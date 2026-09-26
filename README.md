@@ -192,6 +192,13 @@ you:   /reload
 you:   Write the release notes for v2.   ← the skill is used, in this chat and every later one
 ```
 
+**Extension settings persist per key, too.** Inside a sandbox `~` is the chat's workspace, so an
+extension that keeps settings under `~/.pi` would lose them when the chat ends. Sandboxes therefore
+get `PI_CONFIG_DIR=/profile/config`, which such extensions read instead (for `@bytetrue/pi-web-search`,
+`/profile/config/byte-pi-web/config.json`), and the bridge tells the agent so. A user can say "switch
+web search to Brave, my key is …" once, and every later chat of that key uses it; no other key sees
+it, and your own host configuration and keys never enter a sandbox.
+
 **The catalogue follows your Pi configuration.** The gateway rebuilds its model catalogue when
 `models.json`, `auth.json` or `settings.json` in `~/.pi/agent` changes, checked at most every two
 seconds, so a model you add or a login you make in `pi` shows up without a restart. Open chats see

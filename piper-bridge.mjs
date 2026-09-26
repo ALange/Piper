@@ -221,6 +221,20 @@ export default async function piperBridge(pi) {
 		});
 	}
 
+	// Extensions' own settings (the ones they would keep under ~/.pi) go to PI_CONFIG_DIR, which the
+	// gateway points into the key's profile. Said explicitly, or an agent told "use Brave with key X"
+	// writes ~/.pi/..., which is this chat's workspace and is gone when the chat ends.
+	const configDir = process.env.PI_CONFIG_DIR;
+	if (configDir) {
+		pi.on("before_agent_start", (event) => {
+			const guidelines = (event.systemPromptOptions.promptGuidelines ??= []);
+			const note =
+				`Extensions that keep settings under ~/.pi read them from $PI_CONFIG_DIR (${configDir}) instead, e.g. ${configDir}/byte-pi-web/config.json. ` +
+				`Settings written there persist across every chat on this API key; ~/.pi itself is part of this chat's workspace and is discarded with it.`;
+			if (!guidelines.includes(note)) guidelines.push(note);
+		});
+	}
+
 	// What this agent really has, for the dashboard: every tool and command with where it came from.
 	// The gateway asks with a request id and the answer goes back over the socket, since a command
 	// has no other way to return data. It touches nothing in the conversation.

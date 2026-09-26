@@ -1203,6 +1203,7 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.deepEqual(binds.sort(), ["/p/key-1", "/r/a.sock", "/w/s1"], "nothing else is writable");
 	const env = (name) => args[args.findIndex((a, i) => a === "--setenv" && args[i + 1] === name) + 2];
 	assert.equal(env("PI_CODING_AGENT_DIR"), "/profile", "Pi reads the key's profile, not your agent directory");
+	assert.equal(env("PI_CONFIG_DIR"), "/profile/config", "extension settings persist per key, inside the profile");
 	assert.equal(env("PIPER_BRIDGE_SOCKET"), "/run/piper/bridge.sock");
 	assert.equal(env("HOME"), "/workspace");
 	assert.equal(env("PI_OFFLINE"), "1");
@@ -1248,6 +1249,7 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.ok(d.includes("/w/s1:/workspace") && d.includes("/p/key-1:/profile") && d.includes("/r/a.sock:/run/piper/bridge.sock"));
 	assert.ok(d.includes("/g/piper-bridge.mjs:/opt/piper/bridge.mjs:ro"));
 	assert.ok(d.includes("PI_CODING_AGENT_DIR=/profile"));
+	assert.ok(d.includes("PI_CONFIG_DIR=/profile/config"));
 	assert.equal(d[d.indexOf("img") + 1], "pi", "the image runs pi");
 	assert.ok(!runnerInvocation("podman", { ...opts, network: "on" }).args.includes("--network"), "network on uses the engine default");
 }
