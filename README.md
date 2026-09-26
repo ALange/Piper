@@ -2,6 +2,8 @@
 
 **An OpenAI-compatible HTTP gateway in front of the [Pi](https://pi.dev) coding agent.**
 
+![The Piper dashboard: live agents, model usage, spend and the limits in force](docs/dashboard-overview.png)
+
 Point any OpenAI client — Continue, Cursor, an SDK, `curl` — at this, and Pi answers with its
 full agent behind it: its tools, your project context, its skills.
 
