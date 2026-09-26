@@ -13,7 +13,9 @@
  *
  * Plain JavaScript on purpose: nothing here needs compiling, and the gateway has no build step.
  */
+import { readFileSync } from "node:fs";
 import http from "node:http";
+import { join } from "node:path";
 import { createAssistantMessageEventStream, parseStreamingJson } from "@earendil-works/pi-ai";
 
 const SOCKET = process.env.PIPER_BRIDGE_SOCKET;
@@ -182,6 +184,29 @@ export default async function piperBridge(pi) {
 			}
 		},
 	});
+
+	// A new chat starts on the operator's current default model, unless the key's profile names its
+	// own. The gateway sets PIPER_DEFAULT_MODEL only for new chats; a resumed one keeps its model.
+	const defaultModel = process.env.PIPER_DEFAULT_MODEL;
+	if (defaultModel) {
+		pi.on("session_start", async (event, ctx) => {
+			if (event.reason !== "startup") return;
+			let own = {};
+			try {
+				own = JSON.parse(readFileSync(join(process.env.PI_CODING_AGENT_DIR ?? "", "settings.json"), "utf8"));
+			} catch {
+				/* no settings of its own */
+			}
+			if (!own.defaultModel) {
+				// Model ids can contain slashes (Qwen/Qwen3-…), so only the first one splits off the provider.
+				const slash = defaultModel.indexOf("/");
+				const model = ctx.modelRegistry.find(defaultModel.slice(0, slash), defaultModel.slice(slash + 1));
+				if (model) await pi.setModel(model);
+			}
+			const thinking = process.env.PIPER_DEFAULT_THINKING;
+			if (thinking && !own.defaultThinkingLevel) pi.setThinkingLevel(thinking);
+		});
+	}
 
 	// The key's shared folder: tell the agent it exists and what it is for, or it will treat it like
 	// any other folder in its per-chat workspace and never think to keep anything there.

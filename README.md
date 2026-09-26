@@ -43,6 +43,15 @@ runtime dependencies beyond Node's standard library and the Pi package you alrea
 - **A profile per API key** — skills, extensions, prompts, `AGENTS.md` and settings that persist
   across that key's chats. The agent can create a skill or install an extension, `/reload`, and use
   it; another key never sees it.
+- **Chats survive restarts** — a sandboxed chat's Pi session is saved in its workspace, so a
+  restart, an eviction or a crash resumes the same agent with its context rather than replaying
+  the transcript into a new one.
+- **Tool activity in the reasoning stream** — each command and file the agent touches appears as
+  `▸ bash: ls -la` in `reasoning_content`, which clients such as Open WebUI show as "Thinking".
+- **Per-key model allow-list** — limit a key to `local-openai/*` or a handful of models; every
+  way of choosing a model honours it.
+- **A file API for the shared folder** — upload, download, list and delete a key's files over
+  HTTP or from the dashboard.
 - **Status dashboard** — live agents, their models, when each will be reaped, the model catalogue,
   and an editable settings page. No framework, no CDN.
 - **A password on the dashboard** — salted and scrypt-hashed in the database, set or changed from
@@ -54,7 +63,8 @@ runtime dependencies beyond Node's standard library and the Pi package you alrea
 - **Reasoning passthrough** — the model's thinking is forwarded as `reasoning_content`, kept out of
   `content` so clients that ignore it are unaffected.
 - **Cost tracking** — per-session spend from Pi's own token accounting, plus a ledger in
-  `gateway.db` so totals survive a restart, broken down by model and by day.
+  `gateway.db` so totals survive a restart, broken down by model — per call, even when a chat
+  switches models — and by day.
 - **Multiple API keys** — named, optionally expiring, revocable, and each shown only once because
   only a hash is kept. Every request is attributed to the key that made it, with a per-key usage
   report by model and by day.
@@ -117,10 +127,31 @@ Session identity resolves in this order:
 3. **Minted** as a random UUID, returned in the `X-Session-Id` response header.
 
 Only the **new** user turn is forwarded, because Pi already holds the earlier ones — so don't
-resend the transcript on Pi's behalf. If a chat has no live session (the first request, an evicted
-or expired one, or a derived key that changed) the client's earlier turns are replayed as a framed
-transcript ahead of the newest question. A gateway restart or a changed key therefore costs a
-replay rather than silently losing the conversation.
+resend the transcript on Pi's behalf. A chat whose agent was stopped (a restart, an eviction, a
+crash) **resumes** it, as described next. Only a chat with nothing to resume — the first request, an
+expired or ended one, a derived key that changed, or the `inprocess` runner — has the client's
+earlier turns replayed as a framed transcript ahead of the newest question, so it never silently
+loses the conversation.
+
+### Resumable chats
+
+With a sandboxed runner, Pi keeps its session file in the chat's own workspace
+(`/workspace/.piper/session`), and the gateway keeps one row per chat in the `chats` table of
+`gateway.db`: the key, the workspace, request count and timestamps. The session id itself is a
+bearer secret and is stored only as a SHA-256 hash.
+
+Stopping an agent comes in two kinds:
+
+| | What happens | When |
+| --- | --- | --- |
+| **Hibernate** | the process stops and its spend is recorded; the row and the workspace stay | shutdown (`SIGTERM`/`SIGINT`), LRU eviction, a crashed agent, a profile reset or lock (the chat comes back on the new profile) |
+| **End** | the row is deleted and the workspace goes through `WORKSPACE_ON_EXPIRY` | idle, lifetime and one-shot expiry, a dashboard kill |
+
+The next message to a hibernated chat starts Pi in the same workspace with `--continue`: the agent
+has its context, its model choice and its files back, and nothing is replayed. The chat keeps its
+original age, so `SESSION_MAX_LIFETIME_MS` still ends it on time, and the reaper also ends stored
+chats that are past it. On shutdown the gateway stops accepting connections, hibernates every agent
+and exits within about five seconds.
 
 ### Runners and profiles
 
@@ -148,8 +179,10 @@ and the ledger cannot be understated by anything running inside.
 
 **A profile per key.** `PROFILE_ROOT/<key>/` is a Pi agent directory — `settings.json`, `skills/`,
 `extensions/`, `prompts/`, `AGENTS.md` — mounted read-write at `$PI_CODING_AGENT_DIR` in that key's
-sandboxes. It starts from `PROFILE_TEMPLATE` (if set) plus your default model, never from your own
-`~/.pi/agent`. What the user changes there persists across their chats:
+sandboxes. It starts from `PROFILE_TEMPLATE` (if set), never from your own `~/.pi/agent`. A new
+chat starts on your default model and thinking level as they are in `~/.pi/agent/settings.json`
+at that moment, so changing the default in `pi` moves every key along, unless a key has pinned its
+own with `/settings set defaultModel <provider/id>`. What the user changes there persists across their chats:
 
 ```text
 you:   Create a skill in $PI_CODING_AGENT_DIR/skills/release-notes that ...
@@ -157,6 +190,11 @@ agent: DONE
 you:   /reload
 you:   Write the release notes for v2.   ← the skill is used, in this chat and every later one
 ```
+
+**The catalogue follows your Pi configuration.** The gateway rebuilds its model catalogue when
+`models.json`, `auth.json` or `settings.json` in `~/.pi/agent` changes, checked at most every two
+seconds, so a model you add or a login you make in `pi` shows up without a restart. Open chats see
+it after `/reload`. The Models page has a **reload catalogue** button to force it.
 
 Extensions are `.ts` or `.js` files (or a directory with `index.ts`) in the profile's
 `extensions/`; Pi does not discover `.mjs` there. The open gateway and `GATEWAY_API_KEY` each get a
@@ -180,7 +218,29 @@ It is created with the key's first chat, is invisible to every other key, and is
 reset (it is data, not configuration). There is no size limit unless you set
 `KEY_FILES_MAX_BYTES`. Past that limit, new chats get the folder frozen: they can read it, but what
 they write there does not persist until it is trimmed. The Profiles page shows each key's folder
-size, and the key's detail view lists its contents (names and sizes only).
+size, and the key's detail view lists its contents, with a download link per file, delete
+buttons and an upload control.
+
+**Over HTTP**, with the key as the bearer token, the folder is a small file API:
+
+| Method | Path | Does |
+| --- | --- | --- |
+| `GET` | `/v1/piper/files` or `/v1/piper/files/<folder>/` (or `?path=<folder>`) | list: name, type, size, modified |
+| `GET` | `/v1/piper/files/<path>` | download, streamed |
+| `PUT` | `/v1/piper/files/<path>` | upload the request body, streamed; folders are created |
+| `DELETE` | `/v1/piper/files/<path>` | delete a file or a folder |
+
+```bash
+curl -T report.pdf localhost:8787/v1/piper/files/reports/report.pdf -H "Authorization: Bearer $KEY"
+curl -O localhost:8787/v1/piper/files/reports/report.pdf -H "Authorization: Bearer $KEY"
+```
+
+Like the profile, the folder is written by sessions and may hold links, so the gateway never opens
+it itself: every operation runs `piper-profile.mjs` in a sandbox with only that folder mounted.
+Paths are always relative to the folder (a leading `/` means the folder's root), `..` is refused,
+and a link is neither served nor followed, whether it is the file or a folder on the way. An upload
+goes to a temporary name and replaces the file in one rename; it is capped by
+`FILE_UPLOAD_MAX_BYTES` and by what is left of `KEY_FILES_MAX_BYTES`.
 
 ### Shared bundles
 
@@ -274,8 +334,8 @@ would turn "show my settings" into "show your credentials". Reading and editing 
 a link leads to a masked path. The dashboard and the quota check see only names and sizes, from
 `lstat`, which never follows a link.
 
-A sandboxed Pi that crashes or is killed is replaced on the next request, which replays the
-client's transcript exactly as an evicted session does.
+A sandboxed Pi that crashes or is killed is replaced on the next request, which resumes its session
+file exactly as a hibernated chat does.
 
 ### Limits
 
@@ -401,9 +461,9 @@ Sessions are disposed by whichever of these comes first: the hard lifetime, the 
 one-shot rule (used exactly once, then quiet), or LRU eviction past the count cap. A session with a
 request in flight is never reaped or evicted out from under it.
 
-The registry is in memory, so on the first run of a process every workspace on disk is an orphan
-and the startup sweep applies the policy to it — **with `delete`, that means a restart expires every
-workspace.** Directories touched in the last minute are skipped, so a second instance starting up
+Live agents are in memory, and chats that can resume are in the `chats` table. The startup and
+periodic sweeps treat any other workspace on disk as an orphan and apply the policy to it; a
+workspace with a `chats` row is kept for its chat. Directories touched in the last minute are skipped, so a second instance starting up
 cannot reap a running one's work.
 
 ### Model fallback
@@ -427,6 +487,22 @@ whether the switch lasts for the session, just the request, or a cooldown.
 When no fallback applies — none is configured, or the error is not one another model would fix —
 the failure is reported inline as `[model error: provider/model: ...]` rather than as an empty reply.
 
+### Tool activity
+
+With `STREAM_TOOL_ACTIVITY=reasoning` (the default), every tool the agent starts is announced in
+the reasoning stream, one line each, and a failed one is marked:
+
+```text
+▸ bash: ls -la /workspace/shared
+▸ read: /workspace/notes.md
+▸ web_search: {"query":"pi coding agent"}
+  ✗ web_search failed
+```
+
+The summary is the command for `bash`, the path for the file tools and compact JSON for anything
+else (file contents left out), truncated to 200 characters. It goes to `reasoning_content`, never to
+`content`, so a client that ignores reasoning sees no change. `off` turns it off.
+
 ### Spend
 
 Cost is read from Pi rather than estimated. `getSessionStats()` reports a session's cost and token
@@ -439,8 +515,13 @@ Two numbers, because they answer different questions:
   agent in the Agents table and on the Overview card.
 - **The ledger** — a `spend` table in `gateway.db`, written once as a session closes. Close is the
   single funnel for every way a session can end — reaped, killed, evicted, or shut down — so one
-  hook covers them all. It survives a restart, which is what makes *today*, *per model* and
+  hook covers them all. A hibernated chat is recorded when it hibernates, and again for what it
+  spends after it resumes. It survives a restart, which is what makes *today*, *per model* and
   *per day* mean anything.
+
+Every model call is metered with its model, so a chat that switched models is recorded as one row
+per model, and the per-model figures are exact rather than billed to whichever model came last.
+(The `inprocess` runner reports one total, recorded against its last model.)
 
 A session that generated nothing is not recorded: a request rejected before it reached the model
 cost nothing and would only add noise. Tokens are recorded even when the cost is zero, so a local
@@ -497,6 +578,14 @@ more as you like. A key has a name, an optional expiry, and one of four states:
 - **Expiry is a date, or never.** A date means valid *through* that day, so picking today is not
   instantly expired. A later date extends it; clearing it means never.
 
+**Allowed models.** `KEY_ALLOWED_MODELS` limits which models keys may use, and a key's detail view
+on Profiles overrides it for that key. It is a comma-separated list of `provider/model` patterns
+where `*` matches anything, e.g. `local-openai/*, github-copilot/gpt-5-mini`; empty allows every
+model. It applies everywhere a model is chosen: `/v1/models` lists only allowed ones, a request
+naming another gets `400 model_not_allowed`, the sandbox's own catalogue omits the rest, so
+`pi_set_model` and `/model` cannot reach them, and the bridge refuses a call to one outright.
+`GATEWAY_API_KEY` is never limited.
+
 The **Keys** table also shows each key's live sessions and today's spend against its limits, with
 fields to override them (see Limits).
 
@@ -511,6 +600,8 @@ numbers that would then disagree with the per-model and per-day breakdowns besid
 | --- | --- | --- |
 | `POST` | `/v1/chat/completions` | Chat completions, streaming or not |
 | `GET` | `/v1/models` | Model list |
+| `GET` / `PUT` / `DELETE` | `/v1/piper/files/...` | The key's shared folder (see Shared folder) |
+| `*` | `/v1/piper/profile/...` | The key's profile (see Controlling your profile) |
 | `GET` | `/health` | Liveness and session counts (unauthenticated) |
 | `GET` | `/dashboard` | Status dashboard, or the sign-in page when locked |
 | `POST` | `/dashboard/login` | Sign in; sets the session cookie |
@@ -526,9 +617,12 @@ numbers that would then disagree with the per-model and per-day breakdowns besid
 | `POST` | `/dashboard/profiles/:scope/lock` | `{"locked": true}` freezes a profile and closes its agents |
 | `POST` | `/dashboard/profiles/:scope/reset` | Archive a profile and start it over |
 | `GET` | `/dashboard/profiles/:scope.json` | Everything one key's agents get: own profile, granted bundles, and a running agent's loaded tools and commands |
+| `GET` | `/dashboard/files/:scope/:path` | Download a file from a key's shared folder |
+| `PUT` / `DELETE` | `/dashboard/files/:scope/:path` | Upload to, or delete from, a key's shared folder |
 | `GET` | `/dashboard/api-keys/usage.json` | Per-key usage, per model and per day |
 | `GET` | `/dashboard.json` | The same data as JSON |
 | `GET` | `/dashboard/models.json` | Model catalogue |
+| `POST` | `/dashboard/models/reload` | Rebuild the catalogue from `~/.pi/agent` now |
 | `GET` | `/dashboard/spend.json` | Spend ledger: totals, per model, per day |
 | `GET` | `/dashboard/settings.json` | Current settings |
 | `POST` | `/dashboard/settings` | Update settings |
@@ -566,6 +660,8 @@ on write, so a bad one is rejected with a message rather than reaching the runni
 | Agent | `PROFILE_ROOT` | `<gateway>/profiles` | Where each key's Pi profile lives. |
 | Agent | `PROFILE_TEMPLATE` | empty | A directory copied into a key's profile when it is first created. |
 | Limits | `KEY_MAX_SESSIONS` | `16` | Live sessions per key. `0` is unlimited. Overridable per key. |
+| Limits | `KEY_ALLOWED_MODELS` | empty | Models keys may use: `provider/model` patterns, `*` as a wildcard. Empty allows all. Overridable per key. |
+| Limits | `FILE_UPLOAD_MAX_BYTES` | `1073741824` | Largest file accepted by the shared-folder file API, in bytes. `0` is unlimited. |
 | Limits | `KEY_DAILY_SPEND_USD` | `0` | Daily spend cap per key, in USD. `0` is unlimited. Overridable per key. |
 | Limits | `SANDBOX_LIMITS` | `auto` | `auto`, `systemd` or `off`: how bwrap sandboxes get the resource limits below. |
 | Limits | `SANDBOX_MEMORY_MB` | `2048` | Memory per sandbox, swap included. `0` is unlimited. |
@@ -579,6 +675,7 @@ on write, so a bad one is rejected with a message rather than reaching the runni
 | Agent | `CONTAINER_IMAGE` | `piper-sandbox` | Image for the container runners, built from `Dockerfile.sandbox`. |
 | Agent | `GATEWAY_EXTENSIONS` | off | `inprocess` only: load Pi extensions for sessions. See Security. |
 | Logging | `ACCESS_LOG` | on | One line per request to stderr. |
+| Logging | `STREAM_TOOL_ACTIVITY` | `reasoning` | `reasoning` announces each tool the agent runs in `reasoning_content`; `off` does not. |
 | Fallback | `FALLBACK_MODEL` | unset | `provider/model` to retry a failed turn on. Validated against the catalogue. |
 | Fallback | `FALLBACK_MODE` | `session` | `session`, `request` or `cooldown` — how soon the primary is tried again. |
 | Fallback | `FALLBACK_COOLDOWN_MS` | `5m` | How long to stay on the fallback in `cooldown` mode. |
@@ -604,7 +701,8 @@ Seven views behind a hash route:
   requests alongside a chat (a title, a summary, suggested follow-ups) sends each as a bare
   single-message request, and each really is a separate generation. There is no way to tell one
   apart from a brand-new chat on the wire, so a chat counts as one-off until its second turn.
-- **Models** — the catalogue, one tab per provider, with capabilities, context window and cost.
+- **Models** — the catalogue, one tab per provider, with capabilities, context window and cost,
+  and a **reload catalogue** button.
 - **Spend** — what agents have cost: today, all time, per model and per day, from the ledger, with
   what the live agents have spent so far shown alongside.
 - **Profiles** — each key's profile: size against the quota, skills, extensions, live agents, and
@@ -709,9 +807,11 @@ Honest list of what this does not do:
 - **`/proc` is closed to the file tools.** They run inside the gateway process, so `/proc/self` would
   be the gateway. `bash` still has a real `/proc` in its own namespace if a task needs `cpuinfo` or
   `mounts`.
-- **`WORKSPACE_ON_EXPIRY=delete` plus a restart destroys every workspace**, because the registry is
-  in memory and the startup sweep treats everything on disk as an orphan. That is consistent, but
-  worth knowing alongside the 2-minute one-shot prune.
+- **Only sandboxed chats resume.** With `RUNNER=inprocess` a restart or eviction still costs a
+  transcript replay, and with `WORKSPACE_ON_EXPIRY=delete` a restart removes those chats'
+  workspaces.
+- **A resumed chat is a new process.** It gets a fresh meter and a fresh ledger row, and whatever
+  was running in its shell (a server started in the background) is gone.
 - **Audio is rejected** with a 400. Pi's model type declares only `text` and `image` input, and
   there is no audio content type in its API.
 - **Signing out is client-side.** The cookie is stateless, so logging out clears it in the browser
@@ -723,8 +823,6 @@ Honest list of what this does not do:
   still billed to it; only new requests are refused.
 - **Usage is attributed at session creation**, when the ledger row is eventually written. A key that
   continues somebody else's session is not credited for it.
-- **Sessions are not persisted across a restart.** They are in memory by design; the spend ledger
-  and the key tables are what live on disk.
 - **Spend is only as precise as the provider's pricing.** Providers priced at zero — the local ones
   — report `$0.00` however much they are used, though their tokens are still recorded. Cost covers
   model calls only; tool execution is local and free.
@@ -747,9 +845,16 @@ path, because a route it misses is served to anyone who asks — the API key sto
 revocation and delete semantics, the shape of the credential chain from the request down to the
 ledger row, and the sandbox's empty-root view, which must mount nothing of the host beyond `/usr`, a
 short `/etc` list and what the session is given, and must never accept an allow path that
-re-exposes the gateway. It
-points its database and workspace root at scratch paths, so running it never touches a real
+re-exposes the gateway. It also covers resumable chats (hibernate keeps the row, end deletes it,
+resume passes `--continue`), graceful shutdown, catalogue reload, tool-activity summaries,
+per-model metering, the model allow-list, and the file helper's streaming and path safety, links
+included. It points its database and workspace root at scratch paths, so running it never touches a real
 `gateway.db` or a live session's workspace.
+
+The code is split by concern: `server.mjs` is the entry point and router, and `lib/` holds
+`settings`, `auth`, `sandbox`, `models`, `sessions`, `runner`, `chat`, `profiles` and `dashboard`.
+`piper-bridge.mjs` is the extension loaded into every sandboxed Pi, and `piper-profile.mjs` is the
+helper that reads and writes profiles and shared folders inside a sandbox.
 
 The dashboard is `dashboard.html`, served from disk on each request — edit and refresh, no restart
 and no build step.

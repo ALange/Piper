@@ -10,8 +10,8 @@
  * Protocol: one JSON command on stdin, one JSON answer on stdout, `{ ok, result }` or `{ ok: false,
  * error }`. The working directory is the profile. PROFILE_MAX_BYTES caps what writes may grow it to.
  */
-import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, isAbsolute, join, normalize, relative } from "node:path";
+import { createReadStream, createWriteStream, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, isAbsolute, join, normalize, relative, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
 const ROOT = process.cwd();
@@ -190,7 +190,48 @@ export function inventory(root) {
 	};
 }
 
+/** A path inside the folder being served, "" meaning the folder itself. */
+function filePath(rel) {
+	const text = String(rel ?? "").replace(/^\/+|\/+$/g, "");
+	if (text === "") return ROOT;
+	const target = inside(ROOT, text);
+	// A session may plant links in the folder. None of the folders on the way may be one, so a path
+	// can never lead out of the folder, even into what little the helper's own sandbox shows.
+	let dir = ROOT;
+	for (const part of relative(ROOT, dirname(target)).split(sep).filter(Boolean)) {
+		dir = join(dir, part);
+		if (lstatSync(dir, { throwIfNoEntry: false })?.isSymbolicLink()) throw new Refusal(`invalid path: ${rel} (goes through a link)`);
+	}
+	return target;
+}
+
 const OPS = {
+	// The key's shared folder, when this helper runs over it: list and delete. Reading and writing
+	// file contents go through the raw modes below, so large files never pass through JSON.
+	"files.list": ({ path }) => {
+		const dir = filePath(path);
+		if (!existsSync(dir)) throw new Refusal(`no such folder: ${path || "/"}`);
+		if (!lstatSync(dir).isDirectory()) throw new Refusal(`not a folder: ${path}`);
+		return readdirSync(dir)
+			.sort()
+			.slice(0, 5000)
+			.map((name) => {
+				const stat = lstatSync(join(dir, name));
+				return {
+					name,
+					type: stat.isDirectory() ? "dir" : stat.isSymbolicLink() ? "link" : "file",
+					bytes: stat.isDirectory() ? sizeOf(join(dir, name)) : stat.size,
+					modified: stat.mtimeMs,
+				};
+			});
+	},
+	"files.delete": ({ path }) => {
+		const target = filePath(path);
+		if (target === ROOT) throw new Refusal("refusing to delete the whole folder");
+		if (!existsSync(target) && !lstatSync(target, { throwIfNoEntry: false })) throw new Refusal(`no such file: ${path}`);
+		rmSync(target, { recursive: true, force: true });
+		return { deleted: path };
+	},
 	inventory: () => ({ ...inventory(ROOT), bytes: sizeOf(ROOT), maxBytes: MAX_BYTES }),
 	summary: () => {
 		let settings = null;
@@ -279,6 +320,66 @@ const OPS = {
 	},
 };
 
+/**
+ * Stream one file's bytes in or out: `raw read <path>` writes the file to stdout, `raw write <path>
+ * <maxBytes>` stores stdin there, replacing it whole. Failures exit with a code the gateway maps to
+ * HTTP — 3 not a file, 4 not found, 5 too large, 6 a path that leaves the folder, 2 anything else —
+ * and a reason on stderr, before any byte of content is written.
+ */
+async function raw(mode, rel, maxBytes) {
+	const fail = (code, message) => {
+		process.stderr.write(message);
+		process.exit(code);
+	};
+	let target;
+	try {
+		target = filePath(rel);
+	} catch (err) {
+		return fail(err instanceof Refusal ? 6 : 2, err.message);
+	}
+	if (target === ROOT) return fail(3, "that is the folder itself, not a file");
+	if (mode === "read") {
+		// lstat, not stat: a link is not served, wherever it points.
+		const stat = lstatSync(target, { throwIfNoEntry: false });
+		if (!stat) return fail(4, `no such file: ${rel}`);
+		if (!stat.isFile()) return fail(3, `not a file: ${rel}`);
+		// Done when the file has been read out. stdout never emits "finish" (it is never closed), and
+		// Node keeps running until what was written to it has drained.
+		await new Promise((resolvePromise, reject) => {
+			const stream = createReadStream(target).on("error", reject).on("end", resolvePromise);
+			stream.pipe(process.stdout, { end: false });
+		});
+		return;
+	}
+	if (mode === "write") {
+		const limit = Number(maxBytes) || 0;
+		try {
+			if (lstatSync(target, { throwIfNoEntry: false })?.isDirectory()) return fail(3, `a folder is in the way: ${rel}`);
+			mkdirSync(dirname(target), { recursive: true });
+		} catch (err) {
+			return fail(2, err.message);
+		}
+		const temp = `${target}.piper-upload`;
+		let written = 0;
+		const out = createWriteStream(temp);
+		for await (const chunk of process.stdin) {
+			written += chunk.length;
+			if (limit > 0 && written > limit) {
+				out.destroy();
+				rmSync(temp, { force: true });
+				return fail(5, `file too large: more than ${limit} bytes`);
+			}
+			if (!out.write(chunk)) await new Promise((r) => out.once("drain", r));
+		}
+		await new Promise((r) => out.end(r));
+		// A rename replaces a link rather than writing through it.
+		renameSync(temp, target);
+		process.stdout.write(JSON.stringify({ ok: true, bytes: written }));
+		return;
+	}
+	fail(2, `unknown raw mode: ${mode}`);
+}
+
 /** Run one command from stdin. Only when this file is the program, not when the gateway imports inventory(). */
 async function main() {
 	let input = "";
@@ -296,4 +397,7 @@ async function main() {
 	process.stdout.write(JSON.stringify(answer));
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) await main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+	if (process.argv[2] === "raw") await raw(process.argv[3], process.argv[4], process.argv[5]);
+	else await main();
+}

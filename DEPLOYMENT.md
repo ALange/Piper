@@ -86,10 +86,9 @@ If Pi lives somewhere `npm root -g` does not find, set `PI_AGENT_PACKAGE` to its
 ## 4. Install Piper
 
 ```bash
-mkdir -p ~/piper && cd ~/piper
-# copy these files from the repository into ~/piper:
-#   server.mjs  dashboard.html  piper-bridge.mjs  piper-profile.mjs  package.json
-#   README.md  DEPLOYMENT.md  Dockerfile.sandbox  test.mjs
+git clone https://github.com/ALange/Piper.git ~/piper && cd ~/piper
+# or copy the whole repository there; the gateway needs server.mjs, lib/, dashboard.html,
+# piper-bridge.mjs, piper-profile.mjs and package.json
 node test.mjs                            # the unit tests; they touch only scratch paths
 ```
 
@@ -101,7 +100,7 @@ except `workspaces-run`:
 
 | Path | Holds |
 | --- | --- |
-| `gateway.db` | settings, API key hashes, dashboard password hash, spend ledger |
+| `gateway.db` | settings, API key hashes, dashboard password hash, spend ledger, resumable chats |
 | `profiles/` | each API key's own skills, extensions, prompts and settings |
 | `files/` | each API key's shared folder (`/workspace/shared` in its chats) |
 | `shared/` | the shared bundles you hand out (`shared/base/…`) |
@@ -168,15 +167,20 @@ If you run it as **root** instead (not recommended), use a system unit with
 `Environment=ALLOW_ROOT=1` in `/etc/systemd/system/piper.service`. Limits then come from the
 system manager.
 
-Restarting the service ends open chats. Clients that resend their conversation continue in a fresh
-agent.
+Restarting the service does not lose open chats. On `SIGTERM` (what `systemctl stop` sends) the
+gateway stops accepting connections, records every agent's spend and hibernates it; the next message
+to a chat resumes the same agent from its session file in the workspace. Keep the default
+`TimeoutStopSec` (it needs about five seconds). Only with `RUNNER=inprocess` does a restart cost a
+transcript replay.
 
 ## 7. Expose it safely
 
 - **Bind to `127.0.0.1` and put a TLS reverse proxy in front** (Caddy, nginx) for anything beyond
   this machine. Send `X-Forwarded-Proto: https`, so the dashboard's sign-in cookie is marked
   `Secure`. Streaming responses must not be buffered. With nginx:
-  `proxy_buffering off;` and `proxy_read_timeout 1h;`.
+  `proxy_buffering off;` and `proxy_read_timeout 1h;`. For uploads to the shared-folder file API,
+  also raise `client_max_body_size` to `FILE_UPLOAD_MAX_BYTES` (1 GiB by default) and set
+  `proxy_request_buffering off;`.
 - **Set a dashboard password** (Settings → Access), unless you did at first start. An open
   dashboard can reconfigure everything, including the sandbox.
 - **Create an API key per person or client** on API Management. While any key exists, `/v1/*`
@@ -231,7 +235,8 @@ Anything else means the sandbox is not what this guide describes.
 
 ## 10. Upgrading
 
-- **Piper:** stop the service, replace the files from section 4, run `node test.mjs`, start it.
+- **Piper:** `git pull` (or replace the repository files, `lib/` included), run `node test.mjs`,
+  restart the service. Open chats resume.
   `gateway.db`, `profiles/`, `files/`, `shared/` and the workspaces carry over.
 - **Pi:** `npm install -g --ignore-scripts @earendil-works/pi-coding-agent@<version>` with the same
   Node, then restart. If you use the container runner, rebuild its image with the same Pi version.

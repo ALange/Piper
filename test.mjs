@@ -27,8 +27,15 @@ const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 process.env.SANDBOX_ALLOW = `/root:/etc/shadow:/etc:/usr/share/doc:/does/not/exist:${PI_AGENT}:${PI_AGENT}/bin`;
 // Seeded at startup, which is when a validator that reads a not-yet-defined constant would fail.
 process.env.SANDBOX_ENV = "TOOL_HOME=/opt/tool";
-const { agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, pathVerdict, realPathFor, requestedSessionId, resolveImages, resolveModelQuery, sandboxCommand, SessionController, shQuote, shouldFallBack, WorkspaceManager, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, runtimeRoot, sandboxBindBack, jailedRoots, resolveTarget, sandboxCommand: buildSandbox, SENSITIVE_SYSTEM_PATHS, SANDBOX_ETC, allowedExtraPaths, readableRoots, scopedSessionId, isBlockedAddress, rootRefusal, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, runnerInvocation, PiRpcSession, startBridge, sandboxArgs, parseGatewayCommand, profileStats, profileHelperInvocation, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, limitProperties, scopePrefix, keyLimits, limitFromInput, spentToday, spendRefusal, sweepSockets, bundleListFromInput, listBundles, grantedBundles, bundleContents, parseSandboxEnv, originOf, profileDetail, ensureKeyFiles, keyFilesWritability, keyFilesStats, treeSize } = await import("./server.mjs");
+const { agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, pathVerdict, realPathFor, requestedSessionId, resolveImages, resolveModelQuery, sandboxCommand, SessionController, shQuote, shouldFallBack, WorkspaceManager, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, runtimeRoot, sandboxBindBack, jailedRoots, resolveTarget, sandboxCommand: buildSandbox, SENSITIVE_SYSTEM_PATHS, SANDBOX_ETC, allowedExtraPaths, readableRoots, scopedSessionId, isBlockedAddress, rootRefusal, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, runnerInvocation, PiRpcSession, startBridge, sandboxArgs, parseGatewayCommand, profileStats, profileHelperInvocation, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, limitProperties, scopePrefix, keyLimits, limitFromInput, spentToday, spendRefusal, sweepSockets, bundleListFromInput, listBundles, grantedBundles, bundleContents, parseSandboxEnv, originOf, profileDetail, ensureKeyFiles, keyFilesWritability, keyFilesStats, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize } = await import("./server.mjs");
 const { inventory } = await import("./piper-profile.mjs");
+
+/** The gateway's whole source, entry point and modules, for the tests that check its shape. */
+function gatewaySource() {
+	const lib = new URL("./lib/", import.meta.url);
+	const files = existsSync(lib) ? readdirSync(lib).filter((f) => f.endsWith(".mjs")).sort().map((f) => new URL(f, lib)) : [];
+	return [new URL("./server.mjs", import.meta.url), ...files].map((u) => readFileSync(u, "utf8")).join("\n");
+}
 
 /** The gateway's own directory, which the sandbox has to hide. */
 const GATEWAY_DIR = dirname(fileURLToPath(import.meta.url));
@@ -862,7 +869,7 @@ assert.equal(isReloadCommand(undefined), false);
 // undefined, which fails silently: a cooldown that never expires, a duration formatted as "0".
 // This caught FALLBACK_COOLDOWN_MS after it was dropped from the spec while still being read.
 {
-	const src = readFileSync(new URL("./server.mjs", import.meta.url), "utf8");
+	const src = gatewaySource();
 	const specKeys = new Set([...src.matchAll(/key: "([A-Z_]+)"/g)].map((m) => m[1]));
 	const referenced = new Set([...src.matchAll(/config\.([A-Z_]+)/g)].map((m) => m[1]));
 	const missing = [...referenced].filter((k) => !specKeys.has(k));
@@ -1030,8 +1037,8 @@ assert.equal(isReloadCommand(undefined), false);
 // access log cheerfully printed the right key name. Nothing in the unit tests crossed that gap, so
 // the shape of the chain is asserted here instead.
 {
-	const src = readFileSync(new URL("./server.mjs", import.meta.url), "utf8");
-	assert.match(src, /#spawn\(id, credential = null\)/, "#spawn has to take the credential");
+	const src = gatewaySource();
+	assert.match(src, /#spawn\(id, credential = null(, row = null)?\)/, "#spawn has to take the credential");
 	assert.match(src, /keyId: credential\?\.id \?\? null/, "#spawn has to record it");
 	assert.match(src, /acquire\(requestId, credential = null\)/, "acquire has to take it");
 	const spawnCalls = [...src.matchAll(/this\.#spawn\(([^)]*)\)/g)].map((m) => m[1]);
@@ -1125,17 +1132,22 @@ assert.equal(isReloadCommand(undefined), false);
 	writeFileSync(join(host, "auth.json"), '{"p":{"key":"sk-real"}}');
 	writeFileSync(join(template, "skills", "house-style", "SKILL.md"), "---\nname: house-style\n---\n");
 
-	const dir = ensureProfile("k1", { root: join(base, "profiles"), template, hostAgentDir: host });
+	const dir = ensureProfile("k1", { root: join(base, "profiles"), template });
 	assert.equal(dir, join(base, "profiles", "key-k1"));
-	assert.deepEqual(JSON.parse(readFileSync(join(dir, "settings.json"), "utf8")), { defaultProvider: "p", defaultModel: "m", defaultThinkingLevel: "high" }, "only the default model is carried over");
+	assert.deepEqual(JSON.parse(readFileSync(join(dir, "settings.json"), "utf8")), {}, "nothing is copied: a profile follows the operator's default model until its user picks one");
+	// That default is read fresh for every new chat, and handed to the bridge.
+	assert.deepEqual(hostDefaultModel(host), { model: "p/m", thinking: "high" });
+	writeFileSync(join(host, "settings.json"), JSON.stringify({ defaultProvider: "local-openai", defaultModel: "Qwen/Qwen3-Next" }));
+	assert.deepEqual(hostDefaultModel(host), { model: "local-openai/Qwen/Qwen3-Next", thinking: null }, "model ids may contain slashes");
+	assert.equal(hostDefaultModel(join(base, "missing")), null);
 	assert.equal(existsSync(join(dir, "auth.json")), false, "credentials are never copied into a profile");
 	assert.equal(existsSync(join(dir, "skills", "house-style", "SKILL.md")), true, "the template is copied");
 
 	// An existing profile is the key's own; creating it again must not overwrite what they changed.
 	writeFileSync(join(dir, "settings.json"), '{"defaultModel":"mine"}');
-	ensureProfile("k1", { root: join(base, "profiles"), template, hostAgentDir: host });
+	ensureProfile("k1", { root: join(base, "profiles"), template });
 	assert.equal(JSON.parse(readFileSync(join(dir, "settings.json"), "utf8")).defaultModel, "mine");
-	assert.notEqual(ensureProfile("k2", { root: join(base, "profiles"), template: "", hostAgentDir: host }), dir, "each key gets its own");
+	assert.notEqual(ensureProfile("k2", { root: join(base, "profiles"), template: "" }), dir, "each key gets its own");
 	rmSync(base, { recursive: true, force: true });
 }
 
@@ -1197,7 +1209,15 @@ assert.equal(isReloadCommand(undefined), false);
 	const tail = args.slice(args.indexOf("--"));
 	assert.equal(tail[1], join("/opt/node", relative(runtimeRoot(), process.execPath)), "node runs from /opt/node");
 	assert.equal(tail[2], "/opt/node/lib/pi/dist/bundle/cli.js", "the Pi package under the prefix is found at /opt/node");
-	assert.deepEqual(tail.slice(-6), ["--mode", "rpc", "--no-session", "--approve", "-e", "/opt/piper/bridge.mjs"]);
+	assert.deepEqual(tail.slice(-7), ["--mode", "rpc", "--session-dir", "/workspace/.piper/session", "--approve", "-e", "/opt/piper/bridge.mjs"], "Pi keeps its session in the chat's workspace");
+	assert.ok(!tail.includes("--continue"), "a new chat starts a fresh Pi session");
+	const resumed = runnerInvocation("bwrap", { ...opts, resume: true, defaultModel: { model: "p/m", thinking: "high" } }).args;
+	assert.ok(resumed.slice(resumed.indexOf("--")).includes("--continue"), "a resumed chat continues its stored Pi session");
+	assert.ok(!resumed.join(" ").includes("PIPER_DEFAULT_MODEL"), "a resumed chat keeps its own model");
+	const fresh = runnerInvocation("bwrap", { ...opts, defaultModel: { model: "p/m", thinking: "high" } }).args;
+	const envOfFresh = (name) => fresh[fresh.findIndex((a, i) => a === "--setenv" && fresh[i + 1] === name) + 2];
+	assert.equal(envOfFresh("PIPER_DEFAULT_MODEL"), "p/m", "a new chat is handed the operator's default model");
+	assert.equal(envOfFresh("PIPER_DEFAULT_THINKING"), "high");
 	for (const hostPath of ["/p/key-1", "/r/a.sock", "/g/piper-bridge.mjs", "/w/s1", runtimeRoot()]) {
 		assert.ok(!tail.some((a) => a.includes(hostPath)), `the command line inside never names ${hostPath}`);
 	}
@@ -1807,6 +1827,227 @@ assert.equal(isReloadCommand(undefined), false);
 	const [kept] = readdirSync(archive);
 	assert.deepEqual(readdirSync(join(archive, kept)), ["work.txt"], "archived without the empty mountpoint");
 	rmSync(base, { recursive: true, force: true });
+}
+
+// ---------------------------------------------------------------- resumable chats
+
+// Hibernate keeps a chat resumable; ending it does not. The stored row never holds the session id.
+{
+	const rows = new Map();
+	const store = { get: (h) => rows.get(h) ?? null, put: (r) => rows.set(r.id_hash, { ...r }), delete: (h) => rows.delete(h), all: () => [...rows.values()] };
+	const released = [];
+	const dir = mkdtempSync(join(tmpdir(), "pi-resume-"));
+	let made = 0;
+	const workspaceStore = {
+		create: () => { const w = join(dir, `ws${made++}`); mkdirSync(w); return w; },
+		release: (w) => released.push(w),
+	};
+	const spent = [];
+	let spawns = 0;
+	const create = async (workspace, record) => {
+		spawns++;
+		return { resume: record.resume, getSessionStats: () => ({ cost: 0.01, tokens: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, total: 2 } }), model: { provider: "p", id: "m" }, dispose() { spent.push(record.id); } };
+	};
+	const ctl = new SessionController({ create, maxSessions: 2, maxLifetimeMs: 1e9, idleMs: 1e9, sweepMs: 0, workspaces: workspaceStore, store });
+
+	const first = ctl.acquire("key:1\u0000chat-a", { id: "k1" });
+	first.record.state.forwarded = 4;
+	first.record.state.lastUserText = "hello";
+	await ctl.run(first.record, async () => {});
+	const hash = chatIdHash("key:1\u0000chat-a");
+	assert.equal(rows.get(hash).state_json, JSON.stringify({ forwarded: 4, lastUserText: "hello" }), "state is saved after every turn");
+	assert.ok(![...rows.values()].some((r) => JSON.stringify(r).includes("chat-a")), "the session id itself is never stored");
+
+	// Hibernate: process stopped, spend recorded, row and workspace kept.
+	assert.equal(ctl.hibernate("key:1\u0000chat-a"), true);
+	await first.record.stopped;
+	assert.equal(ctl.size, 0);
+	assert.ok(rows.has(hash), "a hibernated chat stays resumable");
+	assert.deepEqual(released, [], "and keeps its workspace");
+	assert.ok(ctl.liveWorkspaces().has(first.record.workspace), "the sweeper spares it");
+
+	// The next request resumes it: same workspace, restored state, told to continue Pi's session.
+	const back = ctl.acquire("key:1\u0000chat-a", { id: "k1" });
+	assert.equal(back.isNew, false);
+	assert.equal(back.resumed, true);
+	assert.equal(back.record.workspace, first.record.workspace);
+	assert.deepEqual(back.record.state, { forwarded: 4, lastUserText: "hello" }, "no transcript replay: the client's position is remembered");
+	assert.equal(back.record.resume, true);
+	assert.equal((await back.record.sessionPromise).resume, true, "the runner is asked to continue");
+	assert.equal(back.record.createdAt, rows.get(hash).created_at, "its lifetime keeps counting from the original start");
+
+	// Eviction hibernates too.
+	ctl.acquire("key:1\u0000chat-b", { id: "k1" });
+	ctl.acquire("key:1\u0000chat-c", { id: "k1" });
+	assert.equal(ctl.size, 2);
+	assert.equal(rows.size, 3, "the evicted chat is still stored");
+
+	// Ending a chat deletes its row and releases its workspace.
+	ctl.close("key:1\u0000chat-b");
+	assert.equal(rows.has(chatIdHash("key:1\u0000chat-b")), false);
+	assert.equal(released.length, 1);
+
+	// A stored chat whose workspace has gone is started fresh.
+	rows.set(chatIdHash("gone"), { id_hash: chatIdHash("gone"), key_id: null, workspace: join(dir, "nope"), created_at: 1, last_used_at: 1, requests: 3, state_json: "{}" });
+	const fresh = ctl.acquire("gone", null);
+	assert.equal(fresh.isNew, true);
+
+	// Shutdown hibernates everything and waits for the spend to be recorded. Earlier stops settle first.
+	await new Promise((r) => setTimeout(r, 20));
+	const before = spent.length;
+	const stopped = await ctl.hibernateAll();
+	assert.ok(stopped >= 2);
+	assert.equal(spent.length - before, stopped, "every live chat was stopped and billed");
+	assert.equal(ctl.size, 0);
+
+	// Stored chats expire by the same rules as live ones.
+	const ctl2 = new SessionController({ create, maxSessions: 5, maxLifetimeMs: 1000, idleMs: 1e9, sweepMs: 0, workspaces: workspaceStore, store });
+	const releasedBefore = released.length;
+	ctl2.reap(Date.now() + 10_000);
+	assert.equal(rows.size, 0, "past its lifetime, a hibernated chat is ended");
+	assert.ok(released.length > releasedBefore, "and its workspace released");
+	rmSync(dir, { recursive: true, force: true });
+}
+
+// Pi's own session record does not make a workspace worth archiving.
+{
+	const base = mkdtempSync(join(tmpdir(), "pi-piper-"));
+	const root = join(base, "workspaces");
+	const archive = `${root}-archive`;
+	const ws = new WorkspaceManager(() => ({ root, archiveRoot: archive, policy: "archive", archiveTtlMs: 0 }));
+	const oneOff = ws.create();
+	mkdirSync(join(oneOff, ".piper", "session"), { recursive: true });
+	writeFileSync(join(oneOff, ".piper", "session", "s.jsonl"), "{}");
+	ws.release(oneOff);
+	assert.equal(existsSync(oneOff), false, "only Pi's bookkeeping: deleted as untouched");
+	assert.equal(existsSync(archive) ? readdirSync(archive).length : 0, 0);
+	rmSync(base, { recursive: true, force: true });
+}
+
+// The catalogue notices when the operator's Pi configuration changes.
+{
+	const dir = mkdtempSync(join(tmpdir(), "pi-cat-"));
+	const a = catalogueStamp(dir);
+	writeFileSync(join(dir, "models.json"), "{}");
+	const b = catalogueStamp(dir);
+	assert.notEqual(a, b, "a new models.json changes the stamp");
+	utimesSync(join(dir, "models.json"), new Date(), new Date(Date.now() + 5000));
+	assert.notEqual(catalogueStamp(dir), b, "so does an edit");
+	rmSync(dir, { recursive: true, force: true });
+}
+
+// ---------------------------------------------------------------- visibility & control
+
+// Tool activity: one readable line per tool call, never the content being written.
+{
+	assert.equal(toolActivity("bash", { command: "ls -la\n  /workspace" }), "bash: ls -la /workspace");
+	assert.equal(toolActivity("read", { path: "/workspace/a.txt" }), "read: /workspace/a.txt");
+	assert.equal(toolActivity("grep", { path: "src", pattern: "TODO" }), "grep: src TODO");
+	assert.equal(toolActivity("write", { path: "/workspace/big.txt", content: "x".repeat(10_000) }), "write: /workspace/big.txt", "the written content is never shown");
+	assert.equal(toolActivity("analyze", { level: 2 }), 'analyze: {"level":2}');
+	assert.ok(toolActivity("bash", { command: "y".repeat(500) }).length < 220, "long commands are truncated");
+}
+
+// Spend per model: a chat that switched models is billed to each for what it used there.
+{
+	const meter = newMeter();
+	meterUsage(meter, { input: 10, output: 5, totalTokens: 15, cost: { total: 0.2 } }, "a/one");
+	meterUsage(meter, { input: 1, output: 1, totalTokens: 2, cost: { total: 0.5 } }, "b/two");
+	meterUsage(meter, { input: 4, output: 0, totalTokens: 4, cost: { total: 0.1 } }, "a/one");
+	assert.equal(meter.byModel["a/one"].tokens.total, 19);
+	assert.ok(Math.abs(meter.byModel["a/one"].cost - 0.3) < 1e-9);
+	assert.equal(meter.byModel["b/two"].tokens.total, 2);
+	assert.equal(meter.tokens.total, 21, "the total still covers everything");
+
+	const fp = `per-model-${process.pid}`;
+	recordSpend(
+		{ id: fp, requests: 3, keyId: "pm-key" },
+		{ getSessionStats: () => ({ cost: 0.8, tokens: meter.tokens, byModel: meter.byModel }), model: { provider: "b", id: "two" } },
+	);
+	const { DatabaseSync } = await import("node:sqlite");
+	const rows = new DatabaseSync(TEST_DB).prepare("SELECT provider, model, cost, requests FROM spend WHERE key_id = 'pm-key' ORDER BY provider").all();
+	assert.deepEqual(rows.map((r) => [r.provider, r.model, r.requests]), [["a", "one", 3], ["b", "two", 0]], "one row per model; requests counted once");
+	assert.ok(Math.abs(rows[0].cost - 0.3) < 1e-9 && Math.abs(rows[1].cost - 0.5) < 1e-9);
+}
+
+// Model allow-lists: patterns, precedence, and the operator's key.
+{
+	assert.deepEqual(parseModelPatterns(""), []);
+	assert.throws(() => parseModelPatterns("gpt-5"), /not a provider\/model pattern/);
+	const m = (provider, id) => ({ provider, id });
+	const { record } = apiKeys.create({ name: "limited-models" });
+	assert.equal(modelAllowed(record.id, m("x", "y")), true, "no list: everything");
+	apiKeys.update(record.id, { allowedModels: "local-openai/*, github-copilot/gpt-5-mini" });
+	assert.equal(allowedModelsFor(record.id), "local-openai/*, github-copilot/gpt-5-mini");
+	assert.equal(modelAllowed(record.id, m("local-openai", "Qwen/Qwen3-Next")), true, "a glob covers ids with slashes");
+	assert.equal(modelAllowed(record.id, m("github-copilot", "gpt-5-mini")), true);
+	assert.equal(modelAllowed(record.id, m("github-copilot", "gpt-5.4-mini")), false, "a dot in the pattern is literal");
+	assert.equal(modelAllowed(record.id, m("anthropic", "claude")), false);
+	assert.equal(modelAllowed("", m("anthropic", "claude")), true, "GATEWAY_API_KEY may use anything");
+	apiKeys.update(record.id, { allowedModels: "broken" });
+	assert.equal(modelAllowed(record.id, m("local-openai", "x")), false, "an unparseable list allows nothing rather than everything");
+	apiKeys.remove(record.id);
+}
+
+// The shared-folder helper: streamed read and write, listing, deletion, and path safety.
+{
+	const { spawnSync } = await import("node:child_process");
+	const helper = fileURLToPath(new URL("./piper-profile.mjs", import.meta.url));
+	const dir = mkdtempSync(join(tmpdir(), "pi-fileapi-"));
+	const run = (args, input) => spawnSync(process.execPath, [helper, ...args], { cwd: dir, input });
+	const payload = Buffer.from(Array.from({ length: 70_000 }, (_, i) => i % 251));
+	const w = run(["raw", "write", "docs/data.bin", "0"], payload);
+	assert.equal(w.status, 0, w.stderr.toString());
+	assert.deepEqual(JSON.parse(w.stdout.toString()), { ok: true, bytes: 70_000 });
+	const r = run(["raw", "read", "docs/data.bin"]);
+	assert.equal(r.status, 0);
+	assert.ok(Buffer.compare(r.stdout, payload) === 0, "the bytes come back identical");
+	assert.equal(run(["raw", "write", "big.bin", "100"], Buffer.alloc(1000)).status, 5, "past the cap: refused");
+	assert.equal(existsSync(join(dir, "big.bin")) || existsSync(join(dir, "big.bin.piper-upload")), false, "and nothing left behind");
+	assert.equal(run(["raw", "read", "missing.txt"]).status, 4);
+	assert.equal(run(["raw", "read", "docs"]).status, 3, "a folder is not a file");
+	assert.equal(run(["raw", "read", "../../etc/passwd"]).status, 6, "no way out of the folder");
+	// Paths are URL-style and always relative to the folder: a leading slash does not reach the host.
+	assert.equal(run(["raw", "write", "/etc/x", "0"], "x").status, 0);
+	assert.equal(readFileSync(join(dir, "etc", "x"), "utf8"), "x", "'/etc/x' lands inside the folder");
+	rmSync(join(dir, "etc"), { recursive: true });
+	// Links a session plants are never followed: not as the file, not as a folder on the way.
+	const outside = mkdtempSync(join(tmpdir(), "pi-fileapi-outside-"));
+	writeFileSync(join(outside, "secret"), "host secret");
+	symlinkSync(join(outside, "secret"), join(dir, "file-link"));
+	symlinkSync(outside, join(dir, "dir-link"));
+	assert.equal(run(["raw", "read", "file-link"]).status, 3, "a link is not a file to serve");
+	assert.equal(run(["raw", "read", "dir-link/secret"]).status, 6, "a linked folder is not a way out");
+	assert.equal(run(["raw", "write", "dir-link/new", "0"], "x").status, 6);
+	assert.equal(existsSync(join(outside, "new")), false, "nothing written through the link");
+	assert.equal(JSON.parse(run([], JSON.stringify({ op: "files.list", path: "dir-link" })).stdout.toString()).ok, false);
+	rmSync(join(dir, "file-link"));
+	rmSync(join(dir, "dir-link"));
+	rmSync(outside, { recursive: true });
+	const list = (path) => JSON.parse(run([], JSON.stringify({ op: "files.list", path })).stdout.toString());
+	assert.deepEqual(list("").result.map((e) => [e.name, e.type]), [["docs", "dir"]]);
+	assert.equal(list("docs").result[0].bytes, 70_000);
+	assert.equal(list("../").ok, false);
+	const del = JSON.parse(run([], JSON.stringify({ op: "files.delete", path: "docs" })).stdout.toString());
+	assert.equal(del.ok, true);
+	assert.equal(existsSync(join(dir, "docs")), false);
+	assert.equal(JSON.parse(run([], JSON.stringify({ op: "files.delete", path: "" })).stdout.toString()).ok, false, "the folder itself cannot be deleted");
+	rmSync(dir, { recursive: true, force: true });
+}
+
+// Folder sizes are cached briefly, and forgotten when the gateway changes the folder.
+{
+	const dir = mkdtempSync(join(tmpdir(), "pi-size-"));
+	writeFileSync(join(dir, "a"), "12345");
+	const t0 = Date.now();
+	assert.equal(cachedTreeSize(dir, { now: t0 }), 5);
+	writeFileSync(join(dir, "b"), "123");
+	assert.equal(cachedTreeSize(dir, { now: t0 + 1000 }), 5, "within the TTL the cached figure is used");
+	assert.equal(cachedTreeSize(dir, { now: t0 + 60_000 }), 8, "after it, the folder is walked again");
+	writeFileSync(join(dir, "c"), "1");
+	invalidateSize(dir);
+	assert.equal(cachedTreeSize(dir, { now: t0 + 60_001 }), 9, "an invalidation takes effect at once");
+	rmSync(dir, { recursive: true, force: true });
 }
 
 console.log("nextTurn + images: ok");

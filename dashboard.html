@@ -296,6 +296,9 @@
   .small { font-size:11px; }
   .dim { color:var(--dim); }
   .hint.bad { color:var(--red); }
+  a.filelink { font-size:11px; margin-left:6px; color:var(--blue); }
+  .uploadrow { margin-top:10px; }
+  .uploadrow input[type=file] { font-size:11px; color:var(--muted); max-width:320px; }
   pre.mdpreview { white-space:pre-wrap; font-size:11px; color:var(--muted); background:#0e0e0e; border:1px solid var(--border);
                   border-radius:6px; padding:8px 10px; max-height:260px; overflow:auto; }
 
@@ -413,7 +416,7 @@
           </div>
           <div class="ctrl">
             <input id="modelfilter" type="search" placeholder="filter models&hellip;" autocomplete="off">
-            <button id="modelrefresh">refresh</button>
+            <button id="modelrefresh" title="re-read your Pi models.json, logins and settings now (also happens automatically when they change)">reload catalogue</button>
           </div>
         </div>
         <div class="tabs" id="modeltabs"></div>
@@ -1434,7 +1437,13 @@ function fillModelList() {
   }));
 }
 $('modelfilter').addEventListener('input', renderModels);
-$('modelrefresh').addEventListener('click', function () { ensureModels(true); });
+$('modelrefresh').addEventListener('click', function () {
+  $('modelhint').textContent = 'reloading\u2026';
+  fetch('dashboard/models/reload', { method: 'POST' })
+    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function (d) { MODELS = d; renderModels(); fillModelList(); })
+    .catch(function (e) { $('modelhint').textContent = 'cannot reload: ' + e.message; });
+});
 
 /* ---- settings view ----
    The server owns what a setting is (type, bounds, default, full help). This page owns how it is
@@ -1510,6 +1519,9 @@ var LAYOUT = {
 
   KEY_MAX_SESSIONS: { tab: 'limits', section: 'Per key', label: 'Chats at once', unit: 'chats',
     summary: 'Live chats one key may hold. A new chat closes that key’s oldest idle one. 0 means unlimited.' },
+  KEY_ALLOWED_MODELS: { tab: 'limits', section: 'Per key', label: 'Allowed models',
+    summary: 'provider/model patterns, comma-separated, * for anything (local-openai/*). Empty allows every model. Set per key in its Profiles detail view.',
+    placeholder: 'every model' },
   KEY_DAILY_SPEND_USD: { tab: 'limits', section: 'Per key', label: 'Daily spend cap', unit: 'USD / day',
     summary: 'Model calls are refused once a key has spent this much today. 0 means unlimited.' },
 
@@ -1554,6 +1566,9 @@ var LAYOUT = {
   MAX_IMAGE_BYTES: { tab: 'server', section: 'Requests', label: 'Largest fetched image', unit: 'bytes', bytes: true,
     summary: 'Images downloaded from a URL may not be bigger than this.',
     when: { key: 'ALLOW_IMAGE_URLS', checked: true, note: 'Only used when image URLs are fetched (Access tab).' } },
+  STREAM_TOOL_ACTIVITY: { tab: 'server', section: 'Logging', label: 'Show tool activity',
+    summary: 'List each tool the agent runs in the reply\u2019s reasoning (Open WebUI shows it under "Thinking").',
+    options: { reasoning: 'In the reasoning stream (recommended)', off: 'Off' } },
   ACCESS_LOG: { tab: 'server', section: 'Logging', label: 'Access log',
     summary: 'Write one line per request to the gateway’s standard error.' },
   PI_AGENT_PACKAGE: { tab: 'server', section: 'Pi', label: 'Pi package location',
@@ -2199,6 +2214,33 @@ function renderProfileDetail(d) {
   }
   parts.push(own);
 
+  // Which models this key may use: its own list, or blank to follow the gateway default.
+  if (d.models && !d.models.admin && d.models.keyId) {
+    var msec = el('div'); msec.className = 'detailsec';
+    msec.appendChild(el('h4', 'Allowed models'));
+    var mrow = el('div'); mrow.className = 'fieldrow';
+    var minput = el('input');
+    minput.type = 'text';
+    minput.value = d.models.own == null ? '' : d.models.own;
+    minput.placeholder = d.models.effective ? 'default: ' + d.models.effective : 'default: every model';
+    var msave = el('button', 'save');
+    var mnote = el('span'); mnote.className = 'hint small';
+    msave.addEventListener('click', function () {
+      msave.disabled = true;
+      fetch('dashboard/api-keys/' + d.models.keyId, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ allowedModels: minput.value.trim() === '' ? null : minput.value }) })
+        .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); return j; }); })
+        .then(function () { mnote.textContent = 'saved \u2014 applies to new chats'; mnote.className = 'hint small'; msave.disabled = false; })
+        .catch(function (e) { mnote.textContent = e.message; mnote.className = 'hint small bad'; msave.disabled = false; });
+    });
+    mrow.appendChild(minput); mrow.appendChild(msave); mrow.appendChild(mnote);
+    msec.appendChild(mrow);
+    var mh = el('p', 'provider/model patterns, comma-separated, * for anything. Blank follows the default' +
+      (d.models.effective ? ' (' + d.models.effective + ')' : ' (every model)') + '.');
+    mh.className = 'hint small'; msec.appendChild(mh);
+    parts.push(msec);
+  }
+
   // The key's shared folder: files every chat of this key sees at /workspace/shared.
   var fsec = el('div'); fsec.className = 'detailsec';
   fsec.appendChild(el('h4', 'Shared folder \u2014 /workspace/shared in every chat on this key'));
@@ -2210,10 +2252,45 @@ function renderProfileDetail(d) {
       (f.maxBytes ? ' of ' + bytes(f.maxBytes) : '') + (f.writable === false ? '  \u00b7  frozen: ' + f.readOnlyReason : ''));
     fh.className = 'hint' + (f.writable === false ? ' bad' : '');
     fsec.appendChild(fh);
+    // Files download through the gateway (which reads them inside a sandbox); folders are listed
+    // by name only here.
+    var fileUrl = function (name) { return 'dashboard/files/' + encodeURIComponent(d.scope) + '/' + name.split('/').map(encodeURIComponent).join('/'); };
     fsec.appendChild(itemList(f.entries.map(function (e) {
-      return { name: e.name + (e.type === 'dir' ? '/' : e.type === 'link' ? ' \u2192' : ''), description: bytes(e.bytes) };
-    }), 20));
+      return { name: e.name + (e.type === 'dir' ? '/' : e.type === 'link' ? ' \u2192' : ''), description: bytes(e.bytes), entry: e };
+    }), 20, function (r, it) {
+      if (it.entry.type !== 'file') return;
+      var a = el('a', 'download'); a.href = fileUrl(it.entry.name); a.className = 'filelink';
+      var del = el('button', 'delete'); del.className = 'linkish';
+      del.addEventListener('click', function () {
+        if (!confirm('Delete ' + it.entry.name + ' from this key\u2019s shared folder?')) return;
+        fetch(fileUrl(it.entry.name), { method: 'DELETE' }).then(function () { openProfileDetail(d.scope, true); });
+      });
+      r.appendChild(a); r.appendChild(del);
+    }));
     if (f.more) { var pm = el('p', '+' + f.more + ' more entries'); pm.className = 'hint small'; fsec.appendChild(pm); }
+  }
+  if (f.created) {
+    // Upload straight into the folder, where every chat on this key can use it.
+    var up = el('div'); up.className = 'fieldrow uploadrow';
+    var picker = el('input'); picker.type = 'file'; picker.multiple = true;
+    var send = el('button', 'upload');
+    var unote = el('span'); unote.className = 'hint small';
+    send.addEventListener('click', function () {
+      var files = Array.prototype.slice.call(picker.files || []);
+      if (!files.length) { unote.textContent = 'choose a file first'; return; }
+      send.disabled = true;
+      var next = function (i) {
+        if (i >= files.length) { unote.textContent = 'uploaded ' + files.length + ' file' + (files.length === 1 ? '' : 's'); send.disabled = false; openProfileDetail(d.scope, true); return; }
+        unote.textContent = 'uploading ' + files[i].name + '\u2026';
+        fetch('dashboard/files/' + encodeURIComponent(d.scope) + '/' + encodeURIComponent(files[i].name), { method: 'PUT', body: files[i] })
+          .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); }); })
+          .then(function () { next(i + 1); })
+          .catch(function (e) { unote.textContent = files[i].name + ': ' + e.message; unote.className = 'hint small bad'; send.disabled = false; });
+      };
+      next(0);
+    });
+    up.appendChild(picker); up.appendChild(send); up.appendChild(unote);
+    fsec.appendChild(up);
   }
   parts.push(fsec);
 
