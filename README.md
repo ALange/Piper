@@ -46,8 +46,9 @@ runtime dependencies beyond Node's standard library and the Pi package you alrea
 - **Chats survive restarts** — a sandboxed chat's Pi session is saved in its workspace, so a
   restart, an eviction or a crash resumes the same agent with its context rather than replaying
   the transcript into a new one.
-- **Tool activity in the reasoning stream** — each command and file the agent touches appears as
-  `▸ bash: ls -la` in `reasoning_content`, which clients such as Open WebUI show as "Thinking".
+- **Tool activity in the reasoning stream**, optional — when switched on, each command and file the
+  agent touches appears as `▸ bash: ls -la` in `reasoning_content`, which clients such as Open
+  WebUI show as "Thinking".
 - **Per-key model allow-list** — limit a key to `local-openai/*` or a handful of models; every
   way of choosing a model honours it.
 - **A file API for the shared folder** — upload, download, list and delete a key's files over
@@ -489,8 +490,9 @@ the failure is reported inline as `[model error: provider/model: ...]` rather th
 
 ### Tool activity
 
-With `STREAM_TOOL_ACTIVITY=reasoning` (the default), every tool the agent starts is announced in
-the reasoning stream, one line each, and a failed one is marked:
+Optional, and off by default. Turn on **Show tool output in the stream** (Settings → Sessions, or
+`STREAM_TOOL_ACTIVITY`) and every tool the agent starts is announced in the reasoning stream, one
+line each, with a failed one marked:
 
 ```text
 ▸ bash: ls -la /workspace/shared
@@ -501,7 +503,8 @@ the reasoning stream, one line each, and a failed one is marked:
 
 The summary is the command for `bash`, the path for the file tools and compact JSON for anything
 else (file contents left out), truncated to 200 characters. It goes to `reasoning_content`, never to
-`content`, so a client that ignores reasoning sees no change. `off` turns it off.
+`content`, so a client that ignores reasoning sees no change. The switch applies from the next
+request, including in chats already open.
 
 ### Spend
 
@@ -675,7 +678,7 @@ on write, so a bad one is rejected with a message rather than reaching the runni
 | Agent | `CONTAINER_IMAGE` | `piper-sandbox` | Image for the container runners, built from `Dockerfile.sandbox`. |
 | Agent | `GATEWAY_EXTENSIONS` | off | `inprocess` only: load Pi extensions for sessions. See Security. |
 | Logging | `ACCESS_LOG` | on | One line per request to stderr. |
-| Logging | `STREAM_TOOL_ACTIVITY` | `reasoning` | `reasoning` announces each tool the agent runs in `reasoning_content`; `off` does not. |
+| Sessions | `STREAM_TOOL_ACTIVITY` | off | Announce each tool the agent runs, with its command or file, in `reasoning_content`. |
 | Fallback | `FALLBACK_MODEL` | unset | `provider/model` to retry a failed turn on. Validated against the catalogue. |
 | Fallback | `FALLBACK_MODE` | `session` | `session`, `request` or `cooldown` — how soon the primary is tried again. |
 | Fallback | `FALLBACK_COOLDOWN_MS` | `5m` | How long to stay on the fallback in `cooldown` mode. |
