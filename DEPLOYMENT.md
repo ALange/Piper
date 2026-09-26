@@ -232,7 +232,7 @@ Anything else means the sandbox is not what this guide describes.
 ## 10. Upgrading
 
 - **Piper:** stop the service, replace the files from section 4, run `node test.mjs`, start it.
-  `gateway.db`, `profiles/`, `shared/` and the workspaces carry over.
+  `gateway.db`, `profiles/`, `files/`, `shared/` and the workspaces carry over.
 - **Pi:** `npm install -g --ignore-scripts @earendil-works/pi-coding-agent@<version>` with the same
   Node, then restart. If you use the container runner, rebuild its image with the same Pi version.
 
