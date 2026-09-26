@@ -134,6 +134,18 @@ Piper on http://127.0.0.1:8787  … runner=bwrap  limits=systemd (MemoryMax=2048
 
 Stop it with Ctrl+C, then unset `DASHBOARD_PASSWORD` so it isn't reset on every start.
 
+To keep it running in the background without a service, `piper.sh` starts, stops and restarts
+the gateway from its folder, logging to `gw.log`:
+
+```bash
+./piper.sh            # restart (the default); open chats hibernate and resume
+./piper.sh start | stop | status | logs
+```
+
+It finds the gateway as the `node server.mjs` process running from that folder, stops it with
+`SIGTERM` (then `SIGKILL` after `STOP_WAIT` seconds, default 20), sets `ALLOW_ROOT=1` when run as
+root, and waits for `/health` before reporting it started. Use it or the service below, not both.
+
 ## 6. Run it as a service
 
 As a **systemd user service** of `piper`, so that per-sandbox limits come from its user manager:

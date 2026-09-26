@@ -857,7 +857,7 @@ included. It points its database and workspace root at scratch paths, so running
 The code is split by concern: `server.mjs` is the entry point and router, and `lib/` holds
 `settings`, `auth`, `sandbox`, `models`, `sessions`, `runner`, `chat`, `profiles` and `dashboard`.
 `piper-bridge.mjs` is the extension loaded into every sandboxed Pi, and `piper-profile.mjs` is the
-helper that reads and writes profiles and shared folders inside a sandbox.
+helper that reads and writes profiles and shared folders inside a sandbox. `piper.sh` starts, stops and restarts the gateway from a console.
 
 The dashboard is `dashboard.html`, served from disk on each request — edit and refresh, no restart
 and no build step.
