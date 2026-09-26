@@ -1,0 +1,2287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Piper</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --bg:#0a0a0a; --side:#0d0d0d; --panel:#101010; --card:#121212;
+    --border:#232323; --border-soft:#1b1b1b;
+    --fg:#ededed; --muted:#8b8f94; --dim:#5f6368;
+    --green:#6ee7a8; --red:#f87171; --amber:#f6c177; --blue:#8ab4f8; --purple:#c58af9;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  .app { display:flex; min-height:100vh; }
+
+  /* sidebar */
+  .side { width:232px; flex:0 0 232px; background:var(--side); border-right:1px solid var(--border);
+          display:flex; flex-direction:column; position:sticky; top:0; height:100vh; }
+  .brand { display:flex; gap:10px; align-items:center; padding:16px 14px; border-bottom:1px solid var(--border); }
+  .brand .glyph { width:26px; height:26px; border:1px solid #3a3a3a; border-radius:7px;
+                  display:grid; place-items:center; color:var(--green); font-size:13px; }
+  .brand b { display:block; font-size:13px; letter-spacing:.02em; }
+  .brand span { display:block; color:var(--dim); font-size:10px; }
+  nav { padding:8px; }
+  nav a { display:flex; align-items:center; gap:9px; padding:8px 10px; margin:1px 0; border-radius:6px;
+          color:var(--muted); text-decoration:none; font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
+  nav a .ic { width:14px; text-align:center; opacity:.75; }
+  nav a:hover { background:#151515; color:var(--fg); }
+  nav a.on { background:var(--fg); color:#0a0a0a; font-weight:600; }
+  nav a.off { opacity:.42; cursor:default; }
+  nav a.off:hover { background:none; color:var(--muted); }
+  .sidefoot { margin-top:auto; padding:12px; border-top:1px solid var(--border); }
+  .statusbox { background:#111; border:1px solid var(--border); border-radius:8px; padding:10px 11px; }
+  .statusbox b { display:block; font-size:11px; margin-bottom:3px; }
+  .statusbox span { color:var(--green); font-size:10px; }
+  .statusbox span.bad { color:var(--red); }
+
+  /* main */
+  /* min-width:0 lets main shrink to the space beside the sidebar; without it, a wide table or a
+     long tool list stretches main and the whole page scrolls sideways. */
+  main { flex:1; min-width:0; padding:26px 30px 40px; max-width:1600px; }
+  h1 { font-size:26px; margin:0 0 4px; letter-spacing:-.01em; }
+  .sub { color:var(--muted); margin:0 0 26px; font-size:12px; }
+  .sectionhead { display:flex; align-items:center; justify-content:space-between; margin:0 0 14px; }
+  .sectionhead h2 { font-size:19px; margin:0; }
+  .view { display:none; }
+  .view.on { display:block; }
+  .ctrl { display:flex; align-items:center; gap:8px; color:var(--muted); font-size:11px; }
+  select { background:#141414; color:var(--fg); border:1px solid var(--border); border-radius:6px;
+           padding:5px 8px; font:inherit; font-size:11px; }
+
+  /* stat cards */
+  .cards { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:10px; margin-bottom:18px; }
+  /* The overview now has nine cards, so it fits as many as the width allows instead of a fixed
+     eight. The id outranks the .cards rules in the media queries below, so the settings cards
+     — which share the class — keep their own layout. */
+  #cards { grid-template-columns:repeat(auto-fit,minmax(126px,1fr)); }
+  /* Four summary cards whose values are words ("bubblewrap"), not numbers, so they get the room. */
+  #settingcards { grid-template-columns:repeat(4,minmax(0,220px)); }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:9px; padding:11px 12px 13px; }
+  .cardtop { font-size:10px; color:var(--dim); margin-bottom:12px; letter-spacing:.04em;
+             display:flex; align-items:center; gap:5px; min-height:13px; }
+  .cardtop.up { color:var(--green); } .cardtop.down { color:var(--red); } .cardtop.warn { color:var(--amber); }
+  .cardlabel { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.09em; margin-bottom:5px; }
+  .cardvalue { font-size:24px; line-height:1.1; font-weight:600; letter-spacing:-.01em; }
+  .cardvalue small { font-size:12px; color:var(--muted); font-weight:400; }
+
+  /* panels */
+  .grid2 { display:grid; grid-template-columns:1.35fr 1fr; gap:14px; margin-bottom:14px; }
+  .grid3 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-bottom:14px; }
+  .panel { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:14px 15px 15px; }
+  .panel h3 { font-size:11px; margin:0 0 3px; text-transform:uppercase; letter-spacing:.1em; color:#cfd3d7; }
+  .panel .hint { color:var(--dim); font-size:11px; margin:0 0 14px; }
+  .empty { color:var(--dim); padding:26px 4px; text-align:center; font-size:11px; }
+
+  svg.area { width:100%; height:196px; display:block; }
+  .axis { display:flex; justify-content:space-between; color:var(--dim); font-size:10px; margin-top:6px; }
+
+  .donut { display:flex; gap:16px; align-items:center; }
+  .donut svg { flex:0 0 132px; }
+  .dnum { fill:var(--fg); font-size:22px; font-weight:600; font-family:inherit; }
+  ul.legend { list-style:none; margin:0; padding:0; flex:1; min-width:0; }
+  ul.legend li { display:flex; align-items:center; gap:8px; padding:3px 0; font-size:11px; }
+  ul.legend i { width:9px; height:9px; border-radius:2px; flex:0 0 9px; }
+  ul.legend span { color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
+  ul.legend b { font-weight:600; }
+
+  dl.limits { margin:0; }
+  dl.limits div { display:flex; justify-content:space-between; gap:12px; padding:7px 0;
+                  border-bottom:1px solid var(--border-soft); font-size:11px; }
+  dl.limits div:last-child { border-bottom:0; }
+  dl.limits dt { color:var(--muted); }
+  dl.limits dd { margin:0; }
+
+  /* table */
+  table { width:100%; border-collapse:collapse; }
+  th,td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--border-soft); white-space:nowrap; }
+  th { color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.09em; font-weight:500; }
+  tbody tr:hover { background:#141414; }
+  tbody tr:last-child td { border-bottom:0; }
+  td.num { text-align:right; font-variant-numeric:tabular-nums; }
+  td.fp { color:#cfd3d7; }
+  .busy { color:var(--amber); } .soon { color:var(--red); } .ok { color:var(--green); }
+  .why { color:var(--muted); }
+  .why.one-shot { color:var(--purple); }
+  button { background:#1b1b1b; color:var(--fg); border:1px solid var(--border); border-radius:6px;
+           padding:3px 10px; font:inherit; font-size:11px; cursor:pointer; }
+  button:hover:not(:disabled) { background:#262626; }
+  button:disabled { opacity:.4; cursor:default; }
+  .toolbar { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; margin-bottom:12px; }
+  input[type=search] { background:#141414; color:var(--fg); border:1px solid var(--border);
+                       border-radius:6px; padding:5px 9px; font:inherit; font-size:11px; min-width:210px; }
+  input[type=search]::placeholder { color:var(--dim); }
+  .provider, .group { margin-bottom:20px; }
+  .provider:last-child, .group:last-child { margin-bottom:0; }
+  .providerhead, .grouphead { display:flex; align-items:baseline; gap:9px; padding-bottom:8px;
+                  border-bottom:1px solid var(--border); margin-bottom:2px; }
+  .providerhead b, .grouphead b { font-size:12px; letter-spacing:.02em; }
+  .providerhead span, .grouphead span { color:var(--dim); font-size:11px; }
+  .caps { display:flex; gap:4px; }
+  .cap { font-size:9px; letter-spacing:.06em; padding:1px 5px; border-radius:4px;
+         border:1px solid var(--border); color:var(--muted); }
+  .cap.on { color:var(--green); border-color:#2c4438; }
+  .cap.vis { color:var(--blue); border-color:#2b3a52; }
+
+  /* settings */
+  .field { padding:12px 0; border-bottom:1px solid var(--border-soft); }
+  .field:last-child { border-bottom:0; }
+  .fieldhead { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:7px; }
+  .fieldhead code { font-size:12px; color:#cfd3d7; }
+  .badge { font-size:9px; letter-spacing:.06em; padding:1px 6px; border-radius:4px;
+           border:1px solid var(--border); color:var(--muted); text-transform:uppercase; }
+  .badge.restart { color:var(--amber); border-color:#4a3a1c; }
+  .badge.env { color:var(--blue); border-color:#2b3a52; }
+  .badge.ui { color:var(--green); border-color:#2c4438; }
+  .fieldrow { display:flex; gap:8px; align-items:center; }
+  .fieldrow input[type=text], .fieldrow input[type=password], .fieldrow input[type=number],
+  .fieldrow select {
+    background:#141414; color:var(--fg); border:1px solid var(--border); border-radius:6px;
+    padding:6px 9px; font:inherit; font-size:12px; width:100%; max-width:420px; }
+  .fieldrow input:focus { outline:1px solid #3a3a3a; }
+  .fieldrow input[type=checkbox] { width:auto; accent-color:#3f8f66; }
+  .field .help { color:var(--dim); font-size:11px; margin:7px 0 0; max-width:78ch; }
+  /* settings: a tab has an intro and titled sections; a field is its label on the left and its
+     control, summary and details on the right, stacking on narrow screens. */
+  .settingtools { display:flex; gap:8px; align-items:center; }
+  .settingtools input[type=search] { min-width:230px; }
+  .tabs .tab.muted { color:var(--dim); }
+  .tabintro { color:var(--muted); font-size:12px; margin:0 0 14px; }
+  .section { margin-bottom:22px; }
+  .section:last-child { margin-bottom:0; }
+  .section h4 { margin:0 0 2px; padding-bottom:7px; border-bottom:1px solid var(--border); font-size:11px;
+                letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600; }
+  #settinggroups .field { display:grid; grid-template-columns:minmax(180px,260px) minmax(0,1fr); gap:6px 24px;
+                          padding:14px 0 14px 10px; border-left:2px solid transparent; }
+  #settinggroups .field.changed { border-left-color:var(--green); }
+  #settinggroups .field.error { border-left-color:var(--red); }
+  #settinggroups .field.inactive .fieldlabel, #settinggroups .field.inactive .fieldrow,
+  #settinggroups .field.inactive .summary { opacity:.45; }
+  .fieldlabel .fieldhead { margin-bottom:3px; }
+  .fieldlabel .fieldhead b { font-size:13px; font-weight:600; color:var(--fg); }
+  .fieldkey { font-size:10px; color:var(--dim); }
+  .badge.dirty { display:none; color:var(--green); border-color:#2c4438; }
+  .field.changed .badge.dirty { display:inline; }
+  .fieldcontrol .summary { color:var(--muted); font-size:12px; margin:7px 0 0; max-width:72ch; line-height:1.45; }
+  .whennote { color:var(--amber); font-size:11px; margin:6px 0 0; }
+  .whennote:empty { display:none; }
+  .more { margin-top:6px; }
+  .more summary { color:var(--dim); font-size:11px; cursor:pointer; width:max-content; }
+  .more summary:hover { color:var(--muted); }
+  .more p { color:var(--dim); font-size:11px; margin:6px 0 0; max-width:78ch; line-height:1.5; }
+  .fieldrow .unit { color:var(--dim); font-size:11px; white-space:nowrap; }
+  .fieldrow input[type=number] { max-width:160px; }
+  .fieldrow .togglestate { color:var(--muted); font-size:11px; min-width:2em; }
+  .fieldrow input.toggle { width:16px; height:16px; }
+  button.linkish { background:none; border:0; color:var(--dim); font-size:11px; padding:2px 4px; cursor:pointer; }
+  button.linkish:hover:not(:disabled) { color:var(--fg); background:none; text-decoration:underline; }
+  .field:not(.changed) .fieldrow button.linkish { visibility:hidden; }
+  .field:hover .fieldrow button.linkish, .field:focus-within .fieldrow button.linkish { visibility:visible; }
+  #savebar { position:sticky; bottom:0; background:var(--panel, #111); padding:12px 0 4px;
+             border-top:1px solid transparent; z-index:2; }
+  #savebar.pending { border-top-color:var(--border); }
+  #settingsave:disabled { opacity:.5; }
+  .savenote.warn { color:var(--amber); }
+  #settinggroups .passblock { padding:14px 0 4px 10px; }
+  @media (max-width:900px) { #settinggroups .field { grid-template-columns:1fr; } }
+  .savebar { display:flex; align-items:center; gap:12px; margin-top:16px; }
+  .savenote { color:var(--muted); font-size:11px; }
+  .savenote.good { color:var(--green); }
+  .savenote.bad { color:var(--red); }
+  #signout { width:100%; margin-top:8px; padding:7px; font-size:10px; letter-spacing:.08em;
+             text-transform:uppercase; color:var(--muted); }
+  #signout:hover:not(:disabled) { color:var(--fg); }
+
+  /* access control */
+  .passblock { padding:14px 0 2px; }
+  .passstatus { display:flex; align-items:baseline; gap:9px; flex-wrap:wrap; margin-bottom:13px; }
+  .passstatus b { font-size:12px; letter-spacing:.02em; }
+  .passstatus span { color:var(--dim); font-size:11px; }
+  .passstatus.good b { color:var(--green); }
+  .passstatus.off b { color:var(--amber); }
+  .passfield { display:flex; align-items:center; gap:10px; margin-bottom:7px; }
+  .passfield label { color:var(--muted); font-size:10px; text-transform:uppercase; letter-spacing:.09em;
+                     flex:0 0 170px; }
+  .passfield input { background:#141414; color:var(--fg); border:1px solid var(--border); border-radius:6px;
+                     padding:7px 9px; font:inherit; font-size:12px; width:min(280px,100%); }
+  .passfield input:focus { outline:1px solid #3a3a3a; }
+  .passfield input:disabled { opacity:.45; }
+  .passrow { display:flex; gap:8px; margin-top:13px; }
+  .passnote { color:var(--muted); font-size:11px; margin-top:10px; min-height:16px; }
+  .passnote.good { color:var(--green); }
+  .passnote.bad { color:var(--red); }
+
+  /* api management */
+  .keytab { display:none; }
+  .keytab.on { display:block; }
+  .keyform { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .keyform input, .keyform select, .rowdate { background:#141414; color:var(--fg);
+    border:1px solid var(--border); border-radius:6px; padding:7px 9px; font:inherit; font-size:12px; }
+  .keyform input:focus, .keyform select:focus { outline:1px solid #3a3a3a; }
+  .keyform #newname { width:min(230px,100%); }
+  .keyreveal { display:flex; gap:8px; align-items:center; }
+  .keyreveal code { flex:1; min-width:0; background:#0d0d0d; border:1px solid var(--border); border-radius:6px;
+    padding:9px 10px; font-size:12px; color:var(--green); overflow-x:auto; white-space:nowrap; }
+  .rowname { background:transparent; color:var(--fg); border:1px solid transparent; border-radius:5px;
+    padding:4px 6px; font:inherit; font-size:12px; width:150px; }
+  .rowname:hover, .rowdate:hover { border-color:var(--border); }
+  .rowname:focus, .rowdate:focus { outline:none; border-color:#3a3a3a; background:#141414; }
+  .rowdate { padding:4px 6px; font-size:11px; color:var(--muted); color-scheme:dark; }
+  .badge.active { color:var(--green); border-color:#2c4438; }
+  .badge.revoked { color:var(--red); border-color:#4a2626; }
+  .badge.expired { color:var(--amber); border-color:#4a3a1c; }
+  .badge.open, .badge.settings, .badge.deleted { color:var(--dim); border-color:#2a2a2a; }
+  td.usagedetail { background:#0d0d0d; color:var(--muted); font-size:11px; }
+  .livenote { color:var(--blue); font-size:10px; margin-left:7px; }
+  /* A disabled sandbox used to be invisible, which is exactly how it goes unnoticed. */
+  .warnstrip { background:#2a1414; border:1px solid #5a2626; color:#f3b6b6; border-radius:8px;
+    padding:10px 13px; margin-bottom:18px; font-size:12px; line-height:1.5; }
+  .warnstrip b { color:#ffd0d0; }
+  tr.clickable:hover { background:#171717; cursor:pointer; }
+
+  /* settings tabs */
+  .tabs { display:flex; gap:4px; margin:0 0 16px; border-bottom:1px solid var(--border); }
+  .tabs .tab { background:none; border:0; border-bottom:2px solid transparent; border-radius:0;
+               color:var(--muted); padding:8px 12px; font-size:11px; letter-spacing:.08em;
+               text-transform:uppercase; cursor:pointer; }
+  .tabs .tab:hover:not(:disabled) { background:none; color:var(--fg); }
+  .tabs .tab.on { color:var(--fg); border-bottom-color:var(--fg); }
+  .tabs .tab .count { color:var(--dim); margin-left:7px; font-size:10px; }
+  .tabs .tab.on .count { color:var(--muted); }
+  .group[hidden] { display:none; }
+  td.bad { color:var(--red); }
+  td.wrap { white-space:normal; overflow-wrap:anywhere; }
+  /* A wide table scrolls inside its panel instead of widening the page. */
+  .tablescroll { overflow-x:auto; }
+  /* Per-key limits and bundles: quiet until hovered or focused, like the name and date fields. */
+  input.rowlimit, input.rowbundles { background:#141414; color:var(--fg); border:1px solid var(--border);
+    border-radius:5px; padding:4px 6px; font:inherit; font-size:11px; color-scheme:dark; }
+  input.rowlimit::placeholder, input.rowbundles::placeholder { color:var(--dim); }
+  input.rowlimit:focus, input.rowbundles:focus { outline:none; border-color:#3a3a3a; }
+  input.rowlimit { width:5.5em; text-align:right; }
+  input.rowbundles { width:10em; }
+  td.dim { color:var(--dim); }
+  #profilerows button + button { margin-left:6px; }
+  tr.clickable { cursor:pointer; }
+  tr.selected td { background:#161616; }
+  #keyrows td button + button { margin-left:4px; }
+  #keyrows input.rowname { width:10em; }
+  .tablescroll th, #keyrows td { padding-left:7px; padding-right:7px; }
+  .detailsec { border-top:1px solid var(--border); padding-top:12px; margin-top:12px; }
+  .detailsec > h4 { margin:0 0 10px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); }
+  .invgrid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px 22px; margin-bottom:10px; }
+  .invgrid.two { grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); }
+  /* Grid columns shrink to the page, and long unbroken names or paths wrap instead of widening it. */
+  .invgrid > div, #profiledetail .toolbar > div:first-child { min-width:0; }
+  .item { overflow-wrap:anywhere; }
+  #profiledetail { overflow:hidden; }
+  .invgrid h4 { margin:0 0 6px; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); font-weight:600; }
+  .invgrid h4 .count { color:var(--muted); }
+  .item { padding:4px 0; border-bottom:1px solid var(--border-soft); font-size:12px; line-height:1.4; }
+  .item b { font-weight:600; margin-right:6px; }
+  .item .desc { display:block; color:var(--dim); font-size:11px; margin-top:2px;
+                overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .origin { font-size:9px; letter-spacing:.05em; padding:1px 5px; border-radius:4px; border:1px solid var(--border);
+            color:var(--muted); margin-right:4px; text-transform:uppercase; white-space:nowrap; }
+  .origin.own { color:var(--green); border-color:#2c4438; }
+  .origin.shared { color:var(--blue); border-color:#2b3a52; }
+  .origin.workspace { color:var(--amber); border-color:#4a3a1c; }
+  .origin.gateway { color:var(--purple); border-color:#3d2c52; }
+  .origin.off { color:var(--dim); }
+  .bundlename { margin:6px 0 8px; }
+  .small { font-size:11px; }
+  .dim { color:var(--dim); }
+  .hint.bad { color:var(--red); }
+  pre.mdpreview { white-space:pre-wrap; font-size:11px; color:var(--muted); background:#0e0e0e; border:1px solid var(--border);
+                  border-radius:6px; padding:8px 10px; max-height:260px; overflow:auto; }
+
+  @media (max-width:1400px) { .cards { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+  @media (max-width:1100px) { .grid2,.grid3 { grid-template-columns:1fr; } }
+  @media (max-width:760px) { .side { display:none; } main { padding:18px; }
+                             .cards { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="glyph">&#9679;</div>
+      <div><b>Piper</b><span>Pi agent proxy</span></div>
+    </div>
+    <nav>
+      <a class="on" href="#overview"><span class="ic">&#9638;</span>Overview</a>
+      <a href="#agents"><span class="ic">&#9683;</span>Agents</a>
+      <a href="#models"><span class="ic">&#9678;</span>Models</a>
+      <a href="#spend"><span class="ic">&#36;</span>Spend</a>
+      <a href="#apikeys"><span class="ic">&#9636;</span>API Management</a>
+      <a href="#profiles"><span class="ic">&#9776;</span>Profiles</a>
+      <a href="#settings"><span class="ic">&#9881;</span>Settings</a>
+    </nav>
+    <div class="sidefoot">
+      <div class="statusbox">
+        <b>&#9881; Status</b>
+        <span id="sysstatus">connecting&hellip;</span>
+      </div>
+      <button id="signout" hidden>sign out</button>
+    </div>
+  </aside>
+
+  <main>
+    <div class="warnstrip" id="jailwarn" hidden></div>
+    <h1 id="title">Gateway Overview</h1>
+    <p class="sub" id="subtitle">Live Pi agents, their models, and when each one will be reaped</p>
+
+    <div class="sectionhead">
+      <h2 id="sectiontitle">Overview</h2>
+      <div class="ctrl">
+        <span>refresh</span>
+        <select id="interval">
+          <option value="2000">2s</option>
+          <option value="5000">5s</option>
+          <option value="10000">10s</option>
+          <option value="0">paused</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="view on" id="view-overview">
+      <div class="cards" id="cards"></div>
+
+    <div class="grid2">
+      <section class="panel">
+        <h3>Agent count</h3>
+        <p class="hint">Live agents over the sampled window</p>
+        <div id="area"></div>
+      </section>
+      <section class="panel">
+        <h3>Expiry reason</h3>
+        <p class="hint">Which limit will fire first</p>
+        <div id="donut-expiry"></div>
+      </section>
+    </div>
+
+    <div class="grid3">
+      <section class="panel">
+        <h3>Model usage</h3>
+        <p class="hint">Live agents per model</p>
+        <div id="donut-model"></div>
+      </section>
+      <section class="panel">
+        <h3>By provider</h3>
+        <p class="hint">Live agents per provider</p>
+        <div id="donut-provider"></div>
+      </section>
+      <section class="panel">
+        <h3>Limits</h3>
+        <p class="hint">Reaping policy in force</p>
+        <dl class="limits" id="limits"></dl>
+      </section>
+    </div>
+
+    </div><!-- /view-overview -->
+
+    <div class="view" id="view-agents">
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Agents</h3>
+            <p class="hint" style="margin:0">Every live Pi agent. A <b>one-off</b> is a session used once — a title, summary or suggestion request, not a chat. Kill targets a fingerprint; the server resolves the real id.</p>
+          </div>
+          <button id="killall">kill all agents</button>
+        </div>
+        <table>
+          <thead><tr>
+            <th>session</th><th>model</th><th class="num">age</th><th class="num">last used</th>
+            <th class="num">expires in</th><th>on</th><th class="num">reqs</th><th class="num">cost</th><th>state</th><th></th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </section>
+    </div><!-- /view-agents -->
+
+    <div class="view" id="view-models">
+      <div class="cards" id="modelcards"></div>
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Catalogue</h3>
+            <p class="hint" style="margin:0" id="modelhint">loading&hellip;</p>
+          </div>
+          <div class="ctrl">
+            <input id="modelfilter" type="search" placeholder="filter models&hellip;" autocomplete="off">
+            <button id="modelrefresh">refresh</button>
+          </div>
+        </div>
+        <div class="tabs" id="modeltabs"></div>
+        <div id="modelgroups"></div>
+      </section>
+    </div><!-- /view-models -->
+
+    <div class="view" id="view-spend">
+      <div class="cards" id="spendcards"></div>
+      <div class="grid2">
+        <section class="panel">
+          <h3>By model</h3>
+          <p class="hint">Every closed session, grouped by the model that served it</p>
+          <table>
+            <thead><tr><th>model</th><th class="num">sessions</th><th class="num">tokens</th><th class="num">cost</th></tr></thead>
+            <tbody id="spendrows"></tbody>
+          </table>
+        </section>
+        <section class="panel">
+          <h3>By day</h3>
+          <p class="hint">Local time, most recent first</p>
+          <table>
+            <thead><tr><th>day</th><th class="num">sessions</th><th class="num">cost</th></tr></thead>
+            <tbody id="spenddays"></tbody>
+          </table>
+        </section>
+      </div>
+      <p class="hint" id="spendnote">A session is billed to the ledger when it closes, so agents that
+        are still running appear under <b>live now</b> and move here once they are reaped or killed.
+        Providers priced at zero — the local ones — record their tokens but contribute no cost.</p>
+      <p class="hint" id="spendhint"></p>
+    </div><!-- /view-spend -->
+
+    <div class="view" id="view-apikeys">
+      <div class="cards" id="keycards"></div>
+      <div class="tabs" id="keytabs"></div>
+
+      <div class="keytab" data-tab="keys">
+        <div class="grid2">
+          <section class="panel">
+            <h3>Create a key</h3>
+            <p class="hint">Shown once, then only its hash is stored, so it cannot be shown again</p>
+            <div class="keyform">
+              <input id="newname" placeholder="name, e.g. laptop">
+              <select id="newexpiry">
+                <option value="">never expires</option>
+                <option value="1d">expires in 1 day</option>
+                <option value="7d">expires in 7 days</option>
+                <option value="30d" selected>expires in 30 days</option>
+                <option value="90d">expires in 90 days</option>
+                <option value="365d">expires in 1 year</option>
+                <option value="date">on a date&hellip;</option>
+              </select>
+              <input id="newdate" type="date" hidden>
+              <button id="createkey">create key</button>
+            </div>
+            <div class="passnote" id="keynote"></div>
+          </section>
+
+          <section class="panel" id="revealpanel" hidden>
+            <h3>Copy this key now</h3>
+            <p class="hint">It was never stored, so this is the only time it can be shown &mdash; if it is lost, issue a new one.</p>
+            <div class="keyreveal">
+              <code id="newkey"></code>
+              <button id="copykey">copy</button>
+            </div>
+            <div class="passnote" id="copynote"></div>
+          </section>
+        </div>
+
+        <section class="panel">
+          <h3>Keys</h3>
+          <p class="hint" id="keyhint"></p>
+          <div class="tablescroll"><table>
+            <thead><tr><th>name</th><th>key</th><th class="num">expires</th><th>status</th>
+              <th class="num">last used</th><th class="num" title="live sessions / limit - blank follows the default, 0 is unlimited">sessions</th>
+              <th class="num" title="spent today / daily cap in USD - blank follows the default, 0 is unlimited">today</th>
+              <th title="shared bundles this key gets - blank follows the default, * is all, none for none">bundles</th><th></th></tr></thead>
+            <tbody id="keyrows"></tbody>
+          </table></div>
+        </section>
+      </div>
+
+      <div class="keytab" data-tab="usage">
+        <div class="grid2">
+          <section class="panel">
+            <h3>Per key</h3>
+            <p class="hint">Click a key for its per-model breakdown. These are ledger totals, written when a session closes; anything still running is marked live.</p>
+            <table>
+              <thead><tr><th>key</th><th>status</th><th class="num">requests</th><th class="num">tokens</th>
+                <th class="num">cost</th><th class="num">last used</th></tr></thead>
+              <tbody id="usagerows"></tbody>
+            </table>
+          </section>
+          <section class="panel">
+            <h3>Per day</h3>
+            <p class="hint">Local time, most recent first</p>
+            <table>
+              <thead><tr><th>day</th><th class="num">requests</th><th class="num">cost</th></tr></thead>
+              <tbody id="usagedays"></tbody>
+            </table>
+          </section>
+        </div>
+      </div>
+    </div><!-- /view-apikeys -->
+
+    <div class="view" id="view-profiles">
+      <section class="panel" style="margin-bottom:14px">
+        <div class="toolbar">
+          <div>
+            <h3>Shared bundles</h3>
+            <p class="hint" style="margin:0" id="sharedhint">Folders of skills, extensions and prompts you hand out, read-only, on top of each key's own profile.</p>
+          </div>
+        </div>
+        <table>
+          <thead><tr><th>bundle</th><th>skills</th><th>extensions</th><th>prompts</th><th>given to</th></tr></thead>
+          <tbody id="sharedrows"></tbody>
+        </table>
+      </section>
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Profiles</h3>
+            <p class="hint" style="margin:0">Each API key's own Pi profile — its skills, extensions and settings, mounted into its sandboxes.
+              Names and sizes only: the gateway never opens a profile's files outside a sandbox. <b>Lock</b> makes a profile
+              read-only and closes that key's live agents so the lock applies at once; <b>reset</b> archives it and starts it over
+              from the template.</p>
+          </div>
+        </div>
+        <table>
+          <thead><tr>
+            <th>key</th><th class="num">size</th><th>skills</th><th>extensions</th><th class="num">live</th><th>state</th><th></th>
+          </tr></thead>
+          <tbody id="profilerows"></tbody>
+        </table>
+        <p class="hint" id="profilehint"></p>
+      </section>
+      <section class="panel" id="profiledetail" hidden style="margin-top:14px"></section>
+    </div><!-- /view-profiles -->
+
+    <div class="view" id="view-settings">
+      <div class="cards" id="settingcards"></div>
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Gateway settings</h3>
+            <p class="hint" style="margin:0" id="settinghint">loading&hellip;</p>
+          </div>
+          <div class="settingtools">
+            <input type="search" id="settingsearch" placeholder="search settings" autocomplete="off">
+            <button id="settingsreload" title="discard unsaved changes and load what is stored">reload</button>
+          </div>
+        </div>
+        <div class="tabs" id="settingtabs"></div>
+        <div id="settinggroups"></div>
+        <p class="hint" id="settingempty" hidden>No setting matches that search.</p>
+        <datalist id="modellist"></datalist>
+        <div class="savebar" id="savebar">
+          <button id="settingsave" disabled>save changes</button>
+          <button id="settingdiscard" class="linkish" hidden>discard</button>
+          <span class="savenote" id="settingnote"></span>
+        </div>
+      </section>
+    </div><!-- /view-settings -->
+  </main>
+</div>
+
+<script>
+/* Everything below builds DOM nodes and assigns via textContent/setAttribute. No HTML string is
+   ever parsed into the document, so a model id or provider name coming out of models.json cannot
+   inject markup into this page. */
+var COLORS = ['#6ee7a8','#8ab4f8','#f6c177','#f28b82','#c58af9','#7fd1e0','#d0d3d6'];
+var SVGNS = 'http://www.w3.org/2000/svg';
+var POLL = 2000;
+var timer = null;
+
+function $(id) { return document.getElementById(id); }
+function el(tag, text) {
+  var n = document.createElement(tag);
+  if (text != null) n.textContent = String(text);
+  return n;
+}
+function svgEl(tag, attrs) {
+  var n = document.createElementNS(SVGNS, tag);
+  if (attrs) Object.keys(attrs).forEach(function (k) { n.setAttribute(k, String(attrs[k])); });
+  return n;
+}
+function dur(ms) {
+  if (ms == null || !isFinite(ms)) return '-';
+  var s = Math.max(0, Math.round(ms / 1000));
+  if (s < 60) return s + 's';
+  var m = Math.floor(s / 60); s = s % 60;
+  if (m < 60) return m + 'm ' + s + 's';
+  var h = Math.floor(m / 60); m = m % 60;
+  if (h < 24) return h + 'h ' + m + 'm';
+  return Math.floor(h / 24) + 'd ' + (h % 24) + 'h';
+}
+/* Cost is usually a fraction of a cent, so small amounts keep more decimals than large ones. */
+function money(n) {
+  n = Number(n) || 0;
+  if (n === 0) return '$0.00';
+  if (n < 0.00001) return '<$0.00001';
+  if (n < 0.01) return '$' + n.toFixed(5);
+  if (n < 1) return '$' + n.toFixed(4);
+  return '$' + n.toFixed(2);
+}
+function tok(n) {
+  n = Number(n) || 0;
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return Math.round(n / 1e3) + 'k';
+  return String(n);
+}
+function modelKey(s) { return s.provider ? s.provider + '/' + s.model : '(settings default)'; }
+function tally(rows, keyOf) {
+  var m = {};
+  rows.forEach(function (r) { var k = keyOf(r); m[k] = (m[k] || 0) + 1; });
+  return Object.keys(m).map(function (k) { return { label: k, value: m[k] }; })
+    .sort(function (a, b) { return b.value - a.value || a.label.localeCompare(b.label); });
+}
+
+function cardEl(label, value, sub, top, cls) {
+  var c = el('div'); c.className = 'card';
+  var t = el('div', top || '\u00a0'); t.className = 'cardtop ' + (cls || ''); c.appendChild(t);
+  c.appendChild(el('div', label)).className = 'cardlabel';
+  var v = el('div', value); v.className = 'cardvalue';
+  if (sub) v.appendChild(el('small', sub));
+  c.appendChild(v);
+  return c;
+}
+
+function donutEl(items) {
+  var wrap = el('div'); wrap.className = 'donut';
+  var total = items.reduce(function (a, i) { return a + i.value; }, 0);
+  if (!total) {
+    var none = el('div', 'no live agents'); none.className = 'empty';
+    wrap.appendChild(none);
+    return wrap;
+  }
+  var R = 52, C = 2 * Math.PI * R, off = 0;
+  var svg = svgEl('svg', { viewBox: '0 0 140 140', width: 132, height: 132 });
+  var g = svgEl('g', { transform: 'rotate(-90 70 70)' });
+  items.forEach(function (it, i) {
+    var frac = it.value / total;
+    g.appendChild(svgEl('circle', {
+      cx: 70, cy: 70, r: R, fill: 'none',
+      stroke: COLORS[i % COLORS.length], 'stroke-width': 10,
+      'stroke-dasharray': (frac * C).toFixed(2) + ' ' + C.toFixed(2),
+      'stroke-dashoffset': (-off * C).toFixed(2),
+    }));
+    off += frac;
+  });
+  svg.appendChild(g);
+  var num = svgEl('text', { x: 70, y: 77, 'text-anchor': 'middle', class: 'dnum' });
+  num.textContent = String(total);
+  svg.appendChild(num);
+  wrap.appendChild(svg);
+
+  var ul = el('ul'); ul.className = 'legend';
+  items.slice(0, 7).forEach(function (it, i) {
+    var li = el('li');
+    var swatch = el('i'); swatch.style.background = COLORS[i % COLORS.length]; li.appendChild(swatch);
+    var name = el('span', it.label); name.title = it.label; li.appendChild(name);
+    li.appendChild(el('b', it.value));
+    ul.appendChild(li);
+  });
+  wrap.appendChild(ul);
+  return wrap;
+}
+
+function areaEl(hist) {
+  var box = el('div');
+  if (!hist || hist.length < 2) {
+    var none = el('div', 'collecting samples\u2026'); none.className = 'empty';
+    box.appendChild(none);
+    return box;
+  }
+  var W = 600, H = 200, pad = 10, base = H - 20;
+  var peak = Math.max(1, Math.max.apply(null, hist.map(function (p) { return p.count; })));
+  var x = function (i) { return pad + (i / (hist.length - 1)) * (W - pad * 2); };
+  var y = function (v) { return base - (v / peak) * (base - 16); };
+  var line = hist.map(function (p, i) { return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.count).toFixed(1); }).join(' ');
+  var fill = line + ' L' + x(hist.length - 1).toFixed(1) + ' ' + base + ' L' + x(0).toFixed(1) + ' ' + base + ' Z';
+
+  var svg = svgEl('svg', { class: 'area', viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'none' });
+  var defs = svgEl('defs');
+  var grad = svgEl('linearGradient', { id: 'ag', x1: 0, y1: 0, x2: 0, y2: 1 });
+  grad.appendChild(svgEl('stop', { offset: '0%', 'stop-color': '#9aa0a6', 'stop-opacity': 0.5 }));
+  grad.appendChild(svgEl('stop', { offset: '100%', 'stop-color': '#9aa0a6', 'stop-opacity': 0.02 }));
+  defs.appendChild(grad);
+  svg.appendChild(defs);
+  svg.appendChild(svgEl('path', { d: fill, fill: 'url(#ag)' }));
+  svg.appendChild(svgEl('path', { d: line, fill: 'none', stroke: '#c8ccd0', 'stroke-width': 1.5 }));
+  box.appendChild(svg);
+
+  var axis = el('div'); axis.className = 'axis';
+  axis.appendChild(el('span', hist.length + ' samples'));
+  axis.appendChild(el('span', 'peak ' + peak));
+  axis.appendChild(el('span', 'now ' + hist[hist.length - 1].count));
+  box.appendChild(axis);
+  return box;
+}
+
+function limitsEl(d) {
+  var dl = el('dl'); dl.className = 'limits';
+  [
+    ['max sessions', d.max],
+    ['max lifetime', dur(d.maxLifetimeMs)],
+    ['idle timeout', dur(d.idleMs)],
+    ['one-shot ttl', d.oneShotMs ? dur(d.oneShotMs) : 'disabled'],
+    ['free slots', d.max - d.count],
+  ].forEach(function (r) {
+    var row = el('div');
+    row.appendChild(el('dt', r[0]));
+    row.appendChild(el('dd', r[1]));
+    dl.appendChild(row);
+  });
+  return dl;
+}
+
+function cell(text, cls) {
+  var td = el('td', text);
+  if (cls) td.className = cls;
+  return td;
+}
+
+function render(d) {
+  var S = d.sessions || [];
+  var hist = d.history || [];
+  var live = d.count;
+  var working = S.filter(function (s) { return s.inflight > 0; }).length;
+  var idle = live - working;
+  var oneShot = S.filter(function (s) { return (s.requests || 0) <= 1; }).length;
+  // A session used exactly once is a one-off generation (a title, summary or suggestion request),
+  // not a conversation. A brand-new chat is indistinguishable from one until it is continued, so
+  // it starts here and moves across on its second turn.
+  var conversations = live - oneShot;
+  var requests = S.reduce(function (a, s) { return a + (s.requests || 0); }, 0);
+  var models = tally(S, modelKey).length;
+  var providers = tally(S, function (s) { return s.provider || '(none)'; }).length;
+  var oldest = S.length ? Math.max.apply(null, S.map(function (s) { return s.ageMs; })) : 0;
+  // What the live agents have cost so far. Sessions that have already closed are not here — they
+  // are in the ledger total, which the spend card shows underneath.
+  var liveCost = S.reduce(function (a, s) { return a + (s.cost || 0); }, 0);
+
+  var delta = hist.length ? live - hist[0].count : 0;
+  var deltaTop = !hist.length ? 'no history yet'
+    : delta > 0 ? '\u25b2 +' + delta
+    : delta < 0 ? '\u25bc ' + delta
+    : '\u2014 no change';
+  var deltaCls = !hist.length ? '' : delta > 0 ? 'up' : delta < 0 ? 'down' : '';
+
+  var cards = $('cards');
+  cards.replaceChildren(
+    cardEl('conversations', conversations, ' of ' + live + ' live', deltaTop, deltaCls),
+    cardEl('working', working, '', working ? 'request in flight' : 'all quiet', working ? 'warn' : ''),
+    cardEl('idle', idle, '', live ? Math.round((idle / live) * 100) + '% of live' : ''),
+    cardEl('free slots', d.max - live, '', 'of ' + d.max),
+    cardEl('one-off', oneShot, '', d.oneShotMs ? 'reaped after ' + dur(d.oneShotMs) : 'disabled', oneShot ? 'warn' : ''),
+    cardEl('requests', requests, '', 'across live agents'),
+    cardEl('models', models, '', providers + ' provider' + (providers === 1 ? '' : 's')),
+    cardEl('spend', money(liveCost), '', d.spend && d.spend.total ? 'billed ' + money(d.spend.total) : 'nothing billed yet'),
+    cardEl('oldest', S.length ? dur(oldest) : '-', '', 'lifetime ' + dur(d.maxLifetimeMs))
+  );
+
+  $('area').replaceChildren(areaEl(hist));
+  $('donut-expiry').replaceChildren(donutEl(tally(S, function (s) { return s.expiresBecause || 'unknown'; })));
+  $('donut-model').replaceChildren(donutEl(tally(S, modelKey)));
+  $('donut-provider').replaceChildren(donutEl(tally(S, function (s) { return s.provider || '(none)'; })));
+  $('limits').replaceChildren(limitsEl(d));
+
+  var status = $('sysstatus');
+  status.textContent = conversations + ' conversation' + (conversations === 1 ? '' : 's') +
+    (oneShot ? ', ' + oneShot + ' one-off' : '');
+  status.className = '';
+  // Nothing to sign out of while the dashboard is open, so the control stays out of the way.
+  $('signout').hidden = !d.passwordSet;
+  // An unsandboxed session can read this gateway's database, so the state is not left to a settings
+  // page nobody visits.
+  var jail = $('jailwarn');
+  jail.hidden = d.jail !== false && !d.runnerNote;
+  if (d.jail === false) {
+    jail.replaceChildren(el('b', 'The session sandbox is disabled. '), document.createTextNode(d.jailNote || ''));
+  } else if (d.runnerNote) {
+    jail.replaceChildren(el('b', 'Sessions share this process. '), document.createTextNode(d.runnerNote));
+  } else if (d.limitsNote) {
+    jail.hidden = false;
+    jail.replaceChildren(el('b', 'Sandboxes are not resource-limited. '), document.createTextNode(d.limitsNote));
+  }
+
+  var tbody = $('rows');
+  if (!S.length) {
+    var tr = el('tr');
+    tr.appendChild(cell('no live agents', 'empty')).colSpan = 10;
+    tbody.replaceChildren(tr);
+  } else {
+    // Conversations first, then the one-off generations, each by whichever expires soonest.
+    var ordered = S.slice().sort(function (a, b) {
+      var ao = (a.requests || 0) <= 1 ? 1 : 0;
+      var bo = (b.requests || 0) <= 1 ? 1 : 0;
+      return ao - bo || a.expiresInMs - b.expiresInMs;
+    });
+    tbody.replaceChildren.apply(tbody, ordered.map(function (s) {
+      var tr = el('tr');
+      var fp = cell(s.fingerprint, 'fp');
+      if ((s.requests || 0) <= 1) {
+        var badge = el('span', 'one-off');
+        badge.className = 'badge';
+        fp.appendChild(badge);
+      }
+      tr.appendChild(fp);
+      tr.appendChild(cell(modelKey(s)));
+      tr.appendChild(cell(dur(s.ageMs), 'num'));
+      tr.appendChild(cell(dur(s.idleMs) + ' ago', 'num'));
+      tr.appendChild(cell(dur(s.expiresInMs), 'num ' + (s.expiresInMs < 300000 ? 'soon' : 'ok')));
+      tr.appendChild(cell(s.expiresBecause, 'why ' + s.expiresBecause));
+      tr.appendChild(cell(s.requests || 0, 'num'));
+      // The token count rides along as a tooltip rather than an eleventh column.
+      var costCell = cell(money(s.cost), 'num');
+      costCell.title = tok(s.tokens || 0) + ' tokens';
+      tr.appendChild(costCell);
+      tr.appendChild(cell(s.inflight > 0 ? 'working' : 'idle', s.inflight > 0 ? 'busy' : ''));
+      var action = el('td');
+      var btn = el('button', 'kill');
+      btn.setAttribute('data-fp', s.fingerprint);
+      action.appendChild(btn);
+      tr.appendChild(action);
+      return tr;
+    }));
+  }
+}
+
+var SPEND = null;
+function ensureSpend(force) {
+  if (SPEND && !force) { renderSpend(); return; }
+  $('spendhint').textContent = 'loading\u2026';
+  fetch('dashboard/spend.json', { cache: 'no-store' })
+    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function (d) { SPEND = d; renderSpend(); })
+    .catch(function (e) { $('spendhint').textContent = 'cannot load spend: ' + e.message; });
+}
+
+function renderSpend() {
+  if (!SPEND) return;
+  var d = SPEND, t = d.total;
+  $('spendhint').textContent = 'updated ' + new Date().toLocaleTimeString();
+  $('spendcards').replaceChildren(
+    cardEl('today', money(d.today.cost), '', d.today.sessions + ' closed'),
+    cardEl('all time', money(t.cost), '', t.sessions + ' billed session' + (t.sessions === 1 ? '' : 's')),
+    cardEl('live now', money(d.live.cost), '', tok(d.live.tokens) + ' tokens so far'),
+    cardEl('tokens', tok(t.input + t.output), '', tok(t.input) + ' in \u00b7 ' + tok(t.output) + ' out'),
+    cardEl('cache read', tok(t.cacheRead), '', 'billed at the reduced rate'),
+    cardEl('cache write', tok(t.cacheWrite), '', 'first-time prompt cache')
+  );
+
+  var rows = $('spendrows');
+  var months = { empty: 'nothing billed yet' };
+  if (!d.byModel.length) {
+    var tr = el('tr');
+    tr.appendChild(cell(months.empty, 'empty')).colSpan = 4;
+    rows.replaceChildren(tr);
+  } else {
+    rows.replaceChildren.apply(rows, d.byModel.map(function (m) {
+      var r = el('tr');
+      r.appendChild(cell(m.provider ? m.provider + '/' + m.model : '(unknown)'));
+      r.appendChild(cell(m.sessions, 'num'));
+      r.appendChild(cell(tok(m.tokens), 'num'));
+      r.appendChild(cell(money(m.cost), 'num'));
+      return r;
+    }));
+  }
+
+  var days = $('spenddays');
+  if (!d.byDay.length) {
+    var tr2 = el('tr');
+    tr2.appendChild(cell(months.empty, 'empty')).colSpan = 3;
+    days.replaceChildren(tr2);
+  } else {
+    days.replaceChildren.apply(days, d.byDay.map(function (r) {
+      var row = el('tr');
+      row.appendChild(cell(r.day));
+      row.appendChild(cell(r.sessions, 'num'));
+      row.appendChild(cell(money(r.cost), 'num'));
+      return row;
+    }));
+  }
+}
+
+/* ---- API Management --------------------------------------------------------------------------
+   Keys are created, renamed, extended, revoked and deleted here. The full value is held in
+   CREATED_KEY only until the page is left, because the server keeps nothing but its hash. */
+
+var KEY_TABS = [{ id: 'keys', label: 'Keys' }, { id: 'usage', label: 'Usage' }];
+var activeKeyTab = 'keys';
+var KEYS = null;
+var KEYUSAGE = null;
+var CREATED_KEY = null;
+
+function keyNote(text, cls) {
+  var n = $('keynote');
+  n.textContent = text;
+  n.className = 'passnote ' + (cls || '');
+}
+
+function stamp(ms) { return ms ? new Date(ms).toLocaleString() : 'never'; }
+
+/* A date means "valid through that day", so it resolves to the end of it. An instant at local
+   midnight would make picking today an already-expired key. */
+function expiryFromDate(v) {
+  if (!v) return 0;
+  var p = String(v).split('-').map(Number);
+  if (p.length !== 3 || p.some(function (n) { return !isFinite(n); })) return 0;
+  return new Date(p[0], p[1] - 1, p[2], 23, 59, 59, 999).getTime();
+}
+function dateForInput(ms) {
+  if (!ms) return '';
+  var d = new Date(ms), pad = function (n) { return String(n).padStart(2, '0'); };
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+}
+function durationFromChoice(v) {
+  var m = /^(\d+)([dh])$/.exec(v);
+  return m ? Number(m[1]) * (m[2] === 'd' ? 86400000 : 3600000) : 0;
+}
+
+function readJson(r) {
+  if (!r.ok) {
+    return r.json().then(function (j) { throw new Error(j && j.error ? j.error.message : 'HTTP ' + r.status); });
+  }
+  return r.json();
+}
+
+function showKeyTab(id) {
+  activeKeyTab = id;
+  Array.prototype.forEach.call(document.querySelectorAll('#keytabs .tab'), function (b) {
+    b.classList.toggle('on', b.getAttribute('data-tab') === id);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('#view-apikeys .keytab'), function (p) {
+    p.classList.toggle('on', p.getAttribute('data-tab') === id);
+  });
+}
+
+function ensureApiKeys(force) {
+  if (KEYS && KEYUSAGE && !force) { renderApiKeys(); return; }
+  $('keyhint').textContent = 'loading\u2026';
+  Promise.all([
+    fetch('dashboard/api-keys.json', { cache: 'no-store' }).then(readJson),
+    fetch('dashboard/api-keys/usage.json', { cache: 'no-store' }).then(readJson)
+  ])
+    .then(function (both) { KEYS = both[0]; KEYUSAGE = both[1]; renderApiKeys(); })
+    .catch(function (e) { $('keyhint').textContent = 'cannot load keys: ' + e.message; });
+}
+
+function renderApiKeys() {
+  if (!KEYS) return;
+  renderKeyTabs();
+  renderKeyCards();
+  renderKeyTable();
+  $('revealpanel').hidden = !CREATED_KEY;
+  if (CREATED_KEY) $('newkey').textContent = CREATED_KEY;
+  renderKeyUsage();
+  showKeyTab(activeKeyTab);
+}
+
+function renderKeyTabs() {
+  var tabs = $('keytabs');
+  var counts = { keys: KEYS.keys.length, usage: KEYUSAGE ? KEYUSAGE.keys.length : 0 };
+  tabs.replaceChildren.apply(tabs, KEY_TABS.map(function (t) {
+    var b = el('button');
+    b.className = 'tab';
+    b.setAttribute('data-tab', t.id);
+    b.appendChild(el('span', t.label));
+    var c = el('span', counts[t.id]); c.className = 'count';
+    b.appendChild(c);
+    b.addEventListener('click', function () { showKeyTab(t.id); });
+    return b;
+  }));
+}
+
+function renderKeyCards() {
+  var now = Date.now();
+  var usage = KEYUSAGE || { total: { requests: 0, cost: 0, tokens: 0 } };
+  var active = KEYS.keys.filter(function (k) { return k.status === 'active'; }).length;
+  var soon = KEYS.keys.filter(function (k) {
+    return k.status === 'active' && k.expiresAt && k.expiresAt - now < 7 * 86400000;
+  }).length;
+  $('keycards').replaceChildren(
+    cardEl('keys', KEYS.keys.length, '', active + ' active'),
+    cardEl('expiring', soon, '', 'within 7 days', soon ? 'warn' : ''),
+    cardEl('requests', usage.total.requests, '', 'across every key'),
+    cardEl('tokens', tok(usage.total.tokens), '', 'in, out and cache'),
+    cardEl('cost', money(usage.total.cost), '', 'billed to keys'),
+    cardEl('auth', KEYS.authRequired ? 'required' : 'off', '',
+      KEYS.authRequired ? 'a key is needed for /v1' : 'the API is open', KEYS.authRequired ? '' : 'warn')
+  );
+  $('keyhint').textContent = KEYS.legacy
+    ? 'GATEWAY_API_KEY from Settings still works and still opens the dashboard. Keys created here authenticate /v1 only.'
+    : 'Keys authenticate the OpenAI endpoints only; the dashboard keeps its own password.';
+}
+
+function renderKeyTable() {
+  var tbody = $('keyrows');
+  if (!KEYS.keys.length) {
+    var empty = el('tr');
+    empty.appendChild(cell('no keys yet - the OpenAI endpoints are open to anyone who can reach this port', 'empty')).colSpan = 9;
+    tbody.replaceChildren(empty);
+    return;
+  }
+  tbody.replaceChildren.apply(tbody, KEYS.keys.map(function (k) {
+    var tr = el('tr');
+
+    var nameCell = el('td');
+    var name = el('input');
+    name.className = 'rowname';
+    name.value = k.name;
+    name.title = 'created ' + stamp(k.createdAt) + ' - press enter to rename';
+    name.addEventListener('keydown', function (e) { if (e.key === 'Enter') name.blur(); });
+    name.addEventListener('change', function () {
+      if (name.value.trim() === k.name) return;
+      act('POST', 'dashboard/api-keys/' + k.id, { name: name.value }, 'renamed to "' + name.value.trim() + '"');
+    });
+    nameCell.appendChild(name);
+    tr.appendChild(nameCell);
+
+    tr.appendChild(cell(k.prefix + '\u2026', 'fp'));
+
+    var expCell = el('td');
+    if (k.status === 'revoked') {
+      expCell.appendChild(el('span', '\u2014'));
+    } else {
+      var date = el('input');
+      date.type = 'date';
+      date.className = 'rowdate';
+      date.value = dateForInput(k.expiresAt);
+      date.title = k.expiresAt
+        ? 'expires ' + stamp(k.expiresAt) + ' - pick a later date to extend, or clear it for never'
+        : 'never expires';
+      date.addEventListener('change', function () {
+        act('POST', 'dashboard/api-keys/' + k.id,
+          { expiresAt: date.value ? expiryFromDate(date.value) : 0 },
+          date.value ? 'expires on ' + date.value : 'never expires');
+      });
+      expCell.appendChild(date);
+    }
+    tr.appendChild(expCell);
+
+    var statusCell = el('td');
+    var badge = el('span', k.status);
+    badge.className = 'badge ' + k.status;
+    statusCell.appendChild(badge);
+    tr.appendChild(statusCell);
+
+    tr.appendChild(cell(k.lastUsedAt ? dur(Date.now() - k.lastUsedAt) + ' ago' : 'never', 'num'));
+
+    // Limits: the key's own value, or blank to follow the default shown as the placeholder.
+    function limitCell(prefix, own, def, field, label, integer) {
+      var td = el('td');
+      td.className = 'num';
+      td.appendChild(el('span', prefix + ' / '));
+      var input = el('input');
+      input.type = 'number';
+      input.min = '0';
+      input.step = integer ? '1' : 'any';
+      input.className = 'rowlimit';
+      input.value = own == null ? '' : String(own);
+      input.placeholder = def ? String(def) : '\u221e';
+      input.title = 'blank follows the default (' + (def || 'unlimited') + '); 0 is unlimited';
+      input.addEventListener('keydown', function (e) { if (e.key === 'Enter') input.blur(); });
+      input.addEventListener('change', function () {
+        var body = {};
+        body[field] = input.value === '' ? null : Number(input.value);
+        act('POST', 'dashboard/api-keys/' + k.id, body, label + (input.value === '' ? ' follows the default' : ' set to ' + input.value));
+      });
+      td.appendChild(input);
+      return td;
+    }
+    var defs = KEYS.defaults || {};
+    tr.appendChild(limitCell(String(k.liveSessions || 0), k.maxSessions, defs.maxSessions, 'maxSessions', 'session limit', true));
+    tr.appendChild(limitCell(money(k.spentToday), k.dailySpend, defs.dailySpend, 'dailySpend', 'daily cap', false));
+
+    // Shared bundles: the key's own list, or blank to follow the default shown as the placeholder.
+    var bcell = el('td');
+    var binput = el('input');
+    binput.className = 'rowbundles';
+    binput.value = k.sharedBundles == null ? '' : (k.sharedBundles === '' ? 'none' : k.sharedBundles);
+    binput.placeholder = defs.sharedBundles ? defs.sharedBundles : 'none';
+    var gets = k.bundles || [];
+    binput.title = 'gets: ' + (gets.length ? gets.join(', ') : 'nothing') +
+      '. Comma-separated names, * for all, none for none; blank follows the default. Applies to new chats.';
+    binput.addEventListener('keydown', function (e) { if (e.key === 'Enter') binput.blur(); });
+    binput.addEventListener('change', function () {
+      act('POST', 'dashboard/api-keys/' + k.id, { sharedBundles: binput.value.trim() === '' ? null : binput.value },
+        binput.value.trim() === '' ? 'bundles follow the default' : 'bundles set to ' + binput.value.trim());
+    });
+    bcell.appendChild(binput);
+    tr.appendChild(bcell);
+
+    var actions = el('td');
+    // First, so it is visible without scrolling the table: what this key's agents get.
+    var contents = el('button', 'contents');
+    contents.title = 'skills, extensions and tools this key\u2019s agents get';
+    contents.addEventListener('click', function () { location.hash = '#profiles/key-' + k.id; });
+    actions.appendChild(contents);
+    if (k.status === 'active') {
+      var revoke = el('button', 'revoke');
+      revoke.addEventListener('click', function () {
+        act('POST', 'dashboard/api-keys/' + k.id + '/revoke', {}, 'revoked "' + k.name + '"');
+      });
+      actions.appendChild(revoke);
+    }
+    var del = el('button', 'kill');
+    del.addEventListener('click', function () {
+      if (!confirm('Delete "' + k.name + '"?\n\nIts usage stays in the report. Revoke instead if you only want to stop it working.')) return;
+      act('DELETE', 'dashboard/api-keys/' + k.id, null, 'deleted "' + k.name + '"');
+    });
+    actions.appendChild(del);
+    tr.appendChild(actions);
+    return tr;
+  }));
+}
+
+function renderKeyUsage() {
+  if (!KEYUSAGE) return;
+  var tbody = $('usagerows');
+  if (!KEYUSAGE.keys.length) {
+    var empty = el('tr');
+    empty.appendChild(cell('nothing has been billed yet', 'empty')).colSpan = 6;
+    tbody.replaceChildren(empty);
+  } else {
+    var frag = [];
+    KEYUSAGE.keys.forEach(function (k) {
+      var tr = el('tr');
+      if (k.byModel.length) tr.className = 'clickable';
+      var nameCell = el('td');
+      nameCell.appendChild(el('span', k.name));
+      // The table is ledger-only, so anything still running is called out rather than silently
+      // missing from its own row.
+      if (k.live && (k.live.requests || k.live.cost)) {
+        var liveTag = el('span', 'live: ' + k.live.requests + ' req, ' + money(k.live.cost));
+        liveTag.className = 'livenote';
+        nameCell.appendChild(liveTag);
+      }
+      tr.appendChild(nameCell);
+      var st = el('td');
+      var badge = el('span', k.status);
+      badge.className = 'badge ' + k.status;
+      st.appendChild(badge);
+      tr.appendChild(st);
+      tr.appendChild(cell(k.requests, 'num'));
+      tr.appendChild(cell(tok(k.tokens.total), 'num'));
+      tr.appendChild(cell(money(k.cost), 'num'));
+      tr.appendChild(cell(k.lastUsedAt ? dur(Date.now() - k.lastUsedAt) + ' ago' : 'never', 'num'));
+
+      // The per-model drill-down: a hidden row under its key, revealed by clicking the key.
+      var detail = null;
+      if (k.byModel.length) {
+        detail = el('tr');
+        detail.hidden = true;
+        var td = el('td');
+        td.className = 'usagedetail';
+        td.colSpan = 6;
+        k.byModel.forEach(function (m) {
+          td.appendChild(el('div', (m.provider ? m.provider + '/' + m.model : '(unknown model)') +
+            '  \u00b7  ' + tok(m.tokens) + ' tokens  \u00b7  ' + money(m.cost) + '  \u00b7  ' +
+            m.sessions + ' session' + (m.sessions === 1 ? '' : 's')));
+        });
+        detail.appendChild(td);
+        tr.addEventListener('click', function () { detail.hidden = !detail.hidden; });
+      }
+      frag.push(tr);
+      if (detail) frag.push(detail);
+    });
+    tbody.replaceChildren.apply(tbody, frag);
+  }
+
+  var days = $('usagedays');
+  if (!KEYUSAGE.byDay.length) {
+    var none = el('tr');
+    none.appendChild(cell('nothing has been billed yet', 'empty')).colSpan = 3;
+    days.replaceChildren(none);
+  } else {
+    days.replaceChildren.apply(days, KEYUSAGE.byDay.map(function (r) {
+      var tr = el('tr');
+      tr.appendChild(cell(r.day));
+      tr.appendChild(cell(r.requests, 'num'));
+      tr.appendChild(cell(money(r.cost), 'num'));
+      return tr;
+    }));
+  }
+}
+
+/* Every mutation returns the fresh key list, so the table is rebuilt from the response rather
+   than from a guess about what changed. Usage is refetched too, since deleting or revoking can
+   move a key's history into the "deleted key" row. */
+function act(method, path, payload, note) {
+  keyNote('saving\u2026', '');
+  fetch(path, {
+    method: method,
+    headers: payload ? { 'content-type': 'application/json' } : {},
+    body: payload ? JSON.stringify(payload) : undefined
+  })
+    .then(readJson)
+    .then(function (d) {
+      KEYS = d;
+      keyNote(note + ' - saved', 'good');
+      return fetch('dashboard/api-keys/usage.json', { cache: 'no-store' }).then(readJson);
+    })
+    .then(function (u) { KEYUSAGE = u; renderApiKeys(); })
+    .catch(function (e) { keyNote(e.message, 'bad'); });
+}
+
+$('createkey').addEventListener('click', function () {
+  var name = $('newname').value.trim();
+  if (!name) { keyNote('give the key a name, so they can be told apart later', 'bad'); return; }
+  var choice = $('newexpiry').value;
+  var expiresAt = 0;
+  if (choice === 'date') {
+    if (!$('newdate').value) { keyNote('pick a date, or choose never expires', 'bad'); return; }
+    expiresAt = expiryFromDate($('newdate').value);
+  } else if (choice) {
+    expiresAt = Date.now() + durationFromChoice(choice);
+  }
+  var button = $('createkey');
+  button.disabled = true;
+  fetch('dashboard/api-keys', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ name: name, expiresAt: expiresAt })
+  })
+    .then(readJson)
+    .then(function (d) {
+      button.disabled = false;
+      KEYS = d;
+      CREATED_KEY = d.key;
+      $('newname').value = '';
+      $('newdate').value = '';
+      $('copynote').textContent = '';
+      keyNote('created "' + name + '"' + (expiresAt ? ', expiring ' + stamp(expiresAt) : ', with no expiry'), 'good');
+      renderApiKeys();
+      return fetch('dashboard/api-keys/usage.json', { cache: 'no-store' }).then(readJson);
+    })
+    .then(function (u) { KEYUSAGE = u; renderApiKeys(); })
+    .catch(function (e) { button.disabled = false; keyNote(e.message, 'bad'); });
+});
+
+$('newexpiry').addEventListener('change', function () {
+  $('newdate').hidden = this.value !== 'date';
+});
+
+$('copykey').addEventListener('click', function () {
+  var note = $('copynote');
+  var fail = function (msg) { note.textContent = msg; note.className = 'passnote bad'; };
+  if (!navigator.clipboard || !navigator.clipboard.writeText) {
+    fail('clipboard unavailable here - select the key and copy it manually');
+    return;
+  }
+  navigator.clipboard.writeText(CREATED_KEY || '').then(function () {
+    note.textContent = 'copied to the clipboard';
+    note.className = 'passnote good';
+  }, function () { fail('could not copy - select the key and copy it manually'); });
+});
+
+function tick() {
+  fetch('dashboard.json', { cache: 'no-store' })
+    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(render)
+    .catch(function (e) {
+      // A signed-out or expired session should get the sign-in page, not an error banner.
+      if (/HTTP 401/.test(e.message)) { location.reload(); return; }
+      var s = $('sysstatus');
+      s.textContent = 'unreachable: ' + e.message;
+      s.className = 'bad';
+    });
+}
+function schedule() {
+  if (timer) clearInterval(timer);
+  timer = POLL > 0 ? setInterval(tick, POLL) : null;
+}
+
+/* Kill targets a fingerprint; the server resolves it to the real id, which this page never holds. */
+$('rows').addEventListener('click', function (e) {
+  var btn = e.target.closest ? e.target.closest('button[data-fp]') : null;
+  if (!btn) return;
+  btn.disabled = true;
+  fetch('dashboard/session/' + encodeURIComponent(btn.getAttribute('data-fp')), { method: 'DELETE' })
+    .then(function (r) { return r.json(); })
+    .then(tick)
+    .catch(function () { btn.disabled = false; });
+});
+$('signout').addEventListener('click', function () {
+  fetch('dashboard/logout', { method: 'POST' }).then(function () { location.reload(); });
+});
+$('killall').addEventListener('click', function () {
+  if (!confirm('Close every live agent?')) return;
+  fetch('dashboard/kill-all', { method: 'POST' }).then(tick);
+});
+$('interval').addEventListener('change', function (e) {
+  POLL = Number(e.target.value);
+  schedule();
+  if (POLL > 0) tick();
+});
+
+/* ---- models view: the catalogue is fetched once, on first visit, not on every 2s tick ---- */
+var MODELS = null;
+function fmtCtx(n) {
+  if (!n) return '-';
+  if (n >= 1000000) return (n / 1000000).toFixed(n % 1000000 ? 1 : 0) + 'M';
+  if (n >= 1000) return Math.round(n / 1000) + 'k';
+  return String(n);
+}
+function fmtCost(v) { return v == null ? '-' : '$' + Number(v).toFixed(2); }
+function capBadge(text, cls) { var s = el('span', text); s.className = 'cap ' + (cls || ''); return s; }
+
+function modelRow(m) {
+  var tr = el('tr');
+  tr.appendChild(cell(m.id, 'fp'));
+  tr.appendChild(cell(m.name));
+  tr.appendChild(cell(fmtCtx(m.contextWindow), 'num'));
+  tr.appendChild(cell(fmtCtx(m.maxTokens), 'num'));
+  var caps = el('td');
+  var wrap = el('div'); wrap.className = 'caps';
+  if (m.reasoning) wrap.appendChild(capBadge('reason', 'on'));
+  if (m.vision) wrap.appendChild(capBadge('vision', 'vis'));
+  if (!m.reasoning && !m.vision) wrap.appendChild(capBadge('text'));
+  caps.appendChild(wrap);
+  tr.appendChild(caps);
+  tr.appendChild(cell(fmtCost(m.costIn), 'num'));
+  tr.appendChild(cell(fmtCost(m.costOut), 'num'));
+  return tr;
+}
+
+/* The table on its own. The tabs supply the provider context, so there is no per-panel
+   heading duplicating it. */
+function modelTable(rows) {
+  var table = el('table');
+  var htr = el('tr');
+  ['model', 'name', 'context', 'max out', 'caps', '$in/Mtok', '$out/Mtok'].forEach(function (h, i) {
+    var th = el('th', h);
+    if (i === 2 || i === 3 || i >= 5) th.className = 'num';
+    htr.appendChild(th);
+  });
+  var thead = el('thead'); thead.appendChild(htr); table.appendChild(thead);
+  var tbody = el('tbody');
+  tbody.replaceChildren.apply(tbody, rows.map(modelRow));
+  table.appendChild(tbody);
+  return table;
+}
+
+/* One tab per provider — the gateway that serves the model — so the catalogue is not one long
+   scroll. The filter narrows the active tab, and each tab shows how many models match, so you
+   can see where the hits are instead of clicking through every tab to find them. */
+var activeModelTab = null;
+
+function renderModels() {
+  if (!MODELS) return;
+  var q = ($('modelfilter').value || '').trim().toLowerCase();
+  var totals = {};
+  var match = {};
+  MODELS.models.forEach(function (m) {
+    totals[m.provider] = (totals[m.provider] || 0) + 1;
+    if (q && !(m.provider + '/' + m.id + ' ' + m.name).toLowerCase().includes(q)) return;
+    (match[m.provider] = match[m.provider] || []).push(m);
+  });
+
+  // Tab order comes from the server's provider list, so it does not reshuffle as you type.
+  var providers = MODELS.providers || [];
+  var shown = providers.reduce(function (a, p) { return a + (match[p] || []).length; }, 0);
+  if (!providers.includes(activeModelTab)) activeModelTab = providers[0] || null;
+
+  $('modelcards').replaceChildren(
+    cardEl('available models', MODELS.available, '', MODELS.known + ' known'),
+    cardEl('providers', MODELS.providerCount, '', 'authenticated'),
+    cardEl('reasoning', MODELS.reasoning, '', 'can think'),
+    cardEl('vision', MODELS.vision, '', 'accept images')
+  );
+  $('modelhint').textContent = shown + ' of ' + MODELS.available + ' shown' +
+    (q ? ' matching "' + q + '"' : '') + ' \u00b7 ' + MODELS.known + ' in the known catalogue';
+
+  var tabs = $('modeltabs');
+  tabs.replaceChildren.apply(tabs, providers.map(function (p) {
+    var b = el('button');
+    b.className = 'tab';
+    b.setAttribute('data-tab', p);
+    if (p === activeModelTab) b.classList.add('on');
+    b.appendChild(el('span', p));
+    // While filtering, the count is matches in that tab; otherwise the provider's total.
+    var c = el('span', q ? (match[p] || []).length : totals[p]);
+    c.className = 'count';
+    b.appendChild(c);
+    b.addEventListener('click', function () { activeModelTab = p; renderModels(); });
+    return b;
+  }));
+
+  var box = $('modelgroups');
+  var rows = match[activeModelTab] || [];
+  if (!rows.length) {
+    var none = el('div', q ? 'no models match "' + q + '" in ' + activeModelTab : 'no models in ' + activeModelTab);
+    none.className = 'empty';
+    box.replaceChildren(none);
+    return;
+  }
+  box.replaceChildren(modelTable(rows));
+}
+
+function ensureModels(force) {
+  if (MODELS && !force) { fillModelList(); return; }
+  $('modelhint').textContent = 'loading\u2026';
+  fetch('dashboard/models.json', { cache: 'no-store' })
+    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function (d) { MODELS = d; renderModels(); fillModelList(); })
+    .catch(function (e) { $('modelhint').textContent = 'cannot load catalogue: ' + e.message; });
+}
+
+/* Feeds the <datalist> behind the fallback model field. */
+function fillModelList() {
+  var dl = $('modellist');
+  if (!dl || !MODELS) return;
+  dl.replaceChildren.apply(dl, MODELS.models.map(function (m) {
+    var o = el('option'); o.value = m.provider + '/' + m.id; return o;
+  }));
+}
+$('modelfilter').addEventListener('input', renderModels);
+$('modelrefresh').addEventListener('click', function () { ensureModels(true); });
+
+/* ---- settings view ----
+   The server owns what a setting is (type, bounds, default, full help). This page owns how it is
+   presented: which tab and section it lives in, a plain-language label and one-line summary, units,
+   friendly names for choices, and when a setting is irrelevant. A key missing from LAYOUT still
+   shows, under "Other", so a new server setting can never silently vanish from the page. */
+var SETTINGS = null;
+var SETTING_INPUTS = {};
+var SETTING_FIELDS = {};
+
+var SETTING_TABS = [
+  { id: 'sandbox', label: 'Sandbox', intro: 'Where each chat’s agent runs, what it can reach, and how much of the machine it may use.' },
+  { id: 'sessions', label: 'Sessions', intro: 'How long agents live, and what happens to their working files afterwards.' },
+  { id: 'limits', label: 'Usage limits', intro: 'Defaults for every API key. Each key can override them on the API Management page.' },
+  { id: 'profiles', label: 'Profiles', intro: 'Each API key’s own skills, extensions and settings, and the shared bundles you hand out on top.' },
+  { id: 'models', label: 'Models', intro: 'What happens when the model a chat uses fails.' },
+  { id: 'access', label: 'Access', intro: 'Who may use the API and the dashboard, and what the gateway will fetch for them.' },
+  { id: 'server', label: 'Server', intro: 'Listening address, request limits, logging and Pi itself. Most of these need a restart.' },
+  { id: 'other', label: 'Other', intro: 'Settings this page does not have a place for yet.' }
+];
+
+var RUNNER_IS = function (values, text) { return { key: 'RUNNER', values: values, note: text }; };
+var SANDBOXED = RUNNER_IS(['bwrap', 'docker', 'podman'], 'Only used by the sandboxed runners (bubblewrap, Docker, Podman).');
+var INPROCESS = RUNNER_IS(['inprocess'], 'Only used when the runner is In-process.');
+
+var LAYOUT = {
+  RUNNER: { tab: 'sandbox', section: 'Runtime', label: 'Runner',
+    summary: 'Where each chat’s Pi agent runs. Sandboxed runners give every chat its own isolated process with no credentials.',
+    options: { bwrap: 'Bubblewrap sandbox (recommended)', docker: 'Docker container', podman: 'Podman container', inprocess: 'In-process — trusted single user only' } },
+  CONTAINER_IMAGE: { tab: 'sandbox', section: 'Runtime', label: 'Container image',
+    summary: 'Image the Docker and Podman runners start. Build it from Dockerfile.sandbox.',
+    when: RUNNER_IS(['docker', 'podman'], 'Only used when the runner is Docker or Podman.') },
+
+  SANDBOX_NETWORK: { tab: 'sandbox', section: 'Isolation', label: 'Network access',
+    summary: 'Whether agents can reach the network. Model calls work either way, through the gateway.',
+    options: { off: 'Off — no network (recommended)', on: 'On — same network as this host' } },
+  SANDBOX_ALLOW: { tab: 'sandbox', section: 'Isolation', label: 'Extra readable paths',
+    summary: 'Folders or files to make visible (read-only) inside every sandbox, colon-separated, e.g. /opt/toolchain. Nothing outside the workspace, profile and system software is visible otherwise.', placeholder: '/path/one:/path/two' },
+  SANDBOX_ENV: { tab: 'sandbox', section: 'Isolation', label: 'Extra environment variables',
+    summary: 'NAME=value pairs, space-separated, set inside every sandbox for tools that need them, e.g. RUSTUP_HOME=/root/.rustup.', placeholder: 'NAME=value NAME2=value' },
+  WORKSPACE_JAIL: { tab: 'sandbox', section: 'Isolation', label: 'Confine in-process sessions',
+    summary: 'Keep in-process agents inside their workspace. Turning this off removes all protection.', when: INPROCESS },
+  GATEWAY_EXTENSIONS: { tab: 'sandbox', section: 'Isolation', label: 'Load extensions in-process',
+    summary: 'Run Pi extensions inside the gateway process. Sandboxed runners always load each key’s own extensions safely.', when: INPROCESS },
+
+  SANDBOX_LIMITS: { tab: 'sandbox', section: 'Resources per chat', label: 'Enforce limits with',
+    summary: 'How the limits below are applied to bubblewrap sandboxes. Containers use their own engine’s limits.',
+    options: { auto: 'systemd when available (recommended)', systemd: 'systemd, or refuse to start chats', off: 'Nothing — unlimited' },
+    when: RUNNER_IS(['bwrap'], 'Only used by the bubblewrap runner; containers are limited by their engine.') },
+  SANDBOX_MEMORY_MB: { tab: 'sandbox', section: 'Resources per chat', label: 'Memory', unit: 'MB',
+    summary: 'Memory one chat may use, everything it runs included. 0 means unlimited.', when: SANDBOXED },
+  SANDBOX_PIDS: { tab: 'sandbox', section: 'Resources per chat', label: 'Processes', unit: 'processes',
+    summary: 'Processes and threads one chat may run at once. 0 means unlimited.', when: SANDBOXED },
+  SANDBOX_CPUS: { tab: 'sandbox', section: 'Resources per chat', label: 'CPU', unit: 'cores',
+    summary: 'CPU cores one chat may use; fractions such as 0.5 work. 0 means unlimited.', when: SANDBOXED },
+
+  MAX_SESSIONS: { tab: 'sessions', section: 'Agents', label: 'Maximum live agents', unit: 'agents',
+    summary: 'Across all keys. Past it, the least recently used agent is closed.' },
+  SESSION_IDLE_MS: { tab: 'sessions', section: 'Agents', label: 'Close after idle for',
+    summary: 'An agent with no requests for this long is closed.' },
+  SESSION_MAX_LIFETIME_MS: { tab: 'sessions', section: 'Agents', label: 'Maximum lifetime',
+    summary: 'An agent is closed this long after it started, however busy it is.' },
+  ONE_SHOT_TTL_MS: { tab: 'sessions', section: 'Agents', label: 'Close one-off requests after',
+    summary: 'Single requests (titles, summaries) are closed this soon. 0 turns this off.' },
+  WORKSPACE_ROOT: { tab: 'sessions', section: 'Workspaces', label: 'Workspace folder',
+    summary: 'Every chat gets its own folder under here. Needed by the sandboxed runners.' },
+  WORKSPACE_ON_EXPIRY: { tab: 'sessions', section: 'Workspaces', label: 'When a chat ends',
+    summary: 'What happens to its workspace. Empty workspaces are always removed.',
+    options: { archive: 'Archive it', 'delete': 'Delete it', keep: 'Keep it in place' } },
+  WORKSPACE_ARCHIVE_TTL_MS: { tab: 'sessions', section: 'Workspaces', label: 'Delete archives after',
+    summary: 'Archived workspaces and reset profiles older than this are deleted. 0 keeps them forever.',
+    when: { key: 'WORKSPACE_ON_EXPIRY', values: ['archive'], note: 'Only matters when chats are archived.' } },
+
+  KEY_MAX_SESSIONS: { tab: 'limits', section: 'Per key', label: 'Chats at once', unit: 'chats',
+    summary: 'Live chats one key may hold. A new chat closes that key’s oldest idle one. 0 means unlimited.' },
+  KEY_DAILY_SPEND_USD: { tab: 'limits', section: 'Per key', label: 'Daily spend cap', unit: 'USD / day',
+    summary: 'Model calls are refused once a key has spent this much today. 0 means unlimited.' },
+
+  PROFILE_MAX_BYTES: { tab: 'profiles', section: 'Profiles', label: 'Size limit per key', unit: 'bytes', bytes: true,
+    summary: 'Past it, uploads are refused and the profile becomes read-only until trimmed. 0 means unlimited.', when: SANDBOXED },
+  PROFILE_TEMPLATE: { tab: 'profiles', section: 'Profiles', label: 'Starting template',
+    summary: 'A folder copied into every new profile, e.g. a shared set of skills. Empty starts with just your default model.', placeholder: '/path/to/template', when: SANDBOXED },
+  PROFILE_ROOT: { tab: 'profiles', section: 'Profiles', label: 'Profiles folder',
+    summary: 'Where each key’s profile is stored.', when: SANDBOXED },
+  SHARED_BUNDLES: { tab: 'profiles', section: 'Shared bundles', label: 'Bundles every key gets',
+    summary: 'Comma-separated bundle names, * for all, or empty for none. A key can have its own list on API Management.',
+    placeholder: 'none', when: SANDBOXED },
+  SHARED_ROOT: { tab: 'profiles', section: 'Shared bundles', label: 'Bundles folder',
+    summary: 'Each subfolder is a bundle with skills/, extensions/ and prompts/, mounted read-only for the keys that get it.', when: SANDBOXED },
+
+  FALLBACK_MODEL: { tab: 'models', section: 'Fallback', label: 'Fallback model',
+    summary: 'Model to switch to when the current one runs out of credit or stops responding. Empty turns fallback off.' },
+  FALLBACK_MODE: { tab: 'models', section: 'Fallback', label: 'Stay on the fallback',
+    summary: 'How soon to try the original model again.',
+    options: { session: 'For the rest of the chat', request: 'For this request only', cooldown: 'For a cooldown period' },
+    when: { key: 'FALLBACK_MODEL', nonEmpty: true, note: 'Only used when a fallback model is set.' } },
+  FALLBACK_COOLDOWN_MS: { tab: 'models', section: 'Fallback', label: 'Cooldown',
+    summary: 'How long to stay on the fallback before trying the original model again.',
+    when: { key: 'FALLBACK_MODE', values: ['cooldown'], note: 'Only used when staying on the fallback for a cooldown period.' } },
+
+  GATEWAY_API_KEY: { tab: 'access', section: 'API and dashboard', label: 'Admin API key',
+    summary: 'A key that opens both the API and the dashboard. Leave empty and use API Management for per-person keys.' },
+  DASHBOARD_SESSION_MS: { tab: 'access', section: 'API and dashboard', label: 'Stay signed in for',
+    summary: 'How long a dashboard sign-in lasts. 0 lasts until the browser closes.' },
+  ALLOW_IMAGE_URLS: { tab: 'access', section: 'Images', label: 'Fetch image URLs',
+    summary: 'Let clients send images as links for the gateway to download. Off accepts embedded images only.' },
+
+  HOST: { tab: 'server', section: 'Listening', label: 'Address',
+    summary: '127.0.0.1 is this machine only; 0.0.0.0 exposes the gateway to your network.' },
+  PORT: { tab: 'server', section: 'Listening', label: 'Port', summary: 'TCP port to listen on.' },
+  BODY_LIMIT: { tab: 'server', section: 'Requests', label: 'Largest request', unit: 'bytes', bytes: true,
+    summary: 'Requests bigger than this are refused.' },
+  MAX_IMAGE_BYTES: { tab: 'server', section: 'Requests', label: 'Largest fetched image', unit: 'bytes', bytes: true,
+    summary: 'Images downloaded from a URL may not be bigger than this.',
+    when: { key: 'ALLOW_IMAGE_URLS', checked: true, note: 'Only used when image URLs are fetched (Access tab).' } },
+  ACCESS_LOG: { tab: 'server', section: 'Logging', label: 'Access log',
+    summary: 'Write one line per request to the gateway’s standard error.' },
+  PI_AGENT_PACKAGE: { tab: 'server', section: 'Pi', label: 'Pi package location',
+    summary: 'Only needed when the Pi package cannot be found automatically.', placeholder: 'found automatically' },
+  PI_CWD: { tab: 'server', section: 'Pi', label: 'Working folder without workspaces',
+    summary: 'Used only when the workspace folder is empty. Empty means where the gateway was started.', placeholder: 'the gateway’s working folder' }
+};
+
+function layoutFor(s) {
+  return LAYOUT[s.key] || { tab: 'other', section: s.group || 'Other', label: s.key, summary: '' };
+}
+
+function settingNote(text, cls) {
+  var n = $('settingnote');
+  n.textContent = text;
+  n.className = 'savenote ' + (cls || '');
+}
+
+function humanBytes(n) {
+  n = Number(n);
+  if (!isFinite(n) || n <= 0) return '';
+  if (n >= 1073741824) return '= ' + (n / 1073741824).toFixed(1) + ' GB';
+  if (n >= 1048576) return '= ' + (n / 1048576).toFixed(1) + ' MB';
+  if (n >= 1024) return '= ' + (n / 1024).toFixed(1) + ' KB';
+  return '';
+}
+
+/* The value a field would save, as the server's display form, for comparing and for "when" rules. */
+function inputValue(s, input) {
+  if (s.type === 'bool') return input.checked;
+  return input.value;
+}
+function savedValue(s) {
+  if (s.type === 'bool') return Boolean(s.value);
+  return s.display == null ? '' : String(s.display);
+}
+function defaultValue(s) {
+  if (s.type === 'bool') return Boolean(s.def);
+  return s.defDisplay == null ? '' : String(s.defDisplay);
+}
+
+function settingInput(s, L) {
+  var row = el('div'); row.className = 'fieldrow';
+  var input;
+  if (s.type === 'enum') {
+    input = el('select');
+    (s.options || []).forEach(function (o) {
+      var op = el('option', (L.options && L.options[o]) || o);
+      op.value = o;
+      input.appendChild(op);
+    });
+    input.value = String(s.value);
+  } else {
+    input = el('input');
+    if (s.type === 'bool') {
+      input.type = 'checkbox';
+      input.checked = Boolean(s.value);
+      input.className = 'toggle';
+    } else if (s.type === 'secret') {
+      // The value is never sent to the page, so there is nothing to prefill.
+      input.type = 'password';
+      input.autocomplete = 'new-password';
+      input.placeholder = s.isSet ? 'set — type a new one to replace it' : 'not set';
+    } else {
+      input.type = s.type === 'int' || s.type === 'float' ? 'number' : 'text';
+      if (s.type === 'float') input.step = 'any';
+      if (s.min != null) input.min = s.min;
+      if (s.max != null) input.max = s.max;
+      if (s.type === 'duration') input.placeholder = 'e.g. 90s, 10m, 24h, 2d';
+      if (s.type === 'model') { input.setAttribute('list', 'modellist'); input.placeholder = 'provider/model, empty for none'; }
+      if (L.placeholder) input.placeholder = L.placeholder;
+      input.value = s.display == null ? '' : String(s.display);
+    }
+  }
+  SETTING_INPUTS[s.key] = input;
+  row.appendChild(input);
+  if (s.type === 'bool') {
+    var state = el('span', input.checked ? 'on' : 'off'); state.className = 'togglestate';
+    input.addEventListener('change', function () { state.textContent = input.checked ? 'on' : 'off'; });
+    row.appendChild(state);
+  }
+  if (L.unit && s.type !== 'bool') { var u = el('span', L.unit); u.className = 'unit'; row.appendChild(u); }
+  if (L.bytes) {
+    var human = el('span', humanBytes(input.value)); human.className = 'unit';
+    input.addEventListener('input', function () { human.textContent = humanBytes(input.value); });
+    row.appendChild(human);
+  }
+  if (s.type === 'secret' && s.isSet) {
+    var clear = el('button', 'remove');
+    clear.title = 'remove the stored key when you save';
+    clear.addEventListener('click', function () {
+      input.value = '';
+      input.dataset.clear = '1';
+      refreshSettingState();
+    });
+    row.appendChild(clear);
+  } else if (s.type !== 'secret') {
+    var reset = el('button', 'default');
+    reset.className = 'linkish';
+    reset.title = 'set back to the default: ' + (defaultValue(s) === '' ? '(empty)' : String(defaultValue(s)));
+    reset.addEventListener('click', function () {
+      if (s.type === 'bool') { input.checked = defaultValue(s); input.dispatchEvent(new Event('change')); }
+      else { input.value = defaultValue(s); input.dispatchEvent(new Event('input')); }
+      refreshSettingState();
+    });
+    row.appendChild(reset);
+  }
+  input.addEventListener('input', refreshSettingState);
+  input.addEventListener('change', refreshSettingState);
+  return row;
+}
+
+function settingField(s) {
+  var L = layoutFor(s);
+  var box = el('div'); box.className = 'field';
+  box.setAttribute('data-key', s.key);
+  box.setAttribute('data-search', (L.label + ' ' + s.key + ' ' + (L.summary || '') + ' ' + (s.help || '')).toLowerCase());
+
+  var label = el('div'); label.className = 'fieldlabel';
+  var head = el('div'); head.className = 'fieldhead';
+  head.appendChild(el('b', L.label));
+  if (s.restart) { var rb = el('span', 'restart'); rb.className = 'badge restart'; rb.title = 'takes effect after the gateway restarts'; head.appendChild(rb); }
+  if (s.source === 'env') { var eb = el('span', 'from env'); eb.className = 'badge env'; head.appendChild(eb); }
+  var mod = el('span', 'unsaved'); mod.className = 'badge dirty'; head.appendChild(mod);
+  label.appendChild(head);
+  var key = el('code', s.key); key.className = 'fieldkey'; label.appendChild(key);
+  box.appendChild(label);
+
+  var control = el('div'); control.className = 'fieldcontrol';
+  control.appendChild(settingInput(s, L));
+  if (L.summary) { var sum = el('p', L.summary); sum.className = 'summary'; control.appendChild(sum); }
+  var when = el('p'); when.className = 'whennote'; control.appendChild(when);
+  if (s.help && s.help !== L.summary) {
+    var more = el('details'); more.className = 'more';
+    more.appendChild(el('summary', 'details'));
+    var full = el('p', s.help);
+    full.appendChild(el('span', ' Default: ' + (defaultValue(s) === '' ? '(empty)' : String(defaultValue(s))) + '.'));
+    more.appendChild(full);
+    control.appendChild(more);
+  }
+  box.appendChild(control);
+  SETTING_FIELDS[s.key] = { box: box, s: s, L: L, when: when };
+  return box;
+}
+
+/* Dims fields that do nothing with the current (possibly unsaved) choices, marks unsaved edits,
+   and keeps the save bar's count honest. */
+function refreshSettingState() {
+  var dirty = 0;
+  Object.keys(SETTING_FIELDS).forEach(function (k) {
+    var f = SETTING_FIELDS[k];
+    var input = SETTING_INPUTS[k];
+    var changed = f.s.type === 'secret'
+      ? (input.value !== '' || input.dataset.clear === '1')
+      : inputValue(f.s, input) !== savedValue(f.s);
+    f.box.classList.toggle('changed', changed);
+    if (changed) dirty++;
+
+    var rule = f.L.when;
+    var active = true;
+    if (rule && SETTING_INPUTS[rule.key]) {
+      var ctl = SETTING_INPUTS[rule.key];
+      if (rule.values) active = rule.values.indexOf(ctl.value) >= 0;
+      else if (rule.nonEmpty) active = ctl.value.trim() !== '';
+      else if (rule.checked !== undefined) active = ctl.checked === rule.checked;
+    }
+    f.box.classList.toggle('inactive', !active);
+    f.when.textContent = active ? '' : rule.note;
+  });
+  $('settingsave').textContent = dirty ? 'save ' + dirty + ' change' + (dirty === 1 ? '' : 's') : 'save changes';
+  $('settingsave').disabled = !dirty;
+  $('settingdiscard').hidden = !dirty;
+  $('savebar').classList.toggle('pending', dirty > 0);
+  if (dirty) settingNote('', '');
+}
+
+var activeSettingTab = 'sandbox';
+
+function showSettingTab(id) {
+  activeSettingTab = id;
+  applySettingFilter();
+}
+
+/* A search spans every tab; otherwise only the active tab shows. */
+function applySettingFilter() {
+  var q = ($('settingsearch').value || '').trim().toLowerCase();
+  Array.prototype.forEach.call(document.querySelectorAll('#settingtabs .tab'), function (b) {
+    b.classList.toggle('on', !q && b.getAttribute('data-tab') === activeSettingTab);
+    b.classList.toggle('muted', Boolean(q));
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('#settinggroups .settingtab'), function (tab) {
+    var tabShown = q ? true : tab.getAttribute('data-tab') === activeSettingTab;
+    var any = false;
+    Array.prototype.forEach.call(tab.querySelectorAll('.section'), function (sec) {
+      var shown = 0;
+      Array.prototype.forEach.call(sec.querySelectorAll('.field'), function (f) {
+        var hit = !q || f.getAttribute('data-search').indexOf(q) >= 0;
+        f.hidden = !hit;
+        if (hit) shown++;
+      });
+      // The password panel has no data-search, so it goes with its section's title.
+      var pass = sec.querySelector('.passblock');
+      if (pass) { var hitPass = !q || 'dashboard password sign in'.indexOf(q) >= 0 || q.indexOf('password') >= 0; pass.hidden = !hitPass; if (hitPass) shown++; }
+      sec.hidden = shown === 0;
+      if (shown) any = true;
+    });
+    tab.hidden = !tabShown || !any;
+    var intro = tab.querySelector('.tabintro');
+    if (intro) intro.hidden = Boolean(q);
+  });
+  var none = q && !document.querySelector('#settinggroups .settingtab:not([hidden])');
+  $('settingempty').hidden = !none;
+}
+
+function renderSettings() {
+  if (!SETTINGS) return;
+  SETTING_INPUTS = {};
+  SETTING_FIELDS = {};
+  var list = SETTINGS.settings;
+  var byKey = {};
+  list.forEach(function (s) { byKey[s.key] = s; });
+  var restart = list.filter(function (x) { return x.restart; }).length;
+  var edited = list.filter(function (x) { return x.source === 'ui'; }).length;
+  var RUNNER_SHORT = { bwrap: 'bubblewrap', docker: 'docker', podman: 'podman', inprocess: 'in-process' };
+  var runner = byKey.RUNNER ? (RUNNER_SHORT[byKey.RUNNER.value] || byKey.RUNNER.value) : '-';
+  var net = byKey.SANDBOX_NETWORK ? (byKey.SANDBOX_NETWORK.value === 'on' ? 'on' : 'off') : '-';
+  $('settingcards').replaceChildren(
+    cardEl('runner', runner, '', 'where agents run', runner === 'in-process' ? 'warn' : ''),
+    cardEl('network', net, '', 'inside sandboxes', net === 'on' ? 'warn' : ''),
+    cardEl('changed', edited, '', 'from the defaults'),
+    cardEl('restart', restart, '', 'need a restart to change')
+  );
+  $('settinghint').textContent = 'Saved in ' + SETTINGS.dbPath + '. Changes apply straight away unless marked restart; ' +
+    'sandbox changes apply to new chats.';
+
+  // tab -> section -> settings, in LAYOUT order, then anything unmapped in server order.
+  var order = Object.keys(LAYOUT);
+  var sorted = list.slice().sort(function (a, b) {
+    var ia = order.indexOf(a.key), ib = order.indexOf(b.key);
+    return (ia < 0 ? 1e6 : ia) - (ib < 0 ? 1e6 : ib);
+  });
+  var tree = {};
+  sorted.forEach(function (s) {
+    var L = layoutFor(s);
+    tree[L.tab] = tree[L.tab] || { sections: [], bySection: {} };
+    var t = tree[L.tab];
+    if (!t.bySection[L.section]) { t.bySection[L.section] = []; t.sections.push(L.section); }
+    t.bySection[L.section].push(s);
+  });
+
+  var tabs = SETTING_TABS.filter(function (t) { return tree[t.id] || t.id === 'access'; });
+  if (!tabs.some(function (t) { return t.id === activeSettingTab; })) activeSettingTab = tabs[0].id;
+  var bar = $('settingtabs');
+  bar.replaceChildren.apply(bar, tabs.map(function (t) {
+    var b = el('button', t.label);
+    b.className = 'tab';
+    b.setAttribute('data-tab', t.id);
+    b.addEventListener('click', function () {
+      $('settingsearch').value = '';
+      showSettingTab(t.id);
+      // The tab is part of the address, so it can be linked and survives a reload.
+      history.replaceState(null, '', '#settings/' + t.id);
+    });
+    return b;
+  }));
+
+  var box = $('settinggroups');
+  box.replaceChildren.apply(box, tabs.map(function (t) {
+    var panel = el('div'); panel.className = 'settingtab';
+    panel.setAttribute('data-tab', t.id);
+    var intro = el('p', t.intro); intro.className = 'tabintro'; panel.appendChild(intro);
+    var node = tree[t.id] || { sections: [], bySection: {} };
+    var sections = node.sections.slice();
+    // The dashboard password has no spec entry; it gets its own section on the Access tab.
+    if (t.id === 'access') sections.splice(1, 0, 'Dashboard password');
+    sections.forEach(function (name) {
+      var sec = el('section'); sec.className = 'section';
+      sec.appendChild(el('h4', name));
+      if (name === 'Dashboard password') sec.appendChild(passwordPanel());
+      else node.bySection[name].forEach(function (s) { sec.appendChild(settingField(s)); });
+      panel.appendChild(sec);
+    });
+    return panel;
+  }));
+  refreshSettingState();
+  applySettingFilter();
+
+  // A model field suggests real catalogue ids, so a typo is caught before saving.
+  if (list.some(function (x) { return x.type === 'model'; })) ensureModels();
+}
+
+function collectSettingChanges() {
+  var out = {};
+  (SETTINGS ? SETTINGS.settings : []).forEach(function (s) {
+    var input = SETTING_INPUTS[s.key];
+    if (!input) return;
+    if (s.type === 'bool') {
+      if (input.checked !== Boolean(s.value)) out[s.key] = input.checked;
+      return;
+    }
+    if (s.type === 'secret') {
+      if (input.dataset.clear === '1') out[s.key] = '';
+      else if (input.value !== '') out[s.key] = input.value;
+      return;
+    }
+    if (input.value !== savedValue(s)) out[s.key] = input.value;
+  });
+  return out;
+}
+
+function labelOf(key) { return (LAYOUT[key] && LAYOUT[key].label) || key; }
+
+function saveSettings() {
+  var changes = collectSettingChanges();
+  var keys = Object.keys(changes);
+  if (!keys.length) { settingNote('nothing changed', ''); return; }
+  settingNote('saving…', '');
+  fetch('dashboard/settings', {
+    method: 'POST', headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ settings: changes })
+  })
+    .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+    .then(function (res) {
+      if (!res.ok) {
+        // Name the setting in the page's own words, and take the user to it.
+        var msg = res.j.error ? res.j.error.message : 'save failed';
+        var bad = keys.find(function (k) { return msg.indexOf(k) === 0; });
+        if (bad) {
+          msg = labelOf(bad) + msg.slice(bad.length).replace(/^:\s*/, ': ');
+          var f = SETTING_FIELDS[bad];
+          if (f) { activeSettingTab = f.L.tab; $('settingsearch').value = ''; applySettingFilter(); f.box.classList.add('error'); SETTING_INPUTS[bad].focus(); }
+        }
+        settingNote(msg, 'bad');
+        return;
+      }
+      SETTINGS = res.j;
+      renderSettings();
+      var applied = res.j.applied || [];
+      var restart = res.j.restart || [];
+      settingNote('saved ' + applied.map(labelOf).join(', ') +
+        (restart.length ? ' — restart the gateway for: ' + restart.map(labelOf).join(', ') : ''),
+        restart.length ? 'warn' : 'good');
+    })
+    .catch(function (e) { settingNote('save failed: ' + e.message, 'bad'); });
+}
+
+/* The password is not a setting, so it has no field in the spec: it is never edited as a text box
+   and only its hash is stored. This is appended to the Access Control panel. */
+function passwordPanel() {
+  var on = Boolean(SETTINGS && SETTINGS.passwordSet);
+  var box = el('div'); box.className = 'passblock';
+  var note = el('div'); note.className = 'passnote';
+
+  var status = el('div'); status.className = 'passstatus ' + (on ? 'good' : 'off');
+  status.appendChild(el('b', on ? 'a password is set' : 'no password is set'));
+  status.appendChild(el('span', on
+    ? 'every page and endpoint under /dashboard asks for it first'
+    : 'anyone who can reach this port can open the dashboard'));
+  box.appendChild(status);
+
+  var inputs = {};
+  [['current password', 'current', on], ['new password', 'next', true], ['repeat new password', 'again', true]]
+    .forEach(function (row) {
+      var wrap = el('div'); wrap.className = 'passfield';
+      wrap.appendChild(el('label', row[0]));
+      var inp = el('input');
+      inp.type = 'password';
+      inp.autocomplete = row[1] === 'current' ? 'current-password' : 'new-password';
+      inp.disabled = !row[2];
+      inputs[row[1]] = inp;
+      wrap.appendChild(inp);
+      box.appendChild(wrap);
+    });
+
+  function submit(payload, button) {
+    button.disabled = true;
+    passNote(note, 'saving\u2026', '');
+    fetch('dashboard/password', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload)
+    })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok) {
+          button.disabled = false;
+          passNote(note, res.j.error ? res.j.error.message : 'could not save', 'bad');
+          return;
+        }
+        // Re-rendering is what updates the status line above, and it detaches this node, so the
+        // message goes to the save bar instead.
+        SETTINGS.passwordSet = res.j.passwordSet;
+        renderSettings();
+        settingNote(res.j.passwordSet
+          ? 'password saved - the dashboard now asks for it, and this browser stays signed in'
+          : 'password removed - the dashboard is open again', 'good');
+      })
+      .catch(function (e) { button.disabled = false; passNote(note, e.message, 'bad'); });
+  }
+
+  var row = el('div'); row.className = 'passrow';
+  var save = el('button', on ? 'change password' : 'set password');
+  save.addEventListener('click', function () {
+    if (inputs.next.value !== inputs.again.value) return passNote(note, 'the two new passwords do not match', 'bad');
+    if (inputs.next.value.length < 8) return passNote(note, 'use at least 8 characters', 'bad');
+    submit({ current: inputs.current.value, next: inputs.next.value }, save);
+  });
+  row.appendChild(save);
+  if (on) {
+    var drop = el('button', 'remove password');
+    drop.addEventListener('click', function () { submit({ current: inputs.current.value, next: '' }, drop); });
+    row.appendChild(drop);
+  }
+  box.appendChild(row);
+  box.appendChild(note);
+  return box;
+}
+
+function passNote(node, text, cls) { node.textContent = text; node.className = 'passnote ' + (cls || ''); }
+
+function ensureSettings(force) {
+  if (SETTINGS && !force) return;
+  $('settinghint').textContent = 'loading\u2026';
+  fetch('dashboard/settings.json', { cache: 'no-store' })
+    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function (d) { SETTINGS = d; renderSettings(); })
+    .catch(function (e) { $('settinghint').textContent = 'cannot load settings: ' + e.message; });
+}
+$('settingsave').addEventListener('click', saveSettings);
+$('settingsreload').addEventListener('click', function () { ensureSettings(true); });
+$('settingdiscard').addEventListener('click', function () { renderSettings(); settingNote('changes discarded', ''); });
+$('settingsearch').addEventListener('input', applySettingFilter);
+
+/* Views. The nav drives a hash route, so a view is linkable and survives a reload. */
+var VIEWS = {
+  overview: { title:'Gateway Overview', subtitle:'Live Pi agents, their models, and when each one will be reaped', section:'Overview' },
+  agents:   { title:'Agents', subtitle:'Every live Pi agent, with its expiry and a kill control', section:'Agents' },
+  models:   { title:'Models', subtitle:'Every model this gateway can route to, grouped by provider', section:'Models' },
+  spend:    { title:'Spend', subtitle:'What agents have cost, per model and per day', section:'Spend' },
+  profiles: { title:'Profiles', subtitle:'Per-key skills, extensions and settings, and who can change them', section:'Profiles' },
+  apikeys:  { title:'API Management', subtitle:'Keys for the OpenAI endpoints, their expiry, and what each one has used', section:'API Management' },
+  settings: { title:'Settings', subtitle:'Gateway configuration, stored in SQLite and editable here', section:'Settings' }
+};
+function route() {
+  var name = (location.hash || '#overview').replace(/^#\/?/, '');
+  // #settings/<tab> opens a settings tab directly.
+  var sub = name.split('/');
+  name = sub[0];
+  if (name === 'settings' && sub[1] && SETTING_TABS.some(function (t) { return t.id === sub[1]; })) {
+    activeSettingTab = sub[1];
+    if (SETTINGS) applySettingFilter();
+  }
+  if (!VIEWS[name]) name = 'overview';
+  Object.keys(VIEWS).forEach(function (k) {
+    var view = $('view-' + k);
+    if (view) view.classList.toggle('on', k === name);
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('nav a[href^="#"]'), function (a) {
+    a.classList.toggle('on', a.getAttribute('href') === '#' + name);
+  });
+  $('title').textContent = VIEWS[name].title;
+  $('subtitle').textContent = VIEWS[name].subtitle;
+  $('sectiontitle').textContent = VIEWS[name].section;
+  if (name === 'models') ensureModels();
+  if (name === 'spend') ensureSpend(true);
+  if (name === 'apikeys') ensureApiKeys(true);
+  if (name === 'settings') ensureSettings();
+  if (name === 'profiles') {
+    ensureProfiles();
+    // #profiles/<scope> opens that key's detail, which is how the API keys page links here.
+    if (sub[1]) openProfileDetail(sub[1], true); else closeProfileDetail(true);
+  }
+}
+
+/* Profiles: one row per key's profile. Lock and reset go to the server, which closes that key's agents. */
+function bytes(n) {
+  n = Number(n) || 0;
+  if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
+  if (n >= 1024) return (n / 1024).toFixed(1) + ' KB';
+  return n + ' B';
+}
+/* A name list for a summary table: the first few and a count, wrapping rather than stretching the
+   page. The full lists are one click away, in the detail view. */
+function listCell(names, max) {
+  max = max || 6;
+  var text = names.length > max ? names.slice(0, max).join(', ') + ', +' + (names.length - max) + ' more' : names.join(', ');
+  var td = cell(names.length ? text : '-');
+  td.className = names.length ? 'wrap' : 'wrap dim';
+  if (names.length > max) td.title = names.join(', ');
+  return td;
+}
+function renderShared(sh) {
+  var tbody = $('sharedrows');
+  $('sharedhint').textContent = 'Folders under ' + sh.root + ', each laid out like a Pi package (skills/, extensions/, prompts/), ' +
+    'mounted read-only for the keys that get them. Every key gets: ' + (sh.defaultBundles || 'none') +
+    ', unless it has its own list on API Management. Edits reach open chats on their next /reload.';
+  if (!sh.bundles.length) {
+    var tr = el('tr');
+    tr.appendChild(cell('no bundles yet - create ' + sh.root + '/base/skills/<skill>/SKILL.md, for example', 'empty')).colSpan = 5;
+    tbody.replaceChildren(tr);
+    return;
+  }
+  tbody.replaceChildren.apply(tbody, sh.bundles.map(function (b) {
+    var tr = el('tr');
+    tr.appendChild(cell(b.name));
+    tr.appendChild(listCell(b.skills));
+    tr.appendChild(listCell(b.extensions));
+    tr.appendChild(listCell(b.prompts));
+    tr.appendChild(listCell(b.keys));
+    return tr;
+  }));
+}
+function renderProfiles(d) {
+  if (d.shared) renderShared(d.shared);
+  var tbody = $('profilerows');
+  $('profilehint').textContent = d.runner === 'inprocess'
+    ? 'RUNNER is inprocess, so no session uses these profiles until a sandboxed runner is chosen.'
+    : (d.maxBytes ? 'Quota per profile: ' + bytes(d.maxBytes) + '. A profile over it is mounted read-only until trimmed.' : 'No profile quota is set.');
+  if (!d.profiles.length) {
+    var tr = el('tr');
+    tr.appendChild(cell('no profiles yet - one is created the first time a key starts a chat', 'empty')).colSpan = 7;
+    tbody.replaceChildren(tr);
+    return;
+  }
+  tbody.replaceChildren.apply(tbody, d.profiles.map(function (p) {
+    var tr = el('tr');
+    tr.className = 'clickable' + (p.scope === DETAIL_SCOPE ? ' selected' : '');
+    tr.title = 'show everything this key\u2019s agents get';
+    tr.addEventListener('click', function (e) {
+      if (e.target.closest && e.target.closest('button')) return;
+      openProfileDetail(p.scope);
+    });
+    tr.appendChild(cell(p.key));
+    tr.appendChild(cell(bytes(p.bytes) + (d.maxBytes ? ' / ' + bytes(d.maxBytes) : ''), 'num'));
+    tr.appendChild(listCell(p.skills));
+    tr.appendChild(listCell(p.extensions));
+    tr.appendChild(cell(p.liveSessions, 'num'));
+    tr.appendChild(cell(p.locked ? 'locked' : p.writable ? 'writable' : 'read-only: ' + p.readOnlyReason, p.writable ? '' : 'bad'));
+    var actions = el('td');
+    var lock = el('button', p.locked ? 'unlock' : 'lock');
+    lock.setAttribute('data-scope', p.scope);
+    lock.setAttribute('data-action', p.locked ? 'unlock' : 'lock');
+    actions.appendChild(lock);
+    if (!p.locked) {
+      var reset = el('button', 'reset');
+      reset.setAttribute('data-scope', p.scope);
+      reset.setAttribute('data-action', 'reset');
+      actions.appendChild(reset);
+    }
+    tr.appendChild(actions);
+    return tr;
+  }));
+}
+/* ---- profile detail: everything one key's agents get ---- */
+var DETAIL_SCOPE = null;
+var ORIGIN_ORDER = ['own', 'workspace', 'shared', 'gateway', 'built-in'];
+
+function originBadge(origin) {
+  var b = el('span', origin);
+  b.className = 'origin ' + String(origin).split(':')[0];
+  return b;
+}
+function subhead(text, count) {
+  var h = el('h4', text);
+  if (count != null) { var c = el('span', ' ' + count); c.className = 'count'; h.appendChild(c); }
+  return h;
+}
+/* A list of {name, description}, folded after `fold` items so a 45-skill bundle stays readable. */
+function itemList(items, fold, extra) {
+  var wrap = el('div');
+  if (!items.length) { var none = el('p', 'none'); none.className = 'dim small'; wrap.appendChild(none); return wrap; }
+  function row(it) {
+    var r = el('div'); r.className = 'item';
+    r.appendChild(el('b', it.name));
+    if (extra) extra(r, it);
+    if (it.description) { var d = el('span', it.description); d.className = 'desc'; r.appendChild(d); }
+    return r;
+  }
+  var shown = fold && items.length > fold ? items.slice(0, fold) : items;
+  shown.forEach(function (it) { wrap.appendChild(row(it)); });
+  if (shown.length < items.length) {
+    var more = el('details'); more.className = 'more';
+    more.appendChild(el('summary', (items.length - shown.length) + ' more'));
+    items.slice(shown.length).forEach(function (it) { more.appendChild(row(it)); });
+    wrap.appendChild(more);
+  }
+  return wrap;
+}
+function inventoryBlock(inv) {
+  var box = el('div'); box.className = 'invgrid';
+  function col(title, items, fold) {
+    var c = el('div');
+    c.appendChild(subhead(title, items.length));
+    c.appendChild(itemList(items, fold));
+    return c;
+  }
+  box.appendChild(col('skills', inv.skills || [], 8));
+  box.appendChild(col('extensions', (inv.extensions || []).map(function (e) { return { name: e.name, description: bytes(e.bytes) }; }), 8));
+  box.appendChild(col('prompts', inv.prompts || [], 8));
+  box.appendChild(col('agents', inv.agents || [], 8));
+  if (inv.packages && inv.packages.length) box.appendChild(col('packages', inv.packages.map(function (p) { return { name: p }; }), 8));
+  return box;
+}
+
+function renderProfileDetail(d) {
+  var box = $('profiledetail');
+  box.hidden = false;
+  var head = el('div'); head.className = 'toolbar';
+  var title = el('div');
+  title.appendChild(el('h3', d.key));
+  var facts = [d.created ? bytes(d.bytes) + (d.maxBytes ? ' of ' + bytes(d.maxBytes) : '') : 'no profile yet',
+    d.locked ? 'locked' : (d.writable ? 'writable by its chats' : 'read-only: ' + d.readOnlyReason),
+    d.liveSessions + ' live agent' + (d.liveSessions === 1 ? '' : 's'),
+    'bundles: ' + (d.bundles.length ? d.bundles.map(function (b) { return b.name; }).join(', ') : 'none')];
+  var hint = el('p', facts.join('  \u00b7  ')); hint.className = 'hint'; hint.style.margin = '0';
+  title.appendChild(hint);
+  head.appendChild(title);
+  var tools = el('div');
+  var refresh = el('button', 'refresh');
+  refresh.addEventListener('click', function () { openProfileDetail(d.scope, true); });
+  var close = el('button', 'close');
+  close.addEventListener('click', function () { location.hash = '#profiles'; });
+  tools.appendChild(refresh); tools.appendChild(close);
+  head.appendChild(tools);
+  var parts = [head];
+
+  // Their own: what the user or their agent installed in the profile.
+  var own = el('div'); own.className = 'detailsec';
+  own.appendChild(el('h4', 'Installed by the user \u2014 own profile'));
+  if (!d.created) {
+    var p0 = el('p', 'This key has not started a chat yet, so it has no profile. It is created on the first chat.'); p0.className = 'hint'; own.appendChild(p0);
+  } else if (d.ownError) {
+    var pe = el('p', 'cannot read the profile: ' + d.ownError); pe.className = 'hint bad'; own.appendChild(pe);
+  } else {
+    own.appendChild(inventoryBlock(d.own));
+    if (d.own.agentsMd) {
+      var md = el('details'); md.className = 'more';
+      md.appendChild(el('summary', 'AGENTS.md (' + bytes(d.own.agentsMd.bytes) + ')'));
+      var pre = el('pre', d.own.agentsMd.preview + (d.own.agentsMd.bytes > d.own.agentsMd.preview.length ? '\n\u2026' : ''));
+      pre.className = 'mdpreview';
+      md.appendChild(pre);
+      own.appendChild(md);
+    }
+  }
+  parts.push(own);
+
+  // Shared: each granted bundle, read-only.
+  var shared = el('div'); shared.className = 'detailsec';
+  shared.appendChild(el('h4', 'Shared bundles \u2014 read-only, from you'));
+  if (!d.bundles.length) { var pn = el('p', 'This key gets no shared bundles.'); pn.className = 'hint'; shared.appendChild(pn); }
+  d.bundles.forEach(function (b) {
+    var bh = el('div'); bh.className = 'bundlename'; bh.appendChild(originBadge('shared: ' + b.name));
+    shared.appendChild(bh);
+    shared.appendChild(inventoryBlock(b));
+  });
+  parts.push(shared);
+
+  // Live: exactly what a running agent has loaded, tools included.
+  var live = el('div'); live.className = 'detailsec';
+  live.appendChild(el('h4', 'Loaded in a running agent'));
+  if (!d.live) {
+    var pl = el('p', d.liveSessions ? 'Its agent is still starting.' : 'No agent is running for this key right now. Tools come from extensions and are only known once one runs: start a chat, then refresh.');
+    pl.className = 'hint'; live.appendChild(pl);
+  } else if (d.live.error) {
+    var pr = el('p', d.live.error); pr.className = 'hint bad'; live.appendChild(pr);
+  } else {
+    var byOrigin = function (a, b) {
+      var ka = ORIGIN_ORDER.indexOf(a.origin.split(':')[0]), kb = ORIGIN_ORDER.indexOf(b.origin.split(':')[0]);
+      return (ka - kb) || a.origin.localeCompare(b.origin) || a.name.localeCompare(b.name);
+    };
+    var grid = el('div'); grid.className = 'invgrid two';
+    var tcol = el('div');
+    tcol.appendChild(subhead('tools', d.live.tools.length));
+    tcol.appendChild(itemList(d.live.tools.slice().sort(byOrigin), 15, function (r, t) {
+      r.appendChild(originBadge(t.origin));
+      if (!t.active) { var off = el('span', 'inactive'); off.className = 'origin off'; r.appendChild(off); }
+    }));
+    var ccol = el('div');
+    ccol.appendChild(subhead('commands', d.live.commands.length));
+    ccol.appendChild(itemList(d.live.commands.slice().sort(byOrigin), 12, function (r, c) {
+      r.firstChild.textContent = '/' + c.name;
+      r.appendChild(originBadge(c.origin));
+    }));
+    grid.appendChild(tcol); grid.appendChild(ccol);
+    live.appendChild(grid);
+  }
+  parts.push(live);
+  box.replaceChildren.apply(box, parts);
+}
+
+function openProfileDetail(scope, fromRoute) {
+  if (!fromRoute && location.hash !== '#profiles/' + scope) { location.hash = '#profiles/' + scope; return; }
+  DETAIL_SCOPE = scope;
+  var box = $('profiledetail');
+  box.hidden = false;
+  if (!box.firstChild) box.appendChild(el('p', 'loading\u2026'));
+  fetch('dashboard/profiles/' + encodeURIComponent(scope) + '.json', { cache: 'no-store' })
+    .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); return j; }); })
+    .then(function (d) { if (DETAIL_SCOPE === scope) renderProfileDetail(d); ensureProfiles(); box.scrollIntoView({ block: 'nearest', inline: 'nearest' }); })
+    .catch(function (e) { box.replaceChildren(el('p', 'cannot load this profile: ' + e.message)); });
+}
+function closeProfileDetail() {
+  DETAIL_SCOPE = null;
+  var box = $('profiledetail');
+  box.hidden = true;
+  box.replaceChildren();
+}
+
+function ensureProfiles() {
+  fetch('dashboard/profiles.json', { cache: 'no-store' })
+    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(renderProfiles)
+    .catch(function (e) { $('profilehint').textContent = 'cannot load profiles: ' + e.message; });
+}
+$('profilerows').addEventListener('click', function (e) {
+  var btn = e.target.closest ? e.target.closest('button[data-scope]') : null;
+  if (!btn) return;
+  var scope = btn.getAttribute('data-scope');
+  var action = btn.getAttribute('data-action');
+  if (action === 'reset' && !confirm('Reset this profile?\n\nEvery skill, extension and setting on the key is archived and replaced with the template, and its live agents are closed.')) return;
+  if (action === 'lock' && !confirm('Lock this profile?\n\nIts live agents are closed, and new ones get it read-only until you unlock it.')) return;
+  btn.disabled = true;
+  var path = 'dashboard/profiles/' + encodeURIComponent(scope) + '/' + (action === 'reset' ? 'reset' : 'lock');
+  var body = action === 'reset' ? '{}' : JSON.stringify({ locked: action === 'lock' });
+  fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body })
+    .then(function (r) { return r.json().then(function (d) { if (!r.ok) throw new Error((d.error && d.error.message) || ('HTTP ' + r.status)); return d; }); })
+    .then(function (d) { renderProfiles(d); tick(); })
+    .catch(function (e) { $('profilehint').textContent = action + ' failed: ' + e.message; btn.disabled = false; });
+});
+window.addEventListener('hashchange', route);
+route();
+
+tick();
+schedule();
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# Runtime state, created next to server.mjs. Never commit it: gateway.db holds settings, API key
+# hashes and the spend ledger; the folders hold users' profiles, shared bundles and chat files.
+gateway.db
+gateway.db-*
+*.log
+profiles/
+shared/
+workspaces/
+workspaces-archive/
+workspaces-run/
+node_modules/

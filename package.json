@@ -1,0 +1,11 @@
+{
+	"name": "piper",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"description": "OpenAI-compatible gateway backed by the Pi coding agent",
+	"scripts": {
+		"start": "node server.mjs",
+		"test": "node test.mjs"
+	}
+}

@@ -1,0 +1,19 @@
+# Image for RUNNER=docker or RUNNER=podman: one container per Piper session.
+#
+#   docker build -t piper-sandbox -f Dockerfile.sandbox .
+#
+# The gateway mounts the session workspace at /workspace, the key's profile at /profile, the
+# bridge socket at /run/piper/bridge.sock and piper-bridge.mjs at /opt/piper/bridge.mjs, then runs
+# `pi --mode rpc` here with no network and no capabilities. No credential is ever put in the image
+# or the container: model calls go through the bridge to the gateway.
+#
+# Pin the Pi version to the one the gateway runs, so the bridge and the RPC protocol match.
+FROM node:22-bookworm-slim
+
+ARG PI_VERSION=0.87.1
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends bash ca-certificates git ripgrep python3 \
+  && rm -rf /var/lib/apt/lists/*
+RUN npm install -g --ignore-scripts @earendil-works/pi-coding-agent@${PI_VERSION}
+
+WORKDIR /workspace
