@@ -2,6 +2,7 @@
 	"name": "piper",
 	"version": "0.1.0",
 	"private": true,
+	"license": "Apache-2.0",
 	"type": "module",
 	"description": "OpenAI-compatible gateway backed by the Pi coding agent",
 	"scripts": {

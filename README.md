@@ -728,3 +728,12 @@ points its database and workspace root at scratch paths, so running it never tou
 
 The dashboard is `dashboard.html`, served from disk on each request — edit and refresh, no restart
 and no build step.
+
+## License
+
+Copyright 2026 ALange
+
+Licensed under the Apache License, Version 2.0; see [LICENSE](LICENSE). You may not use these files
+except in compliance with the License. Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied.
