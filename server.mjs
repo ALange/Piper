@@ -93,6 +93,10 @@ const SETTINGS_SPEC = [
 	  help: "Folder of shared bundles. Each subfolder is a bundle laid out like a Pi package — skills/, extensions/, prompts/ — mounted read-only into the sandboxes of the keys it is granted to. Users cannot change a bundle, but see edits to it on their next /reload." },
 	{ key: "SHARED_BUNDLES", group: "Agent", type: "text", def: "base",
 	  help: "Bundles every key gets unless it has its own list: comma-separated bundle names, * for all of them, or empty for none. A key's own list is set on the API Management page." },
+	{ key: "KEY_FILES_ROOT", group: "Agent", type: "text", def: join(GATEWAY_DIR, "files"),
+	  help: "Each API key gets a persistent shared folder under this root, mounted read-write at /workspace/shared in every one of that key's chats, so they can hand files to each other across conversations. Not used by the inprocess runner." },
+	{ key: "KEY_FILES_MAX_BYTES", group: "Agent", type: "int", def: 0, min: 0,
+	  help: "Largest a key's shared folder may grow to, in bytes. Past it, new chats get the folder frozen: readable, with writes that do not persist, until it is trimmed. 0 means no limit." },
 	{ key: "PROFILE_MAX_BYTES", group: "Agent", type: "int", def: 100 * 1024 * 1024, min: 0,
 	  help: "Largest a key's profile may grow to, in bytes. Uploads past it are refused, and a profile already over it is mounted read-only until it is trimmed. 0 means no limit." },
 	{ key: "CONTAINER_IMAGE", group: "Agent", type: "text", def: "piper-sandbox",
@@ -864,6 +868,11 @@ function profileRoot() {
 	return String(config.PROFILE_ROOT ?? "").trim();
 }
 
+/** Per-key shared folders, mounted read-write at /workspace/shared in that key's chats. */
+function keyFilesRoot() {
+	return String(config.KEY_FILES_ROOT ?? "").trim();
+}
+
 /** Shared bundles, mounted read-only into the sandboxes of the keys granted them. */
 function sharedRoot() {
 	return String(config.SHARED_ROOT ?? "").trim();
@@ -880,7 +889,7 @@ export function jailedRoots() {
 	// /proc is here because these tools run inside the gateway process, so /proc/self is the gateway
 	// itself: its environment, its command line and its open descriptors, which include the database.
 	// A session can still read /proc through bash, where it gets a fresh namespace instead.
-	return [workspaceRoot(), archiveRoot(), runRoot(), profileRoot(), sharedRoot(), agentDirPath(), GATEWAY_DIR, homedir(), "/proc", ...SENSITIVE_SYSTEM_PATHS].filter(Boolean);
+	return [workspaceRoot(), archiveRoot(), runRoot(), profileRoot(), sharedRoot(), keyFilesRoot(), agentDirPath(), GATEWAY_DIR, homedir(), "/proc", ...SENSITIVE_SYSTEM_PATHS].filter(Boolean);
 }
 
 /**
@@ -996,7 +1005,7 @@ export function sandboxAllowPaths() {
  */
 function protectedPaths() {
 	return [
-		GATEWAY_DIR, workspaceRoot(), archiveRoot(), runRoot(), profileRoot(), sharedRoot(), agentDirPath(),
+		GATEWAY_DIR, workspaceRoot(), archiveRoot(), runRoot(), profileRoot(), sharedRoot(), keyFilesRoot(), agentDirPath(),
 		"/etc/shadow", "/etc/shadow-", "/etc/gshadow", "/etc/gshadow-", "/etc/sudoers", "/etc/sudoers.d",
 		"/etc/ssh", "/etc/ssl/private", "/run/docker.sock", "/run/containerd", "/run/podman", "/proc", "/sys",
 	].filter(Boolean);
@@ -1073,6 +1082,7 @@ export const SANDBOX_PATHS = {
 	workspace: "/workspace",
 	profile: "/profile",
 	shared: "/shared",
+	keyFiles: "/workspace/shared",
 	runtime: "/opt/node",
 	pi: "/opt/pi",
 	bridge: "/opt/piper/bridge.mjs",
@@ -1179,7 +1189,7 @@ export function sandboxArgs({ workspace, layout = "same-path", network = config.
 	// The runtime and the operator's extras, read-only.
 	args.push("--ro-bind", runtime, runtimeInside);
 	for (const dir of extras) args.push("--ro-bind", dir, dir);
-	for (const bind of binds) {
+	const mount = (bind) => {
 		const source = bind.source ?? bind.path;
 		const target = bind.target ?? source;
 		// A throwaway overlay: the path looks writable inside, every write lands on an invisible tmpfs,
@@ -1187,8 +1197,13 @@ export function sandboxArgs({ workspace, layout = "same-path", network = config.
 		// them, so a plain read-only mount would make it ignore a locked profile's settings entirely.
 		if (bind.overlay) args.push("--overlay-src", source, "--tmp-overlay", target);
 		else args.push(bind.write ? "--bind" : "--ro-bind", source, target);
-	}
+	};
+	// A bind that lands inside the workspace (the key's /workspace/shared) has to follow the
+	// workspace's own bind, or that bind would cover it.
+	const insideWorkspace = (bind) => isInside(workspaceInside, bind.target ?? bind.source ?? bind.path);
+	for (const bind of binds) if (!insideWorkspace(bind)) mount(bind);
 	args.push("--bind", workspace, workspaceInside);
+	for (const bind of binds) if (insideWorkspace(bind)) mount(bind);
 	args.push("--dev", "/dev", "--proc", "/proc", "--chdir", workspaceInside);
 	args.push("--unshare-pid", "--die-with-parent");
 	return args;
@@ -1282,6 +1297,14 @@ class WorkspaceManager {
 		if (!workspace || !existsSync(workspace)) return;
 		const { archiveRoot: archive, policy } = this.#settings();
 		try {
+			// bwrap leaves an empty `shared` mountpoint behind for the key's shared folder, whose real
+			// files live elsewhere. It is not the session's work, so it goes before anything is judged.
+			const mountpoint = join(workspace, "shared");
+			try {
+				if (lstatSync(mountpoint).isDirectory() && readdirSync(mountpoint).length === 0) rmSync(mountpoint, { recursive: true });
+			} catch {
+				/* no mountpoint */
+			}
 			// A workspace nothing was ever written to (a request rejected before it ran) is not
 			// worth archiving, so it goes regardless of the policy.
 			if (readdirSync(workspace).length === 0) {
@@ -1641,7 +1664,7 @@ export async function startBridge(socketPath, meter, { keyId = null } = {}) {
  * overlay instead, so the session still works but nothing it writes there survives. Containers get
  * the same mounts at fixed paths.
  */
-export function runnerInvocation(kind, { workspace, profileDir, profileWritable = true, bundles = [], socketPath, bridgePath = BRIDGE_PATH, packageDir, network = config.SANDBOX_NETWORK, image = config.CONTAINER_IMAGE, uid = process.getuid?.() ?? 0, gid = process.getgid?.() ?? 0, memoryMb = config.SANDBOX_MEMORY_MB, pids = config.SANDBOX_PIDS, cpus = config.SANDBOX_CPUS }) {
+export function runnerInvocation(kind, { workspace, profileDir, profileWritable = true, filesDir = null, filesWritable = true, bundles = [], socketPath, bridgePath = BRIDGE_PATH, packageDir, network = config.SANDBOX_NETWORK, image = config.CONTAINER_IMAGE, uid = process.getuid?.() ?? 0, gid = process.getgid?.() ?? 0, memoryMb = config.SANDBOX_MEMORY_MB, pids = config.SANDBOX_PIDS, cpus = config.SANDBOX_CPUS }) {
 	// Each bundle is a Pi package: one -e loads its extensions, skills and prompts, and /reload
 	// rediscovers whatever the operator has added to it since.
 	const piArgs = (bridge, bundlePaths) => ["--mode", "rpc", "--no-session", "--approve", "-e", bridge, ...bundlePaths.flatMap((p) => ["-e", p])];
@@ -1657,6 +1680,11 @@ export function runnerInvocation(kind, { workspace, profileDir, profileWritable 
 			{ source: socketPath, target: P.socket, write: true },
 			{ source: bridgePath, target: P.bridge },
 			...bundles.map((b) => ({ source: b.path, target: `${P.shared}/${b.name}` })),
+			// The key's shared folder, inside the workspace so `ls` shows it: the same files in every
+			// chat of this key. Frozen, when over its limit, the way a locked profile is.
+			...(filesDir
+				? [filesWritable ? { source: filesDir, target: P.keyFiles, write: true } : { source: filesDir, target: P.keyFiles, overlay: true }]
+				: []),
 		];
 		// The Pi package is normally under the Node prefix, which is mounted at /opt/node already;
 		// one installed anywhere else is mounted at /opt/pi.
@@ -1672,7 +1700,7 @@ export function runnerInvocation(kind, { workspace, profileDir, profileWritable 
 			layout: "fixed",
 			network,
 			binds,
-			env: { ...quiet, PI_CODING_AGENT_DIR: P.profile, PIPER_BRIDGE_SOCKET: P.socket },
+			env: { ...quiet, PI_CODING_AGENT_DIR: P.profile, PIPER_BRIDGE_SOCKET: P.socket, ...(filesDir ? { PIPER_SHARED_DIR: P.keyFiles } : {}) },
 		});
 		const node = join(P.runtime, relative(runtimeRoot(), process.execPath));
 		return {
@@ -1680,7 +1708,7 @@ export function runnerInvocation(kind, { workspace, profileDir, profileWritable 
 			args: [...args.slice(1), "--", node, join(piInside, "dist", "bundle", "cli.js"), ...piArgs(P.bridge, bundles.map((b) => `${P.shared}/${b.name}`))],
 		};
 	}
-	const env = { ...quiet, HOME: "/workspace", PI_CODING_AGENT_DIR: "/profile", PIPER_BRIDGE_SOCKET: SOCKET_IN_CONTAINER };
+	const env = { ...quiet, HOME: "/workspace", PI_CODING_AGENT_DIR: "/profile", PIPER_BRIDGE_SOCKET: SOCKET_IN_CONTAINER, ...(filesDir ? { PIPER_SHARED_DIR: SANDBOX_PATHS.keyFiles } : {}) };
 	return {
 		command: kind,
 		args: [
@@ -1702,6 +1730,8 @@ export function runnerInvocation(kind, { workspace, profileDir, profileWritable 
 			"-v", `${socketPath}:${SOCKET_IN_CONTAINER}`,
 			"-v", `${bridgePath}:${BRIDGE_IN_CONTAINER}:ro`,
 			...bundles.flatMap((b) => ["-v", `${b.path}:/shared/${b.name}:ro`]),
+			// A frozen shared folder is read-only in a container: there is no overlay to hand it.
+			...(filesDir ? ["-v", `${filesDir}:${SANDBOX_PATHS.keyFiles}${filesWritable ? "" : ":ro"}`] : []),
 			"-w", "/workspace",
 			...Object.entries(env).flatMap(([name, value]) => ["-e", `${name}=${value}`]),
 			image,
@@ -1995,7 +2025,9 @@ async function createSandboxedSession(workspace, record) {
 	let session;
 	try {
 		const bundles = grantedBundles(record?.keyId ?? null);
-		const { command, args } = runnerInvocation(kind, { workspace, profileDir, profileWritable, bundles, socketPath, packageDir: piPackageDir });
+		const filesDir = ensureKeyFiles(record?.keyId ?? null);
+		const { writable: filesWritable } = keyFilesWritability(filesDir);
+		const { command, args } = runnerInvocation(kind, { workspace, profileDir, profileWritable, filesDir, filesWritable, bundles, socketPath, packageDir: piPackageDir });
 		// Containers carry their own limits; bwrap gets a systemd scope around it.
 		const limiter = kind === "bwrap" ? sandboxLimiter() : { prefix: [] };
 		if (limiter.error) throw new Error(limiter.error);
@@ -2129,6 +2161,67 @@ export function profileStats(dir) {
 		}
 	};
 	return { bytes: walk(dir), skills: names("skills"), extensions: names("extensions") };
+}
+
+/** Total bytes under a path, from lstat alone: never reads a file, never follows a link. */
+export function treeSize(path) {
+	let stat;
+	try {
+		stat = lstatSync(path);
+	} catch {
+		return 0;
+	}
+	if (!stat.isDirectory()) return stat.size;
+	let total = 0;
+	for (const entry of readdirSync(path)) total += treeSize(join(path, entry));
+	return total;
+}
+
+/**
+ * A key's shared folder, created on its first chat. It is data, not configuration: kept apart from
+ * the profile, so a profile reset or lock never touches it.
+ */
+export function ensureKeyFiles(keyId, { root = keyFilesRoot() } = {}) {
+	if (!root) throw new Error("KEY_FILES_ROOT is empty; the sandboxed runners need somewhere to keep shared folders");
+	const dir = join(root, profileScope(keyId));
+	mkdirSync(root, { recursive: true, mode: 0o700 });
+	mkdirSync(dir, { recursive: true, mode: 0o700 });
+	return dir;
+}
+
+/** Whether a key's chats may write its shared folder: always, unless a size limit is set and passed. */
+export function keyFilesWritability(dir, max = config.KEY_FILES_MAX_BYTES) {
+	if (!(max > 0)) return { writable: true, reason: "" };
+	const bytes = treeSize(dir);
+	return bytes > max ? { writable: false, reason: `over its limit (${bytes} of ${max} bytes)` } : { writable: true, reason: "" };
+}
+
+/**
+ * What is in a key's shared folder, for the dashboard and /profile: size, file count and the
+ * top-level entries. lstat only, like profileStats, because sessions write here freely.
+ */
+export function keyFilesStats(dir, { maxEntries = 50 } = {}) {
+	if (!existsSync(dir)) return { created: false, bytes: 0, files: 0, entries: [] };
+	let files = 0;
+	const count = (path) => {
+		let stat;
+		try {
+			stat = lstatSync(path);
+		} catch {
+			return;
+		}
+		if (stat.isDirectory()) for (const e of readdirSync(path)) count(join(path, e));
+		else files++;
+	};
+	count(dir);
+	const entries = readdirSync(dir)
+		.sort()
+		.slice(0, maxEntries)
+		.map((name) => {
+			const stat = lstatSync(join(dir, name));
+			return { name, type: stat.isDirectory() ? "dir" : stat.isSymbolicLink() ? "link" : "file", bytes: treeSize(join(dir, name)) };
+		});
+	return { created: true, bytes: treeSize(dir), files, entries, more: Math.max(0, readdirSync(dir).length - maxEntries) };
 }
 
 export function isProfileLocked(scope) {
@@ -3148,7 +3241,7 @@ async function runGatewayCommand(c, { name, args }) {
 	}
 	if (name === "profile") {
 		if (args === "reset") {
-			return "This replaces your profile — every skill, extension and setting on this key — with the gateway's starting template, and closes this key's other chats. The old profile is archived by the operator's retention policy. Send `/profile reset confirm` to go ahead.";
+			return "This replaces your profile — every skill, extension and setting on this key — with the gateway's starting template, and closes this key's other chats. Your shared folder (/workspace/shared) is kept. The old profile is archived by the operator's retention policy. Send `/profile reset confirm` to go ahead.";
 		}
 		if (args === "reset confirm") {
 			const { closed } = resetProfile(keyId);
@@ -3159,8 +3252,14 @@ async function runGatewayCommand(c, { name, args }) {
 		const scope = profileScope(keyId);
 		const { writable, reason } = profileWritability(keyId, join(profileRoot(), scope));
 		const bundles = grantedBundles(keyId);
+		const filesDir = join(keyFilesRoot(), scope);
+		const files = keyFilesStats(filesDir);
+		const filesState = files.created ? keyFilesWritability(filesDir) : { writable: true };
 		return [
 			`Profile: ${summary.skills.length} skill(s), ${summary.extensions.length} extension(s)${summary.hasAgentsMd ? ", an AGENTS.md" : ""}.`,
+			files.created
+				? `Shared folder (/workspace/shared, the same in every chat on this key): ${files.files} file(s), ${formatBytes(files.bytes)}${filesState.writable ? "" : ` — frozen: ${filesState.reason}`}.`
+				: "Shared folder: created with this key's first chat.",
 			bundles.length
 				? `Shared bundles: ${bundles.map((b) => b.name).join(", ")} (read-only, managed by the gateway operator).`
 				: "Shared bundles: none.",
@@ -4046,6 +4145,7 @@ function profilesPayload() {
 				scope,
 				key: keyId === undefined ? "(unknown)" : keyLabel(keyId),
 				bytes: stats.bytes,
+				filesBytes: treeSize(join(keyFilesRoot(), scope)),
 				skills: stats.skills,
 				extensions: stats.extensions,
 				locked: isProfileLocked(scope),
@@ -4105,8 +4205,17 @@ export async function profileDetail(scope) {
 			: { error: "the running agent did not answer in time" };
 	}
 	const state = created ? profileWritability(keyId, dir) : { writable: true, reason: "" };
+	const filesDir = join(keyFilesRoot(), scope);
+	const files = keyFilesStats(filesDir);
+	if (files.created) {
+		const fs = keyFilesWritability(filesDir);
+		files.writable = fs.writable;
+		files.readOnlyReason = fs.reason;
+	}
+	files.maxBytes = config.KEY_FILES_MAX_BYTES;
 	return {
 		scope,
+		files,
 		key: keyLabel(keyId),
 		created,
 		locked: isProfileLocked(scope),

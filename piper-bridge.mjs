@@ -183,6 +183,19 @@ export default async function piperBridge(pi) {
 		},
 	});
 
+	// The key's shared folder: tell the agent it exists and what it is for, or it will treat it like
+	// any other folder in its per-chat workspace and never think to keep anything there.
+	const sharedDir = process.env.PIPER_SHARED_DIR;
+	if (sharedDir) {
+		pi.on("before_agent_start", (event) => {
+			const guidelines = (event.systemPromptOptions.promptGuidelines ??= []);
+			const note =
+				`${sharedDir} persists across every chat on this API key, and other chats of the same key can read and change it. ` +
+				`Save anything that should outlive this chat there; the rest of the working directory is discarded when the chat ends.`;
+			if (!guidelines.includes(note)) guidelines.push(note);
+		});
+	}
+
 	// What this agent really has, for the dashboard: every tool and command with where it came from.
 	// The gateway asks with a request id and the answer goes back over the socket, since a command
 	// has no other way to return data. It touches nothing in the conversation.

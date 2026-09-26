@@ -162,6 +162,26 @@ Extensions are `.ts` or `.js` files (or a directory with `index.ts`) in the prof
 `extensions/`; Pi does not discover `.mjs` there. The open gateway and `GATEWAY_API_KEY` each get a
 profile of their own, too.
 
+### Shared folder
+
+Every API key also gets a **shared folder**: `files/<key>/` on the host, mounted read-write at
+`/workspace/shared` in every one of that key's chats. A file one chat writes there, any other chat
+of the same key can read, now or next week. The rest of `/workspace` belongs to one chat and goes
+when it ends. The bridge tells each agent this in its system prompt, so agents save lasting work
+there on their own.
+
+```text
+chat 1:  echo hello > /workspace/shared/note.txt
+chat 2:  cat /workspace/shared/note.txt      -> hello      (same key, another chat)
+bob:     cat /workspace/shared/note.txt      -> No such file (another key's folder)
+```
+
+It is created with the key's first chat, is invisible to every other key, and is kept by a profile
+reset (it is data, not configuration). There is no size limit unless you set
+`KEY_FILES_MAX_BYTES`. Past that limit, new chats get the folder frozen: they can read it, but what
+they write there does not persist until it is trimmed. The Profiles page shows each key's folder
+size, and the key's detail view lists its contents (names and sizes only).
+
 ### Shared bundles
 
 Skills, extensions and prompts the operator hands out to many keys at once, read-only, on top of
@@ -301,6 +321,7 @@ complete, because nothing is there unless it was put there on purpose. What a se
 | --- | --- | --- |
 | `/workspace` | this chat's workspace — also `HOME` and the working directory | read-write |
 | `/profile` | the key's Pi profile (`PI_CODING_AGENT_DIR`): skills, extensions, prompts, settings, packages | read-write (a throwaway overlay when locked or over quota) |
+| `/workspace/shared` | the key's shared folder: the same files in every chat of this key | read-write (a throwaway overlay when over `KEY_FILES_MAX_BYTES`) |
 | `/shared/<bundle>` | the shared bundles this key was given, and no others | read-only |
 | `/usr`, and `/bin`, `/sbin`, `/lib*` as links into it | system binaries and libraries, `/usr/local` included | read-only |
 | `/etc` | only `alternatives`, `ld.so.cache`, `ld.so.conf(.d)`, `localtime`, `timezone`, `nsswitch.conf`, `hosts`, `resolv.conf`, `ssl/certs`, `ssl/openssl.cnf`, `mime.types`, `protocols`, `services`, `os-release`, and a generated two-line `passwd` and `group` | read-only |
@@ -550,6 +571,8 @@ on write, so a bad one is rejected with a message rather than reaching the runni
 | Limits | `SANDBOX_MEMORY_MB` | `2048` | Memory per sandbox, swap included. `0` is unlimited. |
 | Limits | `SANDBOX_PIDS` | `512` | Processes and threads per sandbox. `0` is unlimited. |
 | Limits | `SANDBOX_CPUS` | `2` | CPU cores per sandbox, fractions allowed. `0` is unlimited. |
+| Agent | `KEY_FILES_ROOT` | `<gateway>/files` | Where each key's shared folder lives. |
+| Agent | `KEY_FILES_MAX_BYTES` | `0` | Shared folder size limit in bytes; past it the folder is frozen for new chats. `0` is unlimited. |
 | Agent | `SHARED_ROOT` | `<gateway>/shared` | Folder of shared bundles. |
 | Agent | `SHARED_BUNDLES` | `base` | Bundles every key gets: names, `*` for all, or empty. Overridable per key. |
 | Agent | `PROFILE_MAX_BYTES` | `104857600` | Profile size limit in bytes; past it uploads are refused and the profile is frozen. `0` is unlimited. |

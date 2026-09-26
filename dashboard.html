@@ -545,7 +545,7 @@
         </div>
         <table>
           <thead><tr>
-            <th>key</th><th class="num">size</th><th>skills</th><th>extensions</th><th class="num">live</th><th>state</th><th></th>
+            <th>key</th><th class="num">size</th><th>skills</th><th>extensions</th><th class="num" title="the key's /workspace/shared, the same in every chat">shared folder</th><th class="num">live</th><th>state</th><th></th>
           </tr></thead>
           <tbody id="profilerows"></tbody>
         </table>
@@ -1519,6 +1519,10 @@ var LAYOUT = {
     summary: 'A folder copied into every new profile, e.g. a shared set of skills. Empty starts with just your default model.', placeholder: '/path/to/template', when: SANDBOXED },
   PROFILE_ROOT: { tab: 'profiles', section: 'Profiles', label: 'Profiles folder',
     summary: 'Where each key’s profile is stored.', when: SANDBOXED },
+  KEY_FILES_ROOT: { tab: 'profiles', section: 'Shared folder', label: 'Shared folders location',
+    summary: 'Each key gets a folder here, mounted read-write at /workspace/shared in all of its chats.', when: SANDBOXED },
+  KEY_FILES_MAX_BYTES: { tab: 'profiles', section: 'Shared folder', label: 'Size limit per key', unit: 'bytes', bytes: true,
+    summary: 'Past it, the folder is frozen for new chats until trimmed. 0 means unlimited.', when: SANDBOXED },
   SHARED_BUNDLES: { tab: 'profiles', section: 'Shared bundles', label: 'Bundles every key gets',
     summary: 'Comma-separated bundle names, * for all, or empty for none. A key can have its own list on API Management.',
     placeholder: 'none', when: SANDBOXED },
@@ -2068,7 +2072,7 @@ function renderProfiles(d) {
     : (d.maxBytes ? 'Quota per profile: ' + bytes(d.maxBytes) + '. A profile over it is mounted read-only until trimmed.' : 'No profile quota is set.');
   if (!d.profiles.length) {
     var tr = el('tr');
-    tr.appendChild(cell('no profiles yet - one is created the first time a key starts a chat', 'empty')).colSpan = 7;
+    tr.appendChild(cell('no profiles yet - one is created the first time a key starts a chat', 'empty')).colSpan = 8;
     tbody.replaceChildren(tr);
     return;
   }
@@ -2084,6 +2088,7 @@ function renderProfiles(d) {
     tr.appendChild(cell(bytes(p.bytes) + (d.maxBytes ? ' / ' + bytes(d.maxBytes) : ''), 'num'));
     tr.appendChild(listCell(p.skills));
     tr.appendChild(listCell(p.extensions));
+    tr.appendChild(cell(bytes(p.filesBytes || 0), 'num'));
     tr.appendChild(cell(p.liveSessions, 'num'));
     tr.appendChild(cell(p.locked ? 'locked' : p.writable ? 'writable' : 'read-only: ' + p.readOnlyReason, p.writable ? '' : 'bad'));
     var actions = el('td');
@@ -2193,6 +2198,24 @@ function renderProfileDetail(d) {
     }
   }
   parts.push(own);
+
+  // The key's shared folder: files every chat of this key sees at /workspace/shared.
+  var fsec = el('div'); fsec.className = 'detailsec';
+  fsec.appendChild(el('h4', 'Shared folder \u2014 /workspace/shared in every chat on this key'));
+  var f = d.files || { created: false };
+  if (!f.created) {
+    var pf = el('p', 'Not created yet: it appears with this key\u2019s first chat.'); pf.className = 'hint'; fsec.appendChild(pf);
+  } else {
+    var fh = el('p', f.files + ' file' + (f.files === 1 ? '' : 's') + ', ' + bytes(f.bytes) +
+      (f.maxBytes ? ' of ' + bytes(f.maxBytes) : '') + (f.writable === false ? '  \u00b7  frozen: ' + f.readOnlyReason : ''));
+    fh.className = 'hint' + (f.writable === false ? ' bad' : '');
+    fsec.appendChild(fh);
+    fsec.appendChild(itemList(f.entries.map(function (e) {
+      return { name: e.name + (e.type === 'dir' ? '/' : e.type === 'link' ? ' \u2192' : ''), description: bytes(e.bytes) };
+    }), 20));
+    if (f.more) { var pm = el('p', '+' + f.more + ' more entries'); pm.className = 'hint small'; fsec.appendChild(pm); }
+  }
+  parts.push(fsec);
 
   // Shared: each granted bundle, read-only.
   var shared = el('div'); shared.className = 'detailsec';

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, statSync, readdirSync, readFileSync, rmSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir, homedir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,6 +17,8 @@ process.env.WORKSPACE_ROOT = TEST_WS;
 const TEST_PROFILES = `${tmpdir()}/piper-test-profiles-${process.pid}`;
 process.env.PROFILE_ROOT = TEST_PROFILES;
 const TEST_SHARED = `${tmpdir()}/piper-test-shared-${process.pid}`;
+const TEST_FILES = `${tmpdir()}/piper-test-files-${process.pid}`;
+process.env.KEY_FILES_ROOT = TEST_FILES;
 process.env.SHARED_ROOT = TEST_SHARED;
 // Extras for the sandbox: only /usr/share/doc should survive. /root contains the Pi credentials,
 // /etc/shadow is a secret, and /etc as a whole contains it.
@@ -25,7 +27,7 @@ const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 process.env.SANDBOX_ALLOW = `/root:/etc/shadow:/etc:/usr/share/doc:/does/not/exist:${PI_AGENT}:${PI_AGENT}/bin`;
 // Seeded at startup, which is when a validator that reads a not-yet-defined constant would fail.
 process.env.SANDBOX_ENV = "TOOL_HOME=/opt/tool";
-const { agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, pathVerdict, realPathFor, requestedSessionId, resolveImages, resolveModelQuery, sandboxCommand, SessionController, shQuote, shouldFallBack, WorkspaceManager, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, runtimeRoot, sandboxBindBack, jailedRoots, resolveTarget, sandboxCommand: buildSandbox, SENSITIVE_SYSTEM_PATHS, SANDBOX_ETC, allowedExtraPaths, readableRoots, scopedSessionId, isBlockedAddress, rootRefusal, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, runnerInvocation, PiRpcSession, startBridge, sandboxArgs, parseGatewayCommand, profileStats, profileHelperInvocation, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, limitProperties, scopePrefix, keyLimits, limitFromInput, spentToday, spendRefusal, sweepSockets, bundleListFromInput, listBundles, grantedBundles, bundleContents, parseSandboxEnv, originOf, profileDetail } = await import("./server.mjs");
+const { agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, pathVerdict, realPathFor, requestedSessionId, resolveImages, resolveModelQuery, sandboxCommand, SessionController, shQuote, shouldFallBack, WorkspaceManager, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, runtimeRoot, sandboxBindBack, jailedRoots, resolveTarget, sandboxCommand: buildSandbox, SENSITIVE_SYSTEM_PATHS, SANDBOX_ETC, allowedExtraPaths, readableRoots, scopedSessionId, isBlockedAddress, rootRefusal, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, runnerInvocation, PiRpcSession, startBridge, sandboxArgs, parseGatewayCommand, profileStats, profileHelperInvocation, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, limitProperties, scopePrefix, keyLimits, limitFromInput, spentToday, spendRefusal, sweepSockets, bundleListFromInput, listBundles, grantedBundles, bundleContents, parseSandboxEnv, originOf, profileDetail, ensureKeyFiles, keyFilesWritability, keyFilesStats, treeSize } = await import("./server.mjs");
 const { inventory } = await import("./piper-profile.mjs");
 
 /** The gateway's own directory, which the sandbox has to hide. */
@@ -1722,6 +1724,91 @@ assert.equal(isReloadCommand(undefined), false);
 	apiKeys.remove(record.id);
 }
 
+// ---------------------------------------------------------------- per-key shared folder
+
+// Mounted at /workspace/shared, after the workspace's own bind (which would otherwise cover it).
+{
+	const opts = { workspace: "/w/s1", profileDir: "/p/key-1", socketPath: "/r/a.sock", bridgePath: "/g/b.mjs", packageDir: join(runtimeRoot(), "lib", "pi"), network: "off", filesDir: "/f/key-1" };
+	const args = runnerInvocation("bwrap", opts).args;
+	const at = (flag, src, dst) => args.findIndex((a, i) => a === flag && args[i + 1] === src && args[i + 2] === dst);
+	const workspaceBind = at("--bind", "/w/s1", "/workspace");
+	const filesBind = at("--bind", "/f/key-1", "/workspace/shared");
+	assert.ok(workspaceBind > 0 && filesBind > workspaceBind, "the shared folder is bound after the workspace, or the workspace would hide it");
+	assert.ok(at("--bind", "/p/key-1", "/profile") < workspaceBind, "binds outside the workspace stay before it");
+	const env = (name) => args[args.findIndex((a, i) => a === "--setenv" && args[i + 1] === name) + 2];
+	assert.equal(env("PIPER_SHARED_DIR"), "/workspace/shared", "the bridge is told where it is");
+	const binds = args.flatMap((a, i) => (a === "--bind" ? [args[i + 1]] : []));
+	assert.deepEqual(binds.sort(), ["/f/key-1", "/p/key-1", "/r/a.sock", "/w/s1"], "writable: workspace, profile, socket and the shared folder, nothing else");
+
+	const frozen = runnerInvocation("bwrap", { ...opts, filesWritable: false }).args;
+	const ov = frozen.findIndex((a, i) => a === "--overlay-src" && frozen[i + 1] === "/f/key-1");
+	assert.ok(ov > 0 && frozen[ov + 3] === "/workspace/shared", "a frozen folder is a throwaway overlay");
+	assert.ok(!frozen.includes("--bind") || frozen.findIndex((a, i) => a === "--bind" && frozen[i + 1] === "/f/key-1") === -1);
+
+	const without = runnerInvocation("bwrap", { ...opts, filesDir: null }).args;
+	assert.ok(!without.includes("/workspace/shared") && !without.join(" ").includes("PIPER_SHARED_DIR"), "no folder, no mount and no note");
+
+	const docker = runnerInvocation("docker", { ...opts, image: "img", uid: 1, gid: 1 }).args;
+	assert.ok(docker.includes("/f/key-1:/workspace/shared") && docker.includes("PIPER_SHARED_DIR=/workspace/shared"));
+	assert.ok(runnerInvocation("docker", { ...opts, filesWritable: false, image: "img", uid: 1, gid: 1 }).args.includes("/f/key-1:/workspace/shared:ro"));
+	assert.ok(sandboxArgs({ workspace: "/w" }).every((a) => !a.includes(TEST_FILES)), "no ordinary sandbox mounts the files root");
+}
+
+// One folder per key, created once, owner-only; a key id cannot steer where it goes.
+{
+	const root = mkdtempSync(join(tmpdir(), "pi-files-"));
+	const a = ensureKeyFiles("k1", { root });
+	assert.equal(a, join(root, "key-k1"));
+	assert.equal(statSync(a).mode & 0o777, 0o700);
+	writeFileSync(join(a, "note.txt"), "hello");
+	assert.equal(ensureKeyFiles("k1", { root }), a, "idempotent");
+	assert.equal(readFileSync(join(a, "note.txt"), "utf8"), "hello", "and never wipes what is there");
+	assert.notEqual(ensureKeyFiles("k2", { root }), a);
+	assert.equal(ensureKeyFiles("../../etc", { root }), join(root, "key-______etc"));
+
+	// Size limit: none by default; frozen past a set one.
+	assert.equal(keyFilesWritability(a, 0).writable, true);
+	assert.equal(keyFilesWritability(a, 1000).writable, true);
+	assert.match(keyFilesWritability(a, 3).reason, /over its limit \(5 of 3 bytes\)/);
+
+	// Stats come from lstat alone: a link to something big counts as the link.
+	const outside = join(root, "..", `pi-files-outside-${process.pid}`);
+	writeFileSync(outside, Buffer.alloc(100_000));
+	symlinkSync(outside, join(a, "big-link"));
+	mkdirSync(join(a, "sub"));
+	writeFileSync(join(a, "sub", "x.bin"), "abc");
+	const st = keyFilesStats(a);
+	assert.equal(st.created, true);
+	assert.equal(st.files, 3, "note.txt, sub/x.bin and the link");
+	assert.ok(st.bytes < 1000, "the link's target is never counted");
+	assert.deepEqual(st.entries.map((e) => [e.name, e.type]), [["big-link", "link"], ["note.txt", "file"], ["sub", "dir"]]);
+	assert.deepEqual(keyFilesStats(join(root, "nope")), { created: false, bytes: 0, files: 0, entries: [] });
+	assert.equal(treeSize(join(a, "sub")), 3);
+	rmSync(outside, { force: true });
+	rmSync(root, { recursive: true, force: true });
+}
+
+// The empty mountpoint bwrap leaves in a workspace is not work: an otherwise untouched workspace is
+// still deleted, and a real one is archived without it.
+{
+	const base = mkdtempSync(join(tmpdir(), "pi-mp-"));
+	const root = join(base, "workspaces");
+	const archive = `${root}-archive`;
+	const ws = new WorkspaceManager(() => ({ root, archiveRoot: archive, policy: "archive", archiveTtlMs: 0 }));
+	const idle = ws.create();
+	mkdirSync(join(idle, "shared"));
+	ws.release(idle);
+	assert.equal(existsSync(idle), false, "only an empty mountpoint: deleted as untouched");
+	assert.equal(existsSync(archive) ? readdirSync(archive).length : 0, 0, "and not archived");
+	const busy = ws.create();
+	mkdirSync(join(busy, "shared"));
+	writeFileSync(join(busy, "work.txt"), "x");
+	ws.release(busy);
+	const [kept] = readdirSync(archive);
+	assert.deepEqual(readdirSync(join(archive, kept)), ["work.txt"], "archived without the empty mountpoint");
+	rmSync(base, { recursive: true, force: true });
+}
+
 console.log("nextTurn + images: ok");
 rmSync(TEST_DB, { force: true });
 rmSync(TEST_WS, { recursive: true, force: true });
@@ -1729,3 +1816,4 @@ rmSync(`${TEST_WS}-archive`, { recursive: true, force: true });
 rmSync(`${TEST_WS}-run`, { recursive: true, force: true });
 rmSync(TEST_PROFILES, { recursive: true, force: true });
 rmSync(TEST_SHARED, { recursive: true, force: true });
+rmSync(TEST_FILES, { recursive: true, force: true });

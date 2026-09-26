@@ -4,6 +4,7 @@ gateway.db
 gateway.db-*
 *.log
 profiles/
+files/
 shared/
 workspaces/
 workspaces-archive/

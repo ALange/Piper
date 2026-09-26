@@ -103,6 +103,7 @@ except `workspaces-run`:
 | --- | --- |
 | `gateway.db` | settings, API key hashes, dashboard password hash, spend ledger |
 | `profiles/` | each API key's own skills, extensions, prompts and settings |
+| `files/` | each API key's shared folder (`/workspace/shared` in its chats) |
 | `shared/` | the shared bundles you hand out (`shared/base/…`) |
 | `workspaces/`, `workspaces-archive/` | per-chat working files and their archives |
 | `workspaces-run/` | per-session bridge sockets (transient) |
