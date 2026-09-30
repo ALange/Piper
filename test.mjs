@@ -23,7 +23,7 @@ process.env.CONTAINER_PI_DIR = TEST_CONTAINER_PI;
 const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 // Seeded at startup, which is when a validator that reads a not-yet-defined constant would fail.
 process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
-const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, stopContainer, removeContainer, listManaged, EngineError } = await import("./server.mjs");
+const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, stopContainer, removeContainer, listManaged, EngineError } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
 
@@ -532,11 +532,18 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(nextTurn([u("q1"), a("a1"), u("q2")], live).context, "", "a session with history must not replay");
 }
 
-// The masked agent dir must be the one Pi actually uses, or provider credentials stay readable.
+// The folder the gateway treats as Pi's own configuration (its credentials, kept out of every container)
+// must be the one Pi actually uses. Pi is found the way the gateway finds it (PI_AGENT_PACKAGE, then
+// the global npm root), not at a path from the machine this was written on; without Pi there is
+// nothing to compare, and the rest of the suite does not need it.
 {
-	const pkg = process.env.PI_AGENT_PACKAGE ?? "/root/.local/share/pi-node/node-v22.23.1-linux-x64/lib/node_modules/@earendil-works/pi-coding-agent";
-	const { getAgentDir } = await import(pkg + "/dist/index.js");
-	assert.equal(agentDirPath(), getAgentDir(), "the sandbox must mask the directory Pi reads credentials from");
+	let piModule = null;
+	try {
+		piModule = await pi();
+	} catch {
+		console.log("skipped: Pi is not installed here, so its agent directory cannot be compared with agentDirPath()");
+	}
+	if (piModule) assert.equal(agentDirPath(), piModule.getAgentDir(), "the gateway must treat as Pi's config the directory Pi reads credentials from");
 }
 
 // Path containment, and the symlink case that a string comparison would miss.
@@ -2594,7 +2601,7 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(normalizeContainerInput(null), null);
 	assert.equal(normalizeContainerInput({}), null, "nothing set is nothing stored");
 	assert.equal(normalizeContainerInput({ memoryMb: "", cpus: null, network: "  " }), null, "blank follows the default");
-	assert.deepEqual(normalizeContainerInput({ memoryMb: "512", cpus: "1.5", pids: 0, network: "none", image: "piper-agent-slim", mounts: "/usr/share/doc", env: "A=1 B=two" }), { memoryMb: 512, cpus: 1.5, pids: 0, network: "none", image: "piper-agent-slim", mounts: "/usr/share/doc", env: "A=1 B=two" }, "0 is kept: it lifts a limit");
+	assert.deepEqual(normalizeContainerInput({ memoryMb: "512", cpus: "1.5", pids: 0, network: "none", image: "piper-agent-slim", mounts: "/usr/lib", env: "A=1 B=two" }), { memoryMb: 512, cpus: 1.5, pids: 0, network: "none", image: "piper-agent-slim", mounts: "/usr/lib", env: "A=1 B=two" }, "0 is kept: it lifts a limit");
 	for (const [input, why] of [
 		[{ memoryMb: -1 }, /memory must be a whole number of 0 or more/],
 		[{ memoryMb: 1.5 }, /memory must be a whole number/],
@@ -2608,7 +2615,7 @@ assert.equal(isReloadCommand(undefined), false);
 		[{ env: "PATH=/evil" }, /env: PATH is set by the gateway/],
 		[{ env: "nope" }, /env: "nope" is not NAME=value/],
 		[{ ports: 80 }, /unknown container setting: ports/],
-		[{ mounts: "/usr/share/doc ".repeat(200) }, /too long/],
+		[{ mounts: "/usr/lib ".repeat(400) }, /too long/],
 		["text", /must be an object/],
 		[[1], /must be an object/],
 	]) assert.throws(() => normalizeContainerInput(input), why, JSON.stringify(input).slice(0, 60));
@@ -2617,8 +2624,8 @@ assert.equal(isReloadCommand(undefined), false);
 	const { record: ka } = apiKeys.create({ name: "container-a" });
 	const { record: kb } = apiKeys.create({ name: "container-b" });
 	assert.equal(apiKeys.get(ka.id).container, null, "a new key has no overrides");
-	apiKeys.update(ka.id, { container: { memoryMb: 512, network: "open", mounts: "/usr/share/doc", env: "A=key B=key" } });
-	assert.deepEqual(apiKeys.get(ka.id).container, { memoryMb: 512, network: "open", mounts: "/usr/share/doc", env: "A=key B=key" });
+	apiKeys.update(ka.id, { container: { memoryMb: 512, network: "open", mounts: "/usr/lib", env: "A=key B=key" } });
+	assert.deepEqual(apiKeys.get(ka.id).container, { memoryMb: 512, network: "open", mounts: "/usr/lib", env: "A=key B=key" });
 	apiKeys.update(ka.id, { name: "container-a renamed" });
 	assert.equal(apiKeys.get(ka.id).container.memoryMb, 512, "changing something else keeps the settings");
 	assert.equal(apiKeys.get(kb.id).container, null, "and no other key has them");
@@ -2632,7 +2639,7 @@ assert.equal(isReloadCommand(undefined), false);
 	const globalMem = containerDefaults().memoryMb;
 	const eff = containerSettingsFor(ka.id);
 	assert.deepEqual([eff.memoryMb, eff.network, eff.image, eff.cpus], [512, "open", containerDefaults().image, containerDefaults().cpus], "own where set, default elsewhere");
-	assert.deepEqual(eff.mounts.map((m) => m.host), ["/usr/share/doc"], "the key's mounts are added");
+	assert.deepEqual(eff.mounts.map((m) => m.host), ["/usr/lib"], "the key's mounts are added");
 	assert.equal(Object.fromEntries(eff.env).A, "key");
 	assert.equal(Object.fromEntries(eff.env).TOOL_HOME, "/opt/tool", "and the default environment stays");
 	assert.deepEqual(containerSettingsFor(kb.id).memoryMb, globalMem, "another key follows the default");
@@ -2644,8 +2651,8 @@ assert.equal(isReloadCommand(undefined), false);
 	const dirB = mkdtempSync(join(tmpdir(), "pi-kmount-b-"));
 	const savedMounts = config.CONTAINER_MOUNTS;
 	config.CONTAINER_MOUNTS = `${dirA}:/opt/tools`;
-	apiKeys.update(ka.id, { container: { mounts: `${dirB}:/opt/tools /usr/share/doc:/docs` } });
-	assert.deepEqual(containerSettingsFor(ka.id).mounts, [{ host: dirB, container: "/opt/tools" }, { host: "/usr/share/doc", container: "/docs" }], "the key's mount of a path replaces the default's");
+	apiKeys.update(ka.id, { container: { mounts: `${dirB}:/opt/tools /usr/lib:/docs` } });
+	assert.deepEqual(containerSettingsFor(ka.id).mounts, [{ host: dirB, container: "/opt/tools" }, { host: "/usr/lib", container: "/docs" }], "the key's mount of a path replaces the default's");
 	config.CONTAINER_MOUNTS = savedMounts;
 	rmSync(dirA, { recursive: true, force: true });
 	rmSync(dirB, { recursive: true, force: true });
