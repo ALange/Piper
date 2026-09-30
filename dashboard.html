@@ -248,6 +248,11 @@
   .cpeditor .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
   .cpeditor .row input { min-width:0; flex:1 1 160px; }
   .cpnote { font-size:12px; } .cpnote.bad { color:#f85149; } .cpnote.good { color:#3fb950; }
+  #uppanel { position:fixed; right:16px; bottom:16px; width:min(440px,calc(100vw - 32px)); max-height:55vh; overflow:auto; z-index:20;
+    background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:10px 12px; box-shadow:0 6px 24px rgba(0,0,0,.45); }
+  #uppanel h4 { margin:0 0 6px; font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:#cfd3d7; display:flex; justify-content:space-between; gap:8px; }
+  #uppanel .upitem { margin:6px 0; font-size:12px; }
+  #uppanel .upitem pre { margin:3px 0 0; max-height:150px; overflow:auto; font-size:11px; color:var(--dim); white-space:pre-wrap; word-break:break-word; }
   .warnstrip { background:#2a1414; border:1px solid #5a2626; color:#f3b6b6; border-radius:8px;
     padding:10px 13px; margin-bottom:18px; font-size:12px; line-height:1.5; }
   .warnstrip b { color:#ffd0d0; }
@@ -423,9 +428,9 @@
         <div class="toolbar">
           <div>
             <h3>Containers</h3>
-            <p class="hint" style="margin:0" id="ctnote">Every chat's container. <b>stop</b> ends the running Pi and stops the container (the chat resumes on its next message, with what was installed). <b>recreate</b> also removes the container, so the next message builds a clean one and the conversation continues. <b>remove</b> ends the chat and removes the container; its workspace stays.</p>
+            <p class="hint" style="margin:0" id="ctnote">Every chat's container. <b>stop</b> ends the running Pi and stops the container (the chat resumes on its next message, with what was installed). <b>recreate</b> also removes the container, so the next message builds a clean one and the conversation continues. <b>remove</b> ends the chat and removes the container; its workspace stays. <b>update</b> rebuilds it with today’s settings <i>keeping what is installed</i>, sets Pi to the gateway’s version and updates its extensions (a newly built image is only taken by <b>recreate</b>).</p>
           </div>
-          <button id="ctrefresh">refresh</button>
+          <div><button id="ctupdateall" title="rebuild every container keeping what is installed, set Pi to the gateway’s version, update extensions">update all</button> <button id="ctrefresh">refresh</button></div>
         </div>
         <p class="hint" id="ctdisk"></p>
         <table>
@@ -685,6 +690,11 @@
       </section>
     </div><!-- /view-settings -->
   </main>
+
+  <div id="uppanel" hidden>
+    <h4><span id="uptitle">Update</span><button id="upclose" title="hide">&times;</button></h4>
+    <div id="upbody"></div>
+  </div>
 </div>
 
 <script>
@@ -2350,6 +2360,7 @@ function renderEndpoints(d) {
     btn(a.enabled ? 'disable' : 'enable', function () { epAct(a, a.enabled ? 'disable' : 'enable'); }, a.enabled ? 'close its port and stop its chats; its container and files stay' : 'open its port again');
     btn('new port', function () { if (confirm('Give ' + a.name + ' a new port? Clients must switch to the new address.')) epAct(a, 'new-port'); });
     btn('reset', function () { if (confirm('Reset ' + a.name + '’s container? Everything installed in it is deleted; its instructions, skills and files stay.')) epAct(a, 'reset'); }, 'remove the container and what is installed in it');
+    btn('update', function () { if (confirm('Update ' + a.name + '’s container? Its chats stop and resume afterwards; what is installed is kept; Pi is set to the gateway’s version and its extensions are updated.')) startUpdateJob('dashboard/agents/' + a.id + '/update', 'Update ' + a.name); }, 'rebuild its container keeping what is installed, update Pi and extensions');
     btn('delete', function () { if (confirm('Delete ' + a.name + '? Its port closes and its container is removed; its profile and own workspace are archived.')) epDelete(a); });
     tr.appendChild(actions);
     tbody.appendChild(tr);
@@ -2421,6 +2432,55 @@ $('epcreate').addEventListener('click', function () {
 });
 $('eprefresh').addEventListener('click', loadEndpoints);
 
+
+/* Updates: one job at a time, started from the Containers, Endpoints and Profiles pages, shown in a panel
+   that stays until closed and is polled while it runs. */
+var UP_TIMER = null;
+function startUpdateJob(url, title) {
+  $('uptitle').textContent = title + ' — starting…';
+  $('upbody').replaceChildren();
+  $('uppanel').hidden = false;
+  return fetch(url, { method: 'POST' })
+    .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); return j; }); })
+    .then(function (j) { renderUpdateJob(j.job, title); pollUpdates(title); })
+    .catch(function (e) { $('uptitle').textContent = title + ' — failed'; $('upbody').replaceChildren(el('div', e.message)); });
+}
+function pollUpdates(title) {
+  if (UP_TIMER) { clearTimeout(UP_TIMER); UP_TIMER = null; }
+  return fetch('dashboard/updates.json', { cache: 'no-store' }).then(readJson).then(function (d) {
+    if (!d.job) return;
+    renderUpdateJob(d.job, title);
+    if (d.job.state === 'running') UP_TIMER = setTimeout(function () { pollUpdates(title); }, 1500);
+    else if (typeof loadContainers === 'function' && $('view-containers').classList.contains('on')) loadContainers();
+  }).catch(function () { /* the next poll tries again */ });
+}
+function renderUpdateJob(job, title) {
+  if (!job) return;
+  $('uppanel').hidden = false;
+  $('uptitle').textContent = (title || 'Update') + ' — ' + job.state;
+  var body = $('upbody');
+  body.replaceChildren();
+  job.items.forEach(function (i) {
+    var row = el('div'); row.className = 'upitem';
+    var head = el('div', i.label + ': ' + i.state);
+    head.style.color = i.state === 'failed' ? '#f3b6b6' : i.state === 'done' ? '#9fd6a8' : i.state === 'skipped' ? '#d6c79f' : '';
+    row.appendChild(head);
+    if (i.lines.length) { var pre = el('pre', i.lines.slice(-14).join('\n')); row.appendChild(pre); pre.scrollTop = pre.scrollHeight; }
+    body.appendChild(row);
+  });
+}
+$('upclose').addEventListener('click', function () { $('uppanel').hidden = true; });
+function ctUpdate(c) {
+  if (!confirm('Update ' + c.name.replace(/^piper-/, '') + '? Chats in it stop and resume on their next message. It is rebuilt with today’s settings keeping what is installed; Pi is set to the gateway’s version and its extensions are updated.' + (c.persistent ? '' : ' (A newly built image is only taken by recreate.)'))) return;
+  startUpdateJob('dashboard/containers/' + c.name + '/update', 'Update ' + c.name.replace(/^piper-/, ''));
+}
+$('ctupdateall').addEventListener('click', function () {
+  if (!confirm('Update every container? Each one’s chats stop and resume on their next message, one container at a time; containers with a request running are skipped. Installed software is kept; Pi is set to the gateway’s version and extensions are updated.')) return;
+  startUpdateJob('dashboard/containers/update-all', 'Update all');
+});
+// A job that was running when the page opened shows up again.
+fetch('dashboard/updates.json', { cache: 'no-store' }).then(readJson).then(function (d) { if (d.job && d.job.state === 'running') { renderUpdateJob(d.job, 'Update'); pollUpdates('Update'); } }).catch(function () {});
+
 /* Containers: one row per container, polled every few seconds while the page is open. */
 var CT_TIMER = null;
 var CT_DATA = null;
@@ -2458,6 +2518,7 @@ function renderContainers(d) {
     var nameCell = cell(c.name.replace(/^piper-/, ''), 'mono');
     nameCell.title = c.name + '\nimage ' + c.image + (c.imageStale ? ' (rebuilt since: recreate to use the new one)' : '');
     if (c.imageStale) nameCell.appendChild(el('span', ' ⚑'));
+    if (c.update) nameCell.title += '\nlast update ' + new Date(c.update.at).toLocaleString() + (c.update.piFrom && c.update.piTo ? ', Pi ' + c.update.piFrom + ' → ' + c.update.piTo : '') + (c.update.failed && c.update.failed.length ? ' (failed: ' + c.update.failed.join(', ') + ')' : '');
     if (c.persistent) { nameCell.appendChild(el('span', ' ★')); nameCell.title += '\npersistent: this key’s one container, shared by its chats; what is installed in it stays'; }
     tr.appendChild(nameCell);
     tr.appendChild(cell(c.key));
@@ -2475,10 +2536,11 @@ function renderContainers(d) {
     tr.appendChild(cell(c.requests || 0, 'num'));
     tr.appendChild(cell(c.lastUsedAt ? dur(Date.now() - c.lastUsedAt) + ' ago' : '-', 'num'));
     var actions = el('td');
-    [['stop', 'stop'], ['recreate', 'recreate'], ['remove', 'remove']].forEach(function (a) {
+    [['stop', 'stop'], ['update', 'update'], ['recreate', 'recreate'], ['remove', 'remove']].forEach(function (a) {
       var b = el('button', a[0]);
       if (a[0] === 'stop' && c.state !== 'running') b.disabled = true;
-      b.addEventListener('click', function () { ctAct(c.name, a[1], a[0], c.persistent); });
+      if (a[0] === 'update' && c.status === 'orphan') b.disabled = true;
+      b.addEventListener('click', function () { if (a[0] === 'update') ctUpdate(c); else ctAct(c.name, a[1], a[0], c.persistent); });
       actions.appendChild(b);
       actions.appendChild(document.createTextNode(' '));
     });
@@ -2829,6 +2891,22 @@ function renderProfileDetail(d) {
       (eff.envNames.length ? ' (env now: ' + eff.envNames.join(', ') + ')' : '') + '. 0 means unlimited.');
     chint.className = 'hint small'; csec.appendChild(chint);
     parts.push(csec);
+  }
+
+  // Update this profile's container(s): rebuild keeping what is installed, Pi to the gateway's version, extensions.
+  if (d.scope) {
+    var usec = el('div'); usec.className = 'detailsec';
+    usec.appendChild(el('h4', 'Container update'));
+    var urow = el('div'); urow.className = 'fieldrow';
+    var ubtn = el('button', 'update container');
+    ubtn.addEventListener('click', function () {
+      if (!confirm('Rebuild this profile\u2019s container(s)? Their chats stop and resume afterwards; what is installed is kept; Pi is set to the gateway\u2019s version and the extensions are updated.')) return;
+      startUpdateJob('dashboard/profiles/' + encodeURIComponent(d.scope) + '/update-container', 'Update ' + (d.key || d.scope));
+    });
+    urow.appendChild(ubtn); usec.appendChild(urow);
+    var uhint = el('p', 'Rebuilds the container with today\u2019s settings (limits, mounts, bundles, DNS files) keeping what the agent installed, sets Pi to the version the gateway runs, and runs pi update --extensions. A newly built image is only picked up by Recreate on the Containers page.');
+    uhint.className = 'hint small'; usec.appendChild(uhint);
+    parts.push(usec);
   }
 
   // The key's workspace: files every chat of this key sees at /workspace.

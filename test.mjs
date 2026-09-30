@@ -23,7 +23,7 @@ process.env.CONTAINER_PI_DIR = TEST_CONTAINER_PI;
 const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 // Seeded at startup, which is when a validator that reads a not-yet-defined constant would fail.
 process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
-const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, recentAudit: recentAuditRows } = await import("./server.mjs");
+const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, recentAudit: recentAuditRows } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
 
@@ -2363,7 +2363,7 @@ assert.equal(isReloadCommand(undefined), false);
 		assert.equal(existsSync(join(chats, hash.slice(0, 16))), true, "the session survives a stop");
 		reset();
 		await containerHost.ended(hash);
-		assert.deepEqual(calls.map((c) => c[1]), ["rm"]);
+		assert.deepEqual(calls.map((c) => c[1]), ["rm", "rmi"], "the container, and the state an update saved for it");
 		assert.equal(existsSync(join(chats, hash.slice(0, 16))), false, "and not the end");
 		const ws = containerHost.workspace("host-key");
 		assert.equal(ws, join(TEST_WS, "key-host-key"), "a key's workspace is one folder");
@@ -2722,7 +2722,7 @@ assert.equal(isReloadCommand(undefined), false);
 		reset2(engine({ inspect: () => ({ code: 0, stdout: seen(true, "old"), stderr: "" }) }));
 		const res = await ensureContainer(pa, "img");
 		assert.equal(res.recreated, true);
-		assert.deepEqual(calls2.map((c) => c[1]), ["inspect", "stop", "commit", "rm", "create", "start"], "stopped, saved, removed, created, started");
+		assert.deepEqual(calls2.map((c) => c[1]), ["inspect", "stop", "commit", "image", "rm", "create", "start"], "stopped, saved (and its depth looked at), removed, created, started");
 		assert.ok(calls2.find((c) => c[1] === "commit").includes(keyStateImage(pa.name)), "saved to the key's state image");
 		const created = calls2.find((c) => c[1] === "create");
 		assert.equal(created[created.length - 1], keyStateImage(pa.name), "the new container is built from the saved state");
@@ -3526,6 +3526,278 @@ assert.equal(isReloadCommand(undefined), false);
 	await new Promise((r) => server.close(r));
 	await stopAgentServers();
 	config.ACCESS_LOG = accessLog;
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+}
+
+// Update container: rebuild keeping what is installed, then Pi to the gateway's version and the extensions.
+{
+	const { EventEmitter } = await import("node:events");
+	const { PassThrough } = await import("node:stream");
+	const http = await import("node:http");
+	const { server } = await import("./server.mjs");
+	config.HOST = "127.0.0.1";
+	const accessLog3 = config.ACCESS_LOG;
+	config.ACCESS_LOG = false;
+	const calls3 = [];
+	let inspectFor = () => null;
+	let piVersion = "0.1.0";
+	let layers = 5;
+	let failCommit = false;
+	const hostPi = await hostPiVersion();
+	assert.ok(hostPi, "the tests run with Pi installed");
+	const fake = async (bin, args) => {
+		calls3.push([bin, ...args]);
+		const ok = (stdout = "") => ({ code: 0, stdout, stderr: "" });
+		if (args[0] === "inspect") {
+			const names = args.slice(args.indexOf("container") + 1);
+			const infos = names.map((n) => inspectFor(n)).filter(Boolean);
+			return infos.length ? ok(JSON.stringify(infos)) : { code: 1, stdout: "[]", stderr: "No such object" };
+		}
+		if (args[0] === "image" && args[1] === "inspect") {
+			if (args.includes("--format")) return ok("sha256:img|" + hostPi + "\n");
+			return ok(JSON.stringify([{ Id: "sha256:saved", RootFS: { Layers: new Array(layers).fill("l") }, Config: { Env: ["PATH=/usr/bin", "TOOL=a b"], Cmd: ["sleep", "infinity"], Entrypoint: null, WorkingDir: "/workspace", Labels: { "piper.image": "1" } } }]));
+		}
+		if (args[0] === "commit" && failCommit) return { code: 1, stdout: "", stderr: "no space left on device" };
+		if (args[0] === "exec" && args.includes("sh") && args.some((a) => /pi --version/.test(a))) return ok(`pi ${piVersion}\n`);
+		return ok();
+	};
+	setRunner(fake);
+	const spawned3 = [];
+	let npmExit = 0;
+	const fakeSpawn = (bin, args) => {
+		const child = new EventEmitter();
+		child.stdout = new PassThrough();
+		child.stderr = new PassThrough();
+		child.stdin = new PassThrough();
+		child.kill = () => {};
+		spawned3.push({ bin, args, child });
+		setImmediate(() => {
+			if (args[0] === "exec") {
+				const cmd = args.slice(args.indexOf("timeout") + 4).join(" ");
+				child.stdout.write(`running ${cmd}\n`);
+				if (/npm install/.test(cmd) && npmExit === 0) piVersion = hostPi;
+				setImmediate(() => child.emit("close", /npm install/.test(cmd) ? npmExit : 0));
+			} else setImmediate(() => child.emit("close", 0));
+		});
+		return child;
+	};
+	const seq = () => calls3.map((c) => c[1] === "image" ? `image ${c[2]}` : c[1]);
+
+	// rebuildContainer: stop, save, remove, create from the save with the current spec, start.
+	const base3 = { name: "piper-ffffffff-key-000000000001", image: "piper-agent", workspace: "/w", profileDir: "/p", chatDir: "/c", runDir: "/r", bridgePath: "/b", persistent: true, keyId: "k", network: "none", memoryMb: 768 };
+	const labelled = (sig = "old") => ({ Name: "/" + base3.name, State: { Running: true }, Config: { Labels: { "piper.managed": "1", "piper.sig": sig, "piper.key": "k" } } });
+	inspectFor = (n) => (n === base3.name ? labelled() : null);
+	calls3.length = 0;
+	const built = await rebuildContainer(base3, "sha256:img", { spawnFn: fakeSpawn });
+	assert.deepEqual([built.rebuilt, built.flattened], [true, false]);
+	assert.deepEqual(seq(), ["inspect", "stop", "commit", "image inspect", "rm", "create", "start"], "stopped, saved, looked at its depth, removed, created, started");
+	const create3 = calls3.find((c) => c[1] === "create");
+	assert.equal(create3[create3.length - 1], keyStateImage(base3.name), "made again from what it had");
+	assert.ok(create3.includes("768m"), "with the settings it would get now");
+	// A failed save removes nothing.
+	failCommit = true;
+	calls3.length = 0;
+	await assert.rejects(rebuildContainer(base3, "sha256:img", { spawnFn: fakeSpawn }), /no space left/);
+	assert.equal(calls3.filter((c) => c[1] === "rm" || c[1] === "create").length, 0, "nothing is removed or made when the state could not be saved");
+	failCommit = false;
+	// No container yet: created from the clean image.
+	inspectFor = () => null;
+	calls3.length = 0;
+	const fresh3 = await rebuildContainer({ ...base3, persistent: false }, "sha256:img", { spawnFn: fakeSpawn });
+	assert.equal(fresh3.rebuilt, false);
+	assert.deepEqual(seq(), ["inspect", "create", "start"]);
+	assert.equal(calls3.find((c) => c[1] === "create").at(-1), "piper-agent");
+
+	// Flattening: only when deep, keeping the configuration.
+	layers = FLATTEN_OVER_LAYERS;
+	calls3.length = 0;
+	spawned3.length = 0;
+	assert.equal((await flattenImage("piper-keystate:x", { spawnFn: fakeSpawn })).flattened, false, "not over the limit");
+	assert.equal(spawned3.length, 0, "nothing was exported or imported");
+	layers = FLATTEN_OVER_LAYERS + 20;
+	spawned3.length = 0;
+	calls3.length = 0;
+	const flat = await flattenImage("piper-keystate:x", { spawnFn: fakeSpawn });
+	assert.deepEqual([flat.flattened, flat.depth, flat.replacedId], [true, 120, "sha256:saved"]);
+	assert.deepEqual(spawned3.map((p) => p.args[0]), ["export", "import"], "export piped into import");
+	const importArgs = spawned3[1].args;
+	const changes = importArgs.flatMap((a, i) => (a === "--change" ? [importArgs[i + 1]] : []));
+	assert.ok(changes.includes('ENV TOOL="a b"') && changes.includes('CMD ["sleep","infinity"]') && changes.includes("WORKDIR /workspace") && changes.includes('LABEL "piper.image"="1"'), "the runtime configuration is put back");
+	assert.deepEqual(importArgs.slice(-2), ["-", "piper-keystate:x"], "under the same tag");
+	assert.ok(calls3.some((c) => c[1] === "create") && calls3.some((c) => c[1] === "rm" && c.includes("-f")), "through a throwaway container");
+	assert.deepEqual(importChanges({}), []);
+	layers = 5;
+
+	// A long command, streamed.
+	{
+		const got = [];
+		spawned3.length = 0;
+		const run = execStream("c1", ["pi", "update", "--extensions"], { env: { HOME: "/root" }, cwd: "/profile", timeoutMs: 120_000, onLine: (l) => got.push(l), spawnFn: fakeSpawn });
+		const done = await run;
+		assert.deepEqual(spawned3[0].args.slice(0, 7), ["exec", "-w", "/profile", "-e", "HOME=/root", "c1", "timeout"], "env, folder, then the command under timeout");
+		assert.deepEqual(spawned3[0].args.slice(6, 10), ["timeout", "-k", "10", "120"]);
+		assert.deepEqual([done.code, done.timedOut, got], [0, false, ["running pi update --extensions"]]);
+	}
+
+	// Who owns a container, and what is refused.
+	const { record: okKey } = apiKeys.create({ name: "updater", expiresAt: 0 });
+	const agent = await createAgent({ keyId: okKey.id, name: "updatable" });
+	const aScope = agentScope(okKey.id, agent.id);
+	const aName = keyContainerName(aScope);
+	const agentInfo = (extra = {}) => ({ Name: "/" + aName, State: { Running: true }, Config: { Labels: { "piper.managed": "1", "piper.sig": "old", "piper.key": okKey.id, "piper.agent": agent.id } }, ...extra });
+	inspectFor = (n) => (n === aName ? agentInfo() : null);
+	const t = await resolveTarget(aName);
+	assert.deepEqual([t.kind, t.persistent, t.scopeId, t.keyId, t.agentId], ["agent", true, aScope, okKey.id, agent.id]);
+	await assert.rejects(resolveTarget("piper-00000000-abc"), (e) => e.status === 404, "not ours");
+	await assert.rejects(resolveTarget(keyContainerName("ghost")), (e) => e.status === 404, "no such container");
+	const goneInfo = (n) => ({ Name: "/" + n, State: { Running: true }, Config: { Labels: { "piper.managed": "1", "piper.key": okKey.id, "piper.agent": "deadbeef" } } });
+	inspectFor = (n) => goneInfo(n);
+	await assert.rejects(resolveTarget(keyContainerName(agentScope(okKey.id, "deadbeef"))), /belongs to nothing/, "an agent that is gone owns nothing");
+	inspectFor = (n) => (n === aName ? agentInfo() : null);
+	assert.deepEqual(await containersOfScope(aScope), [], "no managed containers listed by this fake yet");
+
+	// A request running in it: refused, nothing touched.
+	const realRecords = sessions.recordsByScope.bind(sessions);
+	const realHibernate = sessions.hibernate.bind(sessions);
+	const hibernated = [];
+	sessions.hibernate = (id) => { hibernated.push(id); return true; };
+	sessions.recordsByScope = (scope) => (scope === aScope ? [{ id: "live-1", container: { name: aName }, inflight: 1, stopped: Promise.resolve() }] : realRecords(scope));
+	calls3.length = 0;
+	await assert.rejects(updateContainer(aName), (e) => e.status === 409 && /request is running/.test(e.message));
+	assert.equal(calls3.filter((c) => c[1] === "stop" || c[1] === "rm").length, 0);
+	assert.equal(hibernated.length, 0);
+	// Idle chats are stopped first.
+	sessions.recordsByScope = (scope) => (scope === aScope ? [{ id: "live-1", container: { name: aName }, inflight: 0, stopped: Promise.resolve() }] : realRecords(scope));
+
+	// Not enough disk to save its state.
+	diskState.containers = new Map([[aName, { rw: 3 * 1024 ** 3 }]]);
+	diskState.host = { path: "/", freeBytes: 3.5 * 1024 ** 3, totalBytes: 10 * 1024 ** 3 };
+	await assert.rejects(updateContainer(aName), (e) => e.status === 507 && /not enough disk/.test(e.message));
+	diskState.host = { path: "/", freeBytes: 50 * 1024 ** 3, totalBytes: 100 * 1024 ** 3 };
+
+	// A good run: rebuilt, Pi set to the gateway's version, extensions updated, the container left running.
+	const lines = [];
+	calls3.length = 0;
+	spawned3.length = 0;
+	const result = await updateContainer(aName, (l) => lines.push(l), { spawnFn: fakeSpawn });
+	assert.deepEqual(hibernated, ["live-1"], "its chat was stopped first");
+	assert.deepEqual(result.steps.map((x) => `${x.name}:${x.state}`), ["rebuild:done", "pi:done", "extensions:done"]);
+	assert.deepEqual([result.piFrom, result.piTo], ["0.1.0", hostPi], "old -> the gateway's");
+	const npm = spawned3.find((p) => p.args.includes("npm"));
+	assert.deepEqual(npm.args.slice(npm.args.indexOf("npm")), ["npm", "install", "-g", "--ignore-scripts", `@earendil-works/pi-coding-agent@${hostPi}`], "exactly the gateway's version, not latest");
+	const ext = spawned3.find((p) => p.args.includes("--extensions"));
+	const extEnv = ext.args.flatMap((a, i) => (a === "-e" ? [ext.args[i + 1]] : []));
+	assert.ok(extEnv.includes("PI_CODING_AGENT_DIR=/profile") && extEnv.includes("PI_CONFIG_DIR=/profile/config"), "against the profile");
+	assert.equal(extEnv.some((e) => e.startsWith("PI_OFFLINE")), false, "online: it has to reach the registry");
+	assert.equal(ext.args[ext.args.indexOf("-w") + 1], "/profile");
+	assert.equal(calls3.filter((c) => c[1] === "stop").length, 1, "stopped once, to save it; not stopped again afterwards");
+	assert.ok(lines.some((l) => /rebuilt from its saved state/.test(l)) && lines.some((l) => /installing/.test(l)));
+	assert.ok(recentAuditRows(10).some((r) => r.action === "container.update" && r.target === aName && new RegExp(`Pi 0\\.1\\.0 -> ${hostPi.replace(/\./g, "\\.")}`).test(r.detail)), "on record");
+
+	// Already current: nothing installed. A failed install: reported, and the extensions still run.
+	piVersion = hostPi;
+	spawned3.length = 0;
+	const again = await updateContainer(aName, () => {}, { spawnFn: fakeSpawn });
+	assert.equal(again.steps.find((x) => x.name === "pi").detail, `already ${hostPi}`);
+	assert.equal(spawned3.some((p) => p.args.includes("npm")), false);
+	piVersion = "0.1.0";
+	npmExit = 1;
+	const broken = await updateContainer(aName, () => {}, { spawnFn: fakeSpawn });
+	assert.deepEqual(broken.steps.map((x) => `${x.name}:${x.state}`), ["rebuild:done", "pi:failed", "extensions:done"], "one failed step does not stop the next");
+	assert.deepEqual(broken.failed, ["pi"]);
+	npmExit = 0;
+
+	// A locked profile and a no-network policy: the extension/Pi steps say why they did not run.
+	setProfileLock(scopeOf(aScope), true);
+	spawned3.length = 0;
+	piVersion = hostPi;
+	const locked3 = await updateContainer(aName, () => {}, { spawnFn: fakeSpawn });
+	assert.match(locked3.steps.find((x) => x.name === "extensions").detail, /locked by the operator/);
+	assert.equal(spawned3.some((p) => p.args.includes("--extensions")), false);
+	setProfileLock(scopeOf(aScope), false);
+	await updateAgent(agent.id, { container: { network: "none" } });
+	piVersion = "0.1.0";
+	const offline = await updateContainer(aName, () => {}, { spawnFn: fakeSpawn });
+	assert.match(offline.steps.find((x) => x.name === "pi").detail, /no network/);
+	assert.match(offline.steps.find((x) => x.name === "extensions").detail, /no network/);
+	assert.equal(offline.steps[0].state, "done", "it was still rebuilt");
+	await updateAgent(agent.id, { container: null });
+
+	// A chat's own container: found through its stored row, stopped again when done.
+	const chatHash = chatIdHash("update-chat");
+	const chatName = containerName(chatHash);
+	chatStore.put({ id_hash: chatHash, key_id: null, workspace: "/w-chat", created_at: 1, last_used_at: 2, requests: 2, state_json: "{}" });
+	const chatInfo = { Name: "/" + chatName, State: { Running: false }, Config: { Labels: { "piper.managed": "1", "piper.sig": "old", "piper.key": "" } } };
+	inspectFor = (n) => (n === aName ? agentInfo() : n === chatName ? chatInfo : null);
+	sessions.recordsByScope = realRecords;
+	const ct = await resolveTarget(chatName);
+	assert.deepEqual([ct.kind, ct.persistent, ct.workspace], ["chat", false, "/w-chat"]);
+	calls3.length = 0;
+	piVersion = hostPi;
+	await updateContainer(chatName, () => {}, { spawnFn: fakeSpawn });
+	assert.equal(calls3.filter((c) => c[1] === "stop").length, 2, "stopped to save it, and again afterwards like between messages");
+	chatStore.delete(chatHash);
+	await assert.rejects(resolveTarget(chatName), /belongs to no chat/, "an orphan is refused");
+
+	// Jobs: one at a time, items in order, a busy or orphaned one skipped, the rest go on.
+	resetUpdateJob();
+	inspectFor = (n) => (n === aName ? agentInfo() : n === chatName ? chatInfo : null);
+	const started = await startUpdate([aName], { spawnFn: fakeSpawn });
+	assert.equal(started.state, "running");
+	await assert.rejects(startUpdate([aName], { spawnFn: fakeSpawn }), (e) => e.status === 409, "one job at a time");
+	for (let i = 0; i < 100 && updateJobView().state === "running"; i++) await new Promise((r) => setTimeout(r, 20));
+	assert.equal(updateJobView().state, "done");
+	assert.deepEqual(updateJobView().items.map((i) => [i.name, i.state]), [[aName, "done"]]);
+	assert.ok(updateJobView().items[0].lines.some((l) => /rebuilt/.test(l)));
+	await assert.rejects(startUpdate(["piper-00000000-abc"], { spawnFn: fakeSpawn }), (e) => e.status === 404, "an unknown container is refused up front");
+	// Update all: lists what there is (the agent's, a chat's that is gone), skips what cannot be updated.
+	sessions.recordsByScope = (scope) => (scope === aScope ? [{ id: "live-2", container: { name: aName }, inflight: 2, stopped: Promise.resolve() }] : realRecords(scope));
+	setRunner(async (bin, args) => {
+		if (args[0] === "ps") return { code: 0, stdout: `${aName}\trunning\t${okKey.id}\t${agent.id}\n${containerName(chatIdHash("vanished"))}\texited\t\t\n`, stderr: "" };
+		return fake(bin, args);
+	});
+	const all = await startUpdateAll({ spawnFn: fakeSpawn });
+	assert.equal(all.items.length, 2);
+	for (let i = 0; i < 100 && updateJobView().state === "running"; i++) await new Promise((r) => setTimeout(r, 20));
+	const states = Object.fromEntries(updateJobView().items.map((i) => [i.name.slice(-12), i.state]));
+	assert.deepEqual(Object.values(states).sort(), ["skipped", "skipped"], "busy and orphaned ones are skipped, not failed");
+	assert.equal(updateJobView().state, "done", "skips are not failures");
+	sessions.recordsByScope = realRecords;
+	sessions.hibernate = realHibernate;
+
+	// The routes.
+	setRunner(fake);
+	inspectFor = (n) => (n === aName ? agentInfo() : null);
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	const dash = `http://127.0.0.1:${server.address().port}`;
+	const post = async (path) => {
+		const res = await fetch(dash + path, { method: "POST" });
+		return { status: res.status, json: await res.json().catch(() => null) };
+	};
+	resetUpdateJob();
+	assert.equal((await (await fetch(`${dash}/dashboard/updates.json`)).json()).job, null, "no job yet");
+	assert.equal((await post(`/dashboard/containers/piper-00000000-abc/update`)).status, 404, "unknown container");
+	const viaScope = await post(`/dashboard/profiles/${scopeOf(aScope)}/update-container`);
+	assert.equal(viaScope.status, 404, "no managed container listed by the fake engine yet");
+	assert.equal((await post(`/dashboard/profiles/key-nope/update-container`)).status, 404);
+	setRunner(async (bin, args) => (args[0] === "ps" ? { code: 0, stdout: `${aName}\trunning\t${okKey.id}\t${agent.id}\n`, stderr: "" } : fake(bin, args)));
+	assert.deepEqual(await containersOfScope(aScope), [aName], "an agent scope maps to its container");
+	assert.deepEqual(await containersOfScope(okKey.id), [], "and the key's scope does not include its agents'");
+	const viaAgent = await post(`/dashboard/agents/${agent.id}/update`);
+	assert.equal(viaAgent.status, 200);
+	assert.equal(viaAgent.json.job.items[0].name, aName);
+	for (let i = 0; i < 100 && updateJobView().state === "running"; i++) await new Promise((r) => setTimeout(r, 20));
+	const viaName = await post(`/dashboard/containers/${aName}/update`);
+	assert.equal(viaName.status, 200, "the Containers page's button");
+	for (let i = 0; i < 100 && updateJobView().state === "running"; i++) await new Promise((r) => setTimeout(r, 20));
+	assert.equal((await post(`/dashboard/containers/update-all`)).status, 200);
+	for (let i = 0; i < 100 && updateJobView().state === "running"; i++) await new Promise((r) => setTimeout(r, 20));
+	assert.equal((await post(`/dashboard/agents/00000000/update`)).status, 404);
+
+	await new Promise((r) => server.close(r));
+	await deleteAgent(agent.id);
+	resetUpdateJob();
+	config.ACCESS_LOG = accessLog3;
 	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 }
 

@@ -42,7 +42,7 @@ import { filesRoutes, keyIdForScope, profileAdminRoutes, profileRoutes } from ".
 import { sessions, spendReport, startSweeps } from "./lib/sessions.mjs";
 import { chatCompletions, listModels } from "./lib/chat.mjs";
 import { startAgentServers, stopAgentServers } from "./lib/agentservers.mjs";
-import { LOGIN_PAGE, agentRoutes, apiKeyRoutes, containerPiRoutes, containerRoutes, dashboardLogin, dashboardPage, dashboardSetPassword, modelCatalog, saveSettings, settingsPayload } from "./lib/dashboard.mjs";
+import { LOGIN_PAGE, updateScopeRoute, agentRoutes, apiKeyRoutes, containerPiRoutes, containerRoutes, dashboardLogin, dashboardPage, dashboardSetPassword, modelCatalog, saveSettings, settingsPayload } from "./lib/dashboard.mjs";
 
 // Everything the modules export, re-exported: the tests, and anyone embedding the gateway, import
 // from here.
@@ -64,6 +64,7 @@ export * from "./lib/sessions.mjs";
 export * from "./lib/chat.mjs";
 export * from "./lib/agents.mjs";
 export * from "./lib/agentservers.mjs";
+export * from "./lib/updates.mjs";
 export * from "./lib/dashboard.mjs";
 
 // ------------------------------------------------------------------- server
@@ -108,6 +109,8 @@ export const server = http.createServer(async (req, res) => {
 		if (req.method === "POST" && path === "/dashboard/password") return await dashboardSetPassword(req, res);
 		if (path.startsWith("/dashboard/api-keys")) return await apiKeyRoutes(req, res, path);
 		if (path === "/dashboard/agents.json" || path === "/dashboard/agents" || path.startsWith("/dashboard/agents/")) return await agentRoutes(req, res, path);
+		const updateMatch = /^\/dashboard\/profiles\/([A-Za-z0-9_-]+)\/update-container$/.exec(path);
+		if (updateMatch) return await updateScopeRoute(req, res, updateMatch[1]);
 		if (path === "/dashboard/profiles.json" || path.startsWith("/dashboard/profiles/")) return await profileAdminRoutes(req, res, path);
 		const filesMatch = /^\/dashboard\/files\/([A-Za-z0-9_-]+)(\/.*)?$/.exec(path);
 		if (filesMatch) {
@@ -157,7 +160,7 @@ export const server = http.createServer(async (req, res) => {
 			return res.end(JSON.stringify({ closed }));
 		}
 		if (path === "/dashboard/container-pi" || path === "/dashboard/containers/recheck") return await containerPiRoutes(req, res, path);
-		if (path === "/dashboard/containers.json" || path.startsWith("/dashboard/containers/") || path === "/dashboard/audit.json" || path === "/dashboard/alerts/test" || path === "/dashboard/images.json" || path.startsWith("/dashboard/images/")) return await containerRoutes(req, res, path);
+		if (path === "/dashboard/containers.json" || path.startsWith("/dashboard/containers/") || path === "/dashboard/audit.json" || path === "/dashboard/updates.json" || path === "/dashboard/alerts/test" || path === "/dashboard/images.json" || path.startsWith("/dashboard/images/")) return await containerRoutes(req, res, path);
 		if (req.method === "POST" && path === "/dashboard/kill-all") {
 			res.writeHead(200, { "Content-Type": "application/json" });
 			return res.end(JSON.stringify({ closed: sessions.closeAll() }));

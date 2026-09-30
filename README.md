@@ -368,6 +368,30 @@ OpenAI client at `http://<host>:<port>/v1` with the key the agent belongs to.
 Each agent opens a port on `HOST`, so on a machine reachable from elsewhere, allow `AGENT_PORT_RANGE` in the
 firewall deliberately, or bind `HOST` to localhost and put a TLS reverse proxy in front.
 
+### Updating a container
+
+**Update** (Containers page row, an agent's row on Endpoints, **Update container** in a profile's detail, and
+**Update all**) rebuilds a container *keeping what is installed in it*, then brings Pi and its extensions up
+to date. **Recreate**/**Reset** is the other tool: it throws the container and its installed state away.
+
+What one update does, in order (its log is shown in a panel and stays until closed):
+1. stops the chats in it (each resumes on its next message; a container with a request running is skipped);
+2. rebuilds it with today's settings (limits, mounts, bundles, DNS/hosts files): its state is saved to an
+   image (`piper-keystate:<name>`), the container removed and created again from that. A failed save removes
+   nothing. Many updates add many layers, so a saved state over 100 layers is flattened into one, keeping its
+   configuration. The free-space check refuses when the disk cannot hold the copy;
+3. **Pi** is set to exactly the version the gateway runs (not the newest release: the container's Pi must
+   speak the gateway's protocol, so update the host's Pi first to move both), logged as `old -> new`;
+4. **`pi update --extensions`** updates the profile's packages. They live in the profile, so they survive any
+   rebuild. Skipped, with the reason, when the profile is locked by the operator or is a throwaway copy
+   (frozen or over its limit), and steps 3 and 4 are skipped for a container whose network policy is `none`;
+5. a chat's own container is stopped again (as between messages); a persistent one keeps running.
+
+A failing step is reported and does not stop the next. **Update all** goes container by container, skipping
+any that is busy or belongs to nothing. A newly built `piper-agent` image is *not* picked up by an update (the
+saved state carries the old system): use Recreate for that, and accept that installs are lost. Everything is
+in the audit trail.
+
 ### The Containers page
 
 **Containers** in the sidebar lists every container this gateway made, with the key and chat it belongs
