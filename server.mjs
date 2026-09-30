@@ -6,10 +6,13 @@
  *   GET  /v1/models
  *   GET  /health
  *
- * One Pi agent per session id, never shared between ids: by default a separate `pi --mode rpc`
- * process inside a sandbox (RUNNER), with the API key's own profile of skills, extensions and
- * settings, and no credentials — model calls come back here over a socket. Send `X-Session-Id`
- * (or `session_id`) to continue a chat; omit it and the gateway mints a fresh
+ * One Pi agent per session id, never shared between ids: a separate `pi --mode rpc` in its own
+ * Docker container, where Pi is a stock install with full privileges. The container is the
+ * sandbox: the gateway decides what it can reach (the API key's workspace and profile, a network
+ * that stops at the internet, resource limits), not what Pi does inside. Models the gateway holds
+ * credentials for are served over a socket; models configured for containers are called directly.
+ * Send `X-Session-Id`
+(or `session_id`) to continue a chat; omit it and the gateway mints a fresh
  * isolated session and returns the id in the `X-Session-Id` response header.
  * Sessions are held until the 24h lifetime cap, the idle timeout, or a count cap,
  * whichever comes first, then disposed.
@@ -29,25 +32,33 @@
  */
 import http from "node:http";
 import { pathToFileURL } from "node:url";
-import { GATEWAY_DB, agentCwd, config } from "./lib/settings.mjs";
+import { GATEWAY_DB, config } from "./lib/settings.mjs";
 import { authNote, authRequired, clearSessionCookie, credentialOf, dashboardAuthorized, dashboardHash, isDashboardPath } from "./lib/auth.mjs";
-import { sandboxLimiter } from "./lib/sandbox.mjs";
+import { checkEngine, lastEngineStatus } from "./lib/engine.mjs";
+import { diskSummary, engineOptions, migrateToContainers, startDiskWatch, startEventWatch } from "./lib/containers.mjs";
 import { reloadModelRuntime } from "./lib/models.mjs";
 import { cors, logAccess, readJson, sendError } from "./lib/http.mjs";
-import { filesRoutes, keyIdForScope, migrateProfileDefaults, profileAdminRoutes, profileRoutes } from "./lib/profiles.mjs";
-import { sessions, spendReport } from "./lib/sessions.mjs";
+import { filesRoutes, keyIdForScope, profileAdminRoutes, profileRoutes } from "./lib/profiles.mjs";
+import { sessions, spendReport, startSweeps } from "./lib/sessions.mjs";
 import { chatCompletions, listModels } from "./lib/chat.mjs";
-import { LOGIN_PAGE, apiKeyRoutes, dashboardLogin, dashboardPage, dashboardSetPassword, modelCatalog, saveSettings, settingsPayload } from "./lib/dashboard.mjs";
+import { LOGIN_PAGE, apiKeyRoutes, containerPiRoutes, containerRoutes, dashboardLogin, dashboardPage, dashboardSetPassword, modelCatalog, saveSettings, settingsPayload } from "./lib/dashboard.mjs";
 
 // Everything the modules export, re-exported: the tests, and anyone embedding the gateway, import
 // from here.
 export * from "./lib/settings.mjs";
 export * from "./lib/auth.mjs";
-export * from "./lib/sandbox.mjs";
+export * from "./lib/paths.mjs";
+export * from "./lib/engine.mjs";
+export * from "./lib/containerpi.mjs";
 export * from "./lib/models.mjs";
 export * from "./lib/http.mjs";
 export * from "./lib/profiles.mjs";
 export * from "./lib/runner.mjs";
+export * from "./lib/containers.mjs";
+export * from "./lib/keycontainer.mjs";
+export * from "./lib/audit.mjs";
+export * from "./lib/alerts.mjs";
+export * from "./lib/images.mjs";
 export * from "./lib/sessions.mjs";
 export * from "./lib/chat.mjs";
 export * from "./lib/dashboard.mjs";
@@ -65,7 +76,9 @@ export const server = http.createServer(async (req, res) => {
 		const path = new URL(req.url, "http://localhost").pathname;
 		if (req.method === "GET" && (path === "/health" || path === "/")) {
 			res.writeHead(200, { "Content-Type": "application/json" });
-			return res.end(JSON.stringify({ status: "ok", cwd: agentCwd(), sessions: sessions.stats() }));
+			// Two more facts, both harmless to say to anyone: whether containers can run, and how much disk is left.
+			const engine = lastEngineStatus();
+			return res.end(JSON.stringify({ status: "ok", sessions: sessions.stats(), docker: engine ? engine.ok : null, diskFreeMb: diskSummary().freeMb }));
 		}
 		// The dashboard has its own guard, so an unauthenticated browser gets a sign-in page it can
 		// answer instead of a 401 it cannot. /v1/* keeps the API key check to itself.
@@ -127,26 +140,10 @@ export const server = http.createServer(async (req, res) => {
 			const snapshot = await sessions.snapshot();
 			// The page polls this anyway, so the sidebar learns for free whether to offer a sign-out.
 			snapshot.passwordSet = Boolean(dashboardHash);
-			// The sandbox is a switch, and a switch that is off fails silently: a session then reads the
-			// whole filesystem, including this gateway's own database. The page shows that state loudly.
-			// The sandboxed runners are always confined; only the in-process runner depends on the jail.
-			const inProcess = config.RUNNER === "inprocess";
-			snapshot.runner = config.RUNNER;
-			snapshot.jail = !inProcess || Boolean(config.WORKSPACE_JAIL);
-			snapshot.jailNote = !snapshot.jail
-				? "WORKSPACE_JAIL is off, so sessions run unsandboxed: bash is not confined and the file " +
-					"tools are not path-checked. An agent can read this gateway's database and your home directory."
-				: "";
-			// A sandbox without limits can take the whole machine's memory or processes with it.
-			const limiter = config.RUNNER === "bwrap" ? sandboxLimiter() : null;
-			snapshot.limitsNote =
-				limiter && (limiter.error || limiter.note?.startsWith("none"))
-					? `${limiter.error ?? "systemd scopes are unavailable here"}, so one session can use all of this machine's memory, processes and CPU. Run under systemd, or use a container runner.`
-					: "";
-			snapshot.runnerNote = inProcess
-				? "RUNNER is inprocess: every session shares this gateway's process and your ~/.pi/agent, and the file " +
-					"tools are guarded by a path check rather than a sandbox. Use it only for yourself."
-				: "";
+			// Whether containers can run here and what is wrong when not: Docker, the image, the network
+			// policy. A gateway that cannot start chats should say so on the page, not only in a 503.
+			snapshot.containers = await checkEngine(await engineOptions());
+			snapshot.disk = diskSummary();
 			res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
 			return res.end(JSON.stringify(snapshot));
 		}
@@ -155,6 +152,8 @@ export const server = http.createServer(async (req, res) => {
 			res.writeHead(closed ? 200 : 404, { "Content-Type": "application/json" });
 			return res.end(JSON.stringify({ closed }));
 		}
+		if (path === "/dashboard/container-pi" || path === "/dashboard/containers/recheck") return await containerPiRoutes(req, res, path);
+		if (path === "/dashboard/containers.json" || path.startsWith("/dashboard/containers/") || path === "/dashboard/audit.json" || path === "/dashboard/alerts/test" || path === "/dashboard/images.json" || path.startsWith("/dashboard/images/")) return await containerRoutes(req, res, path);
 		if (req.method === "POST" && path === "/dashboard/kill-all") {
 			res.writeHead(200, { "Content-Type": "application/json" });
 			return res.end(JSON.stringify({ closed: sessions.closeAll() }));
@@ -165,7 +164,7 @@ export const server = http.createServer(async (req, res) => {
 		}
 		if (req.method === "GET" && path === "/v1/models") return await listModels(res, req.credential);
 		if (path === "/v1/piper/profile" || path.startsWith("/v1/piper/profile/")) return await profileRoutes(req, res, path);
-		// A key's own shared folder, and the operator's view of any key's.
+		// A key's own workspace, and the operator's view of any key's.
 		if (path === "/v1/piper/files" || path.startsWith("/v1/piper/files/")) {
 			return await filesRoutes(req, res, req.credential ? req.credential.id : null, path.slice("/v1/piper/files".length));
 		}
@@ -180,36 +179,29 @@ export const server = http.createServer(async (req, res) => {
 
 export const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 /**
- * Why the gateway should not start as root, or null when it may.
- *
- * The sandbox holds without root privileges, but as root its user namespace maps back to uid 0, so
- * anything root-owned that the masks miss is readable by the session that owns it. A dedicated
- * unprivileged user is what makes "the masks missed a path" a non-event rather than a leak.
+ * A warning for running as root, or null. Root is not refused: the gateway needs the Docker socket,
+ * and access to it is root-equivalent whoever holds it. What it should get is a dedicated user (and,
+ * better, rootless Docker), so a container escape is not a host takeover.
  */
-export function rootRefusal(uid = process.getuid?.(), env = process.env) {
+export function rootWarning(uid = process.getuid?.()) {
 	if (uid !== 0) return null;
-	if (/^(1|true|yes|on)$/i.test(String(env.ALLOW_ROOT ?? ""))) return null;
-	return (
-		"refusing to run as root: sessions run commands on your behalf, and as root anything the sandbox " +
-		"fails to mask is readable by them. Run as a dedicated user, or set ALLOW_ROOT=1 to accept the risk.\n"
-	);
+	return "running as root: anything that escapes a container reaches the host as root. Prefer a dedicated user, ideally with rootless Docker (see DEPLOYMENT.md).\n";
 }
 
 if (isMain) {
-	const refusal = rootRefusal();
-	if (refusal) {
-		process.stderr.write(refusal);
-		process.exit(1);
-	}
+	const warning = rootWarning();
+	if (warning) process.stderr.write(warning);
+	const moved = migrateToContainers();
+	if (moved) process.stderr.write(`moved to containers: ${moved.workspaces} shared folder(s) became workspaces, ${moved.archived} old chat workspace(s) archived, ${moved.chats} stored chat(s) reset\n`);
 	// A restart hibernates every chat instead of dropping it: each one's spend is written to the
-	// ledger, its agent stopped, and its workspace and Pi session kept for the next message.
+	// ledger, its agent and container stopped, and the container and Pi session kept for the next message.
 	let stopping = false;
 	const shutdown = async (signal) => {
 		if (stopping) return;
 		stopping = true;
 		process.stderr.write(`${signal}: hibernating ${sessions.size} chat(s)\n`);
 		server.close();
-		const deadline = setTimeout(() => process.exit(0), 5000);
+		const deadline = setTimeout(() => process.exit(0), 10_000);
 		deadline.unref?.();
 		await sessions.hibernateAll().catch(() => {});
 		process.exit(0);
@@ -217,15 +209,25 @@ if (isMain) {
 	process.on("SIGTERM", () => void shutdown("SIGTERM"));
 	process.on("SIGINT", () => void shutdown("SIGINT"));
 	server.listen(config.PORT, config.HOST, () => {
-		void migrateProfileDefaults().then((n) => n && process.stderr.write(`profiles now follow the default model: ${n} migrated\n`), () => {});
 		process.stderr.write(
-			`Piper on http://${config.HOST}:${config.PORT}  cwd=${agentCwd()}  ` +
+			`Piper on http://${config.HOST}:${config.PORT}  ` +
 				`auth=${authNote()}  ` +
 				`dashboard=${dashboardHash ? "password" : "open"}  ` +
-				`runner=${config.RUNNER}  ` +
-				`${config.RUNNER === "bwrap" ? `limits=${sandboxLimiter().note ?? "unavailable"}  ` : ""}` +
-				`jail=${config.RUNNER !== "inprocess" || config.WORKSPACE_JAIL ? "on" : "OFF"}  sandbox-net=${config.SANDBOX_NETWORK}  ` +
+				`image=${config.CONTAINER_IMAGE}  network=${config.CONTAINER_NETWORK}  ` +
+				`limits=${config.CONTAINER_MEMORY_MB}MB/${config.CONTAINER_CPUS}cpu/${config.CONTAINER_PIDS}pids  ` +
 				`${process.getuid?.() === 0 ? "user=ROOT  " : ""}db=${GATEWAY_DB}\n`,
+		);
+		// Say now whether containers can run, instead of at the first chat, and start the sweeps.
+		void engineOptions().then((options) => checkEngine({ force: true, ...options })).then(
+			(status) => {
+				for (const problem of status.problems) process.stderr.write(`containers: ${problem}\n`);
+				for (const warn of status.warnings) process.stderr.write(`containers: ${warn}\n`);
+				if (status.ok) process.stderr.write(`containers: docker ${status.engine.version}, image ${config.CONTAINER_IMAGE} (Pi ${status.image.piVersion || "?"}), network ${status.network.mode}${status.firewall.allowed.length ? `, allowed: ${status.firewall.allowed.map((a) => a.endpoint).join(" ")}` : ""}\n`);
+				startSweeps();
+				startEventWatch();
+				startDiskWatch();
+			},
+			() => startSweeps(),
 		);
 	});
 }

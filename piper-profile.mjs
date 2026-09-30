@@ -1,11 +1,11 @@
 /**
- * Piper profile helper: reads and edits one API key's Pi profile, from inside a sandbox.
+ * Piper profile helper: reads and edits one API key's Pi profile or workspace, from inside a container.
  *
  * The profile is writable by that key's own sessions, so it may hold anything a session put there,
  * symlinks included. The gateway therefore never opens a profile file itself: a link planted as
  * `settings.json -> ~/.pi/agent/auth.json` would turn "show my settings" into "show the gateway's
- * credentials". Instead this script runs in the same sandbox a session gets, with only the profile
- * mounted, so following a link reaches nothing the session could not already read.
+ * credentials". Instead this script runs in a throwaway container with only the folder
+ * mounted, so following a link reaches nothing the agent could not already read.
  *
  * Protocol: one JSON command on stdin, one JSON answer on stdout, `{ ok, result }` or `{ ok: false,
  * error }`. The working directory is the profile. PROFILE_MAX_BYTES caps what writes may grow it to.
@@ -116,7 +116,7 @@ const PREVIEW_CHARS = 1500;
  *
  * Exported because the gateway reads shared bundles with the same code. Bundles are the operator's
  * and read-only, so reading them directly is safe; a profile is read only through this helper,
- * inside a sandbox, for the reasons at the top of this file.
+ * inside a container, for the reasons at the top of this file.
  */
 export function inventory(root) {
 	const at = (...parts) => join(root, ...parts);
@@ -196,7 +196,7 @@ function filePath(rel) {
 	if (text === "") return ROOT;
 	const target = inside(ROOT, text);
 	// A session may plant links in the folder. None of the folders on the way may be one, so a path
-	// can never lead out of the folder, even into what little the helper's own sandbox shows.
+	// can never lead out of the folder, even into what little the helper's own container shows.
 	let dir = ROOT;
 	for (const part of relative(ROOT, dirname(target)).split(sep).filter(Boolean)) {
 		dir = join(dir, part);
@@ -206,7 +206,7 @@ function filePath(rel) {
 }
 
 const OPS = {
-	// The key's shared folder, when this helper runs over it: list and delete. Reading and writing
+	// The key's workspace, when this helper runs over it: list and delete. Reading and writing
 	// file contents go through the raw modes below, so large files never pass through JSON.
 	"files.list": ({ path }) => {
 		const dir = filePath(path);
@@ -361,16 +361,24 @@ async function raw(mode, rel, maxBytes) {
 		}
 		const temp = `${target}.piper-upload`;
 		let written = 0;
-		const out = createWriteStream(temp);
+		// Opened at the first chunk that fits, not before: opening is asynchronous, and a file that
+		// is opened after the clean-up of a refused upload would be left behind, empty.
+		let out = null;
 		for await (const chunk of process.stdin) {
 			written += chunk.length;
 			if (limit > 0 && written > limit) {
-				out.destroy();
+				if (out) {
+					out.destroy();
+					await new Promise((r) => out.once("close", r));
+				}
 				rmSync(temp, { force: true });
 				return fail(5, `file too large: more than ${limit} bytes`);
 			}
+			out ??= createWriteStream(temp);
 			if (!out.write(chunk)) await new Promise((r) => out.once("drain", r));
 		}
+		// An empty upload never got a chunk, and is still a file.
+		out ??= createWriteStream(temp);
 		await new Promise((r) => out.end(r));
 		// A rename replaces a link rather than writing through it.
 		renameSync(temp, target);

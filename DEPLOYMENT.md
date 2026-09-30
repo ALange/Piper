@@ -1,70 +1,115 @@
 # Deploying Piper on a new host
 
 This takes a freshly installed Linux machine to a running gateway: what to install, how to run it
-as a service, and how to check that the sandbox is really in force. The README explains *why*
+as a service, and how to check that a chat's container is really confined. The README explains *why*
 things work the way they do; this file is the *how*.
 
-It was written against Debian 13 (bubblewrap 0.12, systemd 257, Node 22). Other distributions work
-if they meet the requirements below. Watch the bubblewrap version in particular.
+It was written against Debian 13 (Docker 26.1, Node 22, `iptables` 1.8 on the nftables backend).
+Other distributions work if they meet the requirements below.
 
-Tested so far: the gateway running as root with `ALLOW_ROOT=1` on that host, including every
-sandbox check in section 9. The dedicated-user setup below (sections 2 and 6, and resource limits
-through the user's systemd manager) follows the same code paths, but has not been run end to end.
-Do section 9's check once after deploying.
+**What has been run.** On that host, with the gateway running as root and the system Docker: the
+image build, chats, the resume across a restart, the network policy, the memory and process limits,
+the file API, two of the three MCP tool servers in a container, and the data migration from the
+bubblewrap version on a copy of real data. **What has not:** the dedicated-user and rootless-Docker
+setups in sections 2 and 6, which follow the same code paths except for the network policy. Do
+section 9's checks once after deploying, whichever way you run it.
+
+## Quick path: `deploy.sh`
+
+On a Linux host that already has Docker, `deploy.sh` does sections 1 to 6 below for you. Clone or copy
+the repository, then run it from there:
+
+```bash
+git clone https://github.com/ALange/Piper.git ~/piper && cd ~/piper
+./deploy.sh --install-node                       # checks the host, installs Node and Pi, builds the image, starts it
+```
+
+It is safe to run again: what is already in place is left alone, and the image is rebuilt only when
+Pi's version changed. It never asks questions; `--dry-run` prints what it would do and changes
+nothing. The options you are most likely to want:
+
+```bash
+DASHBOARD_PASSWORD='a-long-one' ./deploy.sh --install-node --host 0.0.0.0    # expose it, with a password from the start
+sudo ./deploy.sh --systemd --run-as piper --create-user --install-node       # a service, as its own user
+sudo ./deploy.sh --systemd --backups                                          # ... and a daily backup timer
+./deploy.sh --systemd --print-unit                                            # just show the unit it would install
+```
+
+What it does, in order: checks Linux, Docker (24+ and answering), `iptables` and free disk; with
+`--run-as` creates the user, adds it to the `docker` group and hands it the folder; finds Node 22.19+
+(or installs it under `~/.local/node` with `--install-node`, checking the download's SHA-256);
+installs Pi with that Node's `npm`; runs the unit tests; builds the chat image; seeds `--host`,
+`--port` and `DASHBOARD_PASSWORD` on the first start; then starts the gateway with `piper.sh`, or
+installs and starts a systemd unit with `--systemd` (plus a watchdog timer that alerts when the gateway
+stops answering, and with `--backups` a daily backup timer); and finally runs `./piper.sh doctor`.
+
+What it does not do: install Docker (that choice, rootless or not, is yours: section 2), log Pi in
+(run `pi` and `/login`), or set up TLS in front. `--host`, `--port` and the password only apply the
+first time the gateway creates its database; after that they are edited on the dashboard, and it says
+so if you pass them anyway. It puts the password in the database by running the gateway once, never
+in the systemd unit, because a password in the environment replaces the stored one on every start.
+
+It has been run on the reference host (Debian 13) in dry-run mode and for real up to the start,
+with the failure cases (no Docker, Docker not answering, Node too old, bad options) checked, and the
+Node download's checksum logic and the generated unit checked separately. It has **not** been run on
+a machine that started without Node, Pi or the image, so expect to read its output the first time.
 
 ## 1. What the host needs
 
 | Need | Minimum | Why |
 | --- | --- | --- |
-| Linux kernel | 5.11 | Overlay mounts inside user namespaces (used for locked or over-quota profiles). |
-| Unprivileged user namespaces | enabled | Every session runs in its own user namespace, as `nobody` with no capabilities. |
-| bubblewrap | **0.11.0**, installed at `/usr/bin/bwrap` | The sandbox. 0.11 added `--tmp-overlay`; older versions run sessions but cannot start a locked or over-quota profile. |
-| Node.js | 22.19 | The gateway, and the runtime mounted into every sandbox (at `/opt/node`). |
-| Pi | installed with that Node's `npm`, and logged in | Each session runs the Pi CLI; the gateway holds its credentials. |
-| systemd | optional, recommended | Per-sandbox memory, process and CPU limits (`SANDBOX_LIMITS=auto`). Without it, sandboxes run unlimited and the dashboard says so. |
-| Tools for agents | optional | Whatever agents should be able to run: `git`, `python3`, `file`, `curl`, `ripgrep`… Anything under `/usr` is visible to them automatically. |
-
-Distribution notes:
-
-- **Debian 12** ships bubblewrap 0.8 and **Ubuntu 24.04** ships 0.9. Both are too old for overlays.
-  Install 0.11 or newer from backports, a newer release, or source. Otherwise never lock a profile
-  and keep `PROFILE_MAX_BYTES` generous.
-- **Ubuntu 23.10 and later** block unprivileged user namespaces through AppArmor
-  (`kernel.apparmor_restrict_unprivileged_userns=1`). Either add an AppArmor profile that allows
-  `userns` for `/usr/bin/bwrap`, or set that sysctl to `0`.
-- **bubblewrap must not be setuid.** Recent Debian packages refuse to run if it is.
+| Docker Engine | 24 | Every chat runs in its own container. Debian's `docker.io` or Docker's own packages both work. |
+| `iptables` | any 1.8 | The network policy is a few firewall rules in `INPUT` and `DOCKER-USER`. Without them chats refuse to start on the default policy (use `none` or `open` instead). |
+| Node.js | 22.19 | The gateway itself. Containers carry their own Node. |
+| Pi | installed with that Node's `npm`, and logged in | The gateway holds its credentials and runs the models it has keys for. The image gets the same version. |
+| Disk | a few GB | The image is about 1.9 GB with all the tools; each chat's container adds what the agent installs in it. |
+| systemd | optional | For running the gateway as a service. |
 
 Check the host before going further:
 
 ```bash
-bwrap --version                                   # 0.11.0 or newer
-bwrap --help | grep -q tmp-overlay && echo "overlays: ok"
-uname -r                                          # 5.11 or newer
-node -v                                           # v22.19 or newer
-bwrap --unshare-user --ro-bind / / true && echo "user namespaces: ok"   # run as the service user
-systemd-run --version | head -1                   # optional: resource limits
+docker version --format '{{.Server.Version}}'      # 24 or newer
+docker run --rm hello-world | head -2               # the daemon works
+iptables --version                                  # present
+node -v                                             # v22.19 or newer
 ```
 
 ## 2. Create a dedicated user
 
-Run the gateway as its own unprivileged user. As root it refuses to start unless `ALLOW_ROOT=1`.
-Root works, and the sandbox holds either way, but a dedicated user adds ordinary file permissions
-behind it.
+The gateway needs to talk to Docker, and **access to the Docker socket is root-equivalent**: whoever
+can start a container can mount the host's `/` into one. Two setups, in order of preference:
+
+**Rootless Docker (recommended, not yet run with Piper).** The daemon and every container run as an
+unprivileged user, so "root in a container" is only that user on the host, and a container escape is
+not a host takeover. Follow Docker's own guide for your distribution
+(<https://docs.docker.com/engine/security/rootless/>), as the `piper` user, with linger enabled so
+its services survive logout, and point the gateway at that daemon with `DOCKER_HOST`
+(`unix:///run/user/<uid>/docker.sock`).
+
+Rootless Docker does its own networking, which does not pass through the host's `iptables`, so
+Piper's network policy has nothing to act on there. **With rootless Docker use `CONTAINER_NETWORK=none`
+or `open`**, and put a firewall of your own in front if you choose `open`. Models the containers'
+Pi calls directly (section 8) need `open`; models served through the bridge work in every mode.
+
+**A dedicated user in the `docker` group, or `userns-remap`.** Simpler, and the network policy works.
+With `"userns-remap": "default"` in `/etc/docker/daemon.json`, container root maps to an unprivileged
+host uid, which gives most of what rootless gives, and the files a container writes into a workspace
+are owned by that mapped uid (mind that when you back them up or edit them).
 
 ```bash
-sudo apt-get install -y bubblewrap git python3 file curl ripgrep   # plus any tools agents need
-sudo useradd --create-home --shell /bin/bash piper
-sudo loginctl enable-linger piper        # lets its systemd user services (and limits) run without a login
+sudo apt-get install -y docker.io iptables git
+sudo useradd --create-home --shell /bin/bash --groups docker piper
+sudo loginctl enable-linger piper
 sudo -iu piper
 ```
 
-Everything below runs **as `piper`** unless marked otherwise.
+**As root** works, and is how the reference host runs; the gateway logs a warning. Everything below
+runs **as `piper`** unless marked otherwise.
 
 ## 3. Install Node.js and Pi
 
-Any Node 22.19+ works. A per-user install keeps the gateway and every sandbox on one runtime. Pi
-must be installed with **the same Node's `npm`**, because the gateway finds Pi with `npm root -g`
-and mounts that Node prefix into each sandbox.
+Any Node 22.19+ works. Pi must be installed with **the same Node's `npm`**, because the gateway finds
+it with `npm root -g` and builds the image from that version.
 
 ```bash
 # Node, e.g. the official tarball (or nvm, or your distribution's nodejs 22 package)
@@ -77,35 +122,46 @@ npm install -g --ignore-scripts @earendil-works/pi-coding-agent
 pi          # then type /login and sign in to your model provider(s); /quit when done
 ```
 
-Pi keeps the credentials in `~/.pi/agent/auth.json`. The gateway reads them, and no sandbox ever
-sees them: model calls go through the gateway. Set the default model the same way, with `pi` and
-`/model`. New profiles start on it.
+Pi keeps the credentials in `~/.pi/agent/auth.json`. The gateway reads them, and no container ever
+sees them: model calls go through the gateway. If Pi lives somewhere `npm root -g` does not find,
+set `PI_AGENT_PACKAGE` to its package directory.
 
-If Pi lives somewhere `npm root -g` does not find, set `PI_AGENT_PACKAGE` to its package directory.
-
-## 4. Install Piper
+## 4. Install Piper and build the image
 
 ```bash
 git clone https://github.com/ALange/Piper.git ~/piper && cd ~/piper
 # or copy the whole repository there; the gateway needs server.mjs, lib/, dashboard.html,
-# piper-bridge.mjs, piper-profile.mjs and package.json
-node test.mjs                            # the unit tests; they touch only scratch paths
+# piper-bridge.mjs, piper-profile.mjs, docker/ and package.json
+node test.mjs                            # the unit tests; no Docker, and they touch only scratch paths
+./piper.sh image                         # builds piper-agent, pinned to your Pi version (a few minutes)
+./piper.sh doctor                        # Docker up, image built and current
 ```
 
-There is nothing to build and nothing to `npm install`: the gateway uses only Node's standard
-library and the Pi package.
+`./piper.sh image` passes extra options to `docker build`: leave the heavy toolchains out with
+`--build-arg WITH_RUST=0 --build-arg WITH_JAVA_TOOLS=0`, or put tools in by editing `docker/Dockerfile`.
+Rebuild it whenever you update Pi; the gateway warns at start and on the dashboard when the versions
+differ.
+
+There is nothing to `npm install`: the gateway uses only Node's standard library and the Pi package.
 
 At runtime it creates these next to `server.mjs`. All are owner-only, and all should be backed up
-except `workspaces-run`:
+except the last two:
 
 | Path | Holds |
 | --- | --- |
 | `gateway.db` | settings, API key hashes, dashboard password hash, spend ledger, resumable chats |
 | `profiles/` | each API key's own skills, extensions, prompts and settings |
-| `files/` | each API key's shared folder (`/workspace/shared` in its chats) |
+| `workspaces/` | each API key's workspace (`/workspace` in its chats) |
 | `shared/` | the shared bundles you hand out (`shared/base/…`) |
-| `workspaces/`, `workspaces-archive/` | per-chat working files and their archives |
-| `workspaces-run/` | per-session bridge sockets (transient) |
+| `container-pi/` | the Pi config for containers: `models.json` **with the keys of the models you configured**, and `settings.json` |
+| `workspaces-archive/` | reset profiles, and workspaces from before containers, until `ARCHIVE_TTL_MS` |
+| `workspaces-chats/` | each chat's Pi session files (needed to resume it) |
+| `backups/` | archives made by `./piper.sh backup`, owner-only (they hold the database and an API key) |
+| `.watchdog-state` | the watchdog's memory of whether it has already said the gateway is down |
+| `workspaces-run/` | per-chat bridge sockets (transient) |
+
+Docker itself holds the chats' containers (`docker ps -a --filter label=piper.managed=1`); they are
+recreated when needed and are not worth backing up.
 
 ## 5. First start and settings
 
@@ -120,35 +176,39 @@ same host:
 HOST=127.0.0.1 PORT=8787 DASHBOARD_PASSWORD='choose-a-long-one' node server.mjs
 ```
 
-The startup line tells you what is in force. Check it:
+The startup lines tell you what is in force. Check them:
 
 ```text
-Piper on http://127.0.0.1:8787  … runner=bwrap  limits=systemd (MemoryMax=2048M, …)  jail=on  sandbox-net=off  …
+Piper on http://127.0.0.1:8787  auth=off  dashboard=password  image=piper-agent  network=internet  limits=2048MB/2cpu/512pids  db=…
+containers: docker 26.1.5, image piper-agent (Pi 0.99.1), network internet, allowed: 192.168.1.1:53/udp+tcp
 ```
 
-- `runner=bwrap`: sessions are sandboxed.
-- `limits=systemd (…)`: resource limits are applied. `limits=none: …` means systemd scopes are
-  unavailable here; see Troubleshooting.
-- `sandbox-net=off`: sessions have no network (model calls still work).
+- `network=internet`: containers reach the internet only. `open` is worth a second look, and `none`
+  means no network at all.
+- `containers: …` says whether Docker answers, the image exists and its Pi matches yours, and what
+  private-network endpoints the firewall lets through (your DNS servers, and the endpoints of models
+  you configured for containers). A line that starts `containers:` and names a problem means chats
+  will answer `503` until it is fixed; the message says how.
 - `user=ROOT` appears only if you run it as root.
 
 Stop it with Ctrl+C, then unset `DASHBOARD_PASSWORD` so it isn't reset on every start.
 
-To keep it running in the background without a service, `piper.sh` starts, stops and restarts
-the gateway from its folder, logging to `gw.log`:
+To keep it running in the background without a service, `piper.sh` starts, stops and restarts the
+gateway from its folder, logging to `gw.log`:
 
 ```bash
-./piper.sh            # restart (the default); open chats hibernate and resume
-./piper.sh start | stop | status | logs
+./piper.sh            # restart (the default); open chats' containers are stopped and resume
+./piper.sh start | stop | status | logs | image [env] | doctor | backup | restore FILE
 ```
 
-It finds the gateway as the `node server.mjs` process running from that folder, stops it with
-`SIGTERM` (then `SIGKILL` after `STOP_WAIT` seconds, default 20), sets `ALLOW_ROOT=1` when run as
-root, and waits for `/health` before reporting it started. Use it or the service below, not both.
+It finds the gateway as the `node server.mjs` process running from that folder with that folder's own
+database (a test copy started with another `GATEWAY_DB` is left alone), stops it with `SIGTERM`
+(then `SIGKILL` after `STOP_WAIT` seconds, default 20), and waits for `/health` before reporting it
+started. Use it or the service below, not both.
 
 ## 6. Run it as a service
 
-As a **systemd user service** of `piper`, so that per-sandbox limits come from its user manager:
+As a **systemd user service** of `piper` (with `DOCKER_HOST` set if you use rootless Docker):
 
 ```ini
 # ~/.config/systemd/user/piper.service
@@ -158,7 +218,10 @@ After=network-online.target
 
 [Service]
 WorkingDirectory=%h/piper
-Environment=PATH=%h/.local/node/bin:/usr/local/bin:/usr/bin:/bin
+# sbin too: iptables lives in /usr/sbin, and without it the network policy cannot be enforced
+Environment=PATH=%h/.local/node/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# Rootless Docker only:
+# Environment=DOCKER_HOST=unix:///run/user/%U/docker.sock
 ExecStart=%h/.local/node/bin/node server.mjs
 Restart=on-failure
 
@@ -169,61 +232,92 @@ WantedBy=default.target
 ```bash
 systemctl --user daemon-reload
 systemctl --user enable --now piper
-journalctl --user -u piper -f            # the startup line and the access log
+journalctl --user -u piper -f            # the startup lines and the access log
 ```
 
 `PATH` must include the Node that Pi was installed with, because the gateway runs `npm root -g` to
-find Pi.
-
-If you run it as **root** instead (not recommended), use a system unit with
-`Environment=ALLOW_ROOT=1` in `/etc/systemd/system/piper.service`. Limits then come from the
-system manager.
+find Pi. If you run it as **root** instead, use a system unit in `/etc/systemd/system/piper.service`
+(and order it `After=docker.service`).
 
 Restarting the service does not lose open chats. On `SIGTERM` (what `systemctl stop` sends) the
-gateway stops accepting connections, records every agent's spend and hibernates it; the next message
-to a chat resumes the same agent from its session file in the workspace. Keep the default
-`TimeoutStopSec` (it needs about five seconds). Only with `RUNNER=inprocess` does a restart cost a
-transcript replay.
+gateway stops accepting connections, records every agent's spend, asks each Pi to exit and stops each
+chat's container; the next message to a chat starts the same container and resumes the same agent
+from its session files. Keep the default `TimeoutStopSec`: it needs up to ten seconds. A gateway that
+is killed instead leaves its containers running; the next start stops them.
+
+`./deploy.sh --systemd` writes a *system* unit instead of the user unit above (it needs root, runs as the
+user you name with `--run-as`, and is ordered after `docker.service`), and `./piper.sh` then starts, stops,
+restarts and shows the logs of that unit rather than starting a second copy that would fight it for the port.
+
+### Backups, alerts and the watchdog
+
+- **Backups.** `./piper.sh backup` writes one owner-only archive of the database, profiles, workspaces,
+  shared bundles, container Pi config and chat sessions to `./backups` (`--keep N` keeps the newest N; it
+  refuses to fill the disk). `./piper.sh restore FILE` puts one back, moving what it replaces aside and
+  never deleting it, and works onto a host with a different folder. Take one before every upgrade.
+  `deploy.sh --systemd --backups` adds a daily timer (03:30, keeps 7); check it with
+  `systemctl list-timers piper-backup.timer`. Copy the archives off the machine: they are only as safe as
+  its disk.
+- **Alerts.** Set a webhook under Settings → Containers → Disk and alerts and press **send a test alert**.
+  You are told when Docker or the network policy fails (and recovers), the disk Docker uses runs low
+  (below 5 GB free by default), a container is killed for memory, or one grows past its disk warning.
+- **The watchdog.** `deploy.sh --systemd` also installs a timer that asks the gateway `/health` every
+  minute and sends an alert, through the same webhook, when it has not answered twice in a row, and when
+  it does again. Without a webhook it does nothing. Check it with `systemctl list-timers piper-watchdog.timer`.
+- **A dashboard password matters more now.** The Containers page's command box (root in a container)
+  refuses to work until one is set, and the rest of an open dashboard can be used by anyone who reaches
+  it: set one (Settings → Access), and bind to `127.0.0.1` behind a proxy.
 
 ## 7. Expose it safely
 
 - **Bind to `127.0.0.1` and put a TLS reverse proxy in front** (Caddy, nginx) for anything beyond
   this machine. Send `X-Forwarded-Proto: https`, so the dashboard's sign-in cookie is marked
   `Secure`. Streaming responses must not be buffered. With nginx:
-  `proxy_buffering off;` and `proxy_read_timeout 1h;`. For uploads to the shared-folder file API,
+  `proxy_buffering off;` and `proxy_read_timeout 1h;`. For uploads to the workspace file API,
   also raise `client_max_body_size` to `FILE_UPLOAD_MAX_BYTES` (1 GiB by default) and set
   `proxy_request_buffering off;`.
-- **Set a dashboard password** (Settings → Access), unless you did at first start. An open
-  dashboard can reconfigure everything, including the sandbox.
+- **Set a dashboard password** (Settings → Access), unless you did at first start. On the default
+  network containers cannot reach the dashboard; on `open` they can, and an open dashboard can
+  reconfigure everything.
 - **Create an API key per person or client** on API Management. While any key exists, `/v1/*`
   requires one.
 
 Point clients at `https://your-host/v1` with that key. For example, in Open WebUI add an OpenAI
 connection with that URL and key; the model list comes from `/v1/models`.
 
-## 8. Give agents tools and skills
+## 8. Models, tools and skills for agents
 
-- **Tools under `/usr`** (anything from `apt`, anything in `/usr/local`) are visible to agents
-  already.
-- **Tools elsewhere** (`/opt/...`, `~/.cargo/bin`, a tool built in a source tree) go in
-  Settings → Sandbox → *Extra readable paths* (`SANDBOX_ALLOW`), read-only.
-  - Follow symlinks: a `/usr/local/bin/x` that points into `/somewhere/else` needs
-    `/somewhere/else` listed too.
+- **Models.** Two kinds, and a chat can use both.
+  - **Models the gateway holds keys for** (your `~/.pi/agent`, logged in) need nothing more: they
+    reach the container over the bridge, and no key enters it.
+  - **Models the containers' Pi calls directly** (a local model server, say) go in Settings →
+    Containers → *Pi config for containers*, as a `models.json`. The endpoint is opened in the
+    firewall for you. The provider's key is stored in `container-pi/models.json` (mode `0600`) and
+    is readable inside every container, so give the model server a key meant for it, and one per API
+    key if you want to limit usage there.
+- **Tools.** The image has the common ones. For anything else, either add it to `docker/Dockerfile`
+  and `./piper.sh image` (reproducible, portable), or share its folder read-only with Settings →
+  Containers → *Host folders to share* (`CONTAINER_MOUNTS`). A shared folder has to work against the
+  image's Debian: a Python venv is fine when the image has the same Python; a binary that needs
+  libraries from your host's `/usr/local` is not.
+  - Follow symlinks: a tool that links into `/somewhere/else` needs that folder shared too.
   - Tools that must be told where they live get variables under *Extra environment variables*
-    (`SANDBOX_ENV`), e.g. `RUSTUP_HOME=/home/piper/.rustup`.
-  - `~/.pi/agent/bin` (Pi's own `fd` and `rg`) may be listed; the rest of `~/.pi/agent` never can.
+    (`CONTAINER_ENV`), e.g. `RUSTUP_HOME=/usr/local/rustup`.
+  - The gateway refuses to share `/`, its own folders, your `~/.pi/agent`, `/proc`, `/sys`, `/dev`,
+    or a container engine socket.
 - **Skills, extensions and prompts for everyone** go in a shared bundle:
   `shared/base/{skills,extensions,prompts}`.
   - Every key gets `base` by default. Grant other bundles per key on API Management.
-  - Extensions that look things up under `$HOME` see `/workspace` inside a sandbox, and may need a
-    path adjusted in the bundle's copy.
-- **Network for agents** is off. Turn on Settings → Sandbox → *Network access* only if agents need
-  to download packages or browse.
+  - An extension that starts a program by an absolute host path needs that path shared or in the image.
+- **Network** is the internet only. Settings → Containers → *Network* switches it to none, or to
+  open (also this machine and your LAN, which includes the dashboard: set a password first).
 
-After changing any of these, new chats pick it up. For bundle contents, open chats pick it up on
-`/reload`. The dashboard's Profiles page shows what each key's agents actually get.
+After changing any of these, new chats pick it up; an existing chat's container is recreated on its
+next message when a mount, the image or a limit changed (what the agent installed in it is lost, its
+workspace, profile and session are not). For bundle contents, open chats pick it up on `/reload`.
+The dashboard's Profiles page shows what each key's agents actually get.
 
-## 9. Check the sandbox
+## 9. Check the containers
 
 Create a key, then ask an agent to run a probe:
 
@@ -231,50 +325,56 @@ Create a key, then ask an agent to run a probe:
 KEY=piper_…   # from API Management
 curl -s http://127.0.0.1:8787/v1/chat/completions -H "authorization: Bearer $KEY" \
   -H 'content-type: application/json' -d '{"model":"pi","messages":[{"role":"user","content":
-  "Run with bash and reply with only the raw output: ls /; ls /home /root 2>&1; id -u; pwd; cat /etc/passwd | wc -l"}]}' \
+  "Run with bash and reply with only the raw output: id -un; pwd; ls /var/run/docker.sock /home/piper/piper/gateway.db 2>&1; curl -s -m 5 -o /dev/null -w \"%{http_code}\\n\" https://example.com; curl -s -m 4 -o /dev/null -w \"%{http_code}\\n\" http://192.168.1.1/"}]}' \
   | jq -r '.choices[0].message.content'
 ```
 
-Expected:
-- `ls /` lists only `bin dev etc lib… opt proc profile run sbin tmp usr var workspace`, plus
-  `shared` when the key has bundles;
-- `/home` and `/root` do not exist;
-- `id -u` prints `65534`;
-- `pwd` prints `/workspace`;
-- `/etc/passwd` has 2 lines.
+Change `/home/piper/piper/gateway.db` to where your gateway's database is, and `192.168.1.1` to an
+address of your own LAN. Expected with `CONTAINER_NETWORK=internet`:
+- `root`, and `/workspace`;
+- `No such file or directory` for both the engine socket and the database (and for any other host
+  folder you did not share with `CONTAINER_MOUNTS`);
+- `200` for the internet and `000` (blocked) for the LAN address.
 
-Anything else means the sandbox is not what this guide describes.
+And on the host:
+
+```bash
+docker ps --filter label=piper.managed=1               # one container per open chat
+./piper.sh doctor                                       # the same checks, plus the firewall
+sudo iptables -S DOCKER-USER | grep piper               # the rules, tagged with the gateway's id
+```
+
+Anything else means the containers are not what this guide describes.
 
 ## 10. Upgrading
 
-- **Piper:** `git pull` (or replace the repository files, `lib/` included), run `node test.mjs`,
-  restart the service. Open chats resume.
-  `gateway.db`, `profiles/`, `files/`, `shared/` and the workspaces carry over.
+- **Piper:** `git pull` (or replace the repository files, `lib/` and `docker/` included), run
+  `node test.mjs`, rebuild the image if `docker/` changed (`./piper.sh image`), restart the service.
+  Open chats resume; a chat whose image or mounts changed gets a fresh container.
+  `gateway.db`, `profiles/`, `workspaces/`, `shared/` and `container-pi/` carry over.
 - **Pi:** `npm install -g --ignore-scripts @earendil-works/pi-coding-agent@<version>` with the same
-  Node, then restart. If you use the container runner, rebuild its image with the same Pi version.
-
-## Optional: container runner
-
-Instead of bubblewrap, sessions can run in Docker or Podman (Settings → Sandbox → Runner). Build
-the image with the Pi version the gateway uses:
-
-```bash
-docker build -t piper-sandbox --build-arg PI_VERSION=<same version as the host> -f Dockerfile.sandbox .
-```
-
-A container sees only its image plus the mounts the gateway adds. `SANDBOX_ALLOW` and `SANDBOX_ENV`
-do not apply, so bake agents' tools into the image. Memory, process and CPU limits are passed as
-`--memory`, `--pids-limit` and `--cpus`. The container runner is unit-tested but has not been run
-against a real Docker or Podman engine; try one chat before relying on it.
+  Node, `./piper.sh image` to rebuild the image with it, then restart.
+- **From the bubblewrap version:** see "Upgrading from the bubblewrap version" in the README. The
+  first start moves each key's old shared folder to its workspace, archives the old per-chat
+  workspaces, and resets stored chats once; settings are renamed with their values; the folders
+  you had in `SANDBOX_ALLOW` become `CONTAINER_MOUNTS` (or go into the image).
 
 ## Troubleshooting
 
 | Symptom | Likely cause |
 | --- | --- |
-| Refuses to start: `refusing to run as root` | Run as the dedicated user, or set `ALLOW_ROOT=1`. |
-| Chats fail with 503 `the session's sandbox failed to start` | Read the reason in it. Usual causes: bubblewrap missing or not at `/usr/bin/bwrap`; user namespaces blocked (AppArmor on Ubuntu); Pi not found (set `PI_AGENT_PACKAGE`). |
-| Banner shows `limits=none: systemd scopes are unavailable here` | As a non-root user, run the gateway as a systemd user service with linger enabled (section 6); from a plain `su` shell there is no user manager. Or set `SANDBOX_LIMITS=off` to silence it. |
-| A locked or over-quota profile's chats fail to start | bubblewrap older than 0.11 (no `--tmp-overlay`). |
-| A tool works on the host but not for agents | It lives outside `/usr`, or links there from `/usr/local`. Add its real folder to *Extra readable paths*. |
-| Replies say `[model error: …]` | The provider call failed. Check `pi` works for the service user and that `/login` was done as that user. |
+| Chats fail with 503 `the chat's container failed to start` | Read the reason in it. Usual causes: Docker is not running or the gateway's user cannot reach its socket; the image is not built (`./piper.sh image`); the network policy cannot be enforced (see below). The dashboard's red banner and `./piper.sh doctor` say the same. |
+| 503 `the network policy "internet" cannot be enforced` | `iptables` is missing or the gateway's user may not change the firewall. Install `iptables` and run as root or with `CAP_NET_ADMIN`, or set `CONTAINER_NETWORK` to `none` or `open`. Rootless Docker needs one of those two. |
+| Warning: the image has Pi X but the gateway runs Pi Y | Pi was updated after the image was built. `./piper.sh image`, then restart. |
+| A container cannot resolve names (`apt` and `pip` hang) | Your DNS server is on a private address that was not allowed. The gateway allows the ones in `/etc/resolv.conf`; if you use another, add it as `host:53` in *Extra private endpoints* (`CONTAINER_ALLOW`). |
+| A model at a private address is unreachable from a container | Add it to *Pi config for containers* (its endpoint is then allowed automatically), or to `CONTAINER_ALLOW`. |
+| A tool works on the host but not for agents | It is not in the image. Add it to `docker/Dockerfile`, or share its folder with `CONTAINER_MOUNTS`. |
+| An agent's `apt install` is gone after a change | The container was recreated because its image, mounts, limits or network changed. Put lasting tools in the image or the workspace. |
+| Files in a workspace are owned by an odd uid | Container root is mapped (rootless or `userns-remap`). Expected. |
+| Replies say `[model error: …]` | The provider call failed. For bridged models, check `pi` works for the service user and that `/login` was done as that user; for direct models, check the endpoint and key in *Pi config for containers*. |
 | Dashboard reachable by anyone | Set a password (Settings → Access), and bind to `127.0.0.1` behind a proxy. |
+| `firewall: NOT ENFORCED` right after installing the service, with `spawn iptables ENOENT` in the log | The service's `PATH` lacks `/usr/sbin`. The units `deploy.sh` writes have it, and the gateway also looks in the standard sbin folders itself; a hand-written unit needs `/usr/sbin` in `Environment=PATH=`. |
+| The Containers page's command box is greyed out | No dashboard password is set. Set one under Settings → Access; the box refuses until then, by design. |
+| A red "Disk is nearly full" banner | Less than `DISK_FREE_WARN_MB` is free where Docker keeps its data. Prune old images, clear Docker's build cache (`docker builder prune -f`: every image build leaves gigabytes of it, and it is only a speed-up), recreate the containers with the biggest disk on the Containers page, delete old `*.before-restore-*` and archive folders, or move Docker's data to a bigger disk. |
+| Restarting the gateway with `./piper.sh` says it stops "the systemd unit" | A unit named `piper` runs this folder's gateway, so `piper.sh` uses it. Use `systemctl` or `piper.sh` (not a hand-started `node server.mjs`). |
+| A key on `network: none` gets `[model error: … Connection error]` | The model is one you configured for containers, which Pi calls directly, and there is no network. Use a model the gateway serves, or another network for that key. |
