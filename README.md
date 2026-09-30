@@ -57,6 +57,9 @@ runtime dependencies beyond Node's standard library, the Pi package you already 
   and an audit trail.
 - **Per-key container settings** — memory, CPU, processes, network, image, extra mounts and
   environment for one key, over the defaults, like the per-key limits that already existed.
+- **Resource usage on the Overview** — host CPU, memory, load and disk, the gateway process, and the containers
+  added up (with the heaviest named), with a short history, read cheaply from `/proc`, Docker's cached stats and
+  the disk guard.
 - **Audit log and host Pi update** — an Audit page whose recorded categories, retention and row cap are set under
   Settings → Audit, and a panel that updates the Pi the gateway runs on and its extensions.
 - **Agent endpoints** — named permanent agents of a key (architect, coder, researcher), each with its own

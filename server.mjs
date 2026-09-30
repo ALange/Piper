@@ -39,6 +39,7 @@ import { diskSummary, engineOptions, migrateToContainers, startDiskWatch, startE
 import { reloadModelRuntime } from "./lib/models.mjs";
 import { cors, logAccess, readJson, sendError } from "./lib/http.mjs";
 import { audit, auditOnce, runWithActor } from "./lib/audit.mjs";
+import { resourceSnapshot } from "./lib/resources.mjs";
 import { filesRoutes, keyIdForScope, profileAdminRoutes, profileRoutes } from "./lib/profiles.mjs";
 import { sessions, spendReport, startSweeps } from "./lib/sessions.mjs";
 import { chatCompletions, listModels } from "./lib/chat.mjs";
@@ -67,6 +68,7 @@ export * from "./lib/agents.mjs";
 export * from "./lib/agentservers.mjs";
 export * from "./lib/updates.mjs";
 export * from "./lib/hostpi.mjs";
+export * from "./lib/resources.mjs";
 export * from "./lib/dashboard.mjs";
 
 // ------------------------------------------------------------------- server
@@ -183,6 +185,8 @@ async function handle(req, res) {
 			// policy. A gateway that cannot start chats should say so on the page, not only in a 503.
 			snapshot.containers = await checkEngine(await engineOptions());
 			snapshot.disk = diskSummary();
+			// What the machine, the gateway and the containers are using; never allowed to break the page.
+			snapshot.resources = await resourceSnapshot().catch(() => null);
 			res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
 			return res.end(JSON.stringify(snapshot));
 		}

@@ -23,7 +23,7 @@ process.env.CONTAINER_PI_DIR = TEST_CONTAINER_PI;
 const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 // Seeded at startup, which is when a validator that reads a not-yet-defined constant would fail.
 process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
-const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, recentAudit: recentAuditRows } = await import("./server.mjs");
+const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, recentAudit: recentAuditRows } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
 
@@ -4215,6 +4215,75 @@ assert.equal(isReloadCommand(undefined), false);
 	resetUpdateJob();
 	config.ACCESS_LOG = accessLog;
 	rmSync(root, { recursive: true, force: true });
+}
+
+// Resource usage for the Overview: host, gateway process, containers added up.
+{
+	// /proc/meminfo: available, not free, memory counts as usable.
+	assert.deepEqual(parseMeminfo("MemTotal:       16384000 kB\nMemFree:         1000000 kB\nMemAvailable:    8192000 kB\n"), { total: 16384000 * 1024, available: 8192000 * 1024 });
+	assert.equal(parseMeminfo("nonsense"), null);
+	assert.equal(parseMeminfo("MemTotal: 100 kB\n"), null, "without MemAvailable `os` is asked instead");
+	// CPU: the share of time spent busy between two readings.
+	const t = (user, sys, idle) => [{ times: { user, nice: 0, sys, idle, irq: 0 } }];
+	assert.deepEqual(cpuTimes(t(10, 10, 80)), { busy: 20, total: 100 });
+	assert.equal(cpuPercent(cpuTimes(t(10, 10, 80)), cpuTimes(t(40, 10, 150))), 30, "30 of the 100 ticks between the readings were busy");
+	assert.equal(cpuPercent(cpuTimes(t(1, 1, 1)), cpuTimes(t(1, 1, 1))), null, "no time passed: no figure, not a zero");
+	assert.equal(cpuPercent({ busy: 0, total: 0 }, { busy: 500, total: 100 }), 100, "capped");
+	// Containers, added up from one `docker stats`, cached for five seconds, empty when Docker is not there.
+	resetResources();
+	const managed = [
+		{ name: "piper-aaaaaaaa-1111111111111111", state: "running", keyId: "", agentId: null },
+		{ name: "piper-aaaaaaaa-key-222222222222", state: "running", keyId: "", agentId: null },
+		{ name: "piper-aaaaaaaa-3333333333333333", state: "exited", keyId: "", agentId: null },
+	];
+	let statsCalls = 0;
+	const stats = async (names) => {
+		statsCalls++;
+		assert.deepEqual(names, [managed[0].name, managed[1].name], "only running containers are asked about");
+		return new Map([[managed[0].name, { cpu: 12.5, memUsed: 300 * 1048576, memLimit: 2048 * 1048576, pids: 7 }], [managed[1].name, { cpu: 50, memUsed: 900 * 1048576, memLimit: 0, pids: 30 }]]);
+	};
+	const t0 = Date.now();
+	const usage = await containerUsage({ now: t0, list: async () => managed, stats });
+	assert.deepEqual([usage.running, usage.total, usage.cpu, usage.pids], [2, 3, 62.5, 37]);
+	assert.equal(usage.memUsed, 1200 * 1048576);
+	assert.equal(usage.memLimit, 2048 * 1048576, "an unlimited container adds no limit");
+	assert.deepEqual(usage.top.map((r) => r.name), [managed[1].name, managed[0].name], "heaviest memory first");
+	assert.match(usage.top[0].label, /★$/, "a key's container is marked");
+	assert.match(usage.top[1].label, / chat$/);
+	await containerUsage({ now: t0 + 1000, list: async () => managed, stats });
+	assert.equal(statsCalls, 1, "asked once in five seconds");
+	await containerUsage({ now: t0 + 6000, list: async () => managed, stats });
+	assert.equal(statsCalls, 2);
+	resetResources();
+	assert.equal(await containerUsage({ now: t0, list: async () => { throw new Error("docker is not running"); }, stats }), null, "Docker unreachable leaves it empty, not broken");
+	// The whole snapshot, and a history that takes a sample at most every 15 seconds.
+	resetResources();
+	const snap = await resourceSnapshot({ now: t0, containers: usage });
+	assert.deepEqual(Object.keys(snap).sort(), ["at", "containers", "disk", "gateway", "history", "host"]);
+	assert.ok(snap.host.cores >= 1 && snap.host.memTotal > 0 && snap.host.memUsed >= 0 && snap.host.memUsed <= snap.host.memTotal && snap.host.load.length === 3 && snap.host.uptimeSec > 0);
+	assert.ok(snap.gateway.rss > 0 && snap.gateway.uptimeSec > 0 && /^v\d+/.test(snap.gateway.node));
+	assert.equal(snap.history.length, 1);
+	assert.deepEqual(Object.keys(snap.history[0]).sort(), ["containersCpu", "containersMem", "cpu", "gateway", "mem", "t"]);
+	assert.equal(snap.history[0].containersMem, 1200, "MB");
+	await resourceSnapshot({ now: t0 + 5000, containers: usage });
+	assert.equal((await resourceSnapshot({ now: t0 + 6000, containers: usage })).history.length, 1, "not more often than every 15 s");
+	assert.equal((await resourceSnapshot({ now: t0 + 16000, containers: usage })).history.length, 2);
+	assert.equal((await resourceSnapshot({ now: t0 + 40000, containers: null })).containers, null);
+	resetResources();
+	// It reaches the page through /dashboard.json.
+	const { server } = await import("./server.mjs");
+	const accessLog = config.ACCESS_LOG;
+	config.ACCESS_LOG = false;
+	clearPasswordHash();
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "no docker here" }));
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	const page = await (await fetch(`http://127.0.0.1:${server.address().port}/dashboard.json`)).json();
+	assert.ok(page.resources && page.resources.host.memTotal > 0 && "gateway" in page.resources, "the snapshot carries the resources");
+	assert.deepEqual([page.resources.containers.running, page.resources.containers.total, page.resources.containers.top], [0, 0, []], "and with no Docker there are simply no containers");
+	assert.ok(page.sessions !== undefined && page.containers !== undefined, "and the rest of the snapshot is intact");
+	await new Promise((r) => server.close(r));
+	config.ACCESS_LOG = accessLog;
+	resetResources();
 }
 
 console.log("nextTurn + images: ok");

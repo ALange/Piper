@@ -374,6 +374,26 @@
     <div class="view on" id="view-overview">
       <div class="cards" id="cards"></div>
 
+    <div class="sectionhead" style="margin-top:14px"><h2>Resources</h2><span class="hint" id="resnote"></span></div>
+    <div class="cards" id="rescards"></div>
+    <div class="grid3">
+      <section class="panel">
+        <h3>Host CPU</h3>
+        <p class="hint">Share of all cores busy, sampled while this page is open</p>
+        <div id="area-cpu"></div>
+      </section>
+      <section class="panel">
+        <h3>Host memory</h3>
+        <p class="hint">Share of memory in use (not counting cache)</p>
+        <div id="area-mem"></div>
+      </section>
+      <section class="panel">
+        <h3>Heaviest containers</h3>
+        <p class="hint">By memory, running now</p>
+        <table><tbody id="restop"></tbody></table>
+      </section>
+    </div>
+
     <div class="grid2">
       <section class="panel">
         <h3>Agent count</h3>
@@ -849,7 +869,9 @@ function donutEl(items) {
   return wrap;
 }
 
-function areaEl(hist) {
+function areaEl(hist, key, fmt) {
+  key = key || 'count';
+  fmt = fmt || function (v) { return String(v); };
   var box = el('div');
   if (!hist || hist.length < 2) {
     var none = el('div', 'collecting samples\u2026'); none.className = 'empty';
@@ -857,10 +879,10 @@ function areaEl(hist) {
     return box;
   }
   var W = 600, H = 200, pad = 10, base = H - 20;
-  var peak = Math.max(1, Math.max.apply(null, hist.map(function (p) { return p.count; })));
+  var peak = Math.max(key === 'count' ? 1 : 0.0001, Math.max.apply(null, hist.map(function (p) { return p[key]; })));
   var x = function (i) { return pad + (i / (hist.length - 1)) * (W - pad * 2); };
   var y = function (v) { return base - (v / peak) * (base - 16); };
-  var line = hist.map(function (p, i) { return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.count).toFixed(1); }).join(' ');
+  var line = hist.map(function (p, i) { return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p[key]).toFixed(1); }).join(' ');
   var fill = line + ' L' + x(hist.length - 1).toFixed(1) + ' ' + base + ' L' + x(0).toFixed(1) + ' ' + base + ' Z';
 
   var svg = svgEl('svg', { class: 'area', viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'none' });
@@ -876,8 +898,8 @@ function areaEl(hist) {
 
   var axis = el('div'); axis.className = 'axis';
   axis.appendChild(el('span', hist.length + ' samples'));
-  axis.appendChild(el('span', 'peak ' + peak));
-  axis.appendChild(el('span', 'now ' + hist[hist.length - 1].count));
+  axis.appendChild(el('span', 'peak ' + fmt(peak)));
+  axis.appendChild(el('span', 'now ' + fmt(hist[hist.length - 1][key])));
   box.appendChild(axis);
   return box;
 }
@@ -945,6 +967,7 @@ function render(d) {
   );
 
   $('area').replaceChildren(areaEl(hist));
+  renderResources(d.resources);
   $('donut-expiry').replaceChildren(donutEl(tally(S, function (s) { return s.expiresBecause || 'unknown'; })));
   $('donut-model').replaceChildren(donutEl(tally(S, modelKey)));
   $('donut-provider').replaceChildren(donutEl(tally(S, function (s) { return s.provider || '(none)'; })));
@@ -2503,6 +2526,40 @@ $('epcreate').addEventListener('click', function () {
 $('eprefresh').addEventListener('click', loadEndpoints);
 
 
+
+
+/* Resources: the machine, the gateway process and the containers, from /dashboard.json's `resources`. */
+function pct(v) { return v == null ? '–' : v.toFixed(v < 10 ? 1 : 0) + '%'; }
+function gb(n) { return (n / 1073741824).toFixed(n >= 10737418240 ? 0 : 1) + ' GB'; }
+function renderResources(r) {
+  if (!r) { $('rescards').replaceChildren(); $('restop').replaceChildren(); $('resnote').textContent = 'not available'; return; }
+  var h = r.host, g = r.gateway, c = r.containers, dk = r.disk || {};
+  $('resnote').textContent = 'sampled ' + new Date(r.at).toLocaleTimeString() + (c ? '' : ' · container figures need Docker');
+  var memPct = h.memTotal ? (100 * h.memUsed) / h.memTotal : 0;
+  var cards = [
+    cardEl('host cpu', pct(h.cpuPercent), '', h.cores + ' cores · load ' + h.load.map(function (l) { return l.toFixed(2); }).join(' '), h.cpuPercent != null && h.cpuPercent > 85 ? 'warn' : ''),
+    cardEl('host memory', gb(h.memUsed), ' of ' + gb(h.memTotal), Math.round(memPct) + '% used', memPct > 90 ? 'warn' : ''),
+    cardEl('disk free', dk.freeMb == null ? '–' : (dk.freeMb / 1024).toFixed(1) + ' GB', dk.totalMb ? ' of ' + (dk.totalMb / 1024).toFixed(0) + ' GB' : '', dk.path ? 'where Docker keeps its data' : 'not measured yet', dk.low ? 'warn' : ''),
+    cardEl('gateway', Math.round(g.rss / 1048576) + ' MB', '', 'cpu ' + pct(g.cpuPercent) + ' · up ' + dur(g.uptimeSec * 1000)),
+    cardEl('containers', c ? c.running : '–', c ? ' of ' + c.total : '', c ? (c.pids + ' processes') : 'Docker unreachable'),
+    cardEl('containers cpu', c ? pct(c.cpu) : '–', '', c ? '100% is one core of ' + h.cores : ''),
+    cardEl('containers memory', c ? bytes(c.memUsed) : '–', c && c.memLimit ? ' of ' + bytes(c.memLimit) + ' limits' : '', c ? 'written to their disks: ' + bytes(c.writtenBytes) : '')
+  ];
+  $('rescards').replaceChildren.apply($('rescards'), cards);
+  var hist = r.history || [];
+  $('area-cpu').replaceChildren(areaEl(hist, 'cpu', function (v) { return v.toFixed(0) + '%'; }));
+  $('area-mem').replaceChildren(areaEl(hist, 'mem', function (v) { return v.toFixed(0) + '%'; }));
+  var top = $('restop');
+  top.replaceChildren();
+  if (!c || !c.top.length) { var tr0 = el('tr'); tr0.appendChild(cell(c ? 'no container is running' : 'Docker unreachable', 'empty')); top.appendChild(tr0); return; }
+  c.top.forEach(function (t) {
+    var tr = el('tr');
+    var name = cell(t.label); name.title = t.name; tr.appendChild(name);
+    tr.appendChild(cell(pct(t.cpu), 'num'));
+    tr.appendChild(cell(bytes(t.memUsed) + (t.memLimit && t.memLimit < 1e15 ? ' / ' + bytes(t.memLimit) : ''), 'num'));
+    top.appendChild(tr);
+  });
+}
 
 /* Pi on this host: what the gateway runs, what is installed, what is newest, and updating it. */
 function loadHostPi(check) {
