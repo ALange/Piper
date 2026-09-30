@@ -389,3 +389,13 @@ gateway). Set `AGENT_PORT_RANGE` (Settings → Containers, e.g. `20000-29999`) b
 ports come from a range you can open in the firewall on purpose; leave `HOST` on `127.0.0.1` and put a
 TLS proxy in front if the gateway should not be reachable directly. An agent's port serves only the API
 and only for the key it belongs to, but it is still a listening socket: treat it like the gateway's own.
+
+## The audit log and updating the host Pi
+
+The audit log lives in `gateway.db` (table `audit`), so `./piper.sh backup` includes it; it is bounded by
+Settings → Audit (90 days and 50,000 rows by default). `piper-backup.mjs` and the watchdog do not write to it.
+
+The dashboard can update the Pi the gateway runs on (Containers page, *Pi on this host*), but only when a
+dashboard password is set and the install is the one the gateway's own `npm root -g` manages and its user can
+write. The gateway keeps running the old Pi until restarted (`./piper.sh restart`, or `systemctl restart piper`):
+do that, then rebuild the image (`./piper.sh image`, or the Images panel) and Update the containers.

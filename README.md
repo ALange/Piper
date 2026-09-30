@@ -57,6 +57,8 @@ runtime dependencies beyond Node's standard library, the Pi package you already 
   and an audit trail.
 - **Per-key container settings** — memory, CPU, processes, network, image, extra mounts and
   environment for one key, over the defaults, like the per-key limits that already existed.
+- **Audit log and host Pi update** — an Audit page whose recorded categories, retention and row cap are set under
+  Settings → Audit, and a panel that updates the Pi the gateway runs on and its extensions.
 - **Agent endpoints** — named permanent agents of a key (architect, coder, researcher), each with its own
   instructions, profile, container and OpenAI-compatible port.
 - **Persistent keys** — one container per key, shared by its chats and kept between them, so packages
@@ -392,6 +394,26 @@ any that is busy or belongs to nothing. A newly built `piper-agent` image is *no
 saved state carries the old system): use Recreate for that, and accept that installs are lost. Everything is
 in the audit trail.
 
+### Updating the Pi the gateway runs on
+
+The **Pi on this host** panel (Containers page) updates the Pi installation the gateway itself runs on, and
+the extensions installed for it. It is not about a chat's or a container's Pi (see Updating a container).
+
+- It shows three versions: **running** (what the gateway loaded, and therefore speaks), **installed on disk**,
+  and the **newest release** (asked from the npm registry with *check for updates*, cached for ten minutes).
+- **Update** runs Pi's own `pi update` and/or `pi update --extensions` with this install's `pi`, from the temp
+  folder, online, as the gateway's user, and streams the output to the update panel. The two steps are
+  independent; a failing one does not stop the other.
+- **Update only.** The gateway loads Pi once, so the new version is what is *installed* but not what is
+  *running* until you restart the gateway. The panel says so, and that images and containers follow the running
+  version: after restarting, rebuild the image and update the containers. Nothing restarts or rebuilds by itself.
+- **Only where it is safe.** The install has to be the one the gateway's own `npm root -g` leads to, and writable
+  by the gateway's user; otherwise the panel says why (a custom `PI_AGENT_PACKAGE`, another node, a read-only
+  folder) and what to run by hand, and nothing is attempted.
+- **Needs a dashboard password.** It installs software from a registry as the gateway's user, which on an open
+  dashboard anyone on your network could start, so it is refused (403) until one is set, like the command box.
+- The operator's Pi folder holds credentials. The gateway never reads it; `pi` does, as it would if you ran it.
+
 ### The Containers page
 
 **Containers** in the sidebar lists every container this gateway made, with the key and chat it belongs
@@ -435,6 +457,32 @@ trail under the table (`GET /dashboard/audit.json`).
   checks in a row** (one can be a restart), and again when the gateway answers. It reads the webhook from
   `gateway.db` read-only and keeps its state in `.watchdog-state`. `/health` also reports `docker` (whether
   containers can run) and `diskFreeMb`.
+
+### The audit log
+
+The **Audit** page lists what was done to the gateway and what happened to it, newest first, with filters
+(category, text, dates), *load more*, auto-refresh and CSV export. Every row has a category, an **actor**
+(`dashboard`, `key:<name>`, `agent:<name>`, `settings-key`, `anonymous` or `system`), the address the request
+came from as the gateway saw it (behind a proxy that is the proxy; `X-Forwarded-For` is client-controlled and
+is not used), a target and a detail.
+
+**What is recorded is chosen in Settings → Audit**, one switch per category; a category that is off is not
+stored at all. Two more settings keep it bounded: keep for N days (default 90) and at most N rows (default
+50,000); the sweep applies them hourly.
+
+| Category | On by default | Covers |
+|---|---|---|
+| Sign-ins (`auth`) | yes | dashboard logins and failures, sign-outs, password set, changed or removed |
+| Settings (`settings`) | yes | each changed setting, old -> new; secrets, the webhook URL and environment variables only say they changed |
+| Keys and profiles (`keys`) | yes | key create, revoke, delete, changes; profile lock and reset; sessions killed; model reloads |
+| Operations (`operations`) | yes | containers, images, agent endpoints, updates, commands run in a container, the host Pi update |
+| Runtime events (`runtime`) | yes | containers killed or dead, Docker up or down, limits hit, model fallbacks, sweeps, alerts sent |
+| API requests (`requests`) | **no** | one line per chat request: who, session fingerprint, model, status, time; never the messages |
+| Failed API auth (`authfail`) | **no** | requests refused for a bad or missing key, one row per address per minute with a count |
+| Audit settings (`audit`) | always | a change to these settings, and retention purges, so switching logging off is itself on record |
+
+Nothing secret is written: not passwords, keys, webhook tokens, environment values, prompts or replies. The
+only removal is retention: there is no way to delete or edit rows from the dashboard.
 
 ### Backup and restore
 
@@ -964,6 +1012,9 @@ on write, so a bad one is rejected with a message rather than reaching the runni
 | Containers | `CONTAINER_MOUNTS` | empty | Host folders shared read-only into every container, as `host` or `host:container`. The engine socket, `/`, and anything Piper protects are refused. |
 | Containers | `CONTAINER_DISK_MB` | `0` | Warn when one container has written more than this to its own filesystem. `0` is off. |
 | Containers | `DISK_FREE_WARN_MB` | `5120` | Warn (banner and alert) when the disk Docker uses has less than this free. `0` is off. |
+| Audit | `AUDIT_AUTH`, `AUDIT_SETTINGS`, `AUDIT_KEYS`, `AUDIT_OPERATIONS`, `AUDIT_RUNTIME` | on | Record that category (see The audit log). Applied live. |
+| Audit | `AUDIT_REQUESTS`, `AUDIT_AUTH_FAILURES` | off | Record every chat request / every refused API key (busy; deduplicated for the second). |
+| Audit | `AUDIT_RETENTION_DAYS`, `AUDIT_MAX_ROWS` | 90, 50000 | Delete rows older than this many days, and the oldest beyond this many rows. 0 is no limit. |
 | Containers | `ALERT_WEBHOOK_URL` | empty | A URL that gets a JSON POST for the alerts above. Empty turns alerts off. |
 | Containers | `CONTAINER_ENV` | empty | `NAME=value` pairs set for Pi in every container (`RUSTUP_HOME=/usr/local/rustup`). Cannot override `PATH`, `HOME`, `TERM`, `LANG`, `PI_*` or `PIPER_*`. |
 | Containers | `CONTAINER_PI_DIR` | `<gateway>/container-pi` | The Pi config for containers: `models.json` and `settings.json`. Edited on the dashboard. |

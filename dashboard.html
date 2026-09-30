@@ -253,6 +253,8 @@
   #uppanel h4 { margin:0 0 6px; font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:#cfd3d7; display:flex; justify-content:space-between; gap:8px; }
   #uppanel .upitem { margin:6px 0; font-size:12px; }
   #uppanel .upitem pre { margin:3px 0 0; max-height:150px; overflow:auto; font-size:11px; color:var(--dim); white-space:pre-wrap; word-break:break-word; }
+  .chip { background:#141414; color:var(--fg); border:1px solid var(--border); border-radius:999px; padding:2px 9px; font-size:11px; cursor:pointer; }
+  .chip.on { background:#2a3340; border-color:#46617f; }
   .warnstrip { background:#2a1414; border:1px solid #5a2626; color:#f3b6b6; border-radius:8px;
     padding:10px 13px; margin-bottom:18px; font-size:12px; line-height:1.5; }
   .warnstrip b { color:#ffd0d0; }
@@ -339,6 +341,7 @@
       <a href="#spend"><span class="ic">&#36;</span>Spend</a>
       <a href="#apikeys"><span class="ic">&#9636;</span>API Management</a>
       <a href="#profiles"><span class="ic">&#9776;</span>Profiles</a>
+      <a href="#audit"><span class="ic">&#9745;</span>Audit</a>
       <a href="#settings"><span class="ic">&#9881;</span>Settings</a>
     </nav>
     <div class="sidefoot">
@@ -442,6 +445,25 @@
         </table>
         <p class="hint" id="ctempty" hidden>No containers yet: one is made when a chat first speaks.</p>
       </section>
+      <section class="panel" id="hostpipanel">
+        <div class="toolbar">
+          <div>
+            <h3>Pi on this host</h3>
+            <p class="hint" style="margin:0" id="hpnote">The Pi the gateway itself runs on, and its extensions. Not a chat&rsquo;s or a container&rsquo;s.</p>
+          </div>
+          <button id="hpcheck" title="ask the npm registry for the newest version">check for updates</button>
+        </div>
+        <table>
+          <tbody id="hprows"></tbody>
+        </table>
+        <div class="fieldrow" style="margin-top:8px">
+          <label class="ctrl" style="display:inline-flex"><input type="checkbox" id="hpself" checked> Pi</label>
+          <label class="ctrl" style="display:inline-flex"><input type="checkbox" id="hpext" checked> extensions</label>
+          <button id="hpupdate">update</button>
+        </div>
+        <p class="hint small" id="hpwarn"></p>
+        <pre id="hpext-list" class="hint small" style="white-space:pre-wrap;margin:6px 0 0" hidden></pre>
+      </section>
       <section class="panel">
         <div class="toolbar">
           <div>
@@ -467,6 +489,34 @@
         <table><thead><tr><th>when</th><th>what</th><th>container</th><th>detail</th></tr></thead><tbody id="ctlog"></tbody></table>
       </section>
     </div><!-- /view-containers -->
+
+    <div class="view" id="view-audit">
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Audit log</h3>
+            <p class="hint" style="margin:0" id="audnote">Loading…</p>
+          </div>
+          <div>
+            <label class="ctrl" style="display:inline-flex"><input type="checkbox" id="audauto"> auto-refresh</label>
+            <button id="audrefresh">refresh</button>
+            <button id="audcsv">export CSV</button>
+          </div>
+        </div>
+        <div class="keyform" style="margin-bottom:8px">
+          <span id="audchips"></span>
+          <input id="audq" placeholder="search action, target, detail, actor">
+          <input id="audsince" type="date" title="from">
+          <input id="auduntil" type="date" title="to">
+        </div>
+        <table>
+          <thead><tr><th>time</th><th>category</th><th>action</th><th>actor</th><th>target</th><th>detail</th></tr></thead>
+          <tbody id="audrows"></tbody>
+        </table>
+        <p class="hint" id="audempty" hidden>Nothing matches. Categories that are off are not recorded: turn them on under Settings &rarr; Audit.</p>
+        <div class="fieldrow" style="margin-top:8px"><button id="audmore" hidden>load more</button></div>
+      </section>
+    </div><!-- /view-audit -->
 
     <div class="view" id="view-endpoints">
       <section class="panel">
@@ -1574,6 +1624,7 @@ var SETTING_TABS = [
   { id: 'limits', label: 'Usage limits', intro: 'Defaults for every API key. Each key can override them on the API Management page.' },
   { id: 'profiles', label: 'Profiles', intro: 'Each API key’s own skills, extensions and settings, and the shared bundles you hand out on top.' },
   { id: 'models', label: 'Models', intro: 'What happens when the model a chat uses fails.' },
+  { id: 'audit', label: 'Audit', intro: 'What the audit log records and how long it keeps it. A category that is off is not stored at all. Changes to these settings are always recorded. The log itself is on the Audit page.' },
   { id: 'access', label: 'Access', intro: 'Who may use the API and the dashboard, and what the gateway will fetch for them.' },
   { id: 'server', label: 'Server', intro: 'Listening address, request limits, logging and Pi itself. Most of these need a restart.' },
   { id: 'other', label: 'Other', intro: 'Settings this page does not have a place for yet.' }
@@ -1662,6 +1713,24 @@ var LAYOUT = {
     summary: 'A key that opens both the API and the dashboard. Leave empty and use API Management for per-person keys.' },
   DASHBOARD_SESSION_MS: { tab: 'access', section: 'API and dashboard', label: 'Stay signed in for',
     summary: 'How long a dashboard sign-in lasts. 0 lasts until the browser closes.' },
+  AUDIT_AUTH: { tab: 'audit', section: 'What is recorded', label: 'Dashboard sign-ins',
+    summary: 'Logins and failures, sign-outs, the password being set or removed, with the address.' },
+  AUDIT_SETTINGS: { tab: 'audit', section: 'What is recorded', label: 'Settings changes',
+    summary: 'Which setting changed, old to new. Secrets, the alert webhook and environment variables only say they changed.' },
+  AUDIT_KEYS: { tab: 'audit', section: 'What is recorded', label: 'API keys and profiles',
+    summary: 'Key create, revoke, delete and changes; profile locks and resets; sessions killed here; model reloads.' },
+  AUDIT_OPERATIONS: { tab: 'audit', section: 'What is recorded', label: 'Operations',
+    summary: 'Containers, images, agent endpoints, updates, commands run in a container, and the host Pi update.' },
+  AUDIT_RUNTIME: { tab: 'audit', section: 'What is recorded', label: 'Runtime events',
+    summary: 'Containers killed or dead, Docker up or down, limits hit, model fallbacks, sweeps that removed something, alerts sent.' },
+  AUDIT_REQUESTS: { tab: 'audit', section: 'Busy categories (off by default)', label: 'Every chat request',
+    summary: 'One line per chat request: who, session fingerprint, model, status, time. Never the messages. Can be a lot.' },
+  AUDIT_AUTH_FAILURES: { tab: 'audit', section: 'Busy categories (off by default)', label: 'Failed API authentication',
+    summary: 'Requests refused for a bad or missing key: one line per address per minute, with a count.' },
+  AUDIT_RETENTION_DAYS: { tab: 'audit', section: 'How long it is kept', label: 'Keep for', unit: 'days',
+    summary: 'Older rows are deleted. 0 keeps them for ever.' },
+  AUDIT_MAX_ROWS: { tab: 'audit', section: 'How long it is kept', label: 'Keep at most', unit: 'rows',
+    summary: 'The oldest rows go first once there are more than this. 0 means no limit.' },
   ALLOW_IMAGE_URLS: { tab: 'access', section: 'Images', label: 'Fetch image URLs',
     summary: 'Let clients send images as links for the gateway to download. Off accepts embedded images only.' },
 
@@ -2210,6 +2279,7 @@ var VIEWS = {
   overview: { title:'Gateway Overview', subtitle:'Live Pi agents, their models, and when each one will be reaped', section:'Overview' },
   agents:   { title:'Agents', subtitle:'Every live Pi agent, with its expiry and a kill control', section:'Agents' },
   endpoints: { title:'Endpoints', subtitle:'Named, permanent agents of an API key, each on its own OpenAI-compatible port', section:'Endpoints' },
+  audit:    { title:'Audit', subtitle:'What was done to the gateway and what happened to it, as chosen in Settings \u2192 Audit', section:'Audit' },
   containers: { title:'Containers', subtitle:'Each chat\u2019s container: how it is doing, and stop, recreate, remove or run a command', section:'Containers' },
   models:   { title:'Models', subtitle:'Every model this gateway can route to, grouped by provider', section:'Models' },
   spend:    { title:'Spend', subtitle:'What agents have cost, per model and per day', section:'Spend' },
@@ -2433,14 +2503,110 @@ $('epcreate').addEventListener('click', function () {
 $('eprefresh').addEventListener('click', loadEndpoints);
 
 
+
+/* Pi on this host: what the gateway runs, what is installed, what is newest, and updating it. */
+function loadHostPi(check) {
+  return fetch('dashboard/hostpi.json' + (check ? '?check=1' : ''), { cache: 'no-store' }).then(readJson).then(renderHostPi)
+    .catch(function (e) { $('hpnote').textContent = 'cannot read the host Pi: ' + e.message; });
+}
+function renderHostPi(d) {
+  var rows = $('hprows');
+  rows.replaceChildren();
+  function row(k, v, cls) { var tr = el('tr'); tr.appendChild(cell(k)); tr.appendChild(cell(v, cls)); rows.appendChild(tr); }
+  row('running (what the gateway speaks)', d.running || 'unknown', 'mono');
+  row('installed on disk', (d.onDisk || 'unknown') + (d.restartNeeded ? '  — differs: restart the gateway to run it' : ''), 'mono');
+  row('newest release', d.latest ? d.latest + (d.updateAvailable ? '  — newer than installed' : '  — installed is current') : 'unknown (press check for updates)', 'mono');
+  row('location', d.packageDir || 'unknown', 'mono');
+  $('hpwarn').className = 'hint small' + (d.manageable ? '' : ' bad');
+  $('hpwarn').textContent = d.manageable ? (d.restartNeeded ? 'Pi on disk is ahead of what the gateway runs. Until the gateway is restarted, images and containers follow the running version; after restarting, rebuild the image and update the containers.' : '') : 'Cannot be updated from here: ' + d.reason;
+  $('hpupdate').disabled = !d.manageable || !d.updateAllowed;
+  $('hpupdate').title = d.updateAllowed ? '' : d.updateNote;
+  if (d.manageable && !d.updateAllowed) { $('hpwarn').className = 'hint small bad'; $('hpwarn').textContent = d.updateNote; }
+  var list = $('hpext-list');
+  list.hidden = !(d.extensions && d.extensions.length);
+  list.textContent = d.extensions && d.extensions.length ? 'Extensions installed on this host (pi list):\n' + d.extensions.join('\n') : '';
+  if (d.job && d.job.state === 'running') { renderUpdateJob(d.job, 'Update'); pollUpdates('Update'); }
+}
+$('hpcheck').addEventListener('click', function () { $('hpnote').textContent = 'asking the registry…'; loadHostPi(true).then(function () { $('hpnote').textContent = 'The Pi the gateway itself runs on, and its extensions. Not a chat’s or a container’s.'; }); });
+$('hpupdate').addEventListener('click', function () {
+  var self = $('hpself').checked, ext = $('hpext').checked;
+  if (!self && !ext) { $('hpnote').textContent = 'choose Pi, extensions, or both'; return; }
+  if (!confirm('Update ' + (self && ext ? 'Pi and its extensions' : self ? 'Pi' : 'the extensions') + ' on this host? This runs pi update' + (ext ? ' and pi update --extensions' : '') + ' as the gateway’s user and installs software from the registry. The gateway keeps running the old Pi until you restart it.')) return;
+  startUpdateJob('dashboard/hostpi/update', 'Update Pi on this host', { self: self, extensions: ext });
+});
+
+/* Audit: what was recorded, filtered, in pages, with the categories from Settings -> Audit. */
+var AUD = { cats: {}, rows: [], next: null, timer: null, stats: null };
+function audParams(extra) {
+  var p = new URLSearchParams();
+  var cats = Object.keys(AUD.cats).filter(function (c) { return AUD.cats[c]; });
+  if (cats.length) p.set('category', cats.join(','));
+  if ($('audq').value.trim()) p.set('q', $('audq').value.trim());
+  if ($('audsince').value) p.set('since', String(new Date($('audsince').value + 'T00:00:00').getTime()));
+  if ($('auduntil').value) p.set('until', String(new Date($('auduntil').value + 'T23:59:59').getTime()));
+  Object.keys(extra || {}).forEach(function (k) { p.set(k, extra[k]); });
+  return p;
+}
+function startAudit() { loadAudit(true); if ($('audauto').checked) AUD.timer = setInterval(function () { loadAudit(true); }, 5000); }
+function stopAuditRefresh() { if (AUD.timer) { clearInterval(AUD.timer); AUD.timer = null; } }
+function loadAudit(reset) {
+  var extra = { limit: 100 };
+  if (!reset && AUD.next) extra.before = AUD.next;
+  return fetch('dashboard/audit.json?' + audParams(extra).toString(), { cache: 'no-store' }).then(readJson).then(function (d) {
+    AUD.rows = reset ? d.rows : AUD.rows.concat(d.rows);
+    AUD.next = d.more ? d.next : null;
+    AUD.stats = d.stats;
+    renderAudit(d);
+  }).catch(function (e) { $('audnote').textContent = 'cannot load the audit log: ' + e.message; });
+}
+function renderAudit(d) {
+  var st = d.stats;
+  $('audnote').textContent = st.rows + ' row' + (st.rows === 1 ? '' : 's') + (st.oldest ? ', since ' + new Date(st.oldest).toLocaleString() : '') +
+    '. Kept ' + (st.retentionDays ? st.retentionDays + ' days' : 'for ever') + (st.maxRows ? ', at most ' + st.maxRows + ' rows' : '') + '. What is recorded is set under Settings → Audit.';
+  var chips = $('audchips');
+  chips.replaceChildren();
+  st.categories.forEach(function (c) {
+    var b = el('button', c.label + (c.count ? ' ' + c.count : ''));
+    b.className = 'chip' + (AUD.cats[c.id] ? ' on' : '');
+    b.style.opacity = c.enabled ? '1' : '.55';
+    b.title = c.enabled ? 'show only this category (click again to clear)' : 'not recorded: turn it on under Settings → Audit';
+    b.addEventListener('click', function () { AUD.cats[c.id] = !AUD.cats[c.id]; loadAudit(true); });
+    chips.appendChild(b); chips.appendChild(document.createTextNode(' '));
+  });
+  var body = $('audrows');
+  body.replaceChildren();
+  AUD.rows.forEach(function (r) {
+    var tr = el('tr');
+    tr.appendChild(cell(new Date(r.ts).toLocaleString(), 'num'));
+    tr.appendChild(cell(r.category));
+    tr.appendChild(cell(r.action, 'mono'));
+    var who = cell((r.actor || 'system') + (r.ip ? ' · ' + r.ip : ''));
+    tr.appendChild(who);
+    tr.appendChild(cell(r.target));
+    tr.appendChild(cell(r.detail));
+    body.appendChild(tr);
+  });
+  $('audempty').hidden = AUD.rows.length > 0;
+  $('audmore').hidden = !AUD.next;
+}
+$('audrefresh').addEventListener('click', function () { loadAudit(true); });
+$('audmore').addEventListener('click', function () { loadAudit(false); });
+$('audcsv').addEventListener('click', function () { window.open('dashboard/audit.csv?' + audParams({}).toString(), '_blank'); });
+['audq', 'audsince', 'auduntil'].forEach(function (id) { $(id).addEventListener('change', function () { loadAudit(true); }); });
+$('audq').addEventListener('keydown', function (e) { if (e.key === 'Enter') loadAudit(true); });
+$('audauto').addEventListener('change', function () {
+  stopAuditRefresh();
+  if ($('audauto').checked) AUD.timer = setInterval(function () { loadAudit(true); }, 5000);
+});
+
 /* Updates: one job at a time, started from the Containers, Endpoints and Profiles pages, shown in a panel
    that stays until closed and is polled while it runs. */
 var UP_TIMER = null;
-function startUpdateJob(url, title) {
+function startUpdateJob(url, title, body) {
   $('uptitle').textContent = title + ' — starting…';
   $('upbody').replaceChildren();
   $('uppanel').hidden = false;
-  return fetch(url, { method: 'POST' })
+  return fetch(url, body === undefined ? { method: 'POST' } : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
     .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); return j; }); })
     .then(function (j) { renderUpdateJob(j.job, title); pollUpdates(title); })
     .catch(function (e) { $('uptitle').textContent = title + ' — failed'; $('upbody').replaceChildren(el('div', e.message)); });
@@ -2451,7 +2617,7 @@ function pollUpdates(title) {
     if (!d.job) return;
     renderUpdateJob(d.job, title);
     if (d.job.state === 'running') UP_TIMER = setTimeout(function () { pollUpdates(title); }, 1500);
-    else if (typeof loadContainers === 'function' && $('view-containers').classList.contains('on')) loadContainers();
+    else if ($('view-containers').classList.contains('on')) { loadContainers(); loadHostPi(); }
   }).catch(function () { /* the next poll tries again */ });
 }
 function renderUpdateJob(job, title) {
@@ -2614,8 +2780,10 @@ function route() {
   $('subtitle').textContent = VIEWS[name].subtitle;
   $('sectiontitle').textContent = VIEWS[name].section;
   stopContainersPolling();
+  stopAuditRefresh();
+  if (name === 'audit') startAudit();
   if (name === 'endpoints') loadEndpoints();
-  if (name === 'containers') startContainersPolling();
+  if (name === 'containers') { startContainersPolling(); loadHostPi(); }
   if (name === 'models') ensureModels();
   if (name === 'spend') ensureSpend(true);
   if (name === 'apikeys') ensureApiKeys(true);

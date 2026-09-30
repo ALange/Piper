@@ -23,7 +23,7 @@ process.env.CONTAINER_PI_DIR = TEST_CONTAINER_PI;
 const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 // Seeded at startup, which is when a validator that reads a not-yet-defined constant would fail.
 process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
-const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, recentAudit: recentAuditRows } = await import("./server.mjs");
+const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, recentAudit: recentAuditRows } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
 
@@ -2912,7 +2912,7 @@ assert.equal(isReloadCommand(undefined), false);
 		audit("test.two", "target-2", `line one\n\t line two ${"x".repeat(500)}`);
 		const [newest, older] = recentAudit(2);
 		assert.deepEqual([newest.action, older.action], ["test.two", "test.one"], "newest first");
-		assert.ok(newest.detail.length <= 200 && !/[\n\t]/.test(newest.detail), "a long, multi-line detail is squeezed and cut");
+		assert.ok(newest.detail.length <= 400 && !/[\n\t]/.test(newest.detail), "a long, multi-line detail is squeezed and cut");
 		assert.equal(recentAudit(500).length, before + 2);
 		assert.equal(recentAudit(1).length, 1);
 		assert.doesNotThrow(() => audit(undefined, undefined, undefined));
@@ -3799,6 +3799,422 @@ assert.equal(isReloadCommand(undefined), false);
 	resetUpdateJob();
 	config.ACCESS_LOG = accessLog3;
 	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+}
+
+// The audit log: what is recorded is chosen by settings, who did it comes from the request, nothing secret is written.
+{
+	const { DatabaseSync } = await import("node:sqlite");
+	const http = await import("node:http");
+	const { server } = await import("./server.mjs");
+	const accessLog = config.ACCESS_LOG;
+	config.ACCESS_LOG = false;
+	const saved = { ...Object.fromEntries(["AUDIT_AUTH", "AUDIT_SETTINGS", "AUDIT_KEYS", "AUDIT_OPERATIONS", "AUDIT_RUNTIME", "AUDIT_REQUESTS", "AUDIT_AUTH_FAILURES", "AUDIT_RETENTION_DAYS", "AUDIT_MAX_ROWS"].map((k) => [k, config[k]])) };
+	const rowsOf = (action) => queryAudit({ q: action, limit: 500 }).rows.filter((r) => r.action === action);
+
+	// The table of an older gateway gains the columns and keeps its rows.
+	{
+		const old = new DatabaseSync(":memory:");
+		old.exec("CREATE TABLE audit (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, action TEXT NOT NULL, target TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '')");
+		old.prepare("INSERT INTO audit (ts, action, target, detail) VALUES (1, 'container.stop', 'c1', 'old row')").run();
+		migrateAuditTable(old);
+		migrateAuditTable(old);
+		const cols = old.prepare("PRAGMA table_info(audit)").all().map((c) => c.name);
+		for (const c of ["category", "actor", "ip"]) assert.ok(cols.includes(c), `${c} added, and adding twice is fine`);
+		assert.equal(old.prepare("SELECT detail FROM audit").get().detail, "old row", "the old row is kept");
+	}
+
+	// Categories from the action's prefix; unknown ones are operations.
+	for (const [action, category] of [["auth.login", "auth"], ["settings.change", "settings"], ["key.create", "keys"], ["profile.reset", "keys"], ["session.kill", "keys"], ["models.reload", "keys"], ["container.stop", "operations"], ["image.build", "operations"], ["agent.create", "operations"], ["host.pi.update", "operations"], ["runtime.sweep", "runtime"], ["request.chat", "requests"], ["authfail.api", "authfail"], ["audit.purge", "audit"], ["something.new", "operations"]]) {
+		assert.equal(categoryOf(action), category, action);
+	}
+	assert.deepEqual(AUDIT_CATEGORIES.map((c) => c.id), ["auth", "settings", "keys", "operations", "runtime", "requests", "authfail", "audit"]);
+
+	// What settings switch off is not stored; the audit category is always stored; the busy ones start off.
+	assert.equal(config.AUDIT_REQUESTS, false, "per-request logging starts off");
+	assert.equal(config.AUDIT_AUTH_FAILURES, false);
+	assert.equal(auditEnabled("requests"), false);
+	assert.equal(auditEnabled("keys"), true);
+	config.AUDIT_KEYS = false;
+	assert.equal(audit("key.create", "x", "off"), null, "a switched-off category stores nothing");
+	assert.equal(rowsOf("key.create").filter((r) => r.detail === "off").length, 0);
+	assert.ok(audit("audit.thing", "x", "always") > 0, "the audit category cannot be switched off");
+	config.AUDIT_KEYS = true;
+	assert.ok(audit("key.create", "x", "on") > 0);
+	config.AUDIT_REQUESTS = true;
+	assert.ok(audit("request.chat", "x", "now on") > 0);
+	config.AUDIT_REQUESTS = false;
+
+	// Who and from where comes from the request's context, through awaits; outside one it is the system.
+	await runWithActor("dashboard", "10.1.2.3", async () => {
+		await new Promise((r) => setTimeout(r, 5));
+		assert.deepEqual(currentActor(), { actor: "dashboard", ip: "10.1.2.3" });
+		audit("container.stop", "ctx-target", "inside");
+	});
+	const inside = queryAudit({ q: "ctx-target" }).rows[0];
+	assert.deepEqual([inside.actor, inside.ip], ["dashboard", "10.1.2.3"]);
+	audit("container.stop", "ctx-outside", "outside");
+	assert.deepEqual([queryAudit({ q: "ctx-outside" }).rows[0].actor, queryAudit({ q: "ctx-outside" }).rows[0].ip], ["system", null]);
+	audit("container.stop", "ctx-explicit", "", { actor: "key:x", ip: "1.1.1.1" });
+	assert.equal(queryAudit({ q: "ctx-explicit" }).rows[0].actor, "key:x");
+
+	// A settings change never shows a secret, and shows old -> new for the rest, cut short.
+	const specOf = (key) => SETTINGS_SPEC.find((x) => x.key === key);
+	assert.equal(settingChangeDetail(specOf("GATEWAY_API_KEY"), "", "hunter2-hunter2"), "changed (value not recorded)");
+	assert.equal(settingChangeDetail(specOf("ALERT_WEBHOOK_URL"), "", "https://hooks.example/T0K3N"), "changed (value not recorded)", "a webhook URL carries a token");
+	assert.equal(settingChangeDetail(specOf("CONTAINER_ENV"), "A=1", "A=2"), "changed (value not recorded)", "environment values can be secrets");
+	assert.equal(settingChangeDetail(specOf("ACCESS_LOG"), false, true), "false -> true");
+	assert.equal(settingChangeDetail({ type: "text" }, "", "x"), "(empty) -> x");
+	assert.ok(settingChangeDetail({ type: "text" }, "a", "b".repeat(300)).length < 140, "long values are cut");
+
+	// Reading: filters, paging, CSV.
+	{
+		for (let i = 0; i < 7; i++) audit("runtime.sweep", `page-${i}`, i % 2 ? "odd one" : "even one");
+		const first = queryAudit({ categories: ["runtime"], q: "page-", limit: 3 });
+		assert.deepEqual([first.rows.length, first.more], [3, true]);
+		assert.deepEqual(first.rows.map((r) => r.target), ["page-6", "page-5", "page-4"], "newest first");
+		const second = queryAudit({ categories: "runtime", q: "page-", limit: 3, before: first.next });
+		assert.deepEqual(second.rows.map((r) => r.target), ["page-3", "page-2", "page-1"], "the cursor continues where the page ended");
+		assert.equal(queryAudit({ q: "page-", limit: 3, before: second.next }).more, false);
+		assert.equal(queryAudit({ categories: ["keys"], q: "page-" }).rows.length, 0, "a category filter");
+		assert.equal(queryAudit({ q: "odd one", categories: "runtime" }).rows.length, 3);
+		assert.equal(queryAudit({ q: "100%_" }).rows.length, 0, "% and _ in a search are literal");
+		assert.equal(queryAudit({ actor: "nobody" }).rows.length, 0);
+		assert.equal(queryAudit({ since: Date.now() + 60_000 }).rows.length, 0, "a time filter");
+		assert.ok(queryAudit({ limit: 100000 }).rows.length <= 500, "capped at 500 a page");
+		const st = auditStats();
+		assert.ok(st.rows > 0 && st.oldest > 0);
+		assert.deepEqual(st.categories.map((c) => c.id), AUDIT_CATEGORIES.map((c) => c.id));
+		assert.equal(st.categories.find((c) => c.id === "requests").enabled, false);
+		assert.ok(st.categories.find((c) => c.id === "runtime").count >= 7);
+		const csv = auditCsv([{ ts: 0, category: "keys", action: "key.create", actor: "dashboard", ip: "1.2.3.4", target: 'name, with "quotes"', detail: "=HYPERLINK(\"x\")\nnext" }]);
+		assert.equal(csv.split("\n")[0], "time,category,action,actor,address,target,detail");
+		assert.ok(csv.includes('"name, with ""quotes"""'), "quoted");
+		assert.ok(csv.includes("\"'=HYPERLINK"), "a cell that starts like a formula is neutralised");
+	}
+
+	// A burst is one row with a count.
+	resetAuditDedupe();
+	const t0 = Date.now();
+	for (let i = 0; i < 4; i++) auditOnce("burst-a", 60_000, "authfail.api", "9.9.9.9", "GET /v1/models", {}, t0 + i);
+	config.AUDIT_AUTH_FAILURES = true;
+	resetAuditDedupe();
+	for (let i = 0; i < 4; i++) auditOnce("burst-b", 60_000, "authfail.api", "9.9.9.9", "GET /v1/models", {}, t0 + i);
+	const burst = rowsOf("authfail.api").filter((r) => r.target === "9.9.9.9");
+	assert.equal(burst.length, 1, "four refusals, one row");
+	assert.match(burst[0].detail, /\(×4\)$/);
+	auditOnce("burst-b", 60_000, "authfail.api", "9.9.9.9", "GET /v1/models", {}, t0 + 70_000);
+	assert.equal(rowsOf("authfail.api").filter((r) => r.target === "9.9.9.9").length, 2, "a new minute is a new row");
+	config.AUDIT_AUTH_FAILURES = false;
+
+	// Retention: by age, then by count; a purge is on record even with everything else off.
+	{
+		db.prepare("DELETE FROM audit").run();
+		const day = 86_400_000;
+		const put = (ts, n) => db.prepare("INSERT INTO audit (ts, action, target, detail, category) VALUES (?, 'container.stop', ?, '', 'operations')").run(ts, n);
+		put(Date.now() - 100 * day, "ancient");
+		put(Date.now() - 10 * day, "old");
+		for (let i = 0; i < 5; i++) put(Date.now() - i * 1000, `fresh-${i}`);
+		config.AUDIT_RETENTION_DAYS = 90;
+		config.AUDIT_MAX_ROWS = 4;
+		for (const k of ["AUDIT_KEYS", "AUDIT_OPERATIONS", "AUDIT_RUNTIME"]) config[k] = false;
+		const purged = purgeAudit();
+		assert.deepEqual([purged.byAge, purged.byCap], [1, 2], "the ancient row by age, then the two oldest of the rest, down to 4");
+		const left = db.prepare("SELECT target FROM audit WHERE action = 'container.stop' ORDER BY id").all().map((r) => r.target);
+		assert.deepEqual(left, ["fresh-1", "fresh-2", "fresh-3", "fresh-4"], "the newest rows are the ones kept");
+		assert.ok(rowsOf("audit.purge").length === 1, "the purge is recorded although nearly everything is switched off");
+		config.AUDIT_RETENTION_DAYS = 0;
+		config.AUDIT_MAX_ROWS = 0;
+		assert.deepEqual(Object.values(purgeAudit()), [0, 0], "0 keeps everything");
+		for (const k of ["AUDIT_KEYS", "AUDIT_OPERATIONS", "AUDIT_RUNTIME"]) config[k] = true;
+	}
+	config.AUDIT_RETENTION_DAYS = 90;
+	config.AUDIT_MAX_ROWS = 50000;
+
+	// What the gateway does by itself.
+	handleContainerEvent({ action: "oom", name: "piper-x-1", exitCode: 137 }, { memoryMb: 512 });
+	const oom = rowsOf("runtime.container_killed")[0];
+	assert.deepEqual([oom.actor, oom.target], ["system", "piper-x-1"]);
+	assert.match(oom.detail, /out of memory/);
+
+	// Over real sockets: sign-ins, settings, keys, profiles, sessions, requests and refused keys.
+	clearPasswordHash();
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	const base = `http://127.0.0.1:${server.address().port}`;
+	const call = async (path, { method = "POST", body, cookie, token } = {}) => {
+		const res = await fetch(base + path, { method, headers: { "content-type": "application/json", ...(cookie ? { cookie } : {}), ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
+		const text = await res.text();
+		let json = null;
+		try { json = JSON.parse(text); } catch { /* the assertions say */ }
+		return { status: res.status, json, cookie: res.headers.get("set-cookie")?.split(";")[0] ?? null };
+	};
+	const PASS = "correct horse battery";
+	assert.equal((await call("/dashboard/password", { body: { next: PASS } })).status, 200);
+	const setRow = rowsOf("auth.password").at(0);
+	assert.match(setRow.detail, /password set/);
+	assert.deepEqual([setRow.actor, Boolean(setRow.ip)], ["dashboard", true], "from the dashboard, with the address");
+	assert.equal((await call("/dashboard/login", { body: { password: "wrong wrong wrong" } })).status, 401);
+	assert.equal(rowsOf("auth.login_failed").at(0).detail, "wrong password");
+	const login = await call("/dashboard/login", { body: { password: PASS } });
+	assert.equal(login.status, 200);
+	assert.equal(rowsOf("auth.login").length >= 1, true);
+	const cookie = login.cookie;
+	assert.ok(cookie);
+	assert.ok(!JSON.stringify(queryAudit({ limit: 500 }).rows).includes(PASS) && !JSON.stringify(queryAudit({ limit: 500 }).rows).includes("wrong wrong"), "no password is ever recorded");
+
+	// Settings: old -> new; a secret says only that it changed; the audit settings are always recorded.
+	assert.equal((await call("/dashboard/settings", { cookie, body: { settings: { ACCESS_LOG: true } } })).status, 200);
+	const changed = rowsOf("settings.change").find((r) => r.target === "ACCESS_LOG");
+	assert.equal(changed.detail, "false -> true");
+	assert.equal(changed.actor, "dashboard");
+	await call("/dashboard/settings", { cookie, body: { settings: { ACCESS_LOG: false } } });
+	await call("/dashboard/settings", { cookie, body: { settings: { GATEWAY_API_KEY: "s3cr3t-value-never-logged" } } });
+	assert.equal(rowsOf("settings.change").find((r) => r.target === "GATEWAY_API_KEY").detail, "changed (value not recorded)");
+	await call("/dashboard/settings", { cookie, body: { settings: { GATEWAY_API_KEY: "" } } });
+	await call("/dashboard/settings", { cookie, body: { settings: { ALERT_WEBHOOK_URL: "https://hooks.example.com/services/T0K3N" } } });
+	await call("/dashboard/settings", { cookie, body: { settings: { ALERT_WEBHOOK_URL: "" } } });
+	const everything = JSON.stringify(queryAudit({ limit: 500 }).rows);
+	assert.ok(!everything.includes("s3cr3t-value") && !everything.includes("T0K3N"), "neither a secret nor a webhook token is in the log");
+	const before = queryAudit({ categories: "settings", limit: 500 }).rows.length;
+	await call("/dashboard/settings", { cookie, body: { settings: { ACCESS_LOG: false } } });
+	assert.equal(queryAudit({ categories: "settings", limit: 500 }).rows.length, before, "saving the same value is not news");
+	await call("/dashboard/settings", { cookie, body: { settings: { AUDIT_SETTINGS: false } } });
+	assert.equal(rowsOf("settings.change").find((r) => r.target === "AUDIT_SETTINGS").category, "audit", "switching a category off is itself recorded");
+	await call("/dashboard/settings", { cookie, body: { settings: { ACCESS_LOG: true } } });
+	assert.equal(rowsOf("settings.change").filter((r) => r.target === "ACCESS_LOG").length, 2, "and with settings logging off a change is not stored");
+	await call("/dashboard/settings", { cookie, body: { settings: { ACCESS_LOG: false, AUDIT_SETTINGS: true } } });
+	config.ACCESS_LOG = false;
+
+	// Keys, profiles, sessions.
+	const made = await call("/dashboard/api-keys", { cookie, body: { name: "audited key", expiresAt: 0 } });
+	assert.equal(made.status, 201);
+	const kid = made.json.createdId;
+	const ktoken = made.json.key;
+	assert.match(rowsOf("key.create").find((r) => r.target === "audited key").detail, /no expiry/);
+	assert.ok(!JSON.stringify(queryAudit({ limit: 500 }).rows).includes(ktoken), "the key itself is never recorded");
+	await call(`/dashboard/api-keys/${kid}`, { cookie, body: { maxSessions: 3, dailySpend: 2.5 } });
+	assert.match(rowsOf("key.update").at(0).detail, /maxSessions/);
+	ensureProfile(kid);
+	await call(`/dashboard/profiles/${scopeOf(kid)}/lock`, { cookie, body: { locked: true } });
+	await call(`/dashboard/profiles/${scopeOf(kid)}/lock`, { cookie, body: { locked: false } });
+	assert.deepEqual([rowsOf("profile.lock").length > 0, rowsOf("profile.unlock").length > 0], [true, true]);
+	assert.equal((await call(`/dashboard/profiles/${scopeOf(kid)}/reset`, { cookie, body: {} })).status, 200);
+	assert.equal(rowsOf("profile.reset").at(0).target, "audited key");
+	assert.equal((await call("/dashboard/kill-all", { cookie, body: {} })).status, 200);
+	assert.equal(rowsOf("session.kill_all").at(0).actor, "dashboard");
+
+	// API traffic: failed keys and chat requests, only when switched on, with no content.
+	config.AUDIT_AUTH_FAILURES = false;
+	await call("/v1/models", { method: "GET" });
+	assert.equal(rowsOf("authfail.api").filter((r) => /v1\/models/.test(r.detail) && /no key/.test(r.detail)).length, 0, "off: nothing");
+	config.AUDIT_AUTH_FAILURES = true;
+	resetAuditDedupe();
+	for (let i = 0; i < 3; i++) assert.equal((await call("/v1/models", { method: "GET", token: "not-a-key" })).status, 401);
+	const fails = rowsOf("authfail.api").filter((r) => /not valid/.test(r.detail));
+	assert.equal(fails.length, 1, "three refusals from one address in a minute: one row");
+	assert.match(fails[0].detail, /\(×3\)/);
+	assert.equal(fails[0].actor, "anonymous");
+	config.AUDIT_AUTH_FAILURES = false;
+	await call("/v1/chat/completions", { token: ktoken, body: { note: "TOP-SECRET-PROMPT" } });
+	assert.equal(rowsOf("request.chat").filter((r) => /TOP-SECRET/.test(r.detail)).length, 0);
+	const requestsBefore = rowsOf("request.chat").length;
+	config.AUDIT_REQUESTS = true;
+	const refused = await call("/v1/chat/completions", { token: ktoken, body: { note: "TOP-SECRET-PROMPT" } });
+	assert.equal(refused.status, 400);
+	const reqRow = rowsOf("request.chat")[0];
+	assert.equal(rowsOf("request.chat").length, requestsBefore + 1);
+	assert.match(reqRow.detail, /^400 \d+ ms model=/);
+	assert.equal(reqRow.actor, "key:audited key");
+	assert.ok(!JSON.stringify(queryAudit({ limit: 500 }).rows).includes("TOP-SECRET"), "what was said is not recorded");
+	config.AUDIT_REQUESTS = false;
+
+	// The page's endpoints.
+	const page = await (await fetch(`${base}/dashboard/audit.json?category=keys&limit=2`, { headers: { cookie } })).json();
+	assert.deepEqual([page.rows.length, page.more, typeof page.next, Array.isArray(page.audit)], [2, true, "number", true]);
+	assert.ok(page.rows.every((r) => r.category === "keys"));
+	assert.ok(page.stats.categories.length === 8 && page.stats.rows > 0);
+	const csvRes = await fetch(`${base}/dashboard/audit.csv?category=auth`, { headers: { cookie } });
+	assert.equal(csvRes.headers.get("content-type"), "text/csv; charset=utf-8");
+	assert.match(await csvRes.text(), /^time,category,action,actor,address,target,detail\n.*auth\.login/m);
+	assert.equal((await fetch(`${base}/dashboard/audit.json`)).status, 401, "not without signing in");
+
+	// Sign-out, changing and removing the password, and a key delete.
+	assert.equal((await call("/dashboard/logout", { cookie, body: {} })).status, 200);
+	assert.equal(rowsOf("auth.logout").length >= 1, true);
+	assert.equal((await call(`/dashboard/api-keys/${kid}`, { method: "DELETE", cookie })).status, 200);
+	assert.equal(rowsOf("key.delete").at(0).target, "audited key");
+	assert.equal((await call("/dashboard/password", { cookie, body: { current: PASS, next: "" } })).status, 200);
+	assert.match(rowsOf("auth.password").at(0).detail, /removed/);
+
+	// The sweep applies retention.
+	config.AUDIT_RETENTION_DAYS = 1;
+	db.prepare("INSERT INTO audit (ts, action, target, detail, category) VALUES (?, 'container.stop', 'swept-away', '', 'operations')").run(Date.now() - 3 * 86_400_000);
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "" }));
+	await sweep();
+	assert.equal(queryAudit({ q: "swept-away" }).rows.length, 0, "old rows go with the sweep");
+
+	await new Promise((r) => server.close(r));
+	Object.assign(config, saved);
+	config.ACCESS_LOG = accessLog;
+	clearPasswordHash();
+}
+
+// The Pi the gateway runs on: versions, what can be updated, and the update itself (never against the real install here).
+{
+	const fsx = await import("node:fs");
+	const { EventEmitter } = await import("node:events");
+	const { PassThrough } = await import("node:stream");
+	const { server } = await import("./server.mjs");
+	const accessLog = config.ACCESS_LOG;
+	config.ACCESS_LOG = false;
+	const root = mkdtempSync(join(tmpdir(), "hostpi-"));
+	const prefixRoot = join(root, "lib", "node_modules");
+	const pkgDir = join(prefixRoot, "@earendil-works", "pi-coding-agent");
+	mkdirSync(join(pkgDir, "dist"), { recursive: true });
+	const writePkg = (version) => writeFileSync(join(pkgDir, "package.json"), JSON.stringify({ name: "@earendil-works/pi-coding-agent", version, bin: { pi: "dist/cli.js" } }));
+	writePkg("0.50.0");
+	const fakeNpm = join(root, "npm");
+	writeFileSync(fakeNpm, "");
+	const cli = join(pkgDir, "dist", "cli.js");
+	const runs = [];
+	const fakeRun = (extra = {}) => async (bin, args) => {
+		runs.push([bin, ...args]);
+		if (args[0] === "root") return extra.root ?? { code: 0, stdout: `${prefixRoot}\n`, stderr: "" };
+		if (args[0] === "view") return extra.view ?? { code: 0, stdout: "0.99.2\n", stderr: "" };
+		if (args[1] === "list") return { code: 0, stdout: "npm:@scope/ext-one\n\n  npm:@scope/ext-two  \n", stderr: "" };
+		return { code: 1, stdout: "", stderr: "" };
+	};
+
+	// The running version is what was loaded; the disk is what is installed now.
+	assert.equal(await hostPiVersion(), diskPiVersion(), "nothing has been updated: the two agree");
+	assert.equal(diskPiVersion(pkgDir), "0.50.0");
+	assert.equal(diskPiVersion("/no/such/dir"), "");
+	assert.equal(piCliPath(pkgDir), cli);
+	assert.equal(piCliPath("/no/such/dir"), "");
+	for (const [a, b, newer] of [["0.99.2", "0.99.1", true], ["0.99.1", "0.99.2", false], ["0.99.1", "0.99.1", false], ["1.0.0", "0.99.9", true], ["0.99.1", "0.99.1-beta.1", true], ["0.99.1-beta.1", "0.99.1", false]]) assert.equal(versionNewer(a, b), newer, `${a} newer than ${b}`);
+	const env = hostPiEnv({ PI_OFFLINE: "1", PI_SKIP_VERSION_CHECK: "1", PATH: "/x", KEEP: "me" });
+	assert.deepEqual([env.PI_OFFLINE, env.PI_SKIP_VERSION_CHECK, env.KEEP], [undefined, undefined, "me"], "Pi's own commands must be able to go online");
+	assert.ok(env.PATH.startsWith(dirname(process.execPath)) && env.PATH.endsWith(":/x"), "the gateway's node first");
+
+	// Whether it can be updated from here, and why not.
+	assert.deepEqual(await manageability({ packageDir: pkgDir, run: fakeRun(), npm: fakeNpm }), { ok: true, reason: "" });
+	const elsewhere = await manageability({ packageDir: "/opt/custom/pi", run: fakeRun(), npm: fakeNpm });
+	assert.equal(elsewhere.ok, false);
+	assert.match(elsewhere.reason, /not where the gateway's npm installs/);
+	assert.match((await manageability({ packageDir: pkgDir, run: fakeRun(), npm: join(root, "missing-npm") })).reason, /no npm next to the gateway's node/);
+	assert.match((await manageability({ packageDir: pkgDir, run: fakeRun({ root: { code: 1, stdout: "", stderr: "" } }), npm: fakeNpm })).reason, /could not say where/);
+	assert.match((await manageability({ packageDir: "", run: fakeRun(), npm: fakeNpm })).reason, /not been loaded/);
+	if (process.getuid?.() !== 0) {
+		fsx.chmodSync(pkgDir, 0o555);
+		assert.match((await manageability({ packageDir: pkgDir, run: fakeRun(), npm: fakeNpm })).reason, /cannot write/);
+		fsx.chmodSync(pkgDir, 0o755);
+	}
+
+	// The newest release: asked once, cached, forced by `check`, and a failure is "unknown", not an error.
+	resetHostPiCache();
+	runs.length = 0;
+	assert.equal(await latestPiVersion({ run: fakeRun(), npm: fakeNpm }), "0.99.2");
+	assert.equal(await latestPiVersion({ run: fakeRun(), npm: fakeNpm }), "0.99.2");
+	assert.equal(runs.filter((r) => r[1] === "view").length, 1, "the second look is from the cache");
+	assert.equal(await latestPiVersion({ check: true, run: fakeRun({ view: { code: 0, stdout: "0.99.3\n", stderr: "" } }), npm: fakeNpm }), "0.99.3", "check asks again");
+	assert.equal(await latestPiVersion({ check: true, run: fakeRun({ view: { code: 1, stdout: "", stderr: "offline" } }), npm: fakeNpm }), null);
+	assert.equal(await latestPiVersion({ check: true, run: fakeRun({ view: { code: 0, stdout: "not a version", stderr: "" } }), npm: fakeNpm }), null);
+	resetHostPiCache();
+	assert.deepEqual(await hostExtensions({ run: fakeRun(), packageDir: pkgDir }), ["npm:@scope/ext-one", "npm:@scope/ext-two"], "sources only, blanks dropped");
+	assert.deepEqual(await hostExtensions({ run: async () => { throw new Error("cached"); }, packageDir: pkgDir }), ["npm:@scope/ext-one", "npm:@scope/ext-two"], "and cached");
+
+	// Updating, through a fake `spawn`: Pi's own commands, from the temp folder, online, one failure not stopping the next.
+	const spawned = [];
+	let exits = {};
+	const fakeSpawn = (bin, args, options) => {
+		const child = new EventEmitter();
+		child.stdout = new PassThrough();
+		child.stderr = new PassThrough();
+		child.kill = () => {};
+		spawned.push({ bin, args, options });
+		setImmediate(() => {
+			const what = args.slice(1).join(" ");
+			child.stdout.write(`ran ${what}\n`);
+			if (what === "update" && !exits.pi) writePkg("0.60.0");
+			setImmediate(() => child.emit("close", what === "update" ? exits.pi ?? 0 : exits.ext ?? 0));
+		});
+		return child;
+	};
+	process.env.PI_OFFLINE = "1";
+	const lines = [];
+	const done = await updateHostPi({}, (l) => lines.push(l), { spawnFn: fakeSpawn, run: fakeRun(), packageDir: pkgDir });
+	delete process.env.PI_OFFLINE;
+	assert.deepEqual(spawned.map((p) => p.args.slice(1).join(" ")), ["update", "update --extensions"], "Pi, then its extensions");
+	assert.ok(spawned.every((p) => p.bin === process.execPath && p.args[0] === cli && p.options.cwd === tmpdir()), "this install's own pi, run from the temp folder, never the gateway's");
+	assert.ok(spawned.every((p) => p.options.env.PI_OFFLINE === undefined && p.options.stdio[0] === "ignore"), "online, and nothing can ask a question");
+	assert.deepEqual([done.before, done.after, done.failed], ["0.50.0", "0.60.0", []]);
+	assert.ok(lines.includes("Pi on disk: 0.50.0 -> 0.60.0"));
+	assert.equal(done.restartNeeded, true, "what the gateway runs is not what is now installed");
+	assert.ok(lines.some((l) => l.startsWith("The gateway still runs Pi ") && /restart/.test(l) && /rebuild the image/.test(l)), "the operator is told what is out of step");
+	assert.ok(recentAuditRows(10).some((r) => r.action === "host.pi.update" && /0\.50\.0 -> 0\.60\.0/.test(r.detail)), "on record");
+	// One step failing does not stop the next; only one asked for runs only that.
+	exits = { pi: 3 };
+	spawned.length = 0;
+	const partial = await updateHostPi({}, () => {}, { spawnFn: fakeSpawn, run: fakeRun(), packageDir: pkgDir });
+	assert.deepEqual([partial.steps.map((s) => `${s.name}:${s.state}`), partial.failed], [["pi:failed", "extensions:done"], ["pi"]]);
+	exits = {};
+	spawned.length = 0;
+	await updateHostPi({ self: false }, () => {}, { spawnFn: fakeSpawn, run: fakeRun(), packageDir: pkgDir });
+	assert.deepEqual(spawned.map((p) => p.args.slice(1).join(" ")), ["update --extensions"]);
+	await assert.rejects(updateHostPi({ self: false, extensions: false }, () => {}, { spawnFn: fakeSpawn, run: fakeRun(), packageDir: pkgDir }), (e) => e.status === 400);
+	spawned.length = 0;
+	await assert.rejects(updateHostPi({}, () => {}, { spawnFn: fakeSpawn, run: fakeRun(), packageDir: "/opt/custom/pi" }), (e) => e.status === 409 && /not where the gateway's npm installs/.test(e.message));
+	assert.equal(spawned.length, 0, "an install the gateway cannot manage is never touched");
+
+	// As a job: refused up front when not manageable, and while another job is running; otherwise the log is kept.
+	resetUpdateJob();
+	await assert.rejects(startHostPiUpdate({}, { spawnFn: fakeSpawn, run: fakeRun(), packageDir: "/opt/custom/pi" }), (e) => e.status === 409);
+	let release;
+	startJob([{ name: "busy", label: "busy", run: () => new Promise((r) => (release = () => r({ failed: [] }))) }]);
+	await assert.rejects(startHostPiUpdate({}, { spawnFn: fakeSpawn, run: fakeRun(), packageDir: pkgDir }), (e) => e.status === 409 && /already running/.test(e.message), "one job at a time, host or container");
+	release();
+	for (let i = 0; i < 50 && updateJobView().state === "running"; i++) await new Promise((r) => setTimeout(r, 10));
+	writePkg("0.50.0");
+	await startHostPiUpdate({ self: true, extensions: false }, { spawnFn: fakeSpawn, run: fakeRun(), packageDir: pkgDir });
+	for (let i = 0; i < 100 && updateJobView().state === "running"; i++) await new Promise((r) => setTimeout(r, 10));
+	assert.deepEqual([updateJobView().state, updateJobView().items[0].name, updateJobView().items[0].state], ["done", "host:pi", "done"]);
+	assert.ok(updateJobView().items[0].lines.some((l) => /0\.50\.0 -> 0\.60\.0/.test(l)));
+	resetUpdateJob();
+
+	// The endpoints. The update needs a dashboard password; the real install is never updated here.
+	resetHostPiCache();
+	await latestPiVersion({ check: true, run: fakeRun(), npm: fakeNpm });
+	await hostExtensions({ run: fakeRun(), packageDir: pkgDir });
+	clearPasswordHash();
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	const base = `http://127.0.0.1:${server.address().port}`;
+	const call = async (path, { method = "GET", body, cookie } = {}) => {
+		const res = await fetch(base + path, { method, headers: { "content-type": "application/json", ...(cookie ? { cookie } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
+		return { status: res.status, json: await res.json().catch(() => null), cookie: res.headers.get("set-cookie")?.split(";")[0] ?? null };
+	};
+	const info = await call("/dashboard/hostpi.json");
+	assert.equal(info.status, 200);
+	for (const key of ["running", "onDisk", "latest", "updateAvailable", "restartNeeded", "packageDir", "manageable", "reason", "extensions", "updateAllowed", "updateNote", "job"]) assert.ok(key in info.json, key);
+	assert.equal(info.json.latest, "0.99.2");
+	assert.deepEqual(info.json.extensions, ["npm:@scope/ext-one", "npm:@scope/ext-two"]);
+	assert.equal(info.json.updateAllowed, false, "no dashboard password: no update");
+	assert.match(info.json.updateNote, /dashboard password/);
+	assert.equal((await call("/dashboard/hostpi/update", { method: "POST", body: {} })).status, 403, "refused until a password is set");
+	assert.equal((await call("/dashboard/password", { method: "POST", body: { next: "a long enough password" } })).status, 200);
+	const session = await call("/dashboard/login", { method: "POST", body: { password: "a long enough password" } });
+	assert.equal((await call("/dashboard/hostpi.json", { cookie: session.cookie })).json.updateAllowed, true);
+	let free;
+	startJob([{ name: "busy", label: "busy", run: () => new Promise((r) => (free = () => r({ failed: [] }))) }]);
+	assert.equal((await call("/dashboard/hostpi/update", { method: "POST", body: {}, cookie: session.cookie })).status, 409, "with a password it is allowed, and then refused while another job runs (before anything is run)");
+	free();
+	for (let i = 0; i < 50 && updateJobView().state === "running"; i++) await new Promise((r) => setTimeout(r, 10));
+	assert.equal((await call("/dashboard/hostpi/bogus", { method: "POST", cookie: session.cookie })).status, 404);
+	await call("/dashboard/password", { method: "POST", body: { current: "a long enough password", next: "" }, cookie: session.cookie });
+
+	await new Promise((r) => server.close(r));
+	resetHostPiCache();
+	resetUpdateJob();
+	config.ACCESS_LOG = accessLog;
+	rmSync(root, { recursive: true, force: true });
 }
 
 console.log("nextTurn + images: ok");

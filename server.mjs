@@ -38,11 +38,12 @@ import { checkEngine, lastEngineStatus } from "./lib/engine.mjs";
 import { diskSummary, engineOptions, migrateToContainers, startDiskWatch, startEventWatch } from "./lib/containers.mjs";
 import { reloadModelRuntime } from "./lib/models.mjs";
 import { cors, logAccess, readJson, sendError } from "./lib/http.mjs";
+import { audit, auditOnce, runWithActor } from "./lib/audit.mjs";
 import { filesRoutes, keyIdForScope, profileAdminRoutes, profileRoutes } from "./lib/profiles.mjs";
 import { sessions, spendReport, startSweeps } from "./lib/sessions.mjs";
 import { chatCompletions, listModels } from "./lib/chat.mjs";
 import { startAgentServers, stopAgentServers } from "./lib/agentservers.mjs";
-import { LOGIN_PAGE, updateScopeRoute, agentRoutes, apiKeyRoutes, containerPiRoutes, containerRoutes, dashboardLogin, dashboardPage, dashboardSetPassword, modelCatalog, saveSettings, settingsPayload } from "./lib/dashboard.mjs";
+import { LOGIN_PAGE, hostPiRoutes, updateScopeRoute, agentRoutes, apiKeyRoutes, containerPiRoutes, containerRoutes, dashboardLogin, dashboardPage, dashboardSetPassword, modelCatalog, saveSettings, settingsPayload } from "./lib/dashboard.mjs";
 
 // Everything the modules export, re-exported: the tests, and anyone embedding the gateway, import
 // from here.
@@ -65,13 +66,39 @@ export * from "./lib/chat.mjs";
 export * from "./lib/agents.mjs";
 export * from "./lib/agentservers.mjs";
 export * from "./lib/updates.mjs";
+export * from "./lib/hostpi.mjs";
 export * from "./lib/dashboard.mjs";
 
 // ------------------------------------------------------------------- server
 
-export const server = http.createServer(async (req, res) => {
+/**
+ * Who a request is, for the audit log: the dashboard, an API key (or the settings key), or nobody yet. The
+ * request then runs inside that context, so every audit row it causes says who and from where.
+ */
+export function actorOf(req) {
+	let path = "/";
+	try {
+		path = new URL(req.url, "http://localhost").pathname;
+	} catch {
+		/* a malformed URL is answered by the handler */
+	}
+	if (isDashboardPath(path)) return "dashboard";
+	const credential = credentialOf(req);
+	return credential ? (credential.legacy ? "settings-key" : `key:${credential.name}`) : "anonymous";
+}
+
+export const server = http.createServer((req, res) => runWithActor(actorOf(req), req.socket?.remoteAddress, () => handle(req, res)));
+
+async function handle(req, res) {
 	cors(res);
-	res.on("finish", () => logAccess(req, res.statusCode, res.sessionNote));
+	const started = Date.now();
+	res.on("finish", () => {
+		logAccess(req, res.statusCode, res.sessionNote);
+		// One line per chat request when that is being recorded: who, which session (a fingerprint), model, status, time. Never the messages.
+		if (req.method === "POST" && /^\/(v1\/)?chat\/completions$/.test(req.url?.split("?")[0] ?? "")) {
+			audit("request.chat", req.credential?.name ?? "open gateway", `${res.statusCode} ${Date.now() - started} ms model=${res.auditModel ?? "?"} ${res.sessionNote ?? ""}`.trim());
+		}
+	});
 	try {
 		if (req.method === "OPTIONS") {
 			res.writeHead(204);
@@ -90,10 +117,13 @@ export const server = http.createServer(async (req, res) => {
 		// Resolved once, so the log line and the session record both know which key was used.
 		req.credential = credentialOf(req);
 		if (!isDashboard && authRequired() && !req.credential) {
+			const from = req.socket?.remoteAddress ?? "unknown";
+			auditOnce(`authfail:${from}`, 60_000, "authfail.api", from, `${req.method} ${path}${req.headers.authorization ? " (a key was sent, and is not valid)" : " (no key)"}`);
 			return sendError(res, 401, "Invalid API key", "invalid_api_key", "authentication_error");
 		}
 		if (req.method === "POST" && path === "/dashboard/login") return await dashboardLogin(req, res);
 		if (req.method === "POST" && path === "/dashboard/logout") {
+			audit("auth.logout", req.socket?.remoteAddress ?? "unknown", "signed out");
 			clearSessionCookie(res);
 			res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
 			return res.end(JSON.stringify({ ok: true }));
@@ -108,6 +138,7 @@ export const server = http.createServer(async (req, res) => {
 		}
 		if (req.method === "POST" && path === "/dashboard/password") return await dashboardSetPassword(req, res);
 		if (path.startsWith("/dashboard/api-keys")) return await apiKeyRoutes(req, res, path);
+		if (path === "/dashboard/hostpi.json" || path === "/dashboard/hostpi/update") return await hostPiRoutes(req, res, path);
 		if (path === "/dashboard/agents.json" || path === "/dashboard/agents" || path.startsWith("/dashboard/agents/")) return await agentRoutes(req, res, path);
 		const updateMatch = /^\/dashboard\/profiles\/([A-Za-z0-9_-]+)\/update-container$/.exec(path);
 		if (updateMatch) return await updateScopeRoute(req, res, updateMatch[1]);
@@ -121,6 +152,7 @@ export const server = http.createServer(async (req, res) => {
 		if (req.method === "GET" && path === "/dashboard/models.json") return await modelCatalog(res);
 		if (req.method === "POST" && path === "/dashboard/models/reload") {
 			await reloadModelRuntime();
+			audit("models.reload", "model catalogue", "reloaded from the host's Pi and the container config");
 			return await modelCatalog(res);
 		}
 		if (req.method === "GET" && path === "/dashboard/spend.json") {
@@ -156,14 +188,17 @@ export const server = http.createServer(async (req, res) => {
 		}
 		if (req.method === "DELETE" && path.startsWith("/dashboard/session/")) {
 			const closed = sessions.closeByFingerprint(path.slice("/dashboard/session/".length));
+			audit("session.kill", path.slice("/dashboard/session/".length), closed ? "ended from the dashboard" : "no such session");
 			res.writeHead(closed ? 200 : 404, { "Content-Type": "application/json" });
 			return res.end(JSON.stringify({ closed }));
 		}
 		if (path === "/dashboard/container-pi" || path === "/dashboard/containers/recheck") return await containerPiRoutes(req, res, path);
-		if (path === "/dashboard/containers.json" || path.startsWith("/dashboard/containers/") || path === "/dashboard/audit.json" || path === "/dashboard/updates.json" || path === "/dashboard/alerts/test" || path === "/dashboard/images.json" || path.startsWith("/dashboard/images/")) return await containerRoutes(req, res, path);
+		if (path === "/dashboard/containers.json" || path.startsWith("/dashboard/containers/") || path === "/dashboard/audit.json" || path === "/dashboard/audit.csv" || path === "/dashboard/updates.json" || path === "/dashboard/alerts/test" || path === "/dashboard/images.json" || path.startsWith("/dashboard/images/")) return await containerRoutes(req, res, path);
 		if (req.method === "POST" && path === "/dashboard/kill-all") {
 			res.writeHead(200, { "Content-Type": "application/json" });
-			return res.end(JSON.stringify({ closed: sessions.closeAll() }));
+			const closedAll = sessions.closeAll();
+			audit("session.kill_all", "every live session", `${closedAll} ended`);
+			return res.end(JSON.stringify({ closed: closedAll }));
 		}
 		if (req.method === "GET" && path === "/dashboard") {
 			res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
@@ -182,7 +217,7 @@ export const server = http.createServer(async (req, res) => {
 	} catch (err) {
 		return sendError(res, 500, err?.message ?? String(err), "server_error", "server_error");
 	}
-});
+}
 
 export const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 /**
