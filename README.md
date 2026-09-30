@@ -57,6 +57,8 @@ runtime dependencies beyond Node's standard library, the Pi package you already 
   and an audit trail.
 - **Per-key container settings** — memory, CPU, processes, network, image, extra mounts and
   environment for one key, over the defaults, like the per-key limits that already existed.
+- **Persistent keys** — one container per key, shared by its chats and kept between them, so packages
+  and tools the agent installs survive new sessions, reloads and restarts.
 - **Several images** — a full environment and a slim one out of the box, more by adding a folder;
   build, rebuild and prune them from the dashboard.
 - **Idle chats stop, they do not vanish** — an idle chat's container is stopped (freeing its memory)
@@ -291,6 +293,34 @@ Profiles page, and the fields show what the key gets now.
   within two levels (deeper is not scanned: share the folder you mean, not its parent).
 - Each change is in the audit trail (the fields and their values; environment variables only as a count,
   since they can hold secrets).
+
+### Persistent keys
+
+Tick **persistent container** when creating a key (or later in its detail view) and the key gets **one
+container that lasts**, shared by all its chats, instead of one container per chat. A new chat, a reload
+or a gateway restart finds it as it was:
+
+- **Everything installed stays.** `apt install tor`, compilers, `pip`/`npm` globals, files in `/root`,
+  services the agent left running: they are in the container, which no chat's ending removes. Skills,
+  extensions, settings and files already persisted per key (`/profile`, `/workspace`); this adds the
+  system to that.
+- **One container, several chats.** Each chat still runs its own Pi in it (`docker exec`), with its own
+  session folder and bridge socket, so conversations stay separate and ending one never touches another.
+- **It keeps running** while the key's chats are idle or stopped, and through gateway restarts (a chat's
+  own container is stopped instead). It stops only when you stop it on the Containers page, or the host
+  restarts (then it starts again with the next message; background processes do not come back).
+- **Changing the key's settings does not cost the installs.** A changed limit, network, mount or bundle
+  rebuilds the container, but its state is first saved to an image (`piper-keystate:<name>`) and the new
+  container starts from that. If other chats of the key are running, the rebuild waits until none is. A
+  rebuilt *image* does not touch it: a persistent container keeps its own system, Pi included, until you
+  reset it.
+- **Reset** (Recreate on the Containers page, marked ★) deletes the container and its saved state; the
+  next chat starts from the clean image. Turning persistence off, or deleting the key, does the same.
+- **Cost:** what is installed takes disk in the container's writable layer, which the Containers page
+  shows per container and the disk guard watches. The network policy still decides what it can reach
+  (`internet` by default, so `apt` works).
+
+It is not available to the settings key or the open gateway (there is no key to keep a container for).
 
 ### The Containers page
 

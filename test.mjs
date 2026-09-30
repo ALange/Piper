@@ -23,7 +23,7 @@ process.env.CONTAINER_PI_DIR = TEST_CONTAINER_PI;
 const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 // Seeded at startup, which is when a validator that reads a not-yet-defined constant would fail.
 process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
-const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, stopContainer, removeContainer, listManaged, EngineError } = await import("./server.mjs");
+const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
 
@@ -2175,7 +2175,7 @@ assert.equal(isReloadCommand(undefined), false);
 		const sig = containerSignature(spec, "img1");
 		const inspected = (running, signature, managed = "1") => JSON.stringify([{ State: { Running: running }, Config: { Labels: { "piper.managed": managed, "piper.sig": signature } } }]);
 		reset((bin, args) => (args[0] === "inspect" ? { code: 1, stdout: "", stderr: "No such object" } : { code: 0, stdout: "", stderr: "" }));
-		assert.deepEqual(await ensureContainer(spec, "img1"), { created: true, recreated: false, sig });
+		assert.deepEqual(await ensureContainer(spec, "img1"), { created: true, recreated: false, kept: false, sig });
 		assert.deepEqual(calls.map((c) => c[1]), ["inspect", "create", "start"]);
 		assert.equal(said("create")[0].includes(`piper.sig=${sig}`), true, "the signature is stored on the container");
 
@@ -2668,6 +2668,107 @@ assert.equal(isReloadCommand(undefined), false);
 	const specB = containerSpecFor({ id: "spec-chat", keyId: kb.id }, ensureWorkspace(kb.id));
 	assert.equal(specB.network, containerDefaults().network, "another key's spec follows the defaults");
 	assert.notEqual(containerSignature(specA, "img"), containerSignature({ ...specA, memoryMb: 512 }, "img"), "a changed override recreates the key's containers");
+
+	// Persistent keys: one container for the key, shared by its chats, that keeps what is installed in it.
+	{
+		assert.deepEqual(normalizeContainerInput({ persistent: true }), { persistent: true });
+		assert.deepEqual(normalizeContainerInput({ persistent: "1", memoryMb: "256" }), { persistent: true, memoryMb: 256 });
+		assert.equal(normalizeContainerInput({ persistent: false }), null, "off is not stored");
+		assert.throws(() => normalizeContainerInput({ persistent: "maybe" }), /persistent must be on or off/);
+		assert.equal(containerSettingsFor(ka.id).persistent, false, "off unless asked for");
+		apiKeys.update(ka.id, { container: { persistent: true } });
+		assert.equal(containerSettingsFor(ka.id).persistent, true);
+		assert.equal(containerSettingsFor(null).persistent, false, "the open gateway has no key to keep a container for");
+		const pa = containerSpecFor({ id: "chat-one", keyId: ka.id }, wsA);
+		const pb = containerSpecFor({ id: "chat-two", keyId: ka.id }, wsA);
+		assert.equal(pa.persistent, true);
+		assert.equal(pa.name, pb.name, "two chats of the key meet one container");
+		assert.equal(pa.name, keyContainerName(ka.id));
+		assert.match(pa.name, /^piper-[0-9a-f]{8}-key-[0-9a-f]{12}$/);
+		assert.equal(chatKeyOfContainer(pa.name) !== null && isKeyContainer(pa.name), true);
+		assert.deepEqual([pa.chatDir, pa.runDir], [pb.chatDir, pb.runDir], "and one set of mounted folders");
+		assert.equal(containerSettingsFor(kb.id).persistent, false);
+		assert.ok(join(pa.runDir, `${chatKey(chatIdHash("chat-one"))}.sock`).length <= 107, "a persistent chat's socket path fits a Unix socket");
+		assert.notEqual(containerSpecFor({ id: "chat-one", keyId: kb.id }, ensureWorkspace(kb.id)).name, pa.name, "another key has its own container");
+		assert.notEqual(pa.name, containerName(chatIdHash("chat-one")), "not named after a chat");
+		// Each chat keeps its session and socket under its own name inside the shared folders.
+		const h1 = chatIdHash("chat-one"), h2 = chatIdHash("chat-two");
+		const i1 = piInvocation(pa, { idHash: h1 }), i2 = piInvocation(pb, { idHash: h2 });
+		assert.equal(i1.piArgs[i1.piArgs.indexOf("--session-dir") + 1], `/piper/session/${chatKey(h1)}`);
+		assert.notEqual(i1.sessionDir, i2.sessionDir);
+		assert.equal(i1.env.PIPER_BRIDGE_SOCKET, `/run/piper/${chatKey(h1)}.sock`);
+		assert.notEqual(i1.env.PIPER_BRIDGE_SOCKET, i2.env.PIPER_BRIDGE_SOCKET);
+		assert.equal(piInvocation({ ...pa, persistent: false }, { idHash: h1 }).env.PIPER_BRIDGE_SOCKET, "/run/piper/bridge.sock", "a chat's own container keeps the plain paths");
+		assert.ok(containerCreateArgs({ ...pa, sig: "s" }).includes("piper.persistent=1"), "marked on the container");
+		assert.ok(!containerCreateArgs({ ...pa, persistent: false, sig: "s" }).includes("piper.persistent=1"));
+		// The image being rebuilt does not change a persistent container's signature (it keeps its own system).
+		assert.equal(containerSignature(pa, "img-old"), containerSignature(pa, "img-new"));
+		assert.notEqual(containerSignature({ ...pa, persistent: false }, "img-old"), containerSignature({ ...pa, persistent: false }, "img-new"));
+		assert.notEqual(containerSignature(pa, ""), containerSignature({ ...pa, memoryMb: 1 }, ""), "but its limits still do");
+
+		const sigP = containerSignature(pa, "img");
+		const seen = (running, signature) => JSON.stringify([{ State: { Running: running }, Config: { Labels: { "piper.managed": "1", "piper.sig": signature } } }]);
+		const engine = (handlers) => (bin, args) => handlers[args[0]]?.(args) ?? { code: 0, stdout: "", stderr: "" };
+		// A changed setting: state is saved (commit) before the old container goes, and the new one starts from it.
+		reset2(engine({ inspect: () => ({ code: 0, stdout: seen(true, "old"), stderr: "" }) }));
+		const res = await ensureContainer(pa, "img");
+		assert.equal(res.recreated, true);
+		assert.deepEqual(calls2.map((c) => c[1]), ["inspect", "stop", "commit", "rm", "create", "start"], "stopped, saved, removed, created, started");
+		assert.ok(calls2.find((c) => c[1] === "commit").includes(keyStateImage(pa.name)), "saved to the key's state image");
+		const created = calls2.find((c) => c[1] === "create");
+		assert.equal(created[created.length - 1], keyStateImage(pa.name), "the new container is built from the saved state");
+		// A failed save must not cost the installs.
+		reset2(engine({ inspect: () => ({ code: 0, stdout: seen(true, "old"), stderr: "" }), commit: () => ({ code: 1, stdout: "", stderr: "no space left" }) }));
+		await assert.rejects(ensureContainer(pa, "img"), /no space left/);
+		assert.equal(calls2.filter((c) => c[1] === "rm").length, 0, "the container is not removed when its state could not be saved");
+		// Other chats are in it: left alone, reported.
+		reset2(engine({ inspect: () => ({ code: 0, stdout: seen(true, "old"), stderr: "" }) }));
+		const held = await ensureContainer(pa, "img", { allowRecreate: false });
+		assert.deepEqual([held.kept, held.recreated], [true, false]);
+		assert.deepEqual(calls2.map((c) => c[1]), ["inspect"], "nothing is stopped under a running chat");
+		// Missing container, but a saved state: start from that; with none saved, from the clean image.
+		reset2(engine({ inspect: () => ({ code: 1, stdout: "", stderr: "" }), image: () => ({ code: 1, stdout: "", stderr: "No such image" }) }));
+		await ensureContainer(pa, "img");
+		const fresh = calls2.find((c) => c[1] === "create");
+		assert.equal(fresh[fresh.length - 1], pa.image, "no saved state: the clean image");
+		reset2(engine({ inspect: () => ({ code: 1, stdout: "", stderr: "" }), image: () => ({ code: 0, stdout: "sha256:x\n", stderr: "" }) }));
+		await ensureContainer(pa, "img");
+		const restored = calls2.find((c) => c[1] === "create");
+		assert.equal(restored[restored.length - 1], keyStateImage(pa.name), "a saved state that exists is used");
+		// A chat's own container is unaffected by all of this.
+		reset2(engine({ inspect: () => ({ code: 0, stdout: seen(true, "old"), stderr: "" }) }));
+		await ensureContainer({ ...pa, persistent: false }, "img");
+		assert.deepEqual(calls2.map((c) => c[1]), ["inspect", "rm", "create", "start"], "no commit for a chat's own container");
+		// Killing one chat's Pi leaves the others.
+		reset2();
+		await killPi(pa.name, `--session-dir ${i1.sessionDir}`);
+		assert.ok(calls2[0].includes(`--session-dir ${i1.sessionDir}`) && !calls2[0].includes("--mode rpc"));
+		// Stopping a chat leaves the persistent container running; ending one removes only its own files.
+		reset2();
+		const runDirP = pa.runDir;
+		mkdirSync(runDirP, { recursive: true });
+		const sock = join(runDirP, `${chatKey(h1)}.sock`);
+		writeFileSync(sock, "");
+		await containerHost.stopped(h1, { container: { name: pa.name, persistent: true, runDir: runDirP, chatDir: pa.chatDir } });
+		assert.equal(calls2.filter((c) => c[1] === "stop").length, 0, "the container keeps running for the key's other chats");
+		assert.equal(existsSync(sock), false, "only the chat's own socket goes");
+		mkdirSync(join(pa.chatDir, "session", chatKey(h1)), { recursive: true });
+		mkdirSync(join(pa.chatDir, "session", chatKey(h2)), { recursive: true });
+		await containerHost.ended(h1);
+		assert.equal(existsSync(join(pa.chatDir, "session", chatKey(h1))), false, "ending a chat forgets its session");
+		assert.equal(existsSync(join(pa.chatDir, "session", chatKey(h2))), true, "and not another chat's");
+		assert.equal(calls2.some((c) => c[1] === "rm" && c.includes(pa.name)), false, "and never the key's container");
+		// The sweep keeps a persistent key's container, and removes it once the key is not persistent any more.
+		const managedList = (kept) => engine({ ps: () => ({ code: 0, stdout: `${pa.name}\trunning\t${ka.id}\n`, stderr: "" }) });
+		reset2(managedList());
+		await sweepContainers(new Set(), new Set());
+		assert.equal(calls2.filter((c) => c[1] === "rm" || c[1] === "stop").length, 0, "kept with no chat known and none running");
+		apiKeys.update(ka.id, { container: { memoryMb: 256, pids: 32, cpus: 0.5, network: "none", env: "ONLY_HERE=1" } });
+		reset2(managedList());
+		await sweepContainers(new Set(), new Set());
+		assert.equal(calls2.filter((c) => c[1] === "rm").length, 1, "removed when the key stopped being persistent");
+		assert.ok(calls2.some((c) => c[1] === "rmi"), "with its saved state");
+	}
 
 	// Networks: `open` has a network of its own, so the firewall rules for `internet` never cut it off.
 	assert.deepEqual([networkName("internet"), networkName("open"), networkName("none")], ["piper", "piper-open", "none"]);

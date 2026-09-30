@@ -527,6 +527,7 @@
                 <option value="date">on a date&hellip;</option>
               </select>
               <input id="newdate" type="date" hidden>
+              <label class="ctrl" title="One container for this key, shared by all its chats and kept between them: what the agent installs (packages, Tor, tools) and sets up stays after a chat ends or the gateway restarts. Skills, settings and files already persist per key."><input id="newpersistent" type="checkbox"> persistent container</label>
               <button id="createkey">create key</button>
             </div>
             <div class="passnote" id="keynote"></div>
@@ -1298,11 +1299,12 @@ $('createkey').addEventListener('click', function () {
   fetch('dashboard/api-keys', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ name: name, expiresAt: expiresAt })
+    body: JSON.stringify({ name: name, expiresAt: expiresAt, container: $('newpersistent').checked ? { persistent: true } : undefined })
   })
     .then(readJson)
     .then(function (d) {
       button.disabled = false;
+      $('newpersistent').checked = false;
       KEYS = d;
       CREATED_KEY = d.key;
       $('newname').value = '';
@@ -2236,8 +2238,9 @@ function loadContainers() {
   return fetch('dashboard/containers.json', { cache: 'no-store' }).then(readJson).then(function (d) { CT_DATA = d; renderContainers(d); })
     .catch(function (e) { $('ctnote').textContent = 'cannot load containers: ' + e.message; });
 }
-function ctAct(name, action, label) {
-  if (action !== 'stop' && !confirm(label + ' ' + name + '?')) return;
+function ctAct(name, action, label, persistent) {
+  var warn = persistent && action !== 'stop' ? ' This is the key’s persistent container: everything installed in it is deleted, and the next chat starts from the clean image.' : '';
+  if (action !== 'stop' && !confirm(label + ' ' + name + '?' + warn)) return;
   fetch('dashboard/containers/' + name + '/' + action, { method: 'POST' })
     .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); return j; }); })
     .then(function (j) { $('ctnote').textContent = name + ': ' + j.message; return loadContainers(); })
@@ -2260,10 +2263,12 @@ function renderContainers(d) {
     var nameCell = cell(c.name.replace(/^piper-/, ''), 'mono');
     nameCell.title = c.name + '\nimage ' + c.image + (c.imageStale ? ' (rebuilt since: recreate to use the new one)' : '');
     if (c.imageStale) nameCell.appendChild(el('span', ' ⚑'));
+    if (c.persistent) { nameCell.appendChild(el('span', ' ★')); nameCell.title += '\npersistent: this key’s one container, shared by its chats; what is installed in it stays'; }
     tr.appendChild(nameCell);
     tr.appendChild(cell(c.key));
-    tr.appendChild(cell(c.fingerprint || '-', 'mono'));
+    tr.appendChild(cell(c.persistent ? c.chats + ' chat' + (c.chats === 1 ? '' : 's') : c.fingerprint || '-', 'mono'));
     var st = cell(c.status + (c.inflight ? ' · working' : '') + ' / ' + c.state, 'why ' + (c.status === 'orphan' ? 'one-shot' : c.status === 'live' ? 'idle' : ''));
+    if (c.status === 'kept') st.title = 'persistent: stays (and keeps running) between chats';
     tr.appendChild(st);
     tr.appendChild(cell(c.state === 'running' ? dur(c.uptimeMs) : '-', 'num'));
     tr.appendChild(cell(c.cpu == null ? '-' : c.cpu.toFixed(1) + '%', 'num'));
@@ -2278,7 +2283,7 @@ function renderContainers(d) {
     [['stop', 'stop'], ['recreate', 'recreate'], ['remove', 'remove']].forEach(function (a) {
       var b = el('button', a[0]);
       if (a[0] === 'stop' && c.state !== 'running') b.disabled = true;
-      b.addEventListener('click', function () { ctAct(c.name, a[1], a[0]); });
+      b.addEventListener('click', function () { ctAct(c.name, a[1], a[0], c.persistent); });
       actions.appendChild(b);
       actions.appendChild(document.createTextNode(' '));
     });
@@ -2587,6 +2592,13 @@ function renderProfileDetail(d) {
       row.appendChild(lab); row.appendChild(inp);
       csec.appendChild(row);
     }
+    var prow = el('div'); prow.className = 'fieldrow';
+    var plab = el('label', 'persistent'); plab.style.minWidth = '110px';
+    var pbox = el('input'); pbox.type = 'checkbox'; pbox.checked = own.persistent === true;
+    var ptext = el('span', ' one container for this key, shared by its chats and kept between them: packages and tools the agent installs (Tor, compilers, anything apt can give it) stay, and so do processes it leaves running');
+    ptext.className = 'hint small';
+    prow.appendChild(plab); prow.appendChild(pbox); prow.appendChild(ptext);
+    csec.appendChild(prow);
     cfield('memoryMb', 'memory (MB)', 'default: ' + (eff.memoryMb || 'unlimited'), '');
     cfield('cpus', 'cpu cores', 'default: ' + (eff.cpus || 'unlimited'), '');
     cfield('pids', 'processes', 'default: ' + (eff.pids || 'unlimited'), '');
@@ -2608,9 +2620,11 @@ function renderProfileDetail(d) {
       csave.disabled = true; cnote.className = 'hint small'; cnote.textContent = 'saving…';
       var body = {};
       Object.keys(cin).forEach(function (k) { body[k] = cin[k].value.trim() === '' ? null : cin[k].value.trim(); });
+      body.persistent = pbox.checked ? true : null;
+      if (own.persistent === true && !pbox.checked && !confirm('Turning persistence off deletes this key’s container and everything installed in it. Continue?')) { csave.disabled = false; cnote.textContent = ''; return; }
       fetch('dashboard/api-keys/' + d.container.keyId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ container: body }) })
         .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); return j; }); })
-        .then(function (j) { cnote.textContent = 'saved — ' + (j.stopped ? j.stopped + ' running chat(s) stopped; each ' : 'each chat ') + 'continues in a fresh container on its next message (what an agent installed in the old one is lost; its workspace, profile and conversation are not)'; csave.disabled = false; })
+        .then(function (j) { own.persistent = pbox.checked || undefined; cnote.textContent = 'saved — ' + (j.stopped ? j.stopped + ' running chat(s) stopped; each ' : 'each chat ') + (pbox.checked ? 'continues in the key’s container on its next message (a changed limit or mount rebuilds it, keeping what is installed)' : 'continues in a fresh container on its next message (what an agent installed in the old one is lost; its workspace, profile and conversation are not)'); csave.disabled = false; })
         .catch(function (e) { cnote.textContent = e.message; cnote.className = 'hint small bad'; csave.disabled = false; });
     });
     crow.appendChild(csave); crow.appendChild(cnote); csec.appendChild(crow);
