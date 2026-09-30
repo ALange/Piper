@@ -41,7 +41,8 @@ import { cors, logAccess, readJson, sendError } from "./lib/http.mjs";
 import { filesRoutes, keyIdForScope, profileAdminRoutes, profileRoutes } from "./lib/profiles.mjs";
 import { sessions, spendReport, startSweeps } from "./lib/sessions.mjs";
 import { chatCompletions, listModels } from "./lib/chat.mjs";
-import { LOGIN_PAGE, apiKeyRoutes, containerPiRoutes, containerRoutes, dashboardLogin, dashboardPage, dashboardSetPassword, modelCatalog, saveSettings, settingsPayload } from "./lib/dashboard.mjs";
+import { startAgentServers, stopAgentServers } from "./lib/agentservers.mjs";
+import { LOGIN_PAGE, agentRoutes, apiKeyRoutes, containerPiRoutes, containerRoutes, dashboardLogin, dashboardPage, dashboardSetPassword, modelCatalog, saveSettings, settingsPayload } from "./lib/dashboard.mjs";
 
 // Everything the modules export, re-exported: the tests, and anyone embedding the gateway, import
 // from here.
@@ -61,6 +62,8 @@ export * from "./lib/alerts.mjs";
 export * from "./lib/images.mjs";
 export * from "./lib/sessions.mjs";
 export * from "./lib/chat.mjs";
+export * from "./lib/agents.mjs";
+export * from "./lib/agentservers.mjs";
 export * from "./lib/dashboard.mjs";
 
 // ------------------------------------------------------------------- server
@@ -104,6 +107,7 @@ export const server = http.createServer(async (req, res) => {
 		}
 		if (req.method === "POST" && path === "/dashboard/password") return await dashboardSetPassword(req, res);
 		if (path.startsWith("/dashboard/api-keys")) return await apiKeyRoutes(req, res, path);
+		if (path === "/dashboard/agents.json" || path === "/dashboard/agents" || path.startsWith("/dashboard/agents/")) return await agentRoutes(req, res, path);
 		if (path === "/dashboard/profiles.json" || path.startsWith("/dashboard/profiles/")) return await profileAdminRoutes(req, res, path);
 		const filesMatch = /^\/dashboard\/files\/([A-Za-z0-9_-]+)(\/.*)?$/.exec(path);
 		if (filesMatch) {
@@ -166,7 +170,7 @@ export const server = http.createServer(async (req, res) => {
 		if (path === "/v1/piper/profile" || path.startsWith("/v1/piper/profile/")) return await profileRoutes(req, res, path);
 		// A key's own workspace, and the operator's view of any key's.
 		if (path === "/v1/piper/files" || path.startsWith("/v1/piper/files/")) {
-			return await filesRoutes(req, res, req.credential ? req.credential.id : null, path.slice("/v1/piper/files".length));
+			return await filesRoutes(req, res, req.credential ? req.credential.scopeId ?? req.credential.id : null, path.slice("/v1/piper/files".length));
 		}
 		if (req.method === "POST" && (path === "/v1/chat/completions" || path === "/chat/completions")) {
 			return await chatCompletions(req, res, await readJson(req));
@@ -201,6 +205,7 @@ if (isMain) {
 		stopping = true;
 		process.stderr.write(`${signal}: hibernating ${sessions.size} chat(s)\n`);
 		server.close();
+		void stopAgentServers();
 		const deadline = setTimeout(() => process.exit(0), 10_000);
 		deadline.unref?.();
 		await sessions.hibernateAll().catch(() => {});
@@ -226,8 +231,12 @@ if (isMain) {
 				startSweeps();
 				startEventWatch();
 				startDiskWatch();
+				void startAgentServers();
 			},
-			() => startSweeps(),
+			() => {
+				startSweeps();
+				void startAgentServers();
+			},
 		);
 	});
 }

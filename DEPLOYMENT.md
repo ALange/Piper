@@ -381,3 +381,11 @@ Anything else means the containers are not what this guide describes.
 | A red "Disk is nearly full" banner | Less than `DISK_FREE_WARN_MB` is free where Docker keeps its data. Prune old images, clear Docker's build cache (`docker builder prune -f`: every image build leaves gigabytes of it, and it is only a speed-up), recreate the containers with the biggest disk on the Containers page, delete old `*.before-restore-*` and archive folders, or move Docker's data to a bigger disk. |
 | Restarting the gateway with `./piper.sh` says it stops "the systemd unit" | A unit named `piper` runs this folder's gateway, so `piper.sh` uses it. Use `systemctl` or `piper.sh` (not a hand-started `node server.mjs`). |
 | A key on `network: none` gets `[model error: … Connection error]` | The model is one you configured for containers, which Pi calls directly, and there is no network. Use a model the gateway serves, or another network for that key. |
+
+## Agent endpoints and the firewall
+
+Every agent created on the Endpoints page listens on a port of its own on `HOST` (the same address as the
+gateway). Set `AGENT_PORT_RANGE` (Settings → Containers, e.g. `20000-29999`) before creating them, so the
+ports come from a range you can open in the firewall on purpose; leave `HOST` on `127.0.0.1` and put a
+TLS proxy in front if the gateway should not be reachable directly. An agent's port serves only the API
+and only for the key it belongs to, but it is still a listening socket: treat it like the gateway's own.

@@ -23,7 +23,7 @@ process.env.CONTAINER_PI_DIR = TEST_CONTAINER_PI;
 const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 // Seeded at startup, which is when a validator that reads a not-yet-defined constant would fail.
 process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
-const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi } = await import("./server.mjs");
+const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, recentAudit: recentAuditRows } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
 
@@ -1031,6 +1031,14 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(run({ op: "settings.put", settings: { defaultModel: "m" } }).ok, true);
 	assert.deepEqual(run({ op: "settings.patch", set: { theme: "dark" }, unset: ["defaultModel"] }).result, { theme: "dark" });
 	assert.equal(run({ op: "settings.put", settings: [1, 2] }).ok, false, "settings must be an object");
+	// The agent's instructions are the profile's AGENTS.md.
+	assert.deepEqual(run({ op: "instructions.get" }).result, { text: "" }, "none yet");
+	assert.equal(run({ op: "instructions.put", text: "You are the architect." }).ok, true);
+	assert.equal(readFileSync(join(dir, "AGENTS.md"), "utf8"), "You are the architect.");
+	assert.equal(run({ op: "instructions.get" }).result.text, "You are the architect.");
+	assert.equal(run({ op: "instructions.put", text: 5 }).ok, false, "instructions are text");
+	assert.equal(run({ op: "instructions.put", text: "x".repeat(65 * 1024) }).ok, false, "and at most 64 KB");
+	assert.equal(run({ op: "summary" }).result.hasAgentsMd, true, "Pi will see it");
 
 	const skill = { op: "skills.put", name: "demo", files: { "SKILL.md": "---\nname: demo\ndescription: Says hi.\n---\nhi", "scripts/run.sh": "echo hi" } };
 	assert.deepEqual(run(skill).result, { name: "demo", description: "Says hi." });
@@ -2088,9 +2096,10 @@ assert.equal(isReloadCommand(undefined), false);
 		assert.equal(flags(containerCreateArgs({ ...spec, network: "none" }), "--network")[0], "none");
 		assert.equal(flags(containerCreateArgs({ ...spec, network: "open" }), "--network")[0], "piper-open", "open has a network of its own, so the internet policy's rules cannot cut it off");
 		const mounts = flags(args, "-v");
-		assert.deepEqual(mounts, ["/w/key-k1:/workspace", "/p/key-k1:/profile", "/c/0123/session:/piper/session", "/c/0123/etc:/opt/piper/etc:ro", "/r/abc-0123:/run/piper", "/b.mjs:/opt/piper/bridge.mjs:ro", "/s/base:/shared/base:ro", "/opt/tools:/opt/tools:ro"]);
+		assert.deepEqual(mounts, ["/w/key-k1:/workspace", "/p/key-k1:/profile", "/c/0123/session:/piper/session", "/c/0123/etc:/opt/piper/etc:ro", "/c/0123/sys/resolv.conf:/etc/resolv.conf", "/c/0123/sys/hosts:/etc/hosts", "/c/0123/sys/hostname:/etc/hostname", "/r/abc-0123:/run/piper", "/b.mjs:/opt/piper/bridge.mjs:ro", "/s/base:/shared/base:ro", "/opt/tools:/opt/tools:ro"]);
 		assert.ok(mounts.every((m) => !/docker\.sock/.test(m)), "the engine's socket is never mounted");
 		assert.ok(mounts.some((m) => m.endsWith(":/run/piper")) && !mounts.some((m) => m.endsWith("bridge.sock")), "the socket's folder is mounted, not the socket file");
+		assert.ok(["/etc/resolv.conf", "/etc/hosts", "/etc/hostname"].every((f) => mounts.some((m) => m.endsWith(`:${f}`) && !m.endsWith(":ro"))), "Docker's own /etc files are the container's to edit, and persist");
 		assert.deepEqual(flags(args, "--label").filter((l) => l.startsWith("piper.")).sort(), ["piper.instance=" + instanceId(), "piper.key=k1", "piper.managed=1", "piper.sig=s1"].sort());
 		assert.equal(args.at(-1), "img");
 		// Frozen ones: the workspace read-only, the profile copied into a tmpfs when Pi starts.
@@ -2770,6 +2779,37 @@ assert.equal(isReloadCommand(undefined), false);
 		assert.ok(calls2.some((c) => c[1] === "rmi"), "with its saved state");
 	}
 
+	// The container's /etc/resolv.conf, hosts and hostname are files of its own: created once, kept, and
+	// the resolver list refreshed only while the agent has not edited it.
+	{
+		const dir = mkdtempSync(join(tmpdir(), "sysfiles-"));
+		const sys = ensureSystemFiles(dir);
+		assert.equal(sys, join(dir, "sys"));
+		for (const f of ["resolv.conf", "hosts", "hostname"]) assert.ok(statSync(join(sys, f)).isFile(), `${f} is a regular file: a missing source would make Docker create a folder`);
+		assert.match(readFileSync(join(sys, "resolv.conf"), "utf8"), /^# [^\n]*\n(nameserver \d+\.\d+\.\d+\.\d+\n)+$/, "resolvers, one per line");
+		assert.match(readFileSync(join(sys, "hosts"), "utf8"), /127\.0\.0\.1\tlocalhost[\s\S]*127\.0\.1\.1\tpiper/);
+		assert.equal(readFileSync(join(sys, "hostname"), "utf8"), "piper\n");
+		// The agent's edit is kept, in place (same file), and a second start does not undo it.
+		const inode = statSync(join(sys, "resolv.conf")).ino;
+		writeFileSync(join(sys, "resolv.conf"), "nameserver 127.0.0.1\n");
+		writeFileSync(join(sys, "hosts"), "127.0.0.1 localhost mytor\n");
+		ensureSystemFiles(dir);
+		assert.equal(readFileSync(join(sys, "resolv.conf"), "utf8"), "nameserver 127.0.0.1\n", "an edited resolv.conf is the agent's");
+		assert.equal(readFileSync(join(sys, "hosts"), "utf8"), "127.0.0.1 localhost mytor\n");
+		assert.equal(statSync(join(sys, "resolv.conf")).ino, inode, "rewritten in place: a bind mount must keep its file");
+		// Untouched since it was written: follows the host's resolvers when they change.
+		const dir2 = mkdtempSync(join(tmpdir(), "sysfiles-"));
+		ensureSystemFiles(dir2);
+		writeFileSync(join(dir2, "sys", "resolv.conf"), "nameserver 203.0.113.9\n");
+		writeFileSync(join(dir2, "sys", ".resolv.seeded"), "nameserver 203.0.113.9\n");
+		const before = statSync(join(dir2, "sys", "resolv.conf")).ino;
+		ensureSystemFiles(dir2);
+		assert.notEqual(readFileSync(join(dir2, "sys", "resolv.conf"), "utf8"), "nameserver 203.0.113.9\n", "an untouched one is refreshed");
+		assert.equal(statSync(join(dir2, "sys", "resolv.conf")).ino, before);
+		rmSync(dir, { recursive: true, force: true });
+		rmSync(dir2, { recursive: true, force: true });
+	}
+
 	// Networks: `open` has a network of its own, so the firewall rules for `internet` never cut it off.
 	assert.deepEqual([networkName("internet"), networkName("open"), networkName("none")], ["piper", "piper-open", "none"]);
 	assert.deepEqual(networkArgs("open"), ["--network", "piper-open"]);
@@ -3255,6 +3295,237 @@ assert.equal(isReloadCommand(undefined), false);
 	}
 	await new Promise((r) => hookServer.close(r));
 	config.ALERT_WEBHOOK_URL = "";
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+}
+
+// Agent endpoints: named, permanent agents of a key, each on a port of its own.
+{
+	const { server } = await import("./server.mjs");
+	const http = await import("node:http");
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+	const accessLog = config.ACCESS_LOG;
+	config.ACCESS_LOG = false;
+	config.HOST = "127.0.0.1";
+	const engineCalls = [];
+	setRunner(async (bin, args) => {
+		engineCalls.push([bin, ...args]);
+		return { code: bin === "docker" && args[0] === "ps" ? 0 : 127, stdout: "", stderr: "" };
+	});
+
+	// Ids: scope id of an agent, and back.
+	assert.equal(agentScope("k1", "ab12cd34"), "k1--ab12cd34");
+	assert.deepEqual([ownerKeyOf("k1--ab12cd34"), agentIdOf("k1--ab12cd34")], ["k1", "ab12cd34"]);
+	assert.deepEqual([ownerKeyOf("k1"), agentIdOf("k1")], ["k1", null], "a key's own scope is itself");
+	assert.deepEqual([ownerKeyOf(null), ownerKeyOf(""), agentIdOf(null)], [null, "", null]);
+	assert.equal(scopeOf("k1--ab12cd34"), "key-k1--ab12cd34");
+	assert.equal(keyIdForScope("key-k1--ab12cd34"), "k1--ab12cd34", "the profile routes work on an agent's scope");
+	assert.deepEqual([parsePortRange(""), parsePortRange("20000-20010")], [null, [20000, 20010]]);
+	for (const bad of ["20000", "a-b", "100-2000", "30000-20000", "1024-70000"]) assert.throws(() => parsePortRange(bad), /AGENT_PORT_RANGE/, bad);
+
+	const { record: owner, key: ownerToken } = apiKeys.create({ name: "owner key", expiresAt: 0 });
+	const { key: otherToken } = apiKeys.create({ name: "other key", expiresAt: 0 });
+	const OWNER = owner.id;
+
+	// Creating: every refusal, then two agents.
+	await assert.rejects(createAgent({ keyId: "no-such-key", name: "x" }), (e) => e instanceof AgentError && e.status === 404);
+	for (const name of ["Architect", "-x", "a b", "", "x".repeat(32)]) await assert.rejects(createAgent({ keyId: OWNER, name }), /lowercase letters/, JSON.stringify(name));
+	await assert.rejects(createAgent({ keyId: OWNER, name: "x", workspace: "both" }), /workspace must be/);
+	await assert.rejects(createAgent({ keyId: OWNER, name: "x", thinking: "extreme" }), /thinking must be/);
+	await assert.rejects(createAgent({ keyId: OWNER, name: "x", instructions: 5 }), /instructions must be text/);
+	await assert.rejects(createAgent({ keyId: OWNER, name: "x", instructions: "y".repeat(65 * 1024) }), /limited to 64 KB/);
+	await assert.rejects(createAgent({ keyId: OWNER, name: "x", container: { memoryMb: "lots" } }), /memory/);
+	assert.equal(agents.list().length, 0, "nothing was made by a refused request");
+
+	const architect = await createAgent({ keyId: OWNER, name: "architect", workspace: "own", container: { memoryMb: 1024, env: "B=2", persistent: true } });
+	const coder = await createAgent({ keyId: OWNER, name: "coder", workspace: "shared" });
+	await assert.rejects(createAgent({ keyId: OWNER, name: "coder" }), /already has an agent called "coder"/, "names are unique per key");
+	assert.equal(agentStatus(architect), "listening");
+	assert.notEqual(listeningPort(architect.id), listeningPort(coder.id), "each has its own port");
+	assert.equal(agents.get(architect.id).port, listeningPort(architect.id), "the port is stored, so the URL survives a restart");
+	assert.equal(agents.get(architect.id).container.persistent, undefined, "an agent is always persistent, so that is not a setting");
+	const archScope = agentScope(OWNER, architect.id);
+	const codeScope = agentScope(OWNER, coder.id);
+	assert.equal(existsSync(join(TEST_PROFILES, scopeOf(archScope))), true, "its profile exists");
+	assert.notEqual(workspaceDir(archScope), workspaceDir(OWNER), "an own workspace is its own folder");
+	assert.equal(workspaceDir(codeScope), workspaceDir(OWNER), "a shared one is the key's");
+	assert.equal(workspaceScopeOf(codeScope), OWNER);
+	assert.equal(existsSync(workspaceDir(archScope)), true);
+	assert.equal(keyLabel(archScope), "owner key / architect");
+	assert.equal(agentView(architect).key, "owner key");
+
+	// Container settings: the agent's own over the key's over the defaults; always persistent.
+	apiKeys.update(OWNER, { container: { memoryMb: 512, network: "none", env: "A=1" } });
+	const effA = containerSettingsFor(archScope);
+	assert.deepEqual([effA.memoryMb, effA.network, effA.persistent], [1024, "none", true], "the agent's memory, the key's network");
+	assert.deepEqual(effA.env.filter(([n]) => n === "A" || n === "B").map(([n, v]) => `${n}=${v}`).sort(), ["A=1", "B=2"], "environment adds up");
+	const effC = containerSettingsFor(codeScope);
+	assert.deepEqual([effC.memoryMb, effC.persistent, effC.own], [512, true, null], "an agent with none of its own follows the key");
+	assert.equal(containerSettingsFor(OWNER).persistent, false, "and the key itself is not made persistent by having agents");
+	apiKeys.update(OWNER, { container: null });
+
+	// Its container, its folders, its labels: apart from the key's and from each other's.
+	const recA = { id: "chat-a", keyId: OWNER, scopeId: archScope, agentId: architect.id };
+	const recC = { id: "chat-c", keyId: OWNER, scopeId: codeScope, agentId: coder.id };
+	const specA = containerSpecFor(recA, ensureWorkspace(archScope));
+	const specC = containerSpecFor(recC, ensureWorkspace(codeScope));
+	const specKey = containerSpecFor({ id: "chat-k", keyId: OWNER }, ensureWorkspace(OWNER));
+	assert.equal(specA.persistent, true);
+	assert.equal(specA.name, keyContainerName(archScope));
+	assert.equal(new Set([specA.name, specC.name, keyContainerName(OWNER)]).size, 3, "three different containers");
+	assert.equal(specKey.persistent, false, "the key's own chats keep theirs");
+	assert.equal(specA.keyId, OWNER, "the owner key stays what limits are read from");
+	assert.notEqual(specA.profileDir, specC.profileDir);
+	assert.equal(specC.workspace, workspaceDir(OWNER), "shared: the key's workspace is mounted");
+	assert.notEqual(specA.workspace, specC.workspace);
+	assert.ok(containerCreateArgs({ ...specA, sig: "s" }).includes(`piper.agent=${architect.id}`));
+	assert.ok(containerCreateArgs({ ...specA, sig: "s" }).includes(`piper.key=${OWNER}`), "the label keeps the key: the Containers page and sweep read it");
+	agents.update(architect.id, { model: "p/m", thinking: "high" });
+	assert.deepEqual(agentDefaultModel(recA), { model: "p/m", thinking: "high" });
+	assert.equal(agentDefaultModel({ agentId: null }), null);
+	assert.equal(piInvocation(specA, { defaultModel: agentDefaultModel(recA), idHash: chatIdHash("chat-a") }).env.PIPER_DEFAULT_MODEL, "p/m", "a new chat starts on the agent's model");
+	agents.update(architect.id, { model: null, thinking: null });
+
+	// Sessions never cross: the same client id on the main port, on each agent, under another key.
+	const sid = (credential) => scopedSessionId(credential, "same-id");
+	const cred = { id: OWNER };
+	assert.equal(new Set([sid(cred), sid({ ...cred, agent: { id: architect.id }, scopeId: archScope }), sid({ ...cred, agent: { id: coder.id }, scopeId: codeScope }), sid({ id: "another" })]).size, 4);
+
+	// Over real sockets: who may call an agent's port, and what it serves.
+	const base = (agent) => `http://127.0.0.1:${listeningPort(agent.id)}`;
+	const ask = async (agent, path, { token, method = "GET", body } = {}) => {
+		const res = await fetch(base(agent) + path, { method, headers: { ...(token ? { authorization: `Bearer ${token}` } : {}), "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+		const text = await res.text();
+		let json = null;
+		try { json = JSON.parse(text); } catch { /* the assertions say */ }
+		return { status: res.status, json, text };
+	};
+	assert.equal((await ask(architect, "/health")).json.status, "ok", "health needs no key and says nothing more");
+	assert.equal((await ask(architect, "/v1/models")).status, 401, "no key");
+	assert.equal((await ask(architect, "/v1/models", { token: otherToken })).status, 401, "another key");
+	assert.equal((await ask(architect, "/v1/models", { token: "nonsense" })).status, 401);
+	config.GATEWAY_API_KEY = "settings-key-for-test";
+	assert.equal((await ask(architect, "/v1/models", { token: "settings-key-for-test" })).status, 401, "the settings key is not accepted here");
+	config.GATEWAY_API_KEY = "";
+	const models = await ask(architect, "/v1/models", { token: ownerToken });
+	assert.equal(models.status, 200, "its own key");
+	assert.equal(models.json.object, "list");
+	for (const path of ["/dashboard", "/dashboard/agents.json", "/dashboard/api-keys.json", "/dashboard/settings.json", "/v1/piper/settings", "/nothing"]) {
+		const r = await ask(architect, path, { token: ownerToken });
+		assert.equal(r.status, 404, `${path} is not served on an agent's port`);
+	}
+	const chat = await ask(architect, "/v1/chat/completions", { token: ownerToken, method: "POST", body: {} });
+	assert.equal(chat.status, 400, "the chat route reaches the gateway's own handler (and refuses an empty request)");
+	assert.equal((await ask(architect, "/v1/chat/completions", { method: "POST", body: { messages: [] } })).status, 401, "but not without the key");
+	const pre = await fetch(base(architect) + "/v1/chat/completions", { method: "OPTIONS" });
+	assert.equal(pre.status, 204, "a browser client's preflight is answered");
+
+	// Switching: off closes the port, on reopens the same one.
+	const was = listeningPort(coder.id);
+	await setAgentEnabled(coder.id, false);
+	assert.equal(agentStatus(agents.get(coder.id)), "disabled");
+	await assert.rejects(fetch(`http://127.0.0.1:${was}/health`), "closed");
+	await setAgentEnabled(coder.id, true);
+	assert.equal(listeningPort(coder.id), was, "the stored port is reused when it is free");
+	// A taken port: the agent moves, and says so.
+	await stopAgent(coder.id);
+	const squatter = http.createServer((req, res) => res.end("x"));
+	await new Promise((r) => squatter.listen(was, "127.0.0.1", r));
+	await startAgent(agents.get(coder.id));
+	assert.notEqual(listeningPort(coder.id), was, "it could not have its port back");
+	assert.equal(agents.get(coder.id).port, listeningPort(coder.id), "the new one is stored");
+	assert.ok(recentAuditRows(20).some((r) => r.action === "agent.port" && /was taken/.test(r.detail)), "and it is on record");
+	await new Promise((r) => squatter.close(r));
+	const before = listeningPort(coder.id);
+	await renewAgentPort(coder.id);
+	assert.equal(agentStatus(agents.get(coder.id)), "listening");
+	assert.equal(agents.get(coder.id).port, listeningPort(coder.id));
+	void before;
+	// A range.
+	config.AGENT_PORT_RANGE = "41100-41140";
+	const ranged = await createAgent({ keyId: OWNER, name: "ranged" });
+	assert.ok(listeningPort(ranged.id) >= 41100 && listeningPort(ranged.id) <= 41140, "picked inside AGENT_PORT_RANGE");
+	config.AGENT_PORT_RANGE = "";
+	await deleteAgent(ranged.id);
+
+	// A revoked key closes the door on every agent of it.
+	const { record: doomed, key: doomedToken } = apiKeys.create({ name: "doomed", expiresAt: 0 });
+	const temp = await createAgent({ keyId: doomed.id, name: "temp" });
+	assert.equal((await ask(temp, "/v1/models", { token: doomedToken })).status, 200);
+	apiKeys.revoke(doomed.id);
+	assert.equal((await ask(temp, "/v1/models", { token: doomedToken })).status, 401, "revoked");
+	await assert.rejects(createAgent({ keyId: doomed.id, name: "more" }), /revoked/, "and no new agent for it");
+
+	// Changing one: a new name, model and thinking are checked; an unknown or disallowed model is refused.
+	await assert.rejects(updateAgent(architect.id, { name: "coder" }), /already has an agent/);
+	await assert.rejects(updateAgent(architect.id, { model: "no-such-provider/no-such-model" }), /no model/);
+	const renamed = await updateAgent(architect.id, { name: "architect2", container: { memoryMb: 2048 } });
+	assert.deepEqual([renamed.name, renamed.container], ["architect2", { memoryMb: 2048 }]);
+	await updateAgent(architect.id, { name: "architect" });
+
+	// The dashboard routes.
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	const dash = `http://127.0.0.1:${server.address().port}`;
+	const dpost = async (path, body, method = "POST") => {
+		const res = await fetch(dash + path, { method, headers: { "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+		return { status: res.status, json: await res.json().catch(() => null) };
+	};
+	const listed = await (await fetch(`${dash}/dashboard/agents.json`)).json();
+	assert.deepEqual(Object.keys(listed).sort(), ["agents", "host", "keys", "portRange"]);
+	assert.ok(listed.agents.find((a) => a.name === "architect" && a.status === "listening" && a.port === listeningPort(architect.id)));
+	assert.equal(listed.keys.find((k) => k.id === doomed.id).usable, false, "a revoked key is not offered");
+	const made = await dpost("/dashboard/agents", { keyId: OWNER, name: "researcher", workspace: "own" });
+	assert.equal(made.status, 201);
+	const rid = made.json.created;
+	assert.equal(made.json.agents.find((a) => a.id === rid).status, "listening");
+	assert.equal((await dpost("/dashboard/agents", { keyId: OWNER, name: "researcher" })).status, 400, "a duplicate is the client's fault");
+	assert.equal((await dpost("/dashboard/agents", { keyId: "nope", name: "x" })).status, 404);
+	assert.equal((await dpost("/dashboard/agents/00000000/disable", {})).status, 404);
+	assert.equal((await dpost(`/dashboard/agents/${rid}/disable`, {})).json.agents.find((a) => a.id === rid).status, "disabled");
+	assert.equal((await dpost(`/dashboard/agents/${rid}/enable`, {})).json.agents.find((a) => a.id === rid).status, "listening");
+	assert.equal((await dpost(`/dashboard/agents/${rid}/bogus`, {})).status, 404);
+	assert.equal((await dpost(`/dashboard/agents/${rid}/reset`, {})).status, 200);
+	assert.ok(engineCalls.some((c) => c[1] === "rm" && c.includes(keyContainerName(agentScope(OWNER, rid)))), "reset removes its container");
+	assert.equal((await dpost(`/dashboard/agents/${rid}`, undefined, "DELETE")).json.deleted, rid);
+	assert.equal(agents.get(rid), null);
+
+	// Deleting: port closed, container and saved state removed, profile and own workspace archived, the key's workspace untouched.
+	const keyFile = join(workspaceDir(OWNER), "keep.txt");
+	writeFileSync(keyFile, "the key's");
+	const archPort = listeningPort(architect.id);
+	engineCalls.length = 0;
+	await deleteAgent(architect.id);
+	await assert.rejects(fetch(`http://127.0.0.1:${archPort}/health`), "its port is closed");
+	assert.ok(engineCalls.some((c) => c[1] === "rm" && c.includes(keyContainerName(archScope))) && engineCalls.some((c) => c[1] === "rmi"), "container and saved state removed");
+	assert.equal(existsSync(join(TEST_PROFILES, scopeOf(archScope))), false, "profile moved out");
+	assert.equal(existsSync(workspaceDir(archScope)), false, "own workspace moved out");
+	const archived = readdirSync(`${TEST_WS}-archive`).filter((n) => n.startsWith(`agent-architect-${architect.id}`));
+	assert.equal(archived.length, 2, "its profile and its workspace are in the archive, not deleted");
+	assert.equal(readFileSync(keyFile, "utf8"), "the key's", "the key's workspace is untouched");
+	await deleteAgent(coder.id);
+	assert.equal(existsSync(keyFile), true, "a shared workspace is never archived with an agent");
+
+	// The sweep keeps an agent's container, and removes one whose agent is gone.
+	const live = await createAgent({ keyId: OWNER, name: "kept" });
+	const ps = (rows) => async (bin, args) => {
+		engineCalls.push([bin, ...args]);
+		return { code: bin === "docker" && args[0] === "ps" ? 0 : 127, stdout: args[0] === "ps" ? rows.map((r) => r.join("\t")).join("\n") : "", stderr: "" };
+	};
+	setRunner(ps([[keyContainerName(agentScope(OWNER, live.id)), "running", OWNER, live.id], [keyContainerName(agentScope(OWNER, "deadbeef")), "running", OWNER, "deadbeef"]]));
+	engineCalls.length = 0;
+	await sweepContainers(new Set(), new Set());
+	const removed = engineCalls.filter((c) => c[1] === "rm").map((c) => c[c.length - 1]);
+	assert.deepEqual(removed, [keyContainerName(agentScope(OWNER, "deadbeef"))], "only the orphan is removed");
+	// Deleting a key takes its agents with it.
+	const res = await dpost(`/dashboard/api-keys/${OWNER}`, undefined, "DELETE");
+	assert.equal(res.status, 200);
+	assert.equal(agents.listByKey(OWNER).length, 0, "its agents are gone with it");
+	assert.equal(listeningPort(live.id), null, "and their ports");
+	await deleteAgentsOfKey(doomed.id);
+	assert.equal(agents.list().length, 0);
+
+	await new Promise((r) => server.close(r));
+	await stopAgentServers();
+	config.ACCESS_LOG = accessLog;
 	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 }
 

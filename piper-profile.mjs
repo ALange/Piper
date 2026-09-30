@@ -296,6 +296,21 @@ const OPS = {
 		rmSync(dir, { recursive: true, force: true });
 		return { deleted: name };
 	},
+	// The profile's AGENTS.md, which Pi puts in front of every conversation: the role an agent endpoint is given.
+	"instructions.get": () => {
+		const file = join(ROOT, "AGENTS.md");
+		const stat = lstatSync(file, { throwIfNoEntry: false });
+		return { text: stat?.isFile() ? readFileSync(file, "utf8") : "" };
+	},
+	"instructions.put": ({ text }) => {
+		if (typeof text !== "string") throw new Refusal("instructions must be text");
+		const bytes = Buffer.byteLength(text);
+		if (bytes > 64 * 1024) throw new Refusal("instructions are limited to 64 KB");
+		const file = join(ROOT, "AGENTS.md");
+		checkQuota(bytes, sizeOf(file));
+		writeAtomic(file, text);
+		return { bytes };
+	},
 	"extensions.list": () => listExtensions(),
 	"extensions.get": ({ name }) => {
 		if (!EXTENSION.test(String(name))) throw new Refusal(`invalid extension file name: ${name} (use name.ts or name.js)`);

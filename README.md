@@ -57,6 +57,8 @@ runtime dependencies beyond Node's standard library, the Pi package you already 
   and an audit trail.
 - **Per-key container settings** — memory, CPU, processes, network, image, extra mounts and
   environment for one key, over the defaults, like the per-key limits that already existed.
+- **Agent endpoints** — named permanent agents of a key (architect, coder, researcher), each with its own
+  instructions, profile, container and OpenAI-compatible port.
 - **Persistent keys** — one container per key, shared by its chats and kept between them, so packages
   and tools the agent installs survive new sessions, reloads and restarts.
 - **Several images** — a full environment and a slim one out of the box, more by adding a folder;
@@ -316,11 +318,55 @@ or a gateway restart finds it as it was:
   reset it.
 - **Reset** (Recreate on the Containers page, marked ★) deletes the container and its saved state; the
   next chat starts from the clean image. Turning persistence off, or deleting the key, does the same.
+- **DNS and hosts are the agent's to change.** Docker rewrites a container's `/etc/resolv.conf`, `hosts` and
+  `hostname` at every start, which used to throw away what an agent set (a resolver for Tor, a hosts entry).
+  They are now files in the container's state folder, mounted into it: edited in place (`echo >`, `tee`, an
+  editor's save) the change stays through stops, restarts and rebuilds. A bind-mounted file cannot be replaced,
+  so `sed -i` and `mv` on them fail with "Device or resource busy"; the file's first line says so. Until the
+  agent edits `resolv.conf` it follows the host's resolvers. Applies to every container, persistent or not; an
+  existing container picks it up when it is next rebuilt.
 - **Cost:** what is installed takes disk in the container's writable layer, which the Containers page
   shows per container and the disk guard watches. The network policy still decides what it can reach
   (`internet` by default, so `apt` works).
 
 It is not available to the settings key or the open gateway (there is no key to keep a container for).
+
+### Agent endpoints
+
+An **agent** is a named, permanent Pi of an existing API key with **a port of its own**: one key can front
+an `architect`, a `coder` and a `researcher`, each reachable as a separate OpenAI-compatible endpoint.
+Create them on the **Endpoints** page (pick the key, name it, write its instructions) and point any
+OpenAI client at `http://<host>:<port>/v1` with the key the agent belongs to.
+
+- **What makes agents differ.** Each has its own **instructions** (written to the agent's `AGENTS.md`,
+  which Pi puts in front of every conversation, through the profile helper, never by the gateway on the
+  host), its own **profile** (skills, extensions, settings: `/skills`, `/settings` and the profile API work
+  on the agent's), an optional **default model** and thinking level (for new chats; a request naming a model
+  still wins, within the key's allowed models), and optional **container limits** (memory, CPU, processes,
+  network, image, mounts, environment) layered over the key's and the defaults.
+- **Always permanent.** An agent uses one persistent container (see Persistent keys): packages it installs,
+  files in `/root`, processes left running, all survive new chats, reloads and restarts. Reset it from its
+  row or the Containers page (marked ★, shown as `key / agent`) to start clean.
+- **Workspace: your choice per agent.** `own` gives it a separate `/workspace`; `shared` mounts the key's
+  existing one, so the key's agents see the same files (and can overwrite each other's). It cannot be changed
+  afterwards, since it decides where the files are.
+- **Who may call the port: only the owning key** (Bearer), nobody else, not even the settings key. No new
+  secret; revoking or expiring the key closes every agent of it, and deleting the key deletes them.
+- **Only the API is on the port:** `/v1/chat/completions`, `/v1/models`, the agent's own `/v1/piper/profile`
+  and `/v1/piper/files`, and `/health`. Never the dashboard or settings.
+- **Limits stay on the key.** Session caps, the daily spend cap and the model allow-list count all of a key's
+  agents together; spend is recorded against the key. A conversation id on one port never reaches another
+  agent or the key's main endpoint.
+- **Ports.** Chosen once when the agent is created (any free port, or inside `AGENT_PORT_RANGE`, e.g.
+  `20000-29999`, so a firewall can allow just that range) and kept, so the URL survives restarts. If the
+  port is taken at start the agent moves to a new one, and that is written to the audit trail and sent as an
+  alert. **new port** on the row gives it another on demand; **disable** closes the port and stops its chats
+  (container and files stay).
+- **Deleting an agent** closes its port, removes its container and saved state, and moves its profile and own
+  workspace to the archive (kept `ARCHIVE_TTL_MS`); a workspace shared with the key is never touched.
+
+Each agent opens a port on `HOST`, so on a machine reachable from elsewhere, allow `AGENT_PORT_RANGE` in the
+firewall deliberately, or bind `HOST` to localhost and put a TLS reverse proxy in front.
 
 ### The Containers page
 

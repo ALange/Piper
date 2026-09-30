@@ -329,6 +329,7 @@
       <a class="on" href="#overview"><span class="ic">&#9638;</span>Overview</a>
       <a href="#agents"><span class="ic">&#9683;</span>Agents</a>
       <a href="#containers"><span class="ic">&#9635;</span>Containers</a>
+      <a href="#endpoints"><span class="ic">&#8644;</span>Endpoints</a>
       <a href="#models"><span class="ic">&#9678;</span>Models</a>
       <a href="#spend"><span class="ic">&#36;</span>Spend</a>
       <a href="#apikeys"><span class="ic">&#9636;</span>API Management</a>
@@ -461,6 +462,51 @@
         <table><thead><tr><th>when</th><th>what</th><th>container</th><th>detail</th></tr></thead><tbody id="ctlog"></tbody></table>
       </section>
     </div><!-- /view-containers -->
+
+    <div class="view" id="view-endpoints">
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Agent endpoints</h3>
+            <p class="hint" style="margin:0" id="epnote">A named, permanent Pi agent of an API key with a port of its own: point any OpenAI client at its URL with the key it belongs to. Each has its own instructions, skills, model and container (kept between chats), so one key can front an architect, a coder and a researcher. Spend, session and model limits stay on the key.</p>
+          </div>
+          <button id="eprefresh">refresh</button>
+        </div>
+        <table>
+          <thead><tr>
+            <th>agent</th><th>key</th><th>endpoint</th><th>state</th><th>workspace</th><th>model</th><th class="num">chats</th><th></th>
+          </tr></thead>
+          <tbody id="eprows"></tbody>
+        </table>
+        <p class="hint" id="epempty" hidden>No agent endpoints yet. Create one below.</p>
+      </section>
+      <section class="panel" id="epeditor" hidden>
+        <h3 id="epedtitle">Edit</h3>
+        <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">name</label><input type="text" id="epedname"></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">model</label><input type="text" id="epedmodel" placeholder="provider/model, blank = the default"><select id="epedthink"></select></div>
+        <div style="margin-bottom:8px"><label class="hint" for="epedinstr">instructions (the agent's AGENTS.md: who it is and how it works)</label><textarea id="epedinstr" rows="9" style="width:100%;box-sizing:border-box;background:#141414;color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:12px"></textarea></div>
+        <div id="epedctr"></div>
+        <div class="fieldrow" style="margin-top:8px"><button id="epedsave">save</button><button id="epedcancel">close</button><span class="hint small" id="epednote"></span></div>
+        <p class="hint small" id="epedcurl"></p>
+      </section>
+      <section class="panel">
+        <h3>Create an agent endpoint</h3>
+        <p class="hint">For an existing key. The port is picked for you and kept. Instructions become the agent's AGENTS.md; you can also change its skills and extensions from chat with <code>/skills</code>, or the profile API.</p>
+        <div class="keyform">
+          <select id="epkey"></select>
+          <input id="epname" placeholder="name, e.g. architect">
+          <select id="epws" title="own: a separate /workspace for this agent. shared: the key's existing workspace, so the agents of the key see the same files.">
+            <option value="own">own workspace</option>
+            <option value="shared">shared with the key</option>
+          </select>
+          <input id="epmodel" placeholder="model (optional)">
+          <select id="epthink"></select>
+        </div>
+        <div style="margin:8px 0"><textarea id="epinstr" rows="5" placeholder="Instructions, e.g. You are the architect: design systems and review plans; never write code yourself." style="width:100%;box-sizing:border-box;background:#141414;color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:12px"></textarea></div>
+        <details><summary class="hint">container limits (optional; blank follows the key, then the defaults)</summary><div id="epctr" style="margin-top:8px"></div></details>
+        <div class="fieldrow" style="margin-top:10px"><button id="epcreate">create endpoint</button><span class="passnote" id="epcreatenote"></span></div>
+      </section>
+    </div><!-- /view-endpoints -->
 
     <div class="view" id="view-models">
       <div class="cards" id="modelcards"></div>
@@ -1548,6 +1594,8 @@ var LAYOUT = {
     summary: 'What one chat\u2019s container wrote to its own filesystem (what the agent installed and downloaded). A warning only; recreate the container on the Containers page. 0 turns it off.' },
   ALERT_WEBHOOK_URL: { tab: 'containers', section: 'Disk and alerts', label: 'Alert webhook', placeholder: 'https://hooks.slack.com/services/\u2026',
     summary: 'Gets a JSON POST when Docker is unreachable, the firewall rules are missing, the disk is low, a container is killed for memory, or the gateway stops answering. Slack and Discord webhooks work as they are.' },
+  AGENT_PORT_RANGE: { tab: 'containers', section: 'Agent endpoints', label: 'Agent port range', placeholder: '20000-29999',
+    summary: 'Where an agent endpoint\u2019s port is picked (FROM-TO), so a firewall can allow just that range. Blank: any free port. A port is chosen once, when the agent is created, and kept.' },
   WORKSPACE_ROOT: { tab: 'containers', section: 'Files', label: 'Workspaces folder',
     summary: 'Each API key gets one workspace here, mounted at /workspace in all of its chats.' },
   WORKSPACE_MAX_BYTES: { tab: 'containers', section: 'Files', label: 'Workspace size limit per key', unit: 'bytes', bytes: true,
@@ -2151,6 +2199,7 @@ $('settingsearch').addEventListener('input', applySettingFilter);
 var VIEWS = {
   overview: { title:'Gateway Overview', subtitle:'Live Pi agents, their models, and when each one will be reaped', section:'Overview' },
   agents:   { title:'Agents', subtitle:'Every live Pi agent, with its expiry and a kill control', section:'Agents' },
+  endpoints: { title:'Endpoints', subtitle:'Named, permanent agents of an API key, each on its own OpenAI-compatible port', section:'Endpoints' },
   containers: { title:'Containers', subtitle:'Each chat\u2019s container: how it is doing, and stop, recreate, remove or run a command', section:'Containers' },
   models:   { title:'Models', subtitle:'Every model this gateway can route to, grouped by provider', section:'Models' },
   spend:    { title:'Spend', subtitle:'What agents have cost, per model and per day', section:'Spend' },
@@ -2225,6 +2274,152 @@ function renderImages(d) {
   if ($('view-containers').classList.contains('on')) IMG_TIMER = setInterval(loadImages, running ? 2000 : 8000);
 }
 $('imgprune').addEventListener('click', function () { imgPost('dashboard/images/prune', {}); });
+
+
+/* Endpoints: named, permanent agents of a key, each on its own port. */
+var EP_DATA = null;
+var EP_EDIT = null;
+var EP_FIELDS = [['memoryMb', 'memory (MB)'], ['cpus', 'cpu cores'], ['pids', 'processes'], ['network', 'network'], ['image', 'image'], ['mounts', 'extra mounts'], ['env', 'extra env']];
+var EP_THINK = ['', 'off', 'minimal', 'low', 'medium', 'high', 'xhigh'];
+function epFill(select, list, label) {
+  select.replaceChildren();
+  list.forEach(function (v) { var o = el('option', v === '' ? label : v); o.value = v; select.appendChild(o); });
+}
+/* The container fields, as inputs in `box`; returns a function that reads them as the API expects. */
+function epContainerInputs(box, own) {
+  box.replaceChildren();
+  var inputs = {};
+  EP_FIELDS.forEach(function (f) {
+    var row = el('div'); row.className = 'fieldrow'; row.style.marginBottom = '6px';
+    var lab = el('label', f[1]); lab.style.minWidth = '110px';
+    var inp;
+    if (f[0] === 'network') {
+      inp = el('select');
+      [['', 'follow the key'], ['internet', 'internet only'], ['none', 'none'], ['open', 'open (this machine and your LAN)']].forEach(function (o) { var opt = el('option', o[1]); opt.value = o[0]; inp.appendChild(opt); });
+      inp.value = own && own.network != null ? own.network : '';
+    } else {
+      inp = el('input'); inp.type = 'text';
+      inp.value = own && own[f[0]] != null ? String(own[f[0]]) : '';
+    }
+    inputs[f[0]] = inp;
+    row.appendChild(lab); row.appendChild(inp); box.appendChild(row);
+  });
+  return function () {
+    var out = {};
+    Object.keys(inputs).forEach(function (k) { var v = inputs[k].value.trim(); out[k] = v === '' ? null : v; });
+    return out;
+  };
+}
+function epUrl(a) { return location.protocol + '//' + location.hostname + ':' + a.port + '/v1'; }
+function epPost(url, body, method) {
+  return fetch(url, { method: method || 'POST', headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) })
+    .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); return j; }); });
+}
+function loadEndpoints() {
+  return fetch('dashboard/agents.json', { cache: 'no-store' }).then(readJson).then(function (d) { EP_DATA = d; renderEndpoints(d); })
+    .catch(function (e) { $('epnote').textContent = 'cannot load endpoints: ' + e.message; });
+}
+function renderEndpoints(d) {
+  var tbody = $('eprows');
+  tbody.replaceChildren();
+  $('epempty').hidden = d.agents.length > 0;
+  d.agents.forEach(function (a) {
+    var tr = el('tr');
+    tr.appendChild(cell(a.name, 'mono'));
+    tr.appendChild(cell(a.key));
+    var urlCell = el('td'); urlCell.className = 'mono';
+    if (a.port && a.status === 'listening') {
+      urlCell.appendChild(el('span', epUrl(a)));
+      var copy = el('button', 'copy'); copy.style.marginLeft = '6px';
+      copy.addEventListener('click', function () { navigator.clipboard.writeText(epUrl(a)).then(function () { copy.textContent = 'copied'; setTimeout(function () { copy.textContent = 'copy'; }, 1200); }, function () { copy.textContent = 'press Ctrl+C'; }); });
+      urlCell.appendChild(copy);
+    } else urlCell.appendChild(el('span', a.status === 'disabled' ? '-' : 'not listening'));
+    tr.appendChild(urlCell);
+    var st = cell(a.status, 'why ' + (a.status === 'listening' ? 'idle' : a.status === 'port-lost' ? 'one-shot' : ''));
+    if (a.status === 'port-lost') st.title = 'enabled but could not open a port: see the gateway log, or choose a new port';
+    tr.appendChild(st);
+    tr.appendChild(cell(a.workspace === 'shared' ? 'shared with key' : 'own'));
+    tr.appendChild(cell(a.model || 'default'));
+    tr.appendChild(cell(a.chats, 'num'));
+    var actions = el('td');
+    function btn(label, fn, title) {
+      var b = el('button', label); if (title) b.title = title;
+      b.addEventListener('click', fn); actions.appendChild(b); actions.appendChild(document.createTextNode(' '));
+    }
+    btn('edit', function () { openEndpointEditor(a); });
+    btn(a.enabled ? 'disable' : 'enable', function () { epAct(a, a.enabled ? 'disable' : 'enable'); }, a.enabled ? 'close its port and stop its chats; its container and files stay' : 'open its port again');
+    btn('new port', function () { if (confirm('Give ' + a.name + ' a new port? Clients must switch to the new address.')) epAct(a, 'new-port'); });
+    btn('reset', function () { if (confirm('Reset ' + a.name + '’s container? Everything installed in it is deleted; its instructions, skills and files stay.')) epAct(a, 'reset'); }, 'remove the container and what is installed in it');
+    btn('delete', function () { if (confirm('Delete ' + a.name + '? Its port closes and its container is removed; its profile and own workspace are archived.')) epDelete(a); });
+    tr.appendChild(actions);
+    tbody.appendChild(tr);
+  });
+  // The create form: usable keys only, and the range the ports come from.
+  var keep = $('epkey').value;
+  $('epkey').replaceChildren();
+  d.keys.filter(function (k) { return k.usable; }).forEach(function (k) { var o = el('option', k.name); o.value = k.id; $('epkey').appendChild(o); });
+  if (keep) $('epkey').value = keep;
+  $('epcreate').disabled = !$('epkey').options.length;
+  if (!$('epkey').options.length) $('epcreatenote').textContent = 'create an API key first (API Management)';
+}
+function epAct(a, action) {
+  $('epnote').textContent = a.name + ': working…';
+  return epPost('dashboard/agents/' + a.id + '/' + action, {}).then(function (j) { EP_DATA = j; renderEndpoints(j); $('epnote').textContent = a.name + ': done'; })
+    .catch(function (e) { $('epnote').textContent = a.name + ': ' + e.message; });
+}
+function epDelete(a) {
+  $('epnote').textContent = a.name + ': deleting…';
+  return epPost('dashboard/agents/' + a.id, undefined, 'DELETE').then(function (j) { EP_DATA = j; if (EP_EDIT === a.id) $('epeditor').hidden = true; renderEndpoints(j); $('epnote').textContent = a.name + ': deleted'; })
+    .catch(function (e) { $('epnote').textContent = a.name + ': ' + e.message; });
+}
+var epReadEdit = null;
+function openEndpointEditor(a) {
+  EP_EDIT = a.id;
+  $('epeditor').hidden = false;
+  $('epedtitle').textContent = 'Edit ' + a.name + ' (' + a.key + ')';
+  $('epedname').value = a.name;
+  $('epedmodel').value = a.model || '';
+  epFill($('epedthink'), EP_THINK, 'thinking: default');
+  $('epedthink').value = a.thinking || '';
+  $('epedinstr').value = 'loading…';
+  $('epedinstr').disabled = true;
+  $('epednote').textContent = '';
+  epReadEdit = epContainerInputs($('epedctr'), a.container);
+  $('epedctr').insertBefore(el('p', 'Container limits: blank follows the key, then the defaults. A changed value rebuilds the container and keeps what is installed in it.'), $('epedctr').firstChild).className = 'hint small';
+  $('epedcurl').textContent = a.port ? 'curl ' + epUrl(a) + '/chat/completions -H "Authorization: Bearer <the key ' + a.key + '>" -H "Content-Type: application/json" -d \'{"messages":[{"role":"user","content":"hello"}]}\'' : '';
+  fetch('dashboard/agents/' + a.id + '/instructions', { cache: 'no-store' }).then(readJson).then(function (j) { $('epedinstr').value = j.text || ''; $('epedinstr').disabled = false; })
+    .catch(function (e) { $('epedinstr').value = ''; $('epedinstr').disabled = true; $('epednote').textContent = 'cannot read the instructions: ' + e.message; });
+  $('epeditor').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+$('epedsave').addEventListener('click', function () {
+  if (!EP_EDIT) return;
+  var body = { name: $('epedname').value.trim(), model: $('epedmodel').value.trim() || null, thinking: $('epedthink').value || null, container: epReadEdit() };
+  if (!$('epedinstr').disabled) body.instructions = $('epedinstr').value;
+  $('epedsave').disabled = true; $('epednote').textContent = 'saving…';
+  epPost('dashboard/agents/' + EP_EDIT, body).then(function (j) { EP_DATA = j; renderEndpoints(j); $('epednote').textContent = 'saved. New chats use the new instructions and model; running chats pick the instructions up when they next start.'; })
+    .catch(function (e) { $('epednote').textContent = e.message; $('epednote').className = 'hint small bad'; })
+    .then(function () { $('epedsave').disabled = false; });
+});
+$('epedcancel').addEventListener('click', function () { $('epeditor').hidden = true; EP_EDIT = null; });
+var epReadCreate = epContainerInputs($('epctr'), null);
+epFill($('epthink'), EP_THINK, 'thinking: default');
+$('epcreate').addEventListener('click', function () {
+  var note = $('epcreatenote');
+  note.className = 'passnote'; note.textContent = 'creating… (builds its profile in a container; a few seconds)';
+  $('epcreate').disabled = true;
+  epPost('dashboard/agents', {
+    keyId: $('epkey').value, name: $('epname').value.trim(), workspace: $('epws').value,
+    model: $('epmodel').value.trim() || null, thinking: $('epthink').value || null,
+    instructions: $('epinstr').value, container: epReadCreate()
+  }).then(function (j) {
+    EP_DATA = j; renderEndpoints(j);
+    $('epname').value = ''; $('epinstr').value = ''; $('epmodel').value = '';
+    var made = j.agents.filter(function (a) { return a.id === j.created; })[0];
+    note.textContent = made ? 'created: ' + epUrl(made) : 'created';
+  }).catch(function (e) { note.textContent = e.message; note.className = 'passnote bad'; })
+    .then(function () { $('epcreate').disabled = !$('epkey').options.length; });
+});
+$('eprefresh').addEventListener('click', loadEndpoints);
 
 /* Containers: one row per container, polled every few seconds while the page is open. */
 var CT_TIMER = null;
@@ -2357,6 +2552,7 @@ function route() {
   $('subtitle').textContent = VIEWS[name].subtitle;
   $('sectiontitle').textContent = VIEWS[name].section;
   stopContainersPolling();
+  if (name === 'endpoints') loadEndpoints();
   if (name === 'containers') startContainersPolling();
   if (name === 'models') ensureModels();
   if (name === 'spend') ensureSpend(true);
