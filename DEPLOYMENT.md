@@ -123,8 +123,11 @@ pi          # then type /login and sign in to your model provider(s); /quit when
 ```
 
 Pi keeps the credentials in `~/.pi/agent/auth.json`. The gateway reads them, and no container ever
-sees them: model calls go through the gateway. If Pi lives somewhere `npm root -g` does not find,
-set `PI_AGENT_PACKAGE` to its package directory.
+sees them: model calls go through the gateway. `deploy.sh` finds an existing Pi on its own (in this
+order: `PI_AGENT_PACKAGE`, the gateway's own setting, the `pi` command on the PATH, `npm root -g`, then
+the usual nvm/fnm/asdf/volta folders) and uses that path for the tests, the image build and the gateway;
+when `npm root -g` does not lead to it, it stores the path as the `PI_AGENT_PACKAGE` setting. By hand, set
+`PI_AGENT_PACKAGE` to Pi's package directory.
 
 ## 4. Install Piper and build the image
 

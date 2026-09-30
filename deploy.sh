@@ -12,7 +12,8 @@
 #   --host ADDR          address to listen on at FIRST start (default 127.0.0.1). 0.0.0.0 exposes it
 #   --port N             port at first start (default 8787)
 #   --install-node       install Node.js 22 under ~/.local/node if it is missing or too old
-#   --skip-pi            do not install Pi (you will install it yourself)
+#   --skip-pi            do not install Pi (you will install it yourself). An existing Pi is found on its own:
+#                        PI_AGENT_PACKAGE, the gateway setting, the pi command, npm root -g, nvm/fnm/asdf/volta
 #   --skip-image         do not build the chat image
 #   --rebuild-image      build the image even if it exists and matches
 #   --no-start           set everything up but do not start the gateway
@@ -40,7 +41,7 @@ step() { printf '\n== %s\n' "$*"; }
 die() { printf '  [FAIL] %s\n' "$*" >&2; exit 1; }
 run() { if [ "$DRY" = 1 ]; then printf '  (dry run) %s\n' "$*"; else "$@"; fi; }
 
-usage() { sed -n '2,27p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'; }
 
 while [ $# -gt 0 ]; do
 	case "$1" in
@@ -286,17 +287,74 @@ export PATH="$NODE_DIR:$PATH"
 step "4. Pi"
 PI_PKG="@earendil-works/pi-coding-agent"
 pi_dir() { as_target env PATH="$NODE_DIR:$PATH" bash -c 'echo "$(npm root -g)/'"$PI_PKG"'"' 2>/dev/null || true; }
-PI_DIR="${PI_AGENT_PACKAGE:-$(pi_dir)}"
+valid_pi() { [ -f "$1/package.json" ] && [ -f "$1/dist/index.js" ]; }
+
+# A path the gateway already has in its settings (PI_AGENT_PACKAGE on the dashboard), if any.
+stored_pi() {
+	[ -f "$DIR/gateway.db" ] || return 0
+	as_target "$NODE_BIN" --disable-warning=ExperimentalWarning -e '
+const { DatabaseSync } = require("node:sqlite");
+try {
+	const db = new DatabaseSync(process.argv[1], { readOnly: true });
+	const row = db.prepare("SELECT value FROM settings WHERE key = ?").get("PI_AGENT_PACKAGE");
+	if (row && row.value) console.log(row.value);
+} catch {}' "$DIR/gateway.db" 2>/dev/null || true
+}
+
+# Where Pi might be, most specific first: "source<TAB>package directory".
+pi_candidates() {
+	local bin real dir d
+	[ -z "${PI_AGENT_PACKAGE:-}" ] || printf 'PI_AGENT_PACKAGE\t%s\n' "$PI_AGENT_PACKAGE"
+	printf 'the gateway setting\t%s\n' "$(stored_pi)"
+	# The `pi` command on the target's PATH: follow its link back to the package that owns it.
+	bin="$(as_target bash -lc 'command -v pi' 2>/dev/null || true)"
+	if [ -n "$bin" ]; then
+		real="$(readlink -f "$bin" 2>/dev/null || true)"; dir="$(dirname "$real")"
+		while [ -n "$real" ] && [ "$dir" != / ]; do
+			if [ -f "$dir/package.json" ] && grep -q "\"name\": *\"$PI_PKG\"" "$dir/package.json" 2>/dev/null; then printf 'the pi command (%s)\t%s\n' "$bin" "$dir"; break; fi
+			dir="$(dirname "$dir")"
+		done
+	fi
+	printf 'npm root -g\t%s\n' "$(pi_dir)"
+	for d in /usr/lib/node_modules /usr/local/lib/node_modules \
+		"$TARGET_HOME"/.local/node/lib/node_modules "$TARGET_HOME"/.npm-global/lib/node_modules \
+		"$TARGET_HOME"/.nvm/versions/node/*/lib/node_modules "$TARGET_HOME"/.local/share/fnm/node-versions/*/installation/lib/node_modules \
+		"$TARGET_HOME"/.asdf/installs/nodejs/*/lib/node_modules "$TARGET_HOME"/.volta/tools/image/node/*/lib/node_modules; do
+		printf 'a common install location\t%s/%s\n' "$d" "$PI_PKG"
+	done
+}
+
+# Sets PI_DIR and PI_SOURCE to the first candidate that is really Pi (a package with dist/index.js).
+PI_DIR="" PI_SOURCE=""
+detect_pi() {
+	local src dir
+	PI_DIR="" PI_SOURCE=""
+	while IFS=$'\t' read -r src dir; do
+		dir="${dir%/}"
+		[ -n "$dir" ] || continue
+		if valid_pi "$dir"; then PI_DIR="$dir"; PI_SOURCE="$src"; return 0; fi
+	done < <(pi_candidates)
+	return 1
+}
+
+detect_pi || true
 if [ "$SKIP_PI" = 1 ]; then
 	warn "skipping Pi: install it with $NODE_DIR/npm install -g --ignore-scripts $PI_PKG"
-elif [ -n "$PI_DIR" ] && [ -f "$PI_DIR/package.json" ]; then
-	ok "Pi $(as_target "$NODE_BIN" -p "require('$PI_DIR/package.json').version") at $PI_DIR"
+elif [ -n "$PI_DIR" ]; then
+	ok "Pi $(as_target "$NODE_BIN" -p "require('$PI_DIR/package.json').version") at $PI_DIR (found via $PI_SOURCE)"
 else
+	say "  Pi was not found (looked at PI_AGENT_PACKAGE, the gateway setting, the pi command, npm root -g and the usual Node install folders)"
 	say "  installing $PI_PKG with this Node's npm"
 	run as_target env PATH="$NODE_DIR:$PATH" npm install -g --ignore-scripts "$PI_PKG"
-	PI_DIR="$(pi_dir)"
-	[ "$DRY" = 1 ] || { [ -f "$PI_DIR/package.json" ] || die "Pi did not install where npm root -g says"; ok "installed Pi $(as_target "$NODE_BIN" -p "require('$PI_DIR/package.json').version")"; }
+	if [ "$DRY" = 0 ]; then
+		detect_pi || die "Pi did not install where npm root -g says"
+		ok "installed Pi $(as_target "$NODE_BIN" -p "require('$PI_DIR/package.json').version") at $PI_DIR"
+	fi
 fi
+# Does the gateway find this Pi by itself (npm root -g on its PATH), or has it to be told where it is?
+PI_TELL=0
+[ -z "$PI_DIR" ] || [ "$PI_DIR" = "$(pi_dir)" ] || PI_TELL=1
+[ "$PI_TELL" = 0 ] || say "  the gateway will be told this path (PI_AGENT_PACKAGE), since npm root -g does not lead to it"
 if [ ! -f "$TARGET_HOME/.pi/agent/auth.json" ]; then
 	warn "Pi is not logged in for $TARGET yet: run 'pi', type /login, and sign in to your model provider(s). Models you configure for containers on the dashboard work without it."
 fi
@@ -304,7 +362,7 @@ fi
 # ---------------------------------------------------------------------------------------------
 step "5. Unit tests"
 if [ "$DRY" = 1 ]; then say "  (dry run) node test.mjs"; else
-	( cd "$DIR" && as_target env PATH="$NODE_DIR:$PATH" "$NODE_BIN" test.mjs > /tmp/piper-deploy-test.log 2>&1 ) && ok "node test.mjs passed" || { tail -15 /tmp/piper-deploy-test.log >&2; die "the unit tests failed on this host (log: /tmp/piper-deploy-test.log)"; }
+	( cd "$DIR" && as_target env PATH="$NODE_DIR:$PATH" ${PI_DIR:+PI_AGENT_PACKAGE="$PI_DIR"} "$NODE_BIN" test.mjs > /tmp/piper-deploy-test.log 2>&1 ) && ok "node test.mjs passed" || { tail -15 /tmp/piper-deploy-test.log >&2; die "the unit tests failed on this host (log: /tmp/piper-deploy-test.log)"; }
 fi
 
 # ---------------------------------------------------------------------------------------------
@@ -331,6 +389,7 @@ if [ "$FIRST" = 1 ]; then
 	[ -z "$HOST_ADDR" ] || SEED+=("HOST=$HOST_ADDR")
 	[ -z "$PORT_NUM" ] || SEED+=("PORT=$PORT_NUM")
 	[ -z "${DASHBOARD_PASSWORD:-}" ] || SEED+=("DASHBOARD_PASSWORD=$DASHBOARD_PASSWORD")
+	[ "$PI_TELL" = 0 ] || SEED+=("PI_AGENT_PACKAGE=$PI_DIR")
 	ok "no database yet: this is a first start (${#SEED[@]} setting(s) to seed)"
 	if [ "${HOST_ADDR:-127.0.0.1}" != 127.0.0.1 ] && [ -z "${DASHBOARD_PASSWORD:-}" ]; then
 		warn "listening on ${HOST_ADDR} with no dashboard password: anyone who can reach the port can open the dashboard. Set DASHBOARD_PASSWORD, or put a password on it at Settings → Access straight away."
@@ -339,6 +398,17 @@ else
 	SEED=()
 	ok "gateway.db exists: settings are kept, and --host, --port and DASHBOARD_PASSWORD are not applied (edit them on the dashboard)"
 	{ [ -z "$HOST_ADDR" ] && [ -z "$PORT_NUM" ] && [ -z "${DASHBOARD_PASSWORD:-}" ]; } || warn "ignored --host/--port/DASHBOARD_PASSWORD: the database already holds those settings"
+	# Pi is the exception: the gateway has to find it, so a detected path is stored when the setting is empty or wrong.
+	if [ "$PI_TELL" = 1 ] && [ "$(stored_pi)" != "$PI_DIR" ]; then
+		if [ "$DRY" = 1 ]; then say "  (dry run) store PI_AGENT_PACKAGE=$PI_DIR in gateway.db"; else
+			as_target "$NODE_BIN" --disable-warning=ExperimentalWarning -e '
+const { DatabaseSync } = require("node:sqlite");
+const db = new DatabaseSync(process.argv[1]);
+const [dir, now] = [process.argv[2], Date.now()];
+const done = db.prepare("UPDATE settings SET value = ?, source = ?, updated_at = ? WHERE key = ?").run(dir, "deploy", now, "PI_AGENT_PACKAGE");
+if (!done.changes) db.prepare("INSERT INTO settings (key, value, source, updated_at) VALUES (?, ?, ?, ?)").run("PI_AGENT_PACKAGE", dir, "deploy", now);' "$DIR/gateway.db" "$PI_DIR" && ok "stored the Pi path in the gateway settings (PI_AGENT_PACKAGE)"
+		fi
+	fi
 fi
 
 # ---------------------------------------------------------------------------------------------
