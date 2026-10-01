@@ -103,7 +103,8 @@ Named, permanent agents of an API key, each on its own port, for different roles
 **Agents → Wizard** creates an agent step by step, with a review before anything is made (the Quick create tab does the same
 in one form):
 
-1. **Key & template**: the key that owns the agent, and a template (or a blank agent), each shown with its description, skills and
+1. **Key & template**: **use an existing key or create a new one** (a name and an expiry; the new key is made together with the agent and
+   its secret is shown once on the last screen), and a template (or a blank agent), each shown with its description, skills and
    hand-off setting.
 2. **Identity**: name, description, model, thinking level, own or shared workspace.
 3. **Instructions & skills**: the instructions (prefilled from the template) and the template's skills as checkboxes; you can leave
@@ -161,6 +162,10 @@ On the Agents page (Templates & import tab, and the buttons on each agent's row)
   (model, thinking level, workspace mode). Five ship with Piper (`architect`, `coder`, `researcher`, `reviewer` with a
   review checklist skill, `devops`; the files are in `templates/`). **save as template** on an agent keeps a copy of its
   profile in the database (up to `TEMPLATE_MAX_BYTES`) for new agents; deleting a template never touches agents made from it.
+- **Details and editing.** Click a template to see its description, model, thinking level, workspace mode, hand-off setting and
+  every file with its text. Your own templates can be edited in place (fields, instructions, skills, any file; add or remove
+  files); the built-in ones are read-only, so **copy to edit** makes one of yours. Changes apply to agents created from it from
+  then on, never to agents already made.
 - **Clone** makes a new agent of the same key with this one's profile and settings. Its workspace and its container's
   installed state are not copied: it starts clean.
 - **Export** downloads one JSON file (`piper-agent`, version 1): the agent's name, description, model, thinking level,

@@ -1015,6 +1015,8 @@
           </div>
         </div>
         <table><thead><tr><th>template</th><th>about</th><th>files</th><th></th></tr></thead><tbody id="tplrows"></tbody></table>
+        <p class="hint small" id="tplnote2">Click a template to see what it contains, or to change it (your own; copy a built-in one to edit it).</p>
+        <div id="tpldetail" class="panel" hidden style="margin-top:12px"></div>
         <div class="fieldrow" style="margin-top:10px">
           <select id="impkey"></select>
           <input id="impname" placeholder="name (blank: the file's own)">
@@ -3528,13 +3530,13 @@ $('extinstall').addEventListener('click', function () {
 var WZ = { opts: null, step: 0, d: null, readContainer: null, done: null, queued: [] };
 var WZ_STEPS = [['wzkey', 'Key & template'], ['wzidentity', 'Identity'], ['wzinstructions', 'Instructions & skills'], ['wzextensions', 'Extensions'], ['wzlimits', 'Limits & hand-offs'], ['wzreview', 'Review']];
 function wzFresh() {
-  return { keyId: '', template: '', name: '', description: '', model: '', thinking: '', workspace: 'own', instructions: '', exclude: {}, add: [], extMode: 'follow', ext: {}, packages: '', container: null, canDelegate: false };
+  return { keyMode: 'existing', newKeyName: '', newKeyExpiry: '30d', keyId: '', template: '', name: '', description: '', model: '', thinking: '', workspace: 'own', instructions: '', exclude: {}, add: [], extMode: 'follow', ext: {}, packages: '', container: null, canDelegate: false };
 }
 function wzStart() {
   if (!WZ.d) WZ.d = wzFresh();
   fetch('dashboard/wizard.json', { cache: 'no-store' }).then(readJson).then(function (o) {
     WZ.opts = o;
-    if (!WZ.d.keyId) { var k = o.keys.filter(function (x) { return x.usable; })[0]; WZ.d.keyId = k ? k.id : ''; }
+    if (!WZ.d.keyId) { var k = o.keys.filter(function (x) { return x.usable; })[0]; WZ.d.keyId = k ? k.id : ''; if (!k) WZ.d.keyMode = 'new'; }
     wzRender();
   }).catch(function (e) { $('wznote').textContent = 'cannot load the wizard: ' + e.message; $('wznote').className = 'passnote bad'; });
 }
@@ -3578,11 +3580,27 @@ function wzRender() {
   if (WZ.done) { wzRenderDone(body); return; }
   var id = WZ_STEPS[WZ.step][0];
   if (id === 'wzkey') {
-    body.appendChild(el('p', 'Which key will own the agent, and what should it start from?')).className = 'hint';
-    var ks = el('select');
-    o.keys.filter(function (k) { return k.usable; }).forEach(function (k) { var op = el('option', k.name); op.value = k.id; ks.appendChild(op); });
-    ks.value = d.keyId; ks.addEventListener('change', function () { d.keyId = ks.value; });
-    body.appendChild(wzField('key', ks, 'the agent shares this key’s limits and spend'));
+    body.appendChild(el('p', 'Which key will own the agent, and what should it start from? The agent shares its key’s limits and spend.')).className = 'hint';
+    var usable = o.keys.filter(function (k) { return k.usable; });
+    var modeBox = el('div'); modeBox.className = 'wzcards';
+    [['existing', 'Use an existing key', usable.length ? usable.length + ' usable key' + (usable.length === 1 ? '' : 's') : 'none yet'], ['new', 'Create a new key', 'made together with the agent; shown once at the end']].forEach(function (m) {
+      var c = el('div'); c.className = 'wzcard' + (d.keyMode === m[0] ? ' on' : '');
+      c.appendChild(el('b', m[1])); c.appendChild(el('span', m[2]));
+      if (m[0] === 'existing' && !usable.length) c.style.opacity = '.5';
+      else c.addEventListener('click', function () { d.keyMode = m[0]; wzRender(); });
+      modeBox.appendChild(c);
+    });
+    body.appendChild(modeBox);
+    if (d.keyMode === 'new') {
+      body.appendChild(wzField('new key name', wzInput('newKeyName', 'e.g. laptop, ci, open-webui'), 'who or what will use it'));
+      body.appendChild(wzField('expires', wzSelect('newKeyExpiry', [['', 'never'], ['1d', 'in 1 day'], ['7d', 'in 7 days'], ['30d', 'in 30 days'], ['90d', 'in 90 days'], ['365d', 'in 1 year']])));
+      var np = el('p', 'The key opens this agent’s endpoint and the API. Limits (sessions, daily spend, models) can be set later on the API keys page.'); np.className = 'hint small'; body.appendChild(np);
+    } else {
+      var ks = el('select');
+      usable.forEach(function (k) { var op = el('option', k.name); op.value = k.id; ks.appendChild(op); });
+      ks.value = d.keyId; ks.addEventListener('change', function () { d.keyId = ks.value; });
+      body.appendChild(wzField('key', ks, 'the agent shares this key’s limits and spend'));
+    }
     var cards = el('div'); cards.className = 'wzcards';
     [{ name: '', label: 'Blank agent', description: 'Nothing: you write the instructions and pick the skills yourself.', skills: [], canDelegate: false, builtin: true }].concat(o.templates).forEach(function (t) {
       var c = el('div'); c.className = 'wzcard' + (d.template === t.name ? ' on' : '');
@@ -3662,12 +3680,13 @@ function wzRender() {
     wzReview(body);
   }
 }
+function wzExpiry(v) { var m = /^(\d+)d$/.exec(v || ''); return m ? Date.now() + Number(m[1]) * 86400000 : null; }
 function wzPayload() {
   var d = WZ.d;
   var chosen = Object.keys(d.ext).filter(function (k) { return d.ext[k]; });
   var container = d.container ? Object.keys(d.container).reduce(function (a, k) { if (d.container[k] !== null && d.container[k] !== '') a[k] = d.container[k]; return a; }, {}) : null;
   return {
-    keyId: d.keyId, name: d.name.trim(), description: d.description.trim(), template: d.template || undefined, model: d.model.trim() || null, thinking: d.thinking || null, workspace: d.workspace,
+    keyId: d.keyMode === 'new' ? undefined : d.keyId, newKey: d.keyMode === 'new' ? { name: d.newKeyName.trim(), expiresAt: wzExpiry(d.newKeyExpiry) } : undefined, name: d.name.trim(), description: d.description.trim(), template: d.template || undefined, model: d.model.trim() || null, thinking: d.thinking || null, workspace: d.workspace,
     instructions: d.instructions, skills: { exclude: Object.keys(d.exclude), add: d.add },
     extensions: d.extMode === 'custom' ? (chosen.length ? chosen.join(',') : 'none') : null,
     packages: d.packages.split('\n').map(function (x) { return x.trim(); }).filter(Boolean),
@@ -3679,7 +3698,7 @@ function wzReview(body) {
   var t = wzTemplate();
   var kept = t ? t.skills.filter(function (s) { return p.skills.exclude.indexOf(s.name) < 0; }).map(function (s) { return s.name; }) : [];
   var rows = [
-    ['key', key ? key.name : '(none)'], ['template', p.template || 'blank agent'], ['name', p.name || '(missing)'], ['description', p.description || '(none: colleagues will only see its name)'],
+    ['key', p.newKey ? 'NEW key "' + (p.newKey.name || '(missing name)') + '", ' + (p.newKey.expiresAt ? 'expires ' + new Date(p.newKey.expiresAt).toLocaleDateString() : 'never expires') : (key ? key.name : '(none)')], ['template', p.template || 'blank agent'], ['name', p.name || '(missing)'], ['description', p.description || '(none: colleagues will only see its name)'],
     ['model', p.model || 'default'], ['thinking', p.thinking || 'default'], ['workspace', p.workspace === 'shared' ? 'shared with the key' : 'its own'],
     ['instructions', p.instructions.trim() ? p.instructions.trim().split('\n').length + ' lines' : '(none)'],
     ['skills', kept.concat(p.skills.add.map(function (s) { return s.name + ' (new)'; })).join(', ') || 'none'],
@@ -3699,19 +3718,28 @@ function wzRenderDone(body) {
   var a = WZ.done;
   body.appendChild(el('h4', 'Created: ' + a.name));
   body.appendChild(el('p', 'Its endpoint: ' + (a.port ? location.protocol + '//' + location.hostname + ':' + a.port + '/v1' : '(starting)') + '. Use the key ' + a.key + '.')).className = 'hint';
+  if (WZ.newKey) {
+    var kb = el('div'); kb.className = 'keyreveal';
+    kb.appendChild(el('code', WZ.newKey.key));
+    var kcopy = el('button', 'copy'); kcopy.addEventListener('click', function () { navigator.clipboard.writeText(WZ.newKey.key).then(function () { kcopy.textContent = 'copied'; }, function () { kcopy.textContent = 'press Ctrl+C'; }); });
+    kb.appendChild(kcopy);
+    var kh = el('p', 'New key "' + WZ.newKey.name + '": copy it now. It was never stored, so this is the only time it can be shown.'); kh.className = 'hint bad';
+    body.appendChild(kh); body.appendChild(kb);
+  }
   var pre = el('pre'); pre.className = 'mdpreview'; pre.hidden = true; body.appendChild(pre);
   if (WZ.queued && WZ.queued.length) {
     body.appendChild(el('p', 'Installing into its profile: ' + WZ.queued.join(', '))).className = 'hint';
     pre.hidden = false;
     (function poll() { fetch('dashboard/packages/job.json', { cache: 'no-store' }).then(readJson).then(function (d) { if (d.job) { pre.textContent = d.job.title + ' — ' + d.job.state + '\n' + d.job.lines.join('\n'); pre.scrollTop = pre.scrollHeight; } if ($('view-endpoints').classList.contains('on') && (!d.job || d.job.state === 'running')) setTimeout(poll, 1500); }); })();
   }
-  var again = el('button', 'create another'); again.addEventListener('click', function () { WZ.done = null; WZ.d = wzFresh(); WZ.d.keyId = (WZ.opts.keys.filter(function (k) { return k.usable; })[0] || {}).id || ''; WZ.step = 0; wzRender(); });
+  var again = el('button', 'create another'); again.addEventListener('click', function () { WZ.done = null; WZ.newKey = null; WZ.d = wzFresh(); WZ.d.keyId = (WZ.opts.keys.filter(function (k) { return k.usable; })[0] || {}).id || ''; WZ.step = 0; wzStart(); });
   var go = el('button', 'see it in Agents'); go.addEventListener('click', function () { location.hash = '#agents/agents'; });
   var wrap = el('div'); wrap.className = 'fieldrow'; wrap.appendChild(go); wrap.appendChild(again); body.appendChild(wrap);
 }
 function wzValidate() {
   var d = WZ.d, id = WZ_STEPS[WZ.step][0];
-  if (id === 'wzkey' && !d.keyId) return 'create an API key first (API keys)';
+  if (id === 'wzkey' && d.keyMode === 'new' && !d.newKeyName.trim()) return 'name the new key';
+  if (id === 'wzkey' && d.keyMode !== 'new' && !d.keyId) return 'choose a key, or create a new one';
   if (id === 'wzidentity' && !/^[a-z0-9][a-z0-9-]{0,30}$/.test(d.name.trim())) return 'a name is lowercase letters, digits and hyphens, starting with a letter or digit (at most 31)';
   if (id === 'wzextensions' && d.packages.split('\n').filter(function (x) { return x.trim(); }).length > WZ.opts.maxPackages) return 'at most ' + WZ.opts.maxPackages + ' packages';
   return '';
@@ -3724,7 +3752,7 @@ $('wznext').addEventListener('click', function () {
   if (WZ.step < WZ_STEPS.length - 1) { WZ.step += 1; wzRender(); return; }
   $('wznext').disabled = true; $('wznote').className = 'passnote'; $('wznote').textContent = 'creating… (builds its profile in a container; a few seconds)';
   epPost('dashboard/agents/wizard', wzPayload()).then(function (j) {
-    EP_DATA = j; renderEndpoints(j); WZ.queued = j.queuedPackages;
+    EP_DATA = j; renderEndpoints(j); WZ.queued = j.queuedPackages; WZ.newKey = j.newKey || null;
     WZ.done = j.agents.filter(function (a) { return a.id === j.created; })[0] || { name: WZ.d.name, key: '', port: 0 };
     wzRender();
   }).catch(function (e) { $('wznote').textContent = e.message; $('wznote').className = 'passnote bad'; }).then(function () { $('wznext').disabled = false; });
@@ -4114,6 +4142,82 @@ $('pgmsgs').addEventListener('click', function (e) {
   else if (b.getAttribute('data-act') === 'retry' && !PG.busy) { var c = pgConv(); if (!c || c.messages.length < 2) return; var lastUser = c.messages[c.messages.length - 2]; c.messages.splice(c.messages.length - 2, 2); pgSend(lastUser.text); }
 });
 
+
+/* ---- template details and editing ---- */
+var TPLD = null;
+function tplClose() { TPLD = null; $('tpldetail').hidden = true; $('tpldetail').replaceChildren(); }
+function tplOpen(name) {
+  fetch('dashboard/templates/' + encodeURIComponent(name), { cache: 'no-store' }).then(readJson).then(function (d) {
+    TPLD = d.template; TPLD.sel = TPLD.files.some(function (f) { return f.path === 'AGENTS.md'; }) ? 'AGENTS.md' : (TPLD.files[0] ? TPLD.files[0].path : null); TPLD.dirty = false;
+    tplRender(); $('tpldetail').scrollIntoView({ block: 'nearest' });
+  }).catch(function (e) { $('tplnote2').textContent = e.message; });
+}
+function tplField(label, node) { var l = el('label'); l.className = 'row'; l.appendChild(el('b', label)); l.appendChild(node); return l; }
+function tplRender() {
+  var t = TPLD, box = $('tpldetail');
+  box.hidden = false; box.replaceChildren();
+  var ro = t.builtin;
+  var head = el('div'); head.className = 'toolbar';
+  var title = el('div'); title.appendChild(el('h3', t.name + (ro ? ' (built-in)' : '')));
+  var hint = el('p', ro ? 'Built-in templates are part of Piper and cannot be changed. Copy it to make your own version to edit.' : 'Your template: changes apply to agents created from it from now on; agents already made from it are not touched.'); hint.className = 'hint'; hint.style.margin = '0'; title.appendChild(hint);
+  head.appendChild(title);
+  var tools = el('div');
+  var copy = el('button', ro ? 'copy to edit' : 'duplicate');
+  copy.addEventListener('click', function () {
+    var n = prompt('Name for the copy (lowercase letters, digits, hyphens):', t.name + '-copy'); if (!n) return;
+    epPost('dashboard/templates/' + encodeURIComponent(t.name) + '/copy', { name: n }).then(function (j) { loadTemplates(j.templates); tplOpen(n); $('tplnote2').textContent = 'copied as ' + n; }).catch(function (e) { $('tplnote2').textContent = e.message; });
+  });
+  tools.appendChild(copy); tools.appendChild(document.createTextNode(' '));
+  var close = el('button', 'close'); close.addEventListener('click', tplClose); tools.appendChild(close);
+  head.appendChild(tools); box.appendChild(head);
+  var desc = el('input'); desc.type = 'text'; desc.value = t.description || ''; desc.disabled = ro; desc.style.width = '60%'; desc.addEventListener('input', function () { t.description = desc.value; t.dirty = true; });
+  box.appendChild(tplField('description', desc));
+  var model = el('input'); model.type = 'text'; model.value = t.model || ''; model.placeholder = 'blank = the default'; model.disabled = ro; model.addEventListener('input', function () { t.model = model.value.trim() || null; t.dirty = true; });
+  box.appendChild(tplField('model', model));
+  var th = el('select'); [['', 'default'], ['off', 'off'], ['minimal', 'minimal'], ['low', 'low'], ['medium', 'medium'], ['high', 'high'], ['xhigh', 'xhigh']].forEach(function (o) { var op = el('option', o[1]); op.value = o[0]; th.appendChild(op); });
+  th.value = t.thinking || ''; th.disabled = ro; th.addEventListener('change', function () { t.thinking = th.value || null; t.dirty = true; });
+  box.appendChild(tplField('thinking', th));
+  var ws = el('select'); [['own', 'its own workspace'], ['shared', 'shared with the key']].forEach(function (o) { var op = el('option', o[1]); op.value = o[0]; ws.appendChild(op); });
+  ws.value = t.workspace; ws.disabled = ro; ws.addEventListener('change', function () { t.workspace = ws.value; t.dirty = true; });
+  box.appendChild(tplField('workspace', ws));
+  var dl = el('input'); dl.type = 'checkbox'; dl.checked = Boolean(t.canDelegate); dl.disabled = ro; dl.addEventListener('change', function () { t.canDelegate = dl.checked; t.dirty = true; });
+  var dlw = el('span'); dlw.appendChild(dl); dlw.appendChild(document.createTextNode(' agents made from it may hand work to the other agents of their key'));
+  box.appendChild(tplField('hand-offs', dlw));
+  // files: a list, and the selected file's text
+  var grid = el('div'); grid.style.cssText = 'display:grid;grid-template-columns:230px 1fr;gap:12px;margin-top:10px';
+  var list = el('div'); list.className = 'tpllist';
+  t.files.forEach(function (f) {
+    var row = el('div'); row.className = 'pgitem' + (f.path === t.sel ? ' on' : '');
+    var main = el('div'); main.className = 'pgitemmain'; main.appendChild(el('b', f.path)); main.appendChild(el('span', bytes(f.bytes) + (f.binary ? ' · binary' : '')));
+    main.addEventListener('click', function () { t.sel = f.path; tplRender(); });
+    row.appendChild(main);
+    if (!ro) { var x = el('button', '×'); x.title = 'remove this file'; x.addEventListener('click', function (e) { e.stopPropagation(); if (!confirm('Remove ' + f.path + ' from the template?')) return; t.files = t.files.filter(function (y) { return y !== f; }); if (t.sel === f.path) t.sel = t.files[0] ? t.files[0].path : null; t.dirty = true; tplRender(); }); row.appendChild(x); }
+    list.appendChild(row);
+  });
+  if (!ro) { var add = el('button', 'add file'); add.style.margin = '8px 0 0'; add.addEventListener('click', function () { var p = prompt('Path of the new file, e.g. skills/my-skill/SKILL.md or AGENTS.md'); if (!p) return; p = p.trim().replace(/^\/+/, ''); if (t.files.some(function (f) { return f.path === p; })) { t.sel = p; tplRender(); return; } t.files.push({ path: p, bytes: 0, text: '' }); t.sel = p; t.dirty = true; tplRender(); }); list.appendChild(add); }
+  grid.appendChild(list);
+  var ed = el('div'); var cur = t.files.filter(function (f) { return f.path === t.sel; })[0];
+  if (!cur) ed.appendChild(el('p', 'no files')).className = 'hint';
+  else if (cur.binary) ed.appendChild(el('p', cur.path + ' is a binary file (' + bytes(cur.bytes) + '): it cannot be shown here and is kept as it is.')).className = 'hint';
+  else {
+    var ta = el('textarea'); ta.rows = 18; ta.style.cssText = 'width:100%;box-sizing:border-box;background:#141414;color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:12px'; ta.value = cur.text; ta.readOnly = ro;
+    ta.addEventListener('input', function () { cur.text = ta.value; cur.bytes = new Blob([ta.value]).size; t.dirty = true; });
+    ed.appendChild(el('p', cur.path)).className = 'hint'; ed.appendChild(ta);
+  }
+  grid.appendChild(ed); box.appendChild(grid);
+  if (!ro) {
+    var bar = el('div'); bar.className = 'fieldrow'; bar.style.marginTop = '10px';
+    var save = el('button', 'save changes');
+    save.addEventListener('click', function () {
+      $('tplnote2').textContent = 'saving…';
+      epPost('dashboard/templates/' + encodeURIComponent(t.name), { description: t.description, model: t.model, thinking: t.thinking, workspace: t.workspace, canDelegate: t.canDelegate, files: t.files.map(function (f) { return f.binary ? { path: f.path, keep: true } : { path: f.path, text: f.text }; }) }, 'PATCH')
+        .then(function (j) { loadTemplates(j.templates); var sel = t.sel; TPLD = j.template; TPLD.sel = TPLD.files.some(function (f) { return f.path === sel; }) ? sel : (TPLD.files[0] ? TPLD.files[0].path : null); TPLD.dirty = false; tplRender(); $('tplnote2').textContent = 'saved ' + t.name; })
+        .catch(function (e) { $('tplnote2').textContent = e.message; });
+    });
+    bar.appendChild(save); box.appendChild(bar);
+  }
+}
+
 var TEMPLATES = [];
 function loadTemplates(list) {
   var apply = function (l) {
@@ -4122,14 +4226,15 @@ function loadTemplates(list) {
     body.replaceChildren();
     l.forEach(function (t) {
       var tr = el('tr');
-      var n = el('td', t.name); if (t.builtin) n.appendChild(el('span', ' built-in')).className = 'badge'; if (t.canDelegate) { var hb = n.appendChild(el('span', ' hand-offs')); hb.className = 'badge'; hb.title = 'agents made from it may hand work to the other agents of their key'; }
+      var n = el('td', t.name); n.style.cursor = 'pointer'; if (t.builtin) n.appendChild(el('span', ' built-in')).className = 'badge'; if (t.canDelegate) { var hb = n.appendChild(el('span', ' hand-offs')); hb.className = 'badge'; hb.title = 'agents made from it may hand work to the other agents of their key'; }
       tr.appendChild(n);
       tr.appendChild(el('td', t.description));
       tr.appendChild(el('td', t.files.length));
+      tr.style.cursor = 'pointer'; tr.title = 'click to see the details'; tr.addEventListener('click', function () { tplOpen(t.name); });
       var act = el('td');
       if (!t.builtin) {
         var d = el('button', 'delete');
-        d.addEventListener('click', function () { if (confirm('Delete the template "' + t.name + '"? Agents made from it are not affected.')) epPost('dashboard/templates/' + t.name, undefined, 'DELETE').then(function (j) { loadTemplates(j.templates); }); });
+        d.addEventListener('click', function (ev) { ev.stopPropagation(); if (confirm('Delete the template "' + t.name + '"? Agents made from it are not affected.')) epPost('dashboard/templates/' + t.name, undefined, 'DELETE').then(function (j) { loadTemplates(j.templates); }); });
         act.appendChild(d);
       }
       tr.appendChild(act);

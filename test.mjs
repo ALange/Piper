@@ -5953,6 +5953,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 
 // Phase 3: templates, clone, export and import.
 {
+	const skillText = (n) => `---\nname: ${n}\ndescription: x\n---\nDo it.\n`;
 	const T = await import("./server.mjs");
 	const { validPath, validateBundle, listTemplates, getTemplate, saveTemplate, deleteTemplate, exportAgent, importBundle, cloneAgent, createFromTemplate, createAgent, deleteAgent, agents, profileOp, agentScope, apiKeys, config } = T;
 	const b64 = (t) => Buffer.from(t).toString("base64");
@@ -6113,6 +6114,32 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.equal(deleteTemplate("my-reviewer"), true);
 	assert.equal(getTemplate("my-reviewer"), null);
 
+	// Looking at and changing templates.
+	const { templateDetail, updateTemplate, duplicateTemplate } = T;
+	const detail = templateDetail("reviewer");
+	assert.equal(detail.builtin, true);
+	assert.ok(detail.files.find((f) => f.path === "AGENTS.md").text.includes("Reviewer"), "text files come with their text");
+	assert.throws(() => templateDetail("nope"), (e) => e.status === 404);
+	assert.throws(() => updateTemplate("reviewer", { description: "x" }), (e) => e.status === 409, "a built-in cannot be changed");
+	const copy = duplicateTemplate("reviewer", "my-rev");
+	assert.deepEqual([copy.builtin, copy.files.length], [false, detail.files.length]);
+	assert.throws(() => duplicateTemplate("reviewer", "my-rev"), (e) => e.status === 409);
+	assert.throws(() => duplicateTemplate("reviewer", "Bad Name"), /lowercase/);
+	const changed = updateTemplate("my-rev", { description: "mine", thinking: "low", workspace: "own", canDelegate: true, files: [{ path: "AGENTS.md", text: "# My reviewer\nBe terse.\n" }, { path: "skills/extra/SKILL.md", text: skillText("extra") }] });
+	assert.deepEqual([changed.description, changed.thinking, changed.workspace, changed.canDelegate], ["mine", "low", "own", true]);
+	assert.deepEqual(changed.files.map((f) => f.path), ["AGENTS.md", "skills/extra/SKILL.md"], "the file list is replaced");
+	assert.throws(() => updateTemplate("my-rev", { files: [{ path: "../x", text: "" }] }), /cannot be used/);
+	assert.throws(() => updateTemplate("my-rev", { files: [{ path: "auth.json", text: "" }] }), /cannot be used/);
+	assert.throws(() => updateTemplate("my-rev", { files: [{ path: "AGENTS.md" }] }), /path and its text/);
+	assert.throws(() => updateTemplate("my-rev", { files: [{ path: "AGENTS.md", text: "a" }, { path: "agents.md", text: "b" }] }), /twice|cannot be used/);
+	config.TEMPLATE_MAX_BYTES = 64 * 1024;
+	assert.throws(() => updateTemplate("my-rev", { files: [{ path: "AGENTS.md", text: "y".repeat(80 * 1024) }] }), /limit/);
+	config.TEMPLATE_MAX_BYTES = 5 * 1024 * 1024;
+	assert.equal(templateDetail("my-rev").files.length, 2, "a refused change changes nothing");
+	const made2 = await createFromTemplate({ keyId: key.id, template: "my-rev", name: "from-edited" });
+	assert.equal(made2.agent.canDelegate, true);
+	assert.match(JSON.stringify(await profileOp(agentScope(key.id, made2.agent.id), { op: "instructions.get" })), /Be terse/, "new agents get the edited text");
+	deleteTemplate("my-rev");
 	for (const a of agents.list().filter((x) => [key.id, otherKey.id].includes(x.keyId))) await deleteAgent(a.id);
 	process.env.PATH = oldPath;
 }
@@ -6745,6 +6772,25 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	await assert.rejects(createFromWizard({ keyId: key.id, name: "wiz-limits", container: { memoryMb: "lots" } }), /memory/);
 	assert.equal(agents.find(key.id, "wiz-limits"), null, "nothing is left behind");
 	assert.equal(agents.listByKey(key.id).length, before + 4);
+	// A new key made with the agent.
+	refuse({ keyId: undefined, newKey: { name: " " } }, /name the new key/);
+	refuse({ keyId: undefined, newKey: { name: "k", expiresAt: "not a date" } }, /not a valid date/);
+	refuse({ keyId: undefined, newKey: { name: "k", expiresAt: 1000 } }, /in the future/);
+	refuse({ keyId: undefined }, /choose a key/);
+	const keysBefore = apiKeys.list().length;
+	const fresh = await createFromWizard({ newKey: { name: "wizard made", expiresAt: Date.now() + 86_400_000 }, name: "wiz-newkey", instructions: "Hi." });
+	assert.match(fresh.newKey.key, /^piper_/, "the secret comes back once");
+	assert.equal(apiKeys.list().length, keysBefore + 1);
+	const madeKey = apiKeys.get(fresh.newKey.id);
+	assert.deepEqual([madeKey.name, fresh.agent.keyId === madeKey.id, W.ApiKeyStore.problem(madeKey)], ["wizard made", true, null]);
+	assert.ok(apiKeys.verify(fresh.newKey.key), "the key works");
+	assert.equal(JSON.stringify(W.apiKeys.get(fresh.newKey.id)).includes(fresh.newKey.key), false, "and is not kept in the clear");
+	await assert.rejects(createFromWizard({ newKey: { name: "doomed" }, name: "wiz-doomed", model: "no-such/model" }), /no model/);
+	assert.equal(apiKeys.list().length, keysBefore + 1, "a failed create does not leave a key behind");
+	await assert.rejects(createFromWizard({ newKey: { name: "doomed2" }, name: "bad name!" }), /lowercase/);
+	assert.equal(apiKeys.list().length, keysBefore + 1);
+	await deleteAgent(fresh.agent.id);
+	apiKeys.remove(fresh.newKey.id);
 	// The page has every step.
 	const html = readFileSync(new URL("./dashboard.html", import.meta.url), "utf8");
 	for (const step of ["wzkey", "wzidentity", "wzinstructions", "wzextensions", "wzlimits", "wzreview"]) assert.ok(html.includes(`'${step}'`), `the wizard has the ${step} step`);

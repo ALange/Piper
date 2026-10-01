@@ -50,6 +50,7 @@ strip: between them they name most problems. The log is `journalctl -u piper` (s
 |---|---|---|
 | "needs a header with a description" for an added skill | A skill file must start with `---`, a `name:` and a `description:` | Add the header |
 | "there is already a skill called …" | The template ships a skill of that name | Leave the template's out (uncheck it) or use another name |
+| The new key's secret is gone | It is shown once, on the wizard's last screen, and never stored | Create another key on the API keys page and revoke the lost one |
 | "needs a dashboard password" at the review | Granting extensions or installing packages is third-party code | Settings → Access, or leave them out |
 | The agent exists but a package did not install | Packages install after creation, one at a time; the output is on the last screen | Retry from Files & profiles → Profiles → the agent → Packages |
 | "no model …" or "not allowed for this key" | The model is not in the catalogue, or outside the key's allow-list | Pick one from the list, or blank for the default |

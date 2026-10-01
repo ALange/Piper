@@ -12,9 +12,11 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   three levels, the global default, a key (all its agents) and an individual agent, each following the one above unless it has
   its own list. A new **Extensions** page has a Library tab (install, update, remove) and an Access tab (a matrix of who gets
   what, with the effective result). Settings: `EXTENSIONS_ENABLED`, `EXTENSIONS_ROOT`, `EXTENSION_MAX_BYTES`.
-- **Agent creation wizard.** Agents → Wizard: key and template, identity, instructions and skills (leave template skills out, add
+- **Agent creation wizard.** Agents → Wizard: an existing key or a new one made with the agent, and a template, identity, instructions and skills (leave template skills out, add
   your own), extensions (follow the key or its own list, plus packages to install into its profile), limits and hand-offs, then a
   review. The server validates it all in one place and removes the agent again if anything fails.
+- **Template details and editing.** Click a template on Agents → Templates & import to see it in full and, for your own, change its
+  fields and files; built-in templates can be copied to edit.
 - **Playground.** A chat with any key's agent, first in the menu: streaming Markdown answers, collapsible thinking and tool calls,
   Stop, retry, copy, a list of chats with search, rename, delete and export, a model picker, phone-friendly. It runs as the chosen
   key or agent (their limits and spend apply), keeps the messages in the browser only, and needs a dashboard password. Setting:
