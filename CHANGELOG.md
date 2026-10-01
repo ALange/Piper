@@ -59,6 +59,8 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   Settings: `JOBS_ENABLED`, `JOBS_MAX_PARALLEL`, `JOBS_MIN_INTERVAL_MS`, `JOBS_MAX_PER_KEY`, `JOBS_RESULT_DAYS`.
 
 ### Fixed
+- The unit tests no longer fail when the host's Pi ends in `.0` (for example 1.0.0): the "an older Pi" in the container-version test was
+  made by lowering the last digit, which stays 1.0.0 there. Checked against Pi 1.0.0 end to end (see below).
 - `./piper.sh doctor` (and the check at the end of `deploy.sh`) no longer fails with a JSON error when the dashboard has a password: it
   signs in with `DASHBOARD_PASSWORD` when that is set, and otherwise says the network check was skipped because the dashboard is
   locked.

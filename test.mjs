@@ -4451,7 +4451,11 @@ assert.equal(isReloadCommand(undefined), false);
 
 	// The Containers view and the Agents snapshot carry the version and its colour.
 	const hostPi = await hostPiVersion();
-	const older = hostPi.replace(/\d+$/, (n) => String(Math.max(0, Number(n) - 1)));
+	// A version that is older than whatever Pi is installed here, whether it ends in .0 or not (1.0.0 -> 0.9.9).
+	const older = (() => {
+		const [major, minor, patch] = hostPi.split(/[.-]/).map((x) => Number(x) || 0);
+		return patch > 0 ? `${major}.${minor}.${patch - 1}` : minor > 0 ? `${major}.${minor - 1}.9` : `${Math.max(0, major - 1)}.9.9`;
+	})();
 	const nameCur = containerName(chatIdHash("pi-current"));
 	const nameOld = containerName(chatIdHash("pi-old"));
 	const nameStopped = containerName(chatIdHash("pi-stopped"));
