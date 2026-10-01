@@ -301,6 +301,17 @@
   .speedcard .nums b { display:block; font-size:20px; color:var(--fg); font-weight:600; }
   .speedcard .nums small { font-weight:400; }
   .speedcard .cap { color:var(--dim); font-size:10px; text-transform:uppercase; letter-spacing:.08em; margin:8px 0 2px; }
+  .seg { display:inline-flex; border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+  .seg button { border:0; border-radius:0; background:#141414; }
+  .seg button.on { background:#2a3340; color:var(--fg); }
+  .crumb { font-size:12px; margin:8px 0; color:var(--muted); word-break:break-all; }
+  .crumb a { color:#8fb4d8; cursor:pointer; text-decoration:none; }
+  .dropzone.over { outline:2px dashed #46617f; outline-offset:4px; }
+  #fbtable td.name a { color:var(--fg); cursor:pointer; text-decoration:none; }
+  #fbtable td.name a:hover { text-decoration:underline; }
+  #fbtable td.acts button { font-size:10px; padding:1px 6px; }
+  #fbedit { width:100%; min-height:380px; box-sizing:border-box; background:#0c0c0c; color:var(--fg); border:1px solid var(--border); border-radius:8px; padding:10px; font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; tab-size:2; resize:vertical; }
+  #termbox .xterm { padding:4px; }
   .hit { padding:8px 0; border-bottom:1px solid var(--border); }
   .hit a { color:#8fb4d8; text-decoration:none; font-size:13px; }
   .hit small { display:block; color:var(--dim); }
@@ -388,6 +399,8 @@
       <a class="on" href="#overview"><span class="ic">&#9638;</span>Overview</a>
       <a href="#agents"><span class="ic">&#9683;</span>Agents</a>
       <a href="#containers"><span class="ic">&#9635;</span>Containers</a>
+      <a href="#terminal"><span class="ic">&#9002;</span>Terminal</a>
+      <a href="#files"><span class="ic">&#9776;</span>Files</a>
       <a href="#endpoints"><span class="ic">&#8644;</span>Endpoints</a>
       <a href="#models"><span class="ic">&#9678;</span>Models</a>
       <a href="#spend"><span class="ic">&#36;</span>Spend</a>
@@ -579,6 +592,62 @@
       </section>
     </div><!-- /view-containers -->
 
+    <div class="view" id="view-terminal">
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Terminal</h3>
+            <p class="hint" style="margin:0" id="termnote">An interactive <b>root shell inside a running container</b>, in the container&rsquo;s /workspace. It needs a dashboard password, ends when you close it or after <span id="termidle">a while</span> of no typing, and every open and close is recorded (never what you type).</p>
+          </div>
+          <div class="ctrl">
+            <select id="termsel"></select>
+            <button id="termconnect">connect</button>
+            <button id="termclose" disabled>disconnect</button>
+            <button id="termsmaller" title="smaller text">A&minus;</button><button id="termbigger" title="bigger text">A+</button>
+          </div>
+        </div>
+        <p class="hint" id="termstatus">Not connected.</p>
+        <div id="termbox" style="height:min(68vh,620px);background:#000;border:1px solid var(--border);border-radius:8px;padding:4px"></div>
+      </section>
+    </div><!-- /view-terminal -->
+
+    <div class="view" id="view-files">
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Files</h3>
+            <p class="hint" style="margin:0" id="fbnote">Pick a key or an agent. The <b>workspace</b> is what its agents see at /workspace; the <b>profile</b> is its skills, extensions and AGENTS.md. Everything is done in a throwaway container with only that folder mounted; links an agent planted are never followed.</p>
+          </div>
+          <div class="ctrl">
+            <select id="fbscope"></select>
+            <span class="seg"><button id="fbws" class="on">Workspace</button><button id="fbprof">Profile</button></span>
+          </div>
+        </div>
+        <div class="crumb" id="fbcrumb"></div>
+        <div class="fieldrow" style="margin-bottom:8px;flex-wrap:wrap">
+          <button id="fbup">upload</button><input type="file" id="fbfiles" multiple hidden>
+          <button id="fbmkdir">new folder</button>
+          <button id="fbnew">new file</button>
+          <button id="fbrefresh">refresh</button>
+          <span class="hint small" id="fbstatus"></span>
+        </div>
+        <div id="fbdrop" class="dropzone">
+          <table id="fbtable">
+            <thead><tr><th>name</th><th class="num">size</th><th>modified</th><th></th></tr></thead>
+            <tbody id="fbrows"></tbody>
+          </table>
+          <p class="hint" id="fbempty" hidden>Nothing here. Drop files on this table to upload them.</p>
+        </div>
+      </section>
+      <section class="panel" id="fbeditor" hidden>
+        <div class="toolbar">
+          <div><h3 id="fbedtitle">Edit</h3><p class="hint" style="margin:0" id="fbednote"></p></div>
+          <div class="ctrl"><button id="fbedsave">save</button><button id="fbedreload" hidden>reload from disk</button><button id="fbedforce" hidden>overwrite anyway</button><button id="fbedclose">close</button></div>
+        </div>
+        <textarea id="fbedit" spellcheck="false" wrap="off"></textarea>
+      </section>
+    </div><!-- /view-files -->
+
     <div class="view" id="view-docs">
       <div class="docs">
         <aside class="panel">
@@ -620,6 +689,11 @@
           <dl class="limits" id="abinstall"></dl>
         </section>
       </div>
+      <section class="panel" id="abthird" hidden>
+        <h3>Third-party code</h3>
+        <p class="hint">Copied into the repository and served locally; nothing is fetched from the internet. See THIRD_PARTY.md.</p>
+        <table><thead><tr><th>component</th><th>version</th><th>licence</th><th>used for</th></tr></thead><tbody id="abthirdrows"></tbody></table>
+      </section>
       <section class="panel">
         <h3>Changelog</h3>
         <p class="hint" id="abchange">Loading…</p>
@@ -1826,6 +1900,12 @@ var LAYOUT = {
     summary: 'What one chat\u2019s container wrote to its own filesystem (what the agent installed and downloaded). A warning only; recreate the container on the Containers page. 0 turns it off.' },
   ALERT_WEBHOOK_URL: { tab: 'containers', section: 'Disk and alerts', label: 'Alert webhook', placeholder: 'https://hooks.slack.com/services/\u2026',
     summary: 'Gets a JSON POST when Docker is unreachable, the firewall rules are missing, the disk is low, a container is killed for memory, or the gateway stops answering. Slack and Discord webhooks work as they are.' },
+  TERMINAL_ENABLED: { tab: 'containers', section: 'Terminal', label: 'Allow terminals',
+    summary: 'An interactive root shell in a running container, from the Terminal page. Needs a dashboard password; every open and close is audited, never what is typed. Off refuses all of them.' },
+  TERMINAL_IDLE_MS: { tab: 'containers', section: 'Terminal', label: 'Close an idle terminal after',
+    summary: 'No typing for this long closes the terminal. 0 never does.' },
+  TERMINAL_MAX_SESSIONS: { tab: 'containers', section: 'Terminal', label: 'Most terminals at once', unit: 'terminals',
+    summary: 'How many may be open at the same time, in all.' },
   AGENT_PORT_RANGE: { tab: 'containers', section: 'Agent endpoints', label: 'Agent port range', placeholder: '20000-29999',
     summary: 'Where an agent endpoint\u2019s port is picked (FROM-TO), so a firewall can allow just that range. Blank: any free port. A port is chosen once, when the agent is created, and kept.' },
   WORKSPACE_ROOT: { tab: 'containers', section: 'Files', label: 'Workspaces folder',
@@ -2454,6 +2534,8 @@ var VIEWS = {
   endpoints: { title:'Endpoints', subtitle:'Named, permanent agents of an API key, each on its own OpenAI-compatible port', section:'Endpoints' },
   docs:     { title:'Documentation', subtitle:'The administrator\u2019s handbook: architecture, deployment, operation, configuration, API and troubleshooting', section:'Documentation' },
   about:    { title:'About', subtitle:'Piper, its version, release notes and author', section:'About' },
+  terminal: { title:'Terminal', subtitle:'An interactive root shell inside a running container', section:'Terminal' },
+  files:    { title:'Files', subtitle:'Browse, upload, edit and organise a key\u2019s or an agent\u2019s workspace and profile', section:'Files' },
   audit:    { title:'Audit', subtitle:'What was done to the gateway and what happened to it, as chosen in Settings \u2192 Audit', section:'Audit' },
   containers: { title:'Containers', subtitle:'Each chat\u2019s container: how it is doing, and stop, recreate, remove or run a command', section:'Containers' },
   models:   { title:'Models', subtitle:'Every model this gateway can route to, grouped by provider', section:'Models' },
@@ -2783,6 +2865,243 @@ function renderResources(r) {
 
 
 
+
+/* Terminal: xterm.js (vendored, loaded on first use) over a WebSocket to a shell in a running container. */
+var TERM = { term: null, fit: null, ws: null, loading: null, size: 13, observer: null };
+function loadScript(src) { return new Promise(function (res, rej) { var s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = function () { rej(new Error('cannot load ' + src)); }; document.head.appendChild(s); }); }
+function loadXterm() {
+  if (TERM.loading) return TERM.loading;
+  var css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'dashboard/vendor/xterm/xterm.css'; document.head.appendChild(css);
+  TERM.loading = loadScript('dashboard/vendor/xterm/xterm.js').then(function () { return loadScript('dashboard/vendor/xterm/addon-fit.js'); });
+  TERM.loading.catch(function () { TERM.loading = null; });
+  return TERM.loading;
+}
+function termSay(text, bad) { $('termstatus').textContent = text; $('termstatus').className = 'hint' + (bad ? ' bad' : ''); }
+function startTerminalView(wanted) {
+  fetch('dashboard/containers.json', { cache: 'no-store' }).then(readJson).then(function (d) {
+    var sel = $('termsel');
+    var keep = wanted || sel.value;
+    sel.replaceChildren();
+    (d.containers || []).filter(function (c) { return c.state === 'running'; }).forEach(function (c) {
+      var o = el('option', c.name.replace(/^piper-/, '') + ' · ' + c.key + (c.persistent ? ' ★' : '')); o.value = c.name; sel.appendChild(o);
+    });
+    if (keep) sel.value = keep;
+    var ok = d.execAllowed && sel.options.length > 0;
+    $('termconnect').disabled = !ok || Boolean(TERM.ws);
+    if (!d.execAllowed) termSay(d.execNote || 'Set a dashboard password first.', true);
+    else if (!sel.options.length) termSay('No container is running: a chat’s container runs while the chat does, and a persistent one always does.', true);
+    else if (!TERM.ws) termSay('Not connected.');
+    if (wanted && ok && sel.value === wanted && !TERM.ws) $('termconnect').focus();
+  }).catch(function (e) { termSay('cannot list containers: ' + e.message, true); });
+}
+function termConnect() {
+  var name = $('termsel').value;
+  if (!name || TERM.ws) return;
+  termSay('Loading the terminal…');
+  loadXterm().then(function () {
+    var box = $('termbox');
+    box.replaceChildren();
+    var term = new window.Terminal({ cursorBlink: true, fontSize: TERM.size, scrollback: 5000, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', theme: { background: '#000000' } });
+    var fit = new window.FitAddon.FitAddon();
+    term.loadAddon(fit);
+    term.open(box);
+    fit.fit();
+    TERM.term = term; TERM.fit = fit;
+    var url = new URL('dashboard/terminal/' + name + '?cols=' + term.cols + '&rows=' + term.rows, location.href);
+    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    var ws = new WebSocket(url.toString());
+    ws.binaryType = 'arraybuffer';
+    TERM.ws = ws;
+    $('termconnect').disabled = true; $('termclose').disabled = false;
+    var enc = new TextEncoder();
+    ws.onopen = function () { termSay('Connected to ' + name.replace(/^piper-/, '') + ' — a root shell in /workspace.'); term.focus(); };
+    ws.onmessage = function (e) {
+      if (typeof e.data === 'string') {
+        var m; try { m = JSON.parse(e.data); } catch (x) { return; }
+        if (m.t === 'exit') term.write('\r\n\x1b[2m[the shell exited with code ' + m.code + ']\x1b[0m\r\n');
+        else if (m.t === 'idle') term.write('\r\n\x1b[2m[closed after being idle]\x1b[0m\r\n');
+        else if (m.t === 'error') { term.write('\r\n\x1b[31m[' + m.message + ']\x1b[0m\r\n'); termSay(m.message, true); }
+      } else term.write(new Uint8Array(e.data));
+    };
+    ws.onclose = function () { TERM.ws = null; $('termclose').disabled = true; $('termconnect').disabled = !$('termsel').options.length; if (!/bad/.test($('termstatus').className)) termSay('Disconnected.'); };
+    ws.onerror = function () { termSay('Could not open the terminal: the gateway refused it (is a dashboard password set, and is the container still running?).', true); };
+    term.onData(function (d) { if (ws.readyState === 1) ws.send(enc.encode(d)); });
+    term.onBinary(function (d) { if (ws.readyState === 1) { var b = new Uint8Array(d.length); for (var i = 0; i < d.length; i++) b[i] = d.charCodeAt(i) & 255; ws.send(b); } });
+    term.onResize(function (sz) { if (ws.readyState === 1) ws.send(JSON.stringify({ t: 'resize', cols: sz.cols, rows: sz.rows })); });
+    if (TERM.observer) TERM.observer.disconnect();
+    TERM.observer = new ResizeObserver(function () { try { fit.fit(); } catch (x) { /* hidden */ } });
+    TERM.observer.observe(box);
+  }).catch(function (e) { termSay(e.message, true); });
+}
+$('termconnect').addEventListener('click', termConnect);
+$('termclose').addEventListener('click', function () { if (TERM.ws) TERM.ws.close(); });
+$('termsmaller').addEventListener('click', function () { TERM.size = Math.max(8, TERM.size - 1); if (TERM.term) { TERM.term.options.fontSize = TERM.size; TERM.fit.fit(); } });
+$('termbigger').addEventListener('click', function () { TERM.size = Math.min(28, TERM.size + 1); if (TERM.term) { TERM.term.options.fontSize = TERM.size; TERM.fit.fit(); } });
+
+/* Files: a browser for a scope's workspace or profile, with upload, folders, rename, delete and a text editor. */
+var FB = { scope: null, root: 'workspace', path: '', entries: [], ready: false, edit: null };
+function fbUrl(path, query) {
+  return 'dashboard/files/' + encodeURIComponent(FB.scope) + '/' + path.split('/').filter(Boolean).map(encodeURIComponent).join('/') + '?root=' + FB.root + (query ? '&' + query : '');
+}
+function fbSay(text, bad) { $('fbstatus').textContent = text; $('fbstatus').className = 'hint small' + (bad ? ' bad' : ''); }
+function fbApi(method, path, query, body, json) {
+  var opt = { method: method, headers: {} };
+  if (json !== undefined) { opt.headers['content-type'] = 'application/json'; opt.body = JSON.stringify(json); } else if (body !== undefined) opt.body = body;
+  return fetch(fbUrl(path, query), opt).then(function (r) {
+    return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) { var e = new Error((j.error && j.error.message) || 'HTTP ' + r.status); e.status = r.status; throw e; } return j; });
+  });
+}
+function startFiles() {
+  if (FB.ready) { fbList(); return; }
+  Promise.all([fetch('dashboard/api-keys.json', { cache: 'no-store' }).then(readJson), fetch('dashboard/agents.json', { cache: 'no-store' }).then(readJson)]).then(function (r) {
+    var sel = $('fbscope');
+    sel.replaceChildren();
+    var keys = r[0].keys || [];
+    if (!keys.length) { var o0 = el('option', 'open gateway (no keys yet)'); o0.value = 'open'; sel.appendChild(o0); }
+    keys.forEach(function (k) {
+      var o = el('option', k.name); o.value = 'key-' + k.id; sel.appendChild(o);
+      (r[1].agents || []).filter(function (a) { return a.keyId === k.id; }).forEach(function (a) { var oa = el('option', k.name + ' / ' + a.name + ' (agent)'); oa.value = 'key-' + k.id + '--' + a.id; sel.appendChild(oa); });
+    });
+    FB.scope = sel.value; FB.ready = true; FB.path = '';
+    fbList();
+  }).catch(function (e) { fbSay('cannot load keys: ' + e.message, true); });
+}
+function fbList() {
+  if (!FB.scope) return;
+  fbApi('GET', FB.path, 'as=list').then(function (d) {
+    FB.entries = d.entries || [];
+    $('fbempty').hidden = FB.entries.length > 0;
+    fbRender();
+    fbSay(d.truncated ? 'Showing the first ' + FB.entries.length + ' of ' + d.total + ' entries.' : FB.entries.length + ' entr' + (FB.entries.length === 1 ? 'y' : 'ies') + '.');
+  }).catch(function (e) { FB.entries = []; fbRender(); fbSay(e.message, true); });
+}
+function fbRender() {
+  var crumb = $('fbcrumb');
+  crumb.replaceChildren();
+  function link(label, path) { var a = el('a', label); a.addEventListener('click', function () { FB.path = path; fbList(); }); return a; }
+  crumb.appendChild(link(FB.root === 'profile' ? 'profile' : 'workspace', ''));
+  var parts = FB.path.split('/').filter(Boolean);
+  parts.forEach(function (p, i) { crumb.appendChild(document.createTextNode(' / ')); crumb.appendChild(link(p, parts.slice(0, i + 1).join('/'))); });
+  var rows = $('fbrows');
+  rows.replaceChildren();
+  var sorted = FB.entries.slice().sort(function (a, b) { return (a.type === 'dir' ? 0 : 1) - (b.type === 'dir' ? 0 : 1) || a.name.localeCompare(b.name); });
+  if (parts.length) {
+    var up = el('tr'); var uc = el('td'); uc.className = 'name'; var ua = el('a', '← ..'); ua.addEventListener('click', function () { FB.path = parts.slice(0, -1).join('/'); fbList(); }); uc.appendChild(ua); up.appendChild(uc); up.appendChild(el('td')); up.appendChild(el('td')); up.appendChild(el('td')); rows.appendChild(up);
+  }
+  sorted.forEach(function (e) {
+    var full = (FB.path ? FB.path + '/' : '') + e.name;
+    var tr = el('tr');
+    var nc = el('td'); nc.className = 'name';
+    var a = el('a', (e.type === 'dir' ? '▸ ' : e.type === 'link' ? '⤷ ' : '') + e.name + (e.type === 'dir' ? '/' : ''));
+    if (e.type === 'dir') a.addEventListener('click', function () { FB.path = full; fbList(); });
+    else if (e.type === 'file') a.addEventListener('click', function () { fbOpen(full); });
+    else a.title = 'a link: never followed';
+    nc.appendChild(a); tr.appendChild(nc);
+    tr.appendChild(cell(e.type === 'dir' ? '–' : bytes(e.bytes), 'num'));
+    tr.appendChild(cell(e.modified ? new Date(e.modified).toLocaleString() : ''));
+    var ac = el('td'); ac.className = 'acts';
+    function btn(label, fn) { var b = el('button', label); b.addEventListener('click', fn); ac.appendChild(b); ac.appendChild(document.createTextNode(' ')); }
+    if (e.type === 'file') btn('download', function () { var l = document.createElement('a'); l.href = fbUrl(full); l.download = e.name; document.body.appendChild(l); l.click(); l.remove(); });
+    if (e.type !== 'link') btn('rename', function () {
+      var to = prompt('Rename or move ' + full + ' to:', full);
+      if (!to || to === full) return;
+      fbApi('POST', full, 'op=move', undefined, { to: to.replace(/^\/+/, '') }).then(function () { fbList(); }).catch(function (x) { fbSay(x.message, true); });
+    });
+    btn('delete', function () {
+      if (!confirm('Delete ' + full + (e.type === 'dir' ? ' and everything in it' : '') + '?' + (FB.root === 'profile' ? ' This changes what this key’s agents are given.' : ''))) return;
+      fbApi('DELETE', full).then(function () { if (FB.edit && FB.edit.path === full) fbCloseEditor(true); fbList(); }).catch(function (x) { fbSay(x.message, true); });
+    });
+    tr.appendChild(ac);
+    rows.appendChild(tr);
+  });
+}
+$('fbscope').addEventListener('change', function () { FB.scope = $('fbscope').value; FB.path = ''; fbCloseEditor(true); fbList(); });
+function fbSetRoot(root) { FB.root = root; FB.path = ''; $('fbws').className = root === 'workspace' ? 'on' : ''; $('fbprof').className = root === 'profile' ? 'on' : ''; fbCloseEditor(true); fbList(); }
+$('fbws').addEventListener('click', function () { fbSetRoot('workspace'); });
+$('fbprof').addEventListener('click', function () { fbSetRoot('profile'); });
+$('fbrefresh').addEventListener('click', fbList);
+$('fbmkdir').addEventListener('click', function () {
+  var name = prompt('New folder (inside ' + (FB.path || '/') + '):');
+  if (!name) return;
+  fbApi('POST', (FB.path ? FB.path + '/' : '') + name.replace(/^\/+/, ''), 'op=mkdir').then(function () { fbList(); }).catch(function (e) { fbSay(e.message, true); });
+});
+$('fbnew').addEventListener('click', function () {
+  var name = prompt('New file (inside ' + (FB.path || '/') + '):');
+  if (!name) return;
+  var path = (FB.path ? FB.path + '/' : '') + name.replace(/^\/+/, '');
+  fbApi('PUT', path, 'as=text', undefined, { text: '' }).then(function () { fbList(); fbOpen(path); }).catch(function (e) { fbSay(e.message, true); });
+});
+/* Uploads: one request each, with progress, one after another. */
+function fbUpload(files) {
+  var list = Array.prototype.slice.call(files);
+  if (!list.length) return;
+  var i = 0;
+  (function next() {
+    if (i >= list.length) { fbList(); return; }
+    var f = list[i++];
+    var xhr = new XMLHttpRequest();
+    xhr.open('PUT', fbUrl((FB.path ? FB.path + '/' : '') + f.name));
+    xhr.upload.onprogress = function (e) { if (e.lengthComputable) fbSay('Uploading ' + f.name + ' (' + i + ' of ' + list.length + '): ' + Math.round((100 * e.loaded) / e.total) + '%'); };
+    xhr.onload = function () {
+      if (xhr.status >= 200 && xhr.status < 300) next();
+      else { var m = ''; try { m = JSON.parse(xhr.responseText).error.message; } catch (x) { m = 'HTTP ' + xhr.status; } fbSay(f.name + ': ' + m, true); fbList(); }
+    };
+    xhr.onerror = function () { fbSay(f.name + ': the upload failed', true); };
+    xhr.send(f);
+  })();
+}
+$('fbup').addEventListener('click', function () { $('fbfiles').click(); });
+$('fbfiles').addEventListener('change', function () { fbUpload($('fbfiles').files); $('fbfiles').value = ''; });
+var fbDrop = $('fbdrop');
+['dragenter', 'dragover'].forEach(function (n) { fbDrop.addEventListener(n, function (e) { e.preventDefault(); fbDrop.classList.add('over'); }); });
+['dragleave', 'drop'].forEach(function (n) { fbDrop.addEventListener(n, function (e) { e.preventDefault(); fbDrop.classList.remove('over'); }); });
+fbDrop.addEventListener('drop', function (e) { fbUpload(e.dataTransfer.files); });
+/* The editor: text only, a conflict when the file changed under you. */
+function fbOpen(path) {
+  if (FB.edit && FB.edit.dirty && !confirm('Discard unsaved changes to ' + FB.edit.path + '?')) return;
+  fbApi('GET', path, 'as=text').then(function (d) {
+    if (d.binary || d.tooBig) { fbSay(path + (d.binary ? ' is not a text file' : ' is too large to edit here (' + bytes(d.bytes) + ')') + ': download it instead.', true); return; }
+    FB.edit = { path: path, modified: d.modified, dirty: false };
+    $('fbeditor').hidden = false;
+    $('fbedtitle').textContent = 'Edit ' + FB.root + ':' + path;
+    $('fbedit').value = d.text;
+    $('fbednote').textContent = bytes(d.bytes) + ' · Ctrl+S saves';
+    $('fbednote').className = 'hint';
+    $('fbedreload').hidden = $('fbedforce').hidden = true;
+    $('fbeditor').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }).catch(function (e) { fbSay(e.message, true); });
+}
+function fbCloseEditor(force) {
+  if (!force && FB.edit && FB.edit.dirty && !confirm('Discard unsaved changes to ' + FB.edit.path + '?')) return;
+  FB.edit = null;
+  $('fbeditor').hidden = true;
+}
+function fbSave(force) {
+  if (!FB.edit) return;
+  var body = { text: $('fbedit').value };
+  if (!force) body.expectModified = FB.edit.modified;
+  $('fbedsave').disabled = true;
+  fbApi('PUT', FB.edit.path, 'as=text', undefined, body).then(function (d) {
+    FB.edit.modified = d.modified; FB.edit.dirty = false;
+    $('fbednote').textContent = 'Saved · ' + bytes(d.bytes); $('fbednote').className = 'hint';
+    $('fbedreload').hidden = $('fbedforce').hidden = true;
+    fbList();
+  }).catch(function (e) {
+    $('fbednote').textContent = e.message; $('fbednote').className = 'hint bad';
+    if (e.status === 409) { $('fbedreload').hidden = false; $('fbedforce').hidden = false; }
+  }).then(function () { $('fbedsave').disabled = false; });
+}
+$('fbedsave').addEventListener('click', function () { fbSave(false); });
+$('fbedforce').addEventListener('click', function () { fbSave(true); });
+$('fbedreload').addEventListener('click', function () { var p = FB.edit && FB.edit.path; FB.edit = null; if (p) fbOpen(p); });
+$('fbedclose').addEventListener('click', function () { fbCloseEditor(false); });
+$('fbedit').addEventListener('input', function () { if (FB.edit) { FB.edit.dirty = true; $('fbednote').textContent = 'unsaved changes · Ctrl+S saves'; $('fbednote').className = 'hint'; } });
+$('fbedit').addEventListener('keydown', function (e) {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); fbSave(false); }
+  if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); var t = e.target, a = t.selectionStart; t.value = t.value.slice(0, a) + '  ' + t.value.slice(t.selectionEnd); t.selectionStart = t.selectionEnd = a + 2; t.dispatchEvent(new Event('input')); }
+});
+window.addEventListener('beforeunload', function (e) { if (FB.edit && FB.edit.dirty) { e.preventDefault(); e.returnValue = ''; } });
+
 /* Documentation: pages rendered by the server (escaped, fixed tags), a page list, a contents list and search. */
 var DOCS = { pages: null, current: null, timer: null };
 function startDocs(pageId, anchor) {
@@ -2892,6 +3211,11 @@ function renderAbout(a) {
     ['running for', dur((i.uptimeSec || 0) * 1000) + ' (since ' + new Date(i.startedAt).toLocaleString() + ')'],
     ['database', i.databaseBytes == null ? '–' : bytes(i.databaseBytes)]
   ]);
+  var third = a.thirdParty || [];
+  $('abthird').hidden = !third.length;
+  var trows = $('abthirdrows');
+  trows.replaceChildren();
+  third.forEach(function (t) { var tr = el('tr'); var nc = el('td'); var link = el('a', t.name); link.href = t.url; link.target = '_blank'; link.rel = 'noopener'; link.style.color = 'inherit'; nc.appendChild(link); tr.appendChild(nc); tr.appendChild(cell(t.version, 'mono')); tr.appendChild(cell(t.licence)); tr.appendChild(cell(t.what)); trows.appendChild(tr); });
   var box = $('abreleases');
   box.replaceChildren();
   var log = a.changelog || [];
@@ -3121,11 +3445,12 @@ function renderContainers(d) {
     tr.appendChild(cell(c.requests || 0, 'num'));
     tr.appendChild(cell(c.lastUsedAt ? dur(Date.now() - c.lastUsedAt) + ' ago' : '-', 'num'));
     var actions = el('td');
-    [['stop', 'stop'], ['update', 'update'], ['recreate', 'recreate'], ['remove', 'remove']].forEach(function (a) {
+    [['terminal', 'terminal'], ['stop', 'stop'], ['update', 'update'], ['recreate', 'recreate'], ['remove', 'remove']].forEach(function (a) {
       var b = el('button', a[0]);
       if (a[0] === 'stop' && c.state !== 'running') b.disabled = true;
       if (a[0] === 'update' && c.status === 'orphan') b.disabled = true;
-      b.addEventListener('click', function () { if (a[0] === 'update') ctUpdate(c); else ctAct(c.name, a[1], a[0], c.persistent); });
+      if (a[0] === 'terminal') { b.disabled = c.state !== 'running' || !d.execAllowed; b.title = d.execAllowed ? 'a root shell in this container' : d.execNote; }
+      b.addEventListener('click', function () { if (a[0] === 'terminal') location.hash = '#terminal/' + c.name; else if (a[0] === 'update') ctUpdate(c); else ctAct(c.name, a[1], a[0], c.persistent); });
       actions.appendChild(b);
       actions.appendChild(document.createTextNode(' '));
     });
@@ -3201,6 +3526,8 @@ function route() {
   stopContainersPolling();
   stopAuditRefresh();
   stopSpeedRefresh();
+  if (name === 'terminal') startTerminalView(sub[1]);
+  if (name === 'files') startFiles();
   if (name === 'overview') startSpeed();
   if (name === 'about') loadAbout();
   if (name === 'docs') startDocs(sub[1], sub[2]);

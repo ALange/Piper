@@ -70,6 +70,16 @@ the call, and only the model's answer goes back. The per-key model allow-list an
 - Bind to `127.0.0.1` and put a **TLS reverse proxy** in front for anything else. On the `open` policy containers can
   reach the dashboard.
 
+## The terminal
+
+The dashboard's Terminal opens a **root shell in a container** over a WebSocket. It is gated like the command box and
+more: a dashboard password must be set (refused with 403 otherwise); the signed-in cookie must be valid; the request's
+`Origin` must be this host (so a page on another site cannot open one with your cookie); the container must be this
+gateway's and running; at most `TERMINAL_MAX_SESSIONS` at once; idle ones close after `TERMINAL_IDLE_MS`;
+`TERMINAL_ENABLED` turns it off. The shell is in the container, under its network policy and limits, not on the host.
+Every open and close is an audit row with who and from where; keystrokes and output are never stored. Closing the
+connection hangs the shell up and ends the jobs it started.
+
 ## Agent endpoint ports
 
 Each agent listens on its own port on `HOST`. It serves only the API and only for its owning key; the dashboard and

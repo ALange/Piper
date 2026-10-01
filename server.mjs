@@ -43,9 +43,12 @@ import { resourceSnapshot } from "./lib/resources.mjs";
 import { piVersionsFor } from "./lib/piversions.mjs";
 import { aboutInfo, readPackage } from "./lib/about.mjs";
 import { speedHistory } from "./lib/speed.mjs";
+import { terminalUpgrade } from "./lib/terminalroutes.mjs";
+import { vendorFile } from "./lib/vendor.mjs";
+import { closeAllTerminals } from "./lib/terminal.mjs";
 import { pageIndex, renderPage, searchDocs } from "./lib/docs.mjs";
 import { piStatus } from "./lib/versions.mjs";
-import { filesRoutes, keyIdForScope, profileAdminRoutes, profileRoutes } from "./lib/profiles.mjs";
+import { dashboardFilesRoutes, filesRoutes, keyIdForScope, profileAdminRoutes, profileRoutes } from "./lib/profiles.mjs";
 import { sessions, spendReport, startSweeps } from "./lib/sessions.mjs";
 import { chatCompletions, listModels } from "./lib/chat.mjs";
 import { startAgentServers, stopAgentServers } from "./lib/agentservers.mjs";
@@ -79,6 +82,10 @@ export * from "./lib/piversions.mjs";
 export * from "./lib/about.mjs";
 export * from "./lib/docs.mjs";
 export * from "./lib/speed.mjs";
+export * from "./lib/websocket.mjs";
+export * from "./lib/terminal.mjs";
+export * from "./lib/terminalroutes.mjs";
+export * from "./lib/vendor.mjs";
 export * from "./lib/dashboard.mjs";
 
 // ------------------------------------------------------------------- server
@@ -161,6 +168,12 @@ async function handle(req, res) {
 			const page = renderPage(path.slice("/dashboard/docs/".length, -".json".length));
 			return page ? send(200, page) : sendError(res, 404, "No such page", "not_found");
 		}
+		if (req.method === "GET" && path.startsWith("/dashboard/vendor/")) {
+			const file = vendorFile(path.slice("/dashboard/vendor/".length));
+			if (!file) return sendError(res, 404, "No such file", "not_found");
+			res.writeHead(200, { "Content-Type": file.type, "Cache-Control": "private, max-age=86400", "Content-Length": file.body.length, "X-Content-Type-Options": "nosniff" });
+			return res.end(file.body);
+		}
 		if (req.method === "GET" && path === "/dashboard/speed.json") {
 			res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
 			return res.end(JSON.stringify(speedHistory(new URL(req.url, "http://localhost").searchParams.get("range") ?? "1h")));
@@ -178,7 +191,7 @@ async function handle(req, res) {
 		if (filesMatch) {
 			const keyId = keyIdForScope(filesMatch[1]);
 			if (keyId === undefined) return sendError(res, 404, `No profile ${filesMatch[1]}`, "not_found");
-			return await filesRoutes(req, res, keyId, filesMatch[2] ?? "");
+			return await dashboardFilesRoutes(req, res, keyId, filesMatch[2] ?? "");
 		}
 		if (req.method === "GET" && path === "/dashboard/models.json") return await modelCatalog(res);
 		if (req.method === "POST" && path === "/dashboard/models/reload") {
@@ -261,6 +274,12 @@ async function handle(req, res) {
 	}
 }
 
+// The terminal is the only WebSocket the gateway serves.
+server.on("upgrade", (req, socket, head) => {
+	socket.on("error", () => {});
+	runWithActor(actorOf(req), req.socket?.remoteAddress, () => terminalUpgrade(req, socket, head)).catch(() => socket.destroy());
+});
+
 export const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
 /**
  * A warning for running as root, or null. Root is not refused: the gateway needs the Docker socket,
@@ -286,6 +305,7 @@ if (isMain) {
 		process.stderr.write(`${signal}: hibernating ${sessions.size} chat(s)\n`);
 		server.close();
 		void stopAgentServers();
+		closeAllTerminals();
 		const deadline = setTimeout(() => process.exit(0), 10_000);
 		deadline.unref?.();
 		await sessions.hibernateAll().catch(() => {});
