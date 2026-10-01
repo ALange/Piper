@@ -2073,7 +2073,7 @@ assert.equal(isReloadCommand(undefined), false);
 		reply = (bin, args) => (args[0] === "images" ? { code: 0, stdout: imageRow("sha256:full", "piper-agent", "latest", "2 hours ago", "1.9GB"), stderr: "" } : args[0] === "image" && args[1] === "inspect" ? { code: 0, stdout: JSON.stringify([dinfo["sha256:full"]]), stderr: "" } : { code: 0, stdout: "", stderr: "" });
 		const list = await call("GET", "/dashboard/images.json");
 		assert.equal(list.status, 200);
-		assert.deepEqual(Object.keys(list.json).sort(), ["dangling", "environments", "hostPiVersion", "images", "job", "states"]);
+		assert.deepEqual(Object.keys(list.json).sort(), ["dangling", "environments", "hostPiVersion", "idleContainers", "images", "job", "states"]);
 		assert.equal((await call("POST", "/dashboard/images/build", { env: "nope" })).status, 404);
 		assert.equal((await call("POST", "/dashboard/images/remove", { image: "piper-agent" })).status, 409, "the default image cannot be removed from the page either");
 		assert.equal((await call("POST", "/dashboard/images/remove", { image: "" })).status, 400, "a blank reference is refused, not read as \"every image\"");
@@ -2106,8 +2106,7 @@ assert.equal(isReloadCommand(undefined), false);
 			const ok = (stdout = "") => ({ code: 0, stdout, stderr: "" });
 			if (args[0] === "images") {
 				if (args.includes("label=piper.image=1")) return ok([...rows.filter((r) => !removedI.includes(r[0])).map(fmt), ...states.filter((x) => !removedI.includes(x[0])).map((x) => fmt([x[0], "piper-keystate", x[1], 900]))].join("\n"));
-				if (args.includes("reference=piper-keystate")) return ok(states.filter((x) => !removedI.includes(x[0])).map((x) => fmt([x[0], "piper-keystate", x[1], 900])).join("\n"));
-				if (args.includes("dangling=true")) return ok([fmt(["sha256:dangle", "<none>", "<none>", 300])].join("\n"));
+				if (!args.includes("--filter")) return ok([...states.filter((x) => !removedI.includes(x[0])).map((x) => fmt([x[0], "piper-keystate", x[1], 900])), fmt(["sha256:dangle", "<none>", "<none>", 300])].join("\n"));
 				return ok();
 			}
 			if (args[0] === "image" && args[1] === "inspect") return ok(JSON.stringify(args.slice(2).map((id) => ({ Id: id, Size: (rows.find((r) => r[0] === id)?.[3] ?? 900) * 1048576, Config: { Labels: id === "sha256:dangle" || id.startsWith("sha256:st-") ? {} : labels(id) } }))));
@@ -2179,6 +2178,7 @@ assert.equal(isReloadCommand(undefined), false);
 		done = await runCleanup({ select: ["sha256:failing", "sha256:orphan"], hostPi: "0.99.1" });
 		assert.deepEqual([done.failed.length, done.removed.length], [1, 1]);
 		assert.match(done.failed[0].reason, /no space/);
+		const baseReplyForRoutes = reply;
 		// A container Piper did not make holds an image: never offered, never removed, and said so.
 		await view();
 		rows.push(["sha256:mine", "<none>", "<none>", 600]);
@@ -2213,6 +2213,66 @@ assert.equal(isReloadCommand(undefined), false);
 		reply = baseRmi;
 		containers.splice(containers.findIndex((c) => c.name === "my-own-database"), 1);
 		containers.splice(containers.findIndex((c) => c.name === "piper-pkg-1a2b3c"), 1);
+		// The chain that updates leave: stopped chat containers run from saved states, which sit on older builds.
+		{
+			const c1 = own("chain1"), c2 = own("chain2"), c3 = own("chain3");
+			const tag = (c) => `piper-keystate:${c.replace(/^piper-/, "")}`;
+			const imgs = { cur: ["sha256:cur", "piper-agent", "latest", 1900], p1: ["sha256:p1", "<none>", "<none>", 1890], p2: ["sha256:p2", "<none>", "<none>", 2000] };
+			const stateIds = { [tag(c1)]: "sha256:s1", [tag(c2)]: "sha256:s2" };
+			const parentOf = { "sha256:s1": "sha256:p1", "sha256:s2": "sha256:p2" };
+			const boxes = [{ name: c1, image: "sha256:s1", running: false, at: "2026-10-01T10:00:00Z" }, { name: c2, image: "sha256:s2", running: false, at: "2026-10-01T10:05:00Z" }, { name: c3, image: "sha256:cur", running: false, at: "2026-10-01T10:06:00Z" }];
+			const gone = new Set();
+			const goneC = new Set();
+			const sizes = { "sha256:s1": 2030, "sha256:s2": 2150 };
+			const ok2 = (stdout = "") => ({ code: 0, stdout, stderr: "" });
+			const fmt2 = (r) => JSON.stringify({ ID: r[0], Repository: r[1], Tag: r[2], CreatedSince: "1 day ago", Size: `${r[3]}MB` });
+			const childOf = (id) => Object.entries(parentOf).find(([child, parent]) => parent === id && !gone.has(child))?.[0];
+			reply = (bin, args) => {
+				const live = () => boxes.filter((b) => !goneC.has(b.name));
+				if (args[0] === "images") {
+					if (args.includes("label=piper.image=1")) return ok2([...Object.values(imgs), ...Object.entries(stateIds).map(([t, id]) => [id, "piper-keystate", t.split(":")[1], sizes[id]])].filter((r) => !gone.has(r[0])).map(fmt2).join("\n"));
+					if (!args.includes("--filter")) return ok2(Object.entries(stateIds).filter(([, id]) => !gone.has(id)).map(([t, id]) => fmt2([id, "piper-keystate", t.split(":")[1], sizes[id]])).join("\n"));
+					return ok2();
+				}
+				if (args[0] === "image" && args[1] === "inspect") return ok2(JSON.stringify(args.slice(2).map((id) => ({ Id: id, Size: (sizes[id] ?? Object.values(imgs).find((r) => r[0] === id)?.[3] ?? 900) * 1048576, Config: { Labels: { "piper.image": "1", "piper.pi-version": "0.99.1" } } }))));
+				if (args[0] === "ps") return ok2(live().filter((b) => !args.some((x) => /label=piper\.instance=/.test(x)) || b.name.startsWith(`piper-${instanceId()}-`)).map((b) => `${b.name}\texited\t\t`).join("\n"));
+				if (args[0] === "inspect") return ok2(JSON.stringify(live().map((b) => ({ Name: `/${b.name}`, Image: b.image, State: { Running: false, FinishedAt: b.at }, Config: { Labels: {} } }))));
+				if (args[0] === "rm") { goneC.add(args.at(-1)); return ok2(); }
+				if (args[0] === "rmi") {
+					const ref = args.at(-1);
+					const id = stateIds[ref] ?? ref;
+					if (live().some((b) => b.image === id)) return { code: 1, stdout: "", stderr: `Error response from daemon: conflict: unable to delete ${id} - image is being used by stopped container x` };
+					if (childOf(id)) return { code: 1, stdout: "", stderr: `Error response from daemon: conflict: unable to delete ${id} (cannot be forced) - image has dependent child images` };
+					gone.add(id);
+					// Docker removes an untagged parent that nothing else needs.
+					if (parentOf[id] && !childOf(parentOf[id])) gone.add(parentOf[id]);
+					return ok2();
+				}
+				return ok2();
+			};
+			const l2 = await listImages({ hostPi: "0.99.1" });
+			assert.deepEqual(l2.idleContainers.map((c) => c.name).sort(), [c1, c2].sort(), "the stopped chat containers that keep a saved state alive; not the one on the current image");
+			assert.ok(l2.idleContainers.every((c) => c.saved && c.sizeMb > 2000 && c.finishedAt > 0));
+			const plan2 = await cleanupPlan({ hostPi: "0.99.1" });
+			assert.deepEqual(plan2.items.filter((x) => x.kind === "idle").map((x) => x.id).sort(), [`container:${c1}`, `container:${c2}`].sort());
+			assert.match(plan2.items.find((x) => x.id === `container:${c1}`).reason, /stopped chat container .*saved state.*resumes in a fresh container/);
+			assert.deepEqual(plan2.items.filter((x) => x.kind === "safe").map((x) => x.id).sort(), ["sha256:p1", "sha256:p2"], "the untagged builds behind them are offered too");
+			assert.equal(plan2.blocked.filter((b) => /still exists/.test(b.reason)).length, 2, "the saved states are explained, not offered on their own");
+			const everything = plan2.items.map((x) => x.id);
+			// Without the go-ahead the containers stay, and the builds under them say what is in the way.
+			let r2 = await runCleanup({ select: everything, hostPi: "0.99.1" });
+			assert.equal(r2.skipped.filter((x) => /stopped containers were not to be removed/.test(x.reason)).length, 2);
+			assert.equal(r2.failed.length, 2, "the two builds are refused");
+			assert.match(r2.failed[0].reason, /other images are built on it|container still uses it/);
+			assert.equal(goneC.size, 0);
+			// With it: containers first, then the saved states go with them and the builds follow.
+			r2 = await runCleanup({ select: everything, withContainers: true, hostPi: "0.99.1" });
+			assert.deepEqual(r2.failed, [], "nothing is left stuck");
+			assert.deepEqual([...goneC].sort(), [c1, c2].sort(), "the chat on the current image is not touched");
+			assert.ok(gone.has("sha256:s1") && gone.has("sha256:s2") && gone.has("sha256:p1") && gone.has("sha256:p2"), "the whole chain is gone");
+			assert.ok(r2.reclaimedMb > 4000);
+		}
+		reply = baseReplyForRoutes;
 		// Through the page's routes: the plan, the go-ahead on remove, and cleanup.
 		await view();
 		const callApi = async (method, url, body) => {
@@ -2268,7 +2328,7 @@ assert.equal(isReloadCommand(undefined), false);
 	for (const [path, keys] of [
 		["/dashboard.json", ["sessions", "containers", "disk", "passwordSet"]],
 		["/dashboard/containers.json", ["containers", "disk", "events", "audit", "execAllowed"]],
-		["/dashboard/images.json", ["images", "states", "dangling", "environments", "hostPiVersion", "job"]],
+		["/dashboard/images.json", ["images", "idleContainers", "states", "dangling", "environments", "hostPiVersion", "job"]],
 		["/dashboard/audit.json", ["audit"]],
 		["/dashboard/settings.json", ["settings"]],
 		["/dashboard/api-keys.json", ["keys", "defaults"]],

@@ -63,7 +63,9 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   on the same machine) still referred to it, and neither **remove** nor prune could touch it. Images now say what holds them (running,
   stopped, kept, from another gateway); **remove** names the stopped containers and removes them with your go-ahead; a new **clean up…**
   shows a plan with the reason and size of each candidate (and a list of what is not offered, and why) and removes only what you choose, then
-  keeps the result on screen with the reason for anything that could not be removed; saved container states and unlabelled
+  keeps the result on screen with the reason for anything that could not be removed; stopped chat containers that keep old images and saved
+  states alive (each update keeps what a chat installed in a saved copy of the image, so the old builds stay behind them) are offered as
+  the way to free them, never preselected, and the saved states and builds under them go in the same run; saved container states and unlabelled
   leftovers are listed; and unused superseded images are tidied automatically after a build and every few hours
   (`IMAGE_AUTO_PRUNE`), never one in use.
 - The unit tests no longer fail when the host's Pi ends in `.0` (for example 1.0.0): the "an older Pi" in the container-version test was

@@ -3132,9 +3132,11 @@ function imgRemove(ref, label) {
       $('imgnote').textContent = err.message || 'could not remove it';
     }).catch(failed);
 }
+var IMG_PRESELECT_IDLE = false;
 function imgOpenCleanup() {
   var box = $('imgplan');
   box.hidden = false; box.replaceChildren(el('p', 'working out what can go…'));
+  var preIdle = IMG_PRESELECT_IDLE; IMG_PRESELECT_IDLE = false;
   fetch('dashboard/images/cleanup.json', { cache: 'no-store' }).then(readJson).then(function (plan) {
     box.replaceChildren();
     box.appendChild(el('h4', 'Clean up images'));
@@ -3144,10 +3146,10 @@ function imgOpenCleanup() {
     ['', 'image', 'why', 'size', 'also removes'].forEach(function (h) { hr.appendChild(el('th', h)); });
     tbl.appendChild(el('thead')).appendChild(hr); var tb = el('tbody'); tbl.appendChild(tb);
     var boxes = [];
-    var labels = { safe: 'safe', containers: 'removes containers', rebuild: 'rebuild needed later', other: 'not Piper’s?' };
+    var labels = { safe: 'safe', containers: 'removes containers', idle: 'stopped chat container', rebuild: 'rebuild needed later', other: 'not Piper’s?' };
     plan.items.forEach(function (it) {
       var tr = el('tr');
-      var td = el('td'); var cb = el('input'); cb.type = 'checkbox'; cb.checked = it.kind === 'safe'; td.appendChild(cb); tr.appendChild(td); boxes.push([it, cb]);
+      var td = el('td'); var cb = el('input'); cb.type = 'checkbox'; cb.checked = it.kind === 'safe' || (preIdle && it.kind === 'idle'); td.appendChild(cb); tr.appendChild(td); boxes.push([it, cb]);
       var nm = el('td', it.name); nm.className = 'mono'; tr.appendChild(nm);
       var why = el('td', it.reason); var tag = el('span', ' ' + labels[it.kind]); tag.className = 'badge'; why.appendChild(tag); tr.appendChild(why);
       tr.appendChild(el('td', it.sizeMb == null ? '-' : (it.sizeMb / 1024).toFixed(2) + ' GB')).className = 'num';
@@ -3159,6 +3161,15 @@ function imgOpenCleanup() {
     var update = function () { var mb = 0, n = 0, withC = 0; boxes.forEach(function (b) { if (b[1].checked) { n++; mb += b[0].sizeMb || 0; if (b[0].containers.length) withC += b[0].containers.length; } }); total.textContent = n + ' selected, about ' + (mb / 1024).toFixed(2) + ' GB' + (withC ? ', and ' + withC + ' stopped container(s) removed with them' : ''); };
     boxes.forEach(function (b) { b[1].addEventListener('change', update); }); update();
     box.appendChild(total);
+    var idleCount = plan.items.filter(function (x) { return x.kind === 'idle'; }).length;
+    if (idleCount) {
+      var tip = el('p', idleCount + ' stopped chat container(s) keep old images and saved states alive (each update keeps what a chat installed in a saved copy of the image). Removing a container frees them; the chat itself, its files and profile stay, and it resumes in a fresh container. Sizes of these are upper bounds: layers are shared.'); tip.className = 'hint'; box.appendChild(tip);
+      var pick = el('div'); pick.className = 'fieldrow';
+      [['select the safe ones', function (it) { return it.kind === 'safe'; }], ['select all stopped chat containers too', function (it) { return it.kind === 'safe' || it.kind === 'idle'; }], ['select none', function () { return false; }]].forEach(function (p) {
+        var b = el('button', p[0]); b.addEventListener('click', function () { boxes.forEach(function (x) { x[1].checked = p[1](x[0]); }); update(); }); pick.appendChild(b);
+      });
+      box.appendChild(pick);
+    }
     if (plan.blocked && plan.blocked.length) {
       var det = el('details'); det.appendChild(el('summary', plan.blocked.length + ' image(s) not offered, and why'));
       plan.blocked.forEach(function (b) { var p = el('p', b.name + ' \u2014 ' + b.reason); p.className = 'hint small'; det.appendChild(p); });
@@ -3185,6 +3196,10 @@ function imgOpenCleanup() {
             var rt = el('table'); var rb = el('tbody'); rt.appendChild(rb);
             lines.forEach(function (l) { var tr = el('tr'); tr.appendChild(el('td', l[0])); var n = el('td', l[1]); n.className = 'mono'; tr.appendChild(n); var w = el('td', l[2]); if (l[0].indexOf('failed') >= 0) w.className = 'bad'; tr.appendChild(w); rb.appendChild(tr); });
             box.appendChild(rt);
+          }
+          if (r.failed.some(function (f) { return /built on it/.test(f.reason); })) {
+            var why = el('p', 'Some images are only kept because stopped chat containers (and their saved states) are built on them. Select those containers too and run it again to free them.'); why.className = 'hint'; box.appendChild(why);
+            var again = el('button', 'select the stopped chat containers and try again'); again.addEventListener('click', function () { IMG_PRESELECT_IDLE = true; imgOpenCleanup(); }); box.appendChild(again); box.appendChild(document.createTextNode(' '));
           }
           var ok = el('button', 'close'); ok.addEventListener('click', function () { box.hidden = true; }); box.appendChild(ok);
           $('imgnote').textContent = 'clean up: ' + r.removed.length + ' removed' + (r.failed.length ? ', ' + r.failed.length + ' failed (see the result below)' : '');
