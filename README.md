@@ -63,6 +63,10 @@ runtime dependencies beyond Node's standard library, the Pi package you already 
 - **Terminal and file browser** — an interactive root shell in a running container (full-screen programs, resize,
   idle timeout, audited, never recording keystrokes) and a browser for a key's or agent's workspace and profile with
   upload, rename, delete and a conflict-safe text editor.
+- **Live view, jobs, templates, hand-offs and teams** — watch a running chat live (with interrupt and a transcript), run
+  agents on a schedule, by webhook or through an async API, start agents from templates (clone, export, import), let agents
+  hand work to each other, chain them into a team endpoint, install Pi packages and MCP servers from the dashboard, and edit
+  shared bundles in the browser. See the Documentation page for each.
 - **Model speed** — each running agent's average generation and prompt-processing speed (tokens per second) in
   the Agents table, and per-model charts of both on the Overview, from timing every model call's event stream.
 - **Documentation and About** — an administrator's handbook inside the dashboard (architecture, operations, every setting
@@ -957,8 +961,13 @@ numbers that would then disagree with the per-model and per-day breakdowns besid
 | `POST` | `/dashboard/profiles/:scope/lock` | `{"locked": true}` freezes a profile and closes its agents |
 | `POST` | `/dashboard/profiles/:scope/reset` | Archive a profile and start it over |
 | `GET` | `/dashboard/profiles/:scope.json` | Everything one key's agents get: own profile, granted bundles, and a running agent's loaded tools and commands |
-| `GET` | `/dashboard/files/:scope/:path` | Download a file from a key's workspace |
-| `PUT` / `DELETE` | `/dashboard/files/:scope/:path` | Upload to, or delete from, a key's workspace |
+| `GET` | `/dashboard/files/:scope/:path` | A folder (or `?as=list`) lists it; `?as=text` returns an editor's text; otherwise download. `?root=profile` for the profile instead of the workspace |
+| `PUT` / `DELETE` | `/dashboard/files/:scope/:path` | Upload to, or delete from, a workspace or profile; `PUT ?as=text` saves text (409 when the file changed since `expectModified`) |
+| `POST` | `/dashboard/files/:scope/:path?op=mkdir` / `?op=move` | Make a folder; rename or move (`{"to", "overwrite"}`) |
+| `POST` / `GET` / `DELETE` | `/v1/piper/jobs`, `/v1/piper/jobs/:id` | Run a prompt in the background as the key and poll for the result (see the Documentation page) |
+| `POST` | `/v1/piper/jobs/:id/trigger` | Start a job from its own token (`Authorization: Bearer <token>`), not an API key |
+| `GET` (SSE) | `/dashboard/session/:fingerprint/events` | The live view of a running chat (dashboard password required) |
+| `GET` (WebSocket) | `/dashboard/terminal/:container` | An interactive root shell in a running container (dashboard password, same origin) |
 | `GET` / `PUT` | `/dashboard/container-pi` | The container Pi config: `models.json` (keys shown as `***`) and the default model |
 | `POST` | `/dashboard/containers/recheck` | Check Docker, the image and the network policy again, and return the result |
 | `GET` | `/dashboard/containers.json` | Every container with state, live usage and disk, the disk summary, recent events and the audit trail |
@@ -1024,6 +1033,11 @@ on write, so a bad one is rejected with a message rather than reaching the runni
 | Containers | `CONTAINER_MOUNTS` | empty | Host folders shared read-only into every container, as `host` or `host:container`. The engine socket, `/`, and anything Piper protects are refused. |
 | Containers | `CONTAINER_DISK_MB` | `0` | Warn when one container has written more than this to its own filesystem. `0` is off. |
 | Containers | `DISK_FREE_WARN_MB` | `5120` | Warn (banner and alert) when the disk Docker uses has less than this free. `0` is off. |
+| Containers | `TERMINAL_ENABLED`, `TERMINAL_IDLE_MS`, `TERMINAL_MAX_SESSIONS` | on, 15m, 4 | The dashboard terminal: whether it is allowed, how long without typing closes it, how many may be open at once. |
+| Containers | `LIVE_VIEW_ENABLED`, `PACKAGES_ENABLED` | on, on | The live view of a chat; installing Pi packages and MCP servers from the dashboard. Both need a dashboard password. |
+| Agent | `EXPORT_MAX_BYTES`, `TEMPLATE_MAX_BYTES` | 20 MB, 5 MB | The most an exported or imported agent bundle, and a saved template, may hold. |
+| Agent | `DELEGATE_ENABLED`, `DELEGATE_MAX_DEPTH`, `DELEGATE_TIMEOUT_MS`, `TEAM_MAX_STEPS` | on, 3, 10m, 6 | Hand-offs between agents of a key: allowed, longest chain, longest hand-off; most steps in a team. |
+| Jobs | `JOBS_ENABLED`, `JOBS_MAX_PARALLEL`, `JOBS_MIN_INTERVAL_MS`, `JOBS_MAX_PER_KEY`, `JOBS_RESULT_DAYS` | on, 2, 5m, 20, 30 | Scheduled, webhook and API jobs: on, runs at once, least time between webhook triggers, queued or running runs per key, days results are kept. |
 | Audit | `AUDIT_AUTH`, `AUDIT_SETTINGS`, `AUDIT_KEYS`, `AUDIT_OPERATIONS`, `AUDIT_RUNTIME` | on | Record that category (see The audit log). Applied live. |
 | Audit | `AUDIT_REQUESTS`, `AUDIT_AUTH_FAILURES` | off | Record every chat request / every refused API key (busy; deduplicated for the second). |
 | Audit | `AUDIT_RETENTION_DAYS`, `AUDIT_MAX_ROWS` | 90, 50000 | Delete rows older than this many days, and the oldest beyond this many rows. 0 is no limit. |

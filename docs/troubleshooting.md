@@ -33,6 +33,69 @@ strip: between them they name most problems. The log is `journalctl -u piper` (s
 | An **update** fails on the Pi step with "no network" | The container's policy is `none` | Expected; update Pi by hand or change the policy |
 | An **update** says a profile is "frozen or over its limit" | The profile is locked or over `PROFILE_MAX_BYTES`, so `/profile` is a throwaway copy and an extension update would be lost | Unlock or shrink the profile |
 
+## Packages, MCP servers and bundles
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| "needs a dashboard password" | Changes to code agents run are operator-only | Settings → Access |
+| "network policy is \"none\"" | The scope cannot download or reach anything | Change its network in the container settings |
+| An install fails with a 404 from npm | The package name is wrong, or not on the registry | Check the name; try `git:` or `https://` |
+| "the profile is locked / over its quota" | The profile is read-only | Unlock it, or free space |
+| Test connections: "Failed to resolve … from environment variable" | The `${NAME}` the server uses is not set in the container | Add NAME to the key's or agent's extra environment |
+| "a value must be a reference" | A secret was typed into an MCP server's environment | Use `${NAME}` and set the variable in the container settings |
+| The agent does not see the new package or server | The chat started before; reload happens for live chats, but a stopped one loads at its next start | `/reload`, or send the chat a message |
+| A bundle cannot be edited | It is a link, not a folder, or you need a password | Edit its target by hand; set a password |
+| "granted to …; remove it from them first" | Deleting a bundle a key still gets | Remove the grant on API Management, or delete anyway |
+
+## Hand-offs and teams
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| The agent has no `piper_delegate` tool | Hand-offs are off for it or the gateway, or the chat started before the switch | Agent editor → hand-offs; `DELEGATE_ENABLED`; start a new chat or `/reload` |
+| "You have no colleagues…" | No other enabled agent on the key, or all are already in the chain | Create or enable agents on the same key |
+| "hand-offs may be chained N deep" | `DELEGATE_MAX_DEPTH` | Do the part yourself, or raise the limit |
+| "… could not do it: daily spend limit reached" | The key's cap (hand-offs spend the key's money) | Raise the cap |
+| "… took too long" | `DELEGATE_TIMEOUT_MS` | Raise it, or give a smaller task |
+| A team answers 409 "agent was deleted" | A step's agent no longer exists | Edit the team: delete and recreate with current agents |
+| A team answers 500 "step 2 of 3 (coder) failed: …" | That agent's turn failed; the message says why | Fix that agent (model, limits), or try the agent directly |
+| Follow-ups to a team forget earlier work | No session id sent, so each request is a new conversation | Send `X-Session-Id` |
+
+## Templates and import
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Import says it needs a dashboard password | Bundles can carry code, so only a signed-in operator may import | Settings → Access |
+| "not a Piper agent bundle" | The file is not an export (format `piper-agent`, version 1) | Export from an agent's **export** button |
+| "a file path that cannot be used" | The bundle names a file outside the allowed folders, or a path with `..` or odd characters | Re-export from a gateway you trust |
+| "the bundle is over the … limit" | `EXPORT_MAX_BYTES` | Remove large files from the agent's profile, or raise it |
+| The imported agent uses the default model | Its model is not available on this gateway (the import says so) | Set the model on the agent's editor |
+| Clone or export misses a file | Only regular files in the profile's own folders travel; links are skipped | Replace links with real files |
+| "a folder is in the way" / "in the way" | The target profile has a link or a file where a folder belongs | Reset that agent's profile, or remove the link in the file browser |
+
+## Jobs
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| A run is *skipped*: "the previous run is still going" | The job is slower than its schedule | Lengthen the schedule or the time limit |
+| *skipped*: "the key … revoked / expired" or "agent … switched off" | The job's owner cannot run | Renew the key, or enable the agent |
+| *skipped*: spend limit or session limit | The key's daily cap, or its sessions are all busy | Raise the cap, or see Limits |
+| *error*: "the gateway stopped while this was running" | The gateway restarted mid-run | Run it again; queued runs resume by themselves |
+| Nothing runs at the set time | `JOBS_ENABLED` off, or the time is in the gateway's local time zone, not yours | Settings → Jobs; check the machine's time zone |
+| A run is "late … made up once" | The gateway was down at the time | Nothing: one catch-up run happens after downtime |
+| Trigger answers 404 | Wrong or revoked token, or no trigger created, or wrong job id | Create a new token on the job's History panel |
+| Trigger answers 429 | Called again within `JOBS_MIN_INTERVAL_MS` | Wait, or lower the setting |
+| The result webhook shows "the webhook failed" | The receiver is down or refused (one retry is made) | Fix the receiver; run again |
+
+## Live view
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| **watch** says it needs a dashboard password, or is switched off | No password set, or `LIVE_VIEW_ENABLED` is off | Settings → Access; Settings → Containers |
+| "No such chat" | The chat stopped (idle, or the gateway restarted) | Send it a message, then watch again |
+| 429 "too many are watching" | 5 on one chat, or 20 streams in all | Close a drawer |
+| It shows nothing of the earlier conversation | Only what happened since the chat started is kept, last 300 items | Use the transcript for the whole conversation |
+| Behind a proxy the view stays empty | The proxy buffers event streams | nginx: `proxy_buffering off;` for `/dashboard/` (the gateway sends `X-Accel-Buffering: no`) |
+
 ## Terminal and files
 
 | Symptom | Cause | Fix |

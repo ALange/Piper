@@ -281,7 +281,10 @@ restarts and shows the logs of that unit rather than starting a second copy that
   `Secure`. Streaming responses must not be buffered. With nginx:
   `proxy_buffering off;` and `proxy_read_timeout 1h;`. For uploads to the workspace file API,
   also raise `client_max_body_size` to `FILE_UPLOAD_MAX_BYTES` (1 GiB by default) and set
-  `proxy_request_buffering off;`.
+  `proxy_request_buffering off;`. **The dashboard's Terminal is a WebSocket**, so the proxy must pass upgrades:
+  with nginx `proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";`
+  (with `proxy_read_timeout 1h;` as above), and either keep the `Host` header or send `X-Forwarded-Host`: the gateway
+  refuses a terminal whose `Origin` is not its own host. Caddy does this by default. **The live view is a Server-Sent Events stream** (`/dashboard/session/…/events`), so with nginx also `proxy_buffering off;` there (the gateway sends `X-Accel-Buffering: no`).
 - **Set a dashboard password** (Settings → Access), unless you did at first start. On the default
   network containers cannot reach the dashboard; on `open` they can, and an open dashboard can
   reconfigure everything.
