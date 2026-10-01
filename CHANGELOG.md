@@ -59,6 +59,12 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   Settings: `JOBS_ENABLED`, `JOBS_MAX_PARALLEL`, `JOBS_MIN_INTERVAL_MS`, `JOBS_MAX_PER_KEY`, `JOBS_RESULT_DAYS`.
 
 ### Fixed
+- **Docker images that could not be removed.** An old image stayed because stopped containers (this gateway's, or another Piper gateway's
+  on the same machine) still referred to it, and neither **remove** nor prune could touch it. Images now say what holds them (running,
+  stopped, kept, from another gateway); **remove** names the stopped containers and removes them with your go-ahead; a new **clean up…**
+  shows a plan with the reason and size of each candidate and removes only what you choose; saved container states and unlabelled
+  leftovers are listed; and unused superseded images are tidied automatically after a build and every few hours
+  (`IMAGE_AUTO_PRUNE`), never one in use.
 - The unit tests no longer fail when the host's Pi ends in `.0` (for example 1.0.0): the "an older Pi" in the container-version test was
   made by lowering the last digit, which stays 1.0.0 there. Checked against Pi 1.0.0 end to end (see below).
 - `./piper.sh doctor` (and the check at the end of `deploy.sh`) no longer fails with a JSON error when the dashboard has a password: it

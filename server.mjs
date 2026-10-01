@@ -54,6 +54,7 @@ import { extensionRoutes } from "./lib/extroutes.mjs";
 import { playgroundRoutes } from "./lib/playground.mjs";
 import { jobApiRoutes, jobDashboardRoutes, triggerRoute } from "./lib/jobroutes.mjs";
 import { startJobs, stopJobs } from "./lib/jobs.mjs";
+import { startImageHousekeeping } from "./lib/images.mjs";
 import { startTeamServers, stopTeamServers } from "./lib/teams.mjs";
 import { dashboardFilesRoutes, filesRoutes, keyIdForScope, profileAdminRoutes, profileRoutes } from "./lib/profiles.mjs";
 import { sessions, spendReport, startSweeps } from "./lib/sessions.mjs";
@@ -362,6 +363,7 @@ if (isMain) {
 				if (status.ok) process.stderr.write(`containers: docker ${status.engine.version}, image ${config.CONTAINER_IMAGE} (Pi ${status.image.piVersion || "?"}), network ${status.network.mode}${status.firewall.allowed.length ? `, allowed: ${status.firewall.allowed.map((a) => a.endpoint).join(" ")}` : ""}\n`);
 				startSweeps();
 				startJobs();
+				startImageHousekeeping();
 				startEventWatch();
 				startDiskWatch();
 				void startAgentServers().then(() => startTeamServers());

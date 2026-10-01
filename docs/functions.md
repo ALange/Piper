@@ -294,7 +294,13 @@ Everything Docker-related.
   updates**, and **update** for Pi and/or its extensions (password required; update only, then restart the gateway
   yourself). The host's extensions are listed as a table.
 - **Images.** The environments chats run in (`full`, `slim`, any folder under `docker/environments`), build and
-  rebuild with a live log, per-image Pi version and how many containers are behind, and prune.
+  rebuild with a live log, per-image Pi version, and what holds each image: running containers, stopped ones, a key's kept
+  container, containers of another Piper gateway on this machine. **remove** names the stopped containers that keep an image alive and
+  removes them too if you say so. **clean up…** works out a plan first: each candidate with the reason, its size and what else would go
+  (*safe* ones nothing uses are preselected; ones that need stopped containers removed, spare environments and unlabelled leftovers are
+  not), and removes only what you tick. Saved container states of containers that are gone are listed and cleaned too. Never offered:
+  the default image, one a key names, one a container is running from, one a kept container is built on. Piper also removes the plainly
+  unused ones by itself after a build and every few hours (`IMAGE_AUTO_PRUNE`).
 - **Audit and events.** Kills, deaths and every action taken here, most recent first.
 - **Health.** In Settings → Containers: whether Docker, the image and the network policy are in order, with a
   button to look again.

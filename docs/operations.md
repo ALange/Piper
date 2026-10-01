@@ -107,7 +107,9 @@ Docker's data (images, containers, saved states) is usually the big user. Look a
 
 - **Overview → Resources**: free disk and what containers have written.
 - **Containers**: each container's written size; `CONTAINER_DISK_MB` warns when one passes it.
-- **Images**: old and untagged images (**prune**); every image build leaves build cache, which `docker builder
+- **Images**: old and untagged images (**clean up…** shows what can go, with the reason and size of each, and removes only what you tick;
+  **quick prune** does just the plainly unused; Piper also tidies the plainly unused ones itself after a build and every few hours,
+  `IMAGE_AUTO_PRUNE`); every image build leaves build cache, which `docker builder
   prune -f` clears safely.
 - **`piper-keystate:*` images**: the saved state of rebuilt containers; removed with their container.
 - `workspaces-archive/` and `*.before-restore-*` folders are safe to delete when you are sure (archives expire

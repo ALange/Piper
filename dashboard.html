@@ -685,11 +685,14 @@
             <h3>Images</h3>
             <p class="hint" style="margin:0" id="imgnote">The environments chats run in. <b>Build</b> makes one from its Dockerfile (docker/Dockerfile is <b>full</b>; add more under docker/environments/&lt;name&gt;). A rebuilt image applies to a chat's container the next time it is recreated, and an image is only removed when nothing uses it.</p>
           </div>
-          <button id="imgprune" title="remove the untagged images a rebuild leaves behind">prune old images</button>
+          <button id="imgclean" title="see what can be removed, and choose">clean up…</button>
+          <button id="imgprune" title="remove what is plainly unused: superseded builds and saved states of containers that are gone">quick prune</button>
         </div>
         <table><thead><tr><th>environment</th><th>image</th><th>Pi</th><th class="num">containers behind</th><th></th></tr></thead><tbody id="imgenvs"></tbody></table>
         <h4 style="margin:14px 0 4px;font-size:11px;letter-spacing:.06em;color:var(--dim)">ON THIS MACHINE</h4>
         <table><thead><tr><th>image</th><th>environment</th><th>Pi</th><th class="num">size</th><th>built</th><th>used by</th><th></th></tr></thead><tbody id="imgrows"></tbody></table>
+        <div id="imgplan" class="panel" hidden style="margin-top:12px"></div>
+        <div id="imgextra"></div>
         <pre id="imgjob" class="mdpreview" hidden></pre>
       </section>
       <section data-tab="events" class="panel">
@@ -2332,6 +2335,8 @@ var LAYOUT = {
     summary: 'Install Pi packages and MCP servers into a key\u2019s or agent\u2019s profile from Files & profiles \u2192 Profiles. They run third-party code in the agent\u2019s container, so it needs a dashboard password. Off refuses all of it.' },
   LIVE_VIEW_ENABLED: { tab: 'containers', section: 'Live view', label: 'Allow the live view',
     summary: 'Watch a running chat from the Agents page: what is said, thinking and tool calls, with interrupt and a transcript download. Needs a dashboard password; watches are audited, never the content. Off refuses all of it.' },
+  IMAGE_AUTO_PRUNE: { tab: 'containers', section: 'Images', label: 'Tidy unused images automatically',
+    summary: 'After a build and every few hours, remove images nothing uses (superseded builds, saved states of containers that are gone). Never an image in use, and never a container.' },
   JOBS_ENABLED: { tab: 'jobs', section: 'Jobs', label: 'Run jobs',
     summary: 'Scheduled and webhook-started runs of an agent, and asynchronous requests through POST /v1/piper/jobs. Off stops the scheduler and refuses new runs.' },
   JOBS_MAX_PARALLEL: { tab: 'jobs', section: 'Jobs', label: 'Runs at once', unit: 'runs',
@@ -3065,19 +3070,31 @@ function renderImages(d) {
     tr.appendChild(cell(i.piVersion ? 'Pi ' + i.piVersion : '-', i.stale ? 'soon' : ''));
     tr.appendChild(cell(i.sizeMb == null ? '-' : (i.sizeMb / 1024).toFixed(2) + ' GB', 'num'));
     tr.appendChild(cell(i.created));
-    var used = [];
-    if (i.isDefault) used.push('default');
-    if (i.containers) used.push(i.containers + ' container(s)');
-    if (i.keys.length) used.push(i.keys.join(', '));
-    tr.appendChild(cell(used.join(' · ') || 'nothing'));
+    tr.appendChild(cell(imgUsedBy(i), i.running || i.isDefault ? '' : (i.idle && i.idle.length ? 'soon' : '')));
     var td = el('td');
     var b = el('button', 'remove');
-    b.disabled = i.isDefault || i.containers > 0 || i.keys.length > 0;
-    b.title = b.disabled ? 'in use' : 'remove this image';
-    b.addEventListener('click', function () { if (confirm('Remove ' + (i.name || i.id) + '?')) imgPost('dashboard/images/remove', { image: i.name || i.id }); });
+    var blocked = i.isDefault || i.keys.length > 0 || i.running > 0 || (i.kept && i.kept.length > 0);
+    b.disabled = blocked;
+    b.title = blocked ? (i.isDefault ? 'the default image' : i.keys.length ? 'a key uses it' : i.running ? 'a container is running from it' : 'a kept container is built on it') : (i.idle && i.idle.length ? 'held by stopped containers: you will be asked' : 'remove this image');
+    b.addEventListener('click', function () { var label = i.name || i.id.replace('sha256:', '').slice(0, 12); if (!(i.idle && i.idle.length) && !confirm('Remove ' + label + '?')) return; imgRemove(i.name || i.id, label); });
     td.appendChild(b); tr.appendChild(td);
     rows.appendChild(tr);
   });
+  var extra = $('imgextra'); extra.replaceChildren();
+  var odd = (d.states || []).concat((d.dangling || []).map(function (x) { return { id: x.id, name: '(untagged, no Piper label) ' + x.id.replace('sha256:', '').slice(0, 12), sizeMb: x.sizeMb, created: x.created, other: true }; }));
+  if (odd.length) {
+    extra.appendChild(el('h4', 'SAVED CONTAINER STATES AND OTHER LEFTOVERS')).style.cssText = 'margin:14px 0 4px;font-size:11px;letter-spacing:.06em;color:var(--dim)';
+    var t2 = el('table'); var h2 = el('tr'); ['image', 'what it is', 'size', ''].forEach(function (h) { h2.appendChild(el('th', h)); }); t2.appendChild(el('thead')).appendChild(h2); var b2 = el('tbody'); t2.appendChild(b2);
+    odd.forEach(function (x) {
+      var tr = el('tr'); tr.appendChild(cell(x.name, 'mono'));
+      tr.appendChild(cell(x.other ? 'an untagged image Piper did not label: a build\u2019s leftover, or another tool\u2019s' : (x.orphan ? 'the saved state of ' + x.container + ', which is gone' : 'the saved state of ' + x.container + ' (in use)'), x.orphan ? 'soon' : ''));
+      tr.appendChild(cell(x.sizeMb == null ? '-' : (x.sizeMb / 1024).toFixed(2) + ' GB', 'num'));
+      var td = el('td'); var rb = el('button', 'remove'); rb.disabled = Boolean(x.name.indexOf('piper-keystate') === 0 && !x.orphan);
+      rb.addEventListener('click', function () { if (confirm('Remove ' + x.name + '?')) imgRemove(x.id, x.name); });
+      td.appendChild(rb); tr.appendChild(td); b2.appendChild(tr);
+    });
+    extra.appendChild(t2);
+  }
   var out = $('imgjob');
   out.hidden = !job;
   if (job) {
@@ -3089,6 +3106,79 @@ function renderImages(d) {
   if ($('view-containers').classList.contains('on')) IMG_TIMER = setInterval(loadImages, running ? 2000 : 8000);
 }
 $('imgprune').addEventListener('click', function () { imgPost('dashboard/images/prune', {}); });
+/* Images: what uses each, removing with a go-ahead, and a clean up that shows its plan first. */
+function imgUsedBy(i) {
+  var used = [];
+  if (i.isDefault) used.push('default');
+  if (i.running) used.push(i.running + ' running');
+  if (i.idle && i.idle.length) used.push(i.idle.length + ' stopped');
+  if (i.kept && i.kept.length) used.push('kept container');
+  if (i.foreign) used.push(i.foreign + ' from another gateway');
+  if (i.keys.length) used.push('key ' + i.keys.join(', '));
+  return used.join(' · ') || 'nothing';
+}
+function imgRemove(ref, label) {
+  var failed = function (e) { $('imgnote').textContent = e.message; };
+  return fetch('dashboard/images/remove', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image: ref }) })
+    .then(function (r) { return r.json().then(function (j) { return { r: r, j: j }; }); })
+    .then(function (x) {
+      if (x.r.ok) { $('imgnote').textContent = x.j.message; return loadImages(); }
+      var err = x.j.error || {};
+      if (err.code === 'needs_force') {
+        if (!confirm(err.message + '\n\nRemove ' + label + ' and those containers?')) return;
+        return fetch('dashboard/images/remove', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image: ref, force: true }) })
+          .then(function (r2) { return r2.json().then(function (j2) { $('imgnote').textContent = r2.ok ? j2.message : ((j2.error && j2.error.message) || 'failed'); return loadImages(); }); });
+      }
+      $('imgnote').textContent = err.message || 'could not remove it';
+    }).catch(failed);
+}
+function imgOpenCleanup() {
+  var box = $('imgplan');
+  box.hidden = false; box.replaceChildren(el('p', 'working out what can go…'));
+  fetch('dashboard/images/cleanup.json', { cache: 'no-store' }).then(readJson).then(function (plan) {
+    box.replaceChildren();
+    box.appendChild(el('h4', 'Clean up images'));
+    if (!plan.items.length) { box.appendChild(el('p', 'Nothing to clean up: every image is in use or the default.')).className = 'hint'; var c0 = el('button', 'close'); c0.addEventListener('click', function () { box.hidden = true; }); box.appendChild(c0); return; }
+    var note = el('p', 'Nothing is removed until you press the button. Never offered: the default image, images a key names, images a container is running from, and images a key’s or agent’s kept container is built on. Removing an image that stopped chat containers hold removes those containers too (what was installed inside them is lost; chats, files and profiles are kept).'); note.className = 'hint'; box.appendChild(note);
+    var tbl = el('table'); var hr = el('tr');
+    ['', 'image', 'why', 'size', 'also removes'].forEach(function (h) { hr.appendChild(el('th', h)); });
+    tbl.appendChild(el('thead')).appendChild(hr); var tb = el('tbody'); tbl.appendChild(tb);
+    var boxes = [];
+    var labels = { safe: 'safe', containers: 'removes containers', rebuild: 'rebuild needed later', other: 'not Piper’s?' };
+    plan.items.forEach(function (it) {
+      var tr = el('tr');
+      var td = el('td'); var cb = el('input'); cb.type = 'checkbox'; cb.checked = it.kind === 'safe'; td.appendChild(cb); tr.appendChild(td); boxes.push([it, cb]);
+      var nm = el('td', it.name); nm.className = 'mono'; tr.appendChild(nm);
+      var why = el('td', it.reason); var tag = el('span', ' ' + labels[it.kind]); tag.className = 'badge'; why.appendChild(tag); tr.appendChild(why);
+      tr.appendChild(el('td', it.sizeMb == null ? '-' : (it.sizeMb / 1024).toFixed(2) + ' GB')).className = 'num';
+      tr.appendChild(el('td', it.containers.length ? it.containers.length + ' stopped container(s)' + (it.foreign ? ' (' + it.foreign + ' from another gateway)' : '') : '-'));
+      tb.appendChild(tr);
+    });
+    box.appendChild(tbl);
+    var total = el('p'); total.className = 'hint';
+    var update = function () { var mb = 0, n = 0, withC = 0; boxes.forEach(function (b) { if (b[1].checked) { n++; mb += b[0].sizeMb || 0; if (b[0].containers.length) withC += b[0].containers.length; } }); total.textContent = n + ' selected, about ' + (mb / 1024).toFixed(2) + ' GB' + (withC ? ', and ' + withC + ' stopped container(s) removed with them' : ''); };
+    boxes.forEach(function (b) { b[1].addEventListener('change', update); }); update();
+    box.appendChild(total);
+    var row = el('div'); row.className = 'fieldrow';
+    var go = el('button', 'remove selected');
+    go.addEventListener('click', function () {
+      var chosen = boxes.filter(function (b) { return b[1].checked; }).map(function (b) { return b[0]; });
+      if (!chosen.length) return;
+      var withC = chosen.some(function (x) { return x.containers.length; });
+      if (withC && !confirm('Some of these are held by stopped containers; they will be removed too. Continue?')) return;
+      go.disabled = true;
+      fetch('dashboard/images/cleanup', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ select: chosen.map(function (x) { return x.id; }), withContainers: withC }) })
+        .then(readJson).then(function (r) {
+          $('imgnote').textContent = 'removed ' + r.removed.length + ' image(s), about ' + (r.reclaimedMb / 1024).toFixed(2) + ' GB' + (r.failed.length ? '; ' + r.failed.length + ' failed: ' + r.failed.map(function (f) { return f.name + ' (' + f.reason + ')'; }).join('; ') : '') + (r.skipped.length ? '; ' + r.skipped.length + ' skipped' : '');
+          box.hidden = true; return loadImages();
+        }).catch(function (e) { $('imgnote').textContent = e.message; go.disabled = false; });
+    });
+    var cancel = el('button', 'cancel'); cancel.addEventListener('click', function () { box.hidden = true; });
+    row.appendChild(go); row.appendChild(cancel); box.appendChild(row);
+  }).catch(function (e) { box.replaceChildren(el('p', 'cannot work it out: ' + e.message)); });
+}
+$('imgclean').addEventListener('click', imgOpenCleanup);
+
 
 
 /* Endpoints: named, permanent agents of a key, each on its own port. */

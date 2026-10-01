@@ -2073,13 +2073,126 @@ assert.equal(isReloadCommand(undefined), false);
 		reply = (bin, args) => (args[0] === "images" ? { code: 0, stdout: imageRow("sha256:full", "piper-agent", "latest", "2 hours ago", "1.9GB"), stderr: "" } : args[0] === "image" && args[1] === "inspect" ? { code: 0, stdout: JSON.stringify([dinfo["sha256:full"]]), stderr: "" } : { code: 0, stdout: "", stderr: "" });
 		const list = await call("GET", "/dashboard/images.json");
 		assert.equal(list.status, 200);
-		assert.deepEqual(Object.keys(list.json).sort(), ["environments", "hostPiVersion", "images", "job"]);
+		assert.deepEqual(Object.keys(list.json).sort(), ["dangling", "environments", "hostPiVersion", "images", "job", "states"]);
 		assert.equal((await call("POST", "/dashboard/images/build", { env: "nope" })).status, 404);
 		assert.equal((await call("POST", "/dashboard/images/remove", { image: "piper-agent" })).status, 409, "the default image cannot be removed from the page either");
 		assert.equal((await call("POST", "/dashboard/images/remove", { image: "" })).status, 400, "a blank reference is refused, not read as \"every image\"");
 		assert.equal((await call("POST", "/dashboard/images/remove", { image: "sha" })).status, 404, "and a short string does not pick an image by its prefix");
 		assert.equal((await call("POST", "/dashboard/images/nonsense", {})).status, 404);
 		assert.equal((await call("GET", "/dashboard/images/build")).status, 404, "building needs POST");
+	}
+
+	// Cleaning up: a fake docker with the situations that keep old images alive.
+	{
+		const { cleanupPlan, runCleanup, autoPrune, NeedsForce } = await import("./server.mjs");
+		const own = (w) => `piper-${instanceId()}-${chatIdHash(w).slice(0, 16)}`;
+		const other = (w) => `piper-deadbeef-${chatIdHash(w).slice(0, 16)}`;
+		const rows = [
+			["sha256:default", "piper-agent", "latest", 1900], ["sha256:oldrun", "<none>", "<none>", 1800], ["sha256:oldidle", "<none>", "<none>", 1700], ["sha256:orphan", "<none>", "<none>", 1600],
+			["sha256:stale", "piper-agent-slim", "latest", 700], ["sha256:fresh", "piper-agent-re", "latest", 800], ["sha256:keptimg", "<none>", "<none>", 1500], ["sha256:foreignimg", "<none>", "<none>", 1400],
+		];
+		const labels = (id) => ({ "piper.image": "1", "piper.pi-version": id === "sha256:stale" ? "0.98.0" : "0.99.1" });
+		const containers = [
+			{ name: own("run"), image: "sha256:oldrun", running: true }, { name: own("idle1"), image: "sha256:oldidle", running: false }, { name: own("idle2"), image: "sha256:oldidle", running: false },
+			{ name: `piper-${instanceId()}-key-abcdef123456`, image: "sha256:keptimg", running: false, persistent: true }, { name: other("far"), image: "sha256:foreignimg", running: false },
+			{ name: own("cur"), image: "sha256:default", running: true },
+		];
+		const states = [["sha256:st-orphan", `gone${"0".repeat(8)}-abc`], ["sha256:st-live", `${containers[3].name.replace(/^piper-/, "")}`]];
+		let removedC = [];
+		let removedI = [];
+		const alive = () => containers.filter((c) => !removedC.includes(c.name));
+		const fmt = (r) => JSON.stringify({ ID: r[0], Repository: r[1], Tag: r[2], CreatedSince: "1 day ago", Size: `${r[3]}MB` });
+		reply = (bin, args) => {
+			const ok = (stdout = "") => ({ code: 0, stdout, stderr: "" });
+			if (args[0] === "images") {
+				if (args.includes("label=piper.image=1")) return ok(rows.filter((r) => !removedI.includes(r[0])).map(fmt).join("\n"));
+				if (args.includes("reference=piper-keystate")) return ok(states.filter((x) => !removedI.includes(x[0])).map((x) => fmt([x[0], "piper-keystate", x[1], 900])).join("\n"));
+				if (args.includes("dangling=true")) return ok([fmt(["sha256:dangle", "<none>", "<none>", 300])].join("\n"));
+				return ok();
+			}
+			if (args[0] === "image" && args[1] === "inspect") return ok(JSON.stringify(args.slice(2).map((id) => ({ Id: id, Size: (rows.find((r) => r[0] === id)?.[3] ?? 900) * 1048576, Config: { Labels: id === "sha256:dangle" || id.startsWith("sha256:st-") ? {} : labels(id) } }))));
+			if (args[0] === "ps") return ok(alive().filter((c) => !args.some((x) => /label=piper\.instance=/.test(x)) || c.name.startsWith(`piper-${instanceId()}-`)).map((c) => `${c.name}\t${c.running ? "running" : "exited"}\t\t`).join("\n"));
+			if (args[0] === "inspect") return ok(JSON.stringify(alive().map((c) => ({ Name: `/${c.name}`, Image: c.image, State: { Running: c.running }, Config: { Labels: c.persistent ? { "piper.persistent": "1" } : {} } }))));
+			if (args[0] === "rm") { removedC.push(args[args.length - 1]); return ok(); }
+			if (args[0] === "rmi") {
+				const ref = args[args.length - 1];
+				const id = rows.find((r) => r[1] !== "<none>" && `${r[1]}` === ref)?.[0] ?? states.find((x) => `piper-keystate:${x[1]}` === ref)?.[0] ?? ref;
+				if (alive().some((c) => c.image === id)) return { code: 1, stdout: "", stderr: `Error response from daemon: conflict: unable to delete ${id} (must be forced) - image is being used by stopped container x` };
+				if (ref === "sha256:failing") return { code: 1, stdout: "", stderr: "no space" };
+				removedI.push(id); return ok();
+			}
+			return ok();
+		};
+		const view = async () => { removedC = []; removedI = []; return listImages({ hostPi: "0.99.1" }); };
+		const l = await view();
+		const by = Object.fromEntries(l.images.map((i) => [i.id, i]));
+		assert.deepEqual([by["sha256:default"].running, by["sha256:oldrun"].running, by["sha256:oldidle"].idle.length, by["sha256:keptimg"].kept.length, by["sha256:foreignimg"].foreign, by["sha256:foreignimg"].idle.length], [1, 1, 2, 1, 1, 1], "running, idle, kept and another gateway's containers are told apart");
+		assert.deepEqual(l.states.map((x) => [x.name.split(":")[0], x.orphan]), [["piper-keystate", true], ["piper-keystate", false]], "a saved state is an orphan when its container is gone");
+		assert.deepEqual(l.dangling.map((d) => d.id), ["sha256:dangle"], "a dangling image with no Piper label is listed on its own");
+
+		// Removing one: the stopped containers holding it are named, and removed only on a go-ahead.
+		await assert.rejects(removeImage("sha256:oldrun", { hostPi: "0.99.1" }), (e) => e.status === 409 && /running from it/.test(e.message));
+		await assert.rejects(removeImage("sha256:keptimg", { hostPi: "0.99.1" }), (e) => e.status === 409 && /kept container/.test(e.message));
+		await assert.rejects(removeImage("sha256:oldidle", { hostPi: "0.99.1" }), (e) => e instanceof NeedsForce && e.errorCode === "needs_force" && /2 stopped container\(s\)/.test(e.message) && e.message.includes(own("idle1")));
+		await assert.rejects(removeImage("sha256:foreignimg", { hostPi: "0.99.1" }), (e) => e instanceof NeedsForce && /belong to another Piper gateway/.test(e.message));
+		assert.deepEqual(removedC, [], "nothing was removed without the go-ahead");
+		assert.match(await removeImage("sha256:oldidle", { hostPi: "0.99.1", force: true }), /removed sha256:oldidle and 2 stopped container/);
+		assert.deepEqual(removedC.sort(), [own("idle1"), own("idle2")].sort());
+		assert.ok(removedI.includes("sha256:oldidle"), "then the image goes");
+		assert.match(await removeImage("sha256:orphan", { hostPi: "0.99.1" }), /removed/, "an unused one just goes");
+		assert.match(await removeImage(l.states[0].name, { hostPi: "0.99.1" }), /removed piper-keystate/, "a saved state with no container goes");
+		await assert.rejects(removeImage(l.states[1].name, { hostPi: "0.99.1" }), (e) => e.status === 409 && /still exists/.test(e.message));
+		await assert.rejects(removeImage("sha256:default", { hostPi: "0.99.1" }), (e) => e.status === 409);
+
+		// The plan: what is offered, why, and what it costs.
+		await view();
+		const plan = await cleanupPlan({ hostPi: "0.99.1" });
+		const kind = (id) => plan.items.find((x) => x.id === id)?.kind;
+		assert.deepEqual([kind("sha256:orphan"), kind("sha256:stale"), kind("sha256:fresh"), kind("sha256:oldidle"), kind("sha256:foreignimg"), kind("sha256:dangle"), kind("sha256:st-orphan")], ["safe", "safe", "rebuild", "containers", "containers", "other", "safe"]);
+		for (const never of ["sha256:default", "sha256:oldrun", "sha256:keptimg", "sha256:st-live"]) assert.equal(kind(never), undefined, `${never} is never offered`);
+		assert.deepEqual(plan.items.find((x) => x.id === "sha256:oldidle").containers.sort(), [own("idle1"), own("idle2")].sort());
+		assert.equal(plan.items.find((x) => x.id === "sha256:foreignimg").foreign, 1);
+		assert.equal(plan.safeMb, 1600 + 700 + 900, "the safe total is the unused ones");
+		assert.ok(plan.allMb > plan.safeMb);
+		// Running it: only what was chosen; items that need containers removed wait for the go-ahead.
+		let done = await runCleanup({ select: ["sha256:orphan", "sha256:oldidle", "sha256:default", "sha256:oldrun", "nonsense"], hostPi: "0.99.1" });
+		assert.equal(done.removed.length, 1);
+		assert.equal(done.skipped.length, 1, "the one that needs its containers removed is skipped without the go-ahead");
+		assert.deepEqual(removedC, [], "and its containers stay");
+		assert.ok(!removedI.includes("sha256:default") && !removedI.includes("sha256:oldrun"), "the default image and a running one are not in the plan, so not removed even when asked for");
+		done = await runCleanup({ select: ["sha256:oldidle", "sha256:foreignimg"], withContainers: true, hostPi: "0.99.1" });
+		assert.equal(done.removed.length, 2);
+		assert.ok(done.reclaimedMb >= 1700 + 1400);
+		assert.deepEqual(removedC.sort(), [own("idle1"), own("idle2"), other("far")].sort(), "with the go-ahead their containers go first");
+		// The automatic part touches only what is plainly unused.
+		await view();
+		const auto = await autoPrune();
+		assert.equal(auto.removed, 2, "the unused superseded build and the orphaned saved state");
+		assert.deepEqual(removedI.sort(), ["sha256:orphan", "sha256:st-orphan"].sort());
+		assert.ok(!removedI.includes("sha256:stale") && !removedI.includes("sha256:fresh") && !removedI.includes("sha256:dangle") && !removedI.includes("sha256:oldidle"), "not an old-Pi tagged image, a spare environment, an unlabelled one, or one with containers");
+		assert.ok(recentAudit(30).some((a) => a.action === "image.autoprune"), "and it is on record");
+		// A failing removal is reported, the rest carries on.
+		await view();
+		rows.push(["sha256:failing", "<none>", "<none>", 100]);
+		done = await runCleanup({ select: ["sha256:failing", "sha256:orphan"], hostPi: "0.99.1" });
+		assert.deepEqual([done.failed.length, done.removed.length], [1, 1]);
+		assert.match(done.failed[0].reason, /no space/);
+		// Through the page's routes: the plan, the go-ahead on remove, and cleanup.
+		await view();
+		const callApi = async (method, url, body) => {
+			const req = Readable.from(body === undefined ? [] : [Buffer.from(JSON.stringify(body))]);
+			req.method = method; req.url = url;
+			const res = { status: null, body: "", writeHead(st) { this.status = st; }, end(b) { this.body = b ?? ""; } };
+			await containerRoutes(req, res, new URL(url, "http://x").pathname);
+			return { status: res.status, json: res.body ? JSON.parse(res.body) : null };
+		};
+		const apiPlan = await callApi("GET", "/dashboard/images/cleanup.json");
+		assert.deepEqual([apiPlan.status, apiPlan.json.items.length > 3], [200, true]);
+		const needs = await callApi("POST", "/dashboard/images/remove", { image: "sha256:oldidle" });
+		assert.deepEqual([needs.status, needs.json.error.code], [409, "needs_force"]);
+		assert.equal((await callApi("POST", "/dashboard/images/remove", { image: "sha256:oldidle", force: true })).status, 200);
+		assert.equal((await callApi("POST", "/dashboard/images/cleanup", { select: ["sha256:fresh"] })).json.removed.length, 1);
+		assert.equal((await callApi("POST", "/dashboard/images/cleanup", { select: "nope" })).json.removed.length, 0, "a bad selection selects nothing");
 	}
 	apiKeys.remove(imgKey.id);
 	rmSync(root, { recursive: true, force: true });
@@ -2119,7 +2232,7 @@ assert.equal(isReloadCommand(undefined), false);
 	for (const [path, keys] of [
 		["/dashboard.json", ["sessions", "containers", "disk", "passwordSet"]],
 		["/dashboard/containers.json", ["containers", "disk", "events", "audit", "execAllowed"]],
-		["/dashboard/images.json", ["images", "environments", "hostPiVersion", "job"]],
+		["/dashboard/images.json", ["images", "states", "dangling", "environments", "hostPiVersion", "job"]],
 		["/dashboard/audit.json", ["audit"]],
 		["/dashboard/settings.json", ["settings"]],
 		["/dashboard/api-keys.json", ["keys", "defaults"]],

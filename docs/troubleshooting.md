@@ -122,6 +122,15 @@ strip: between them they name most problems. The log is `journalctl -u piper` (s
 | Trigger answers 429 | Called again within `JOBS_MIN_INTERVAL_MS` | Wait, or lower the setting |
 | The result webhook shows "the webhook failed" | The receiver is down or refused (one retry is made) | Fix the receiver; run again |
 
+## Images that will not go
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| **remove** or `docker rmi` says "container … is using its referenced image" | Docker never deletes an image any container refers to, running or **stopped**. Old images are usually held by stopped chat containers, or by containers of another Piper gateway on this machine (a different folder or database makes a different instance) | Containers → Images → **remove** names the stopped containers and asks; **clean up…** lists every image with the reason and removes what you tick, containers first. Chats, files and profiles are kept; what was installed inside those containers is not |
+| An image is listed but its **remove** is greyed | The default image, one a key names, one a container is running from, or one a key's or agent's kept (persistent) container is built on | Change the setting, stop or recreate the container (Containers → update, reset), then clean up |
+| `piper-keystate:…` images pile up | The saved state of a container that is gone (an update keeps it while the container lives) | They show under *Saved container states* and in clean up; removed automatically when orphaned |
+| Disk is still full after clean up | Build cache, or untagged layers Piper did not label | `docker builder prune -f`; the *other leftovers* list in clean up shows untagged ones, never preselected |
+
 ## Doctor
 
 | Symptom | Cause | Fix |
