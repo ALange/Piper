@@ -94,6 +94,21 @@ colleague keeps its conversation across the calls of one chat. If the caller is 
 colleague's turn; a hand-off that takes longer than `DELEGATE_TIMEOUT_MS` is stopped and the caller told. Each hand-off is
 a `runtime.delegate` audit row and a note in the live view.
 
+### The orchestrator template
+
+Create an agent from the **orchestrator** template (Agents → Create → pick the template) and talk to it: it coordinates the
+other agents of its key. Hand-offs are on from the start, and at the start of **every turn** it is given the list of its
+colleagues with their descriptions, so an agent created a minute ago is used on the next message with nothing changed on the
+orchestrator. Its instructions make it split the request, match parts to colleagues by their descriptions, write each hand-off
+as a self-contained brief, send independent ones together (Pi runs tool calls from one message at the same time, so different
+colleagues work in parallel), check what comes back, and report who did what. Its workspace is shared with the key, so files a
+colleague writes are visible to the others.
+
+It chooses by what each agent says it is for, so **give every agent a description** (Agents → edit). An agent without one is listed by
+name only, and the orchestrator says it is guessing. Any agent with hand-offs switched on gets the same list; the orchestrator is
+just the one made for it. Every hand-off is a model turn on the key, so the key's spend and session caps, `DELEGATE_MAX_DEPTH` and
+`DELEGATE_TIMEOUT_MS` bound it.
+
 ### Teams
 
 A **team** is a fixed chain of agents of one key with an OpenAI-compatible endpoint of its own (a port, like an agent's;

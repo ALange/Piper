@@ -52,6 +52,7 @@ strip: between them they name most problems. The log is `journalctl -u piper` (s
 | Symptom | Cause | Fix |
 |---|---|---|
 | The agent has no `piper_delegate` tool | Hand-offs are off for it or the gateway, or the chat started before the switch | Agent editor → hand-offs; `DELEGATE_ENABLED`; start a new chat or `/reload` |
+| The orchestrator does everything itself | The key has no other enabled agent, or their descriptions are empty or vague | Create the specialists on the same key and give each a clear description (Agents → edit) |
 | "You have no colleagues…" | No other enabled agent on the key, or all are already in the chain | Create or enable agents on the same key |
 | "hand-offs may be chained N deep" | `DELEGATE_MAX_DEPTH` | Do the part yourself, or raise the limit |
 | "… could not do it: daily spend limit reached" | The key's cap (hand-offs spend the key's money) | Raise the cap |

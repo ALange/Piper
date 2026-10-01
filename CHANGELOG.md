@@ -20,6 +20,9 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 - **Hand-offs between agents.** An agent can be allowed to give tasks to the other agents of its key (`piper_agents`,
   `piper_delegate`), with a description for each agent, a depth limit, no loops, a timeout, and the cost on the key. The
   caller stopping stops the colleague. Settings: `DELEGATE_ENABLED`, `DELEGATE_MAX_DEPTH`, `DELEGATE_TIMEOUT_MS`.
+- **Orchestrator template.** A built-in template whose agents may hand work to the other agents of their key and are shown the current
+  list of colleagues, with descriptions, at the start of every turn: new agents are used on the next message. Templates, export,
+  import and clone now carry the hand-offs switch.
 - **Teams.** A chain of agents behind an OpenAI-compatible endpoint of its own: each step's instruction gets the task and the
   previous answer, progress streams as reasoning, and a failing step is named. Setting: `TEAM_MAX_STEPS`.
 - **Agent templates, clone, export and import.** New agents can start from a template (five ship: architect, coder,

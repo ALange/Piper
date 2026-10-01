@@ -5977,7 +5977,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 
 	// The built-in templates are real and every file of them can travel.
 	const listed = listTemplates();
-	assert.deepEqual(listed.filter((t) => t.builtin).map((t) => t.name), ["architect", "coder", "devops", "researcher", "reviewer"]);
+	assert.deepEqual(listed.filter((t) => t.builtin).map((t) => t.name), ["architect", "coder", "devops", "orchestrator", "researcher", "reviewer"]);
 	for (const t of listed) {
 		const full = getTemplate(t.name);
 		assert.ok(t.description.length > 10 && full.files.some((f) => f.path === "AGENTS.md"), `${t.name} has a description and instructions`);
@@ -5986,6 +5986,16 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	}
 	assert.ok(getTemplate("reviewer").files.some((f) => f.path === "skills/review-checklist/SKILL.md"));
 	assert.throws(() => deleteTemplate("architect"), /built-in/);
+
+	// The orchestrator: real instructions, and hand-offs on from the start.
+	const orch = getTemplate("orchestrator");
+	assert.equal(orch.canDelegate, true);
+	assert.equal(listTemplates().find((t) => t.name === "orchestrator").canDelegate, true);
+	assert.deepEqual(listTemplates().filter((t) => t.canDelegate).map((t) => t.name), ["orchestrator"], "only the orchestrator delegates by default");
+	const orchText = Buffer.from(orch.files.find((f) => f.path === "AGENTS.md").data, "base64").toString();
+	assert.ok(orchText.length > 1500 && /piper_agents/.test(orchText) && /piper_delegate/.test(orchText) && /same message/.test(orchText), "the working method is there");
+	assert.equal(validateBundle({ ...base, agent: { name: "o", canDelegate: "yes" } }).agent.canDelegate, false, "only a real true turns it on");
+	assert.equal(validateBundle({ ...base, agent: { name: "o", canDelegate: true } }).agent.canDelegate, true);
 
 	// A fake docker that runs the profile helper over the mounted folder, so the real ops are exercised.
 	const bin = mkdtempSync(join(tmpdir(), "fakedocker3-"));
@@ -6037,7 +6047,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.deepEqual(paths, ["AGENTS.md", "settings.json", "skills/review-checklist/SKILL.md"]);
 	assert.ok(bundle.skipped >= 1, "the links were skipped");
 	assert.equal(JSON.stringify(bundle).includes("do-not-export"), false, "auth.json never travels");
-	assert.deepEqual(Object.keys(bundle.agent).sort(), ["container", "description", "model", "name", "thinking", "workspace"]);
+	assert.deepEqual(Object.keys(bundle.agent).sort(), ["canDelegate", "container", "description", "model", "name", "thinking", "workspace"]);
 
 	// Import into another key: same files, a fresh profile; a hostile bundle writes nothing and leaves no agent.
 	const imported = await importBundle({ keyId: otherKey.id, bundle: JSON.parse(JSON.stringify(bundle)), name: "copy" });
@@ -6064,6 +6074,22 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	config.PROFILE_MAX_BYTES = 100;
 	await assert.rejects(profileOp(otherScope, { op: "tree.import", files: [{ path: "prompts/big.md", data: b64("x".repeat(5000)) }] }), /quota/);
 	config.PROFILE_MAX_BYTES = 0;
+
+	// An orchestrator made from the template may delegate; export, import and clone keep that.
+	const orchAgent = await createFromTemplate({ keyId: key.id, template: "orchestrator", name: "boss" });
+	assert.equal(orchAgent.agent.canDelegate, true);
+	assert.equal(orchAgent.agent.workspace, "shared");
+	assert.ok(orchAgent.agent.description.length > 20, "it has a description");
+	const orchBundle = await exportAgent(orchAgent.agent.id);
+	assert.equal(orchBundle.agent.canDelegate, true);
+	const orchImported = await importBundle({ keyId: otherKey.id, bundle: JSON.parse(JSON.stringify(orchBundle)), name: "boss-copy" });
+	assert.equal(orchImported.agent.canDelegate, true, "import keeps it");
+	assert.equal((await cloneAgent(orchAgent.agent.id, "boss-two")).agent.canDelegate, true, "clone keeps it");
+	assert.equal(arch.agent.canDelegate, false, "a reviewer does not delegate");
+	await saveTemplate({ fromAgent: orchAgent.agent.id, name: "my-boss" });
+	assert.equal(getTemplate("my-boss").canDelegate, true, "a saved template keeps it");
+	assert.equal((await createFromTemplate({ keyId: key.id, template: "my-boss", name: "boss-three" })).agent.canDelegate, true);
+	deleteTemplate("my-boss");
 
 	// Clone: a new agent of the same key, same profile.
 	const clone = await cloneAgent(arch.agent.id, "rev-two");
@@ -6112,6 +6138,28 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	config.DELEGATE_ENABLED = false;
 	assert.equal(mayDelegate(rec(arch)), false);
 	assert.deepEqual(colleagues(rec(arch)), []);
+	config.DELEGATE_ENABLED = true;
+
+	// The roster that goes into the system prompt each turn.
+	const { rosterText } = D;
+	assert.equal(rosterText(rec(coder)), "", "an agent that may not delegate gets none");
+	assert.match(rosterText(rec(arch)), /^Your colleagues right now/);
+	assert.match(rosterText(rec(arch)), /- coder: writes code/);
+	assert.ok(!/- arch:|- off:|stranger/.test(rosterText(rec(arch))), "not itself, not a disabled agent, not another key's");
+	mkAgent(k1.record.id, "mute");
+	assert.match(rosterText(rec(arch)), /- mute: \(no description: judge by its name\)/);
+	mkAgent(k1.record.id, "late-arrival", { description: "joined after the orchestrator started" });
+	assert.match(rosterText(rec(arch)), /late-arrival: joined after/, "a new agent is on the very next turn");
+	for (let i = 0; i < 32; i++) mkAgent(k1.record.id, `bulk-${i}`, { description: "x".repeat(400) });
+	const big = rosterText(rec(arch));
+	assert.match(big, /and \d+ more/);
+	assert.ok(big.split("\n").length <= 32 && !/x{201}/.test(big), "capped in length and in lines");
+	for (let i = 0; i < 32; i++) agents.remove(agents.find(k1.record.id, `bulk-${i}`).id);
+	agents.remove(agents.find(k1.record.id, "mute").id);
+	agents.remove(agents.find(k1.record.id, "late-arrival").id);
+	assert.match(rosterText(rec(arch, { delegateChain: [coder.id] })), /none enabled right now/, "alone: a note, not an empty list");
+	config.DELEGATE_ENABLED = false;
+	assert.equal(rosterText(rec(arch)), "");
 	config.DELEGATE_ENABLED = true;
 
 	// A hand-off runs the colleague with its credential, a derived session, and a deeper chain.

@@ -856,7 +856,7 @@
         <h3 id="epedtitle">Edit</h3>
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">name</label><input type="text" id="epedname"></div>
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">model</label><input type="text" id="epedmodel" placeholder="provider/model, blank = the default"><select id="epedthink"></select></div>
-        <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">description</label><input type="text" id="epeddesc" placeholder="what it is for: colleagues see this when choosing who to ask" maxlength="300"></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">description</label><input type="text" id="epeddesc" placeholder="what it is for: an orchestrator (or any agent that hands off work) chooses colleagues by this" maxlength="300"></div>
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">hand-offs</label><label class="ctrl" title="Gives this agent two tools: list its colleagues and hand a task to one, then use the answer. Only agents of the same key, bounded in depth; each hand-off is a turn that counts against the key."><input type="checkbox" id="epeddeleg"> may hand work to the other agents of its key</label></div>
         <div style="margin-bottom:8px"><label class="hint" for="epedinstr">instructions (the agent's AGENTS.md: who it is and how it works)</label><textarea id="epedinstr" rows="9" style="width:100%;box-sizing:border-box;background:#141414;color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:12px"></textarea></div>
         <div id="epedctr"></div>
@@ -867,7 +867,7 @@
         <div class="toolbar">
           <div>
             <h3>Templates and import</h3>
-            <p class="hint" style="margin:0" id="tplnote">A template is a ready-made profile: instructions, skills and settings. Pick one when creating an agent, or save an existing agent as a template (the <b>save as template</b> button). An agent can also be exported to a file and imported into any key, here or on another gateway.</p>
+            <p class="hint" style="margin:0" id="tplnote">A template is a ready-made profile: instructions, skills and settings. Pick one when creating an agent, or save an existing agent as a template (the <b>save as template</b> button). The <b>orchestrator</b> template turns hand-offs on: it sees every enabled agent of its key, with its description, at the start of each turn, so write a good description on each agent. An agent can also be exported to a file and imported into any key, here or on another gateway.</p>
           </div>
         </div>
         <table><thead><tr><th>template</th><th>about</th><th>files</th><th></th></tr></thead><tbody id="tplrows"></tbody></table>
@@ -3281,7 +3281,7 @@ function loadTemplates(list) {
     body.replaceChildren();
     l.forEach(function (t) {
       var tr = el('tr');
-      var n = el('td', t.name); if (t.builtin) n.appendChild(el('span', ' built-in')).className = 'badge';
+      var n = el('td', t.name); if (t.builtin) n.appendChild(el('span', ' built-in')).className = 'badge'; if (t.canDelegate) { var hb = n.appendChild(el('span', ' hand-offs')); hb.className = 'badge'; hb.title = 'agents made from it may hand work to the other agents of their key'; }
       tr.appendChild(n);
       tr.appendChild(el('td', t.description));
       tr.appendChild(el('td', t.files.length));
