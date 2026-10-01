@@ -70,6 +70,28 @@ the call, and only the model's answer goes back. The per-key model allow-list an
 - Bind to `127.0.0.1` and put a **TLS reverse proxy** in front for anything else. On the `open` policy containers can
   reach the dashboard.
 
+## The Playground
+
+The Playground runs agents with their tools and spends a key's money from the dashboard, so it needs a dashboard password
+(403 otherwise) and `PLAYGROUND_ENABLED`. Each turn is a normal one under the chosen key's limits. The first message of each
+conversation is an audit row (`session.playground`: who, which key and agent), never the message or the answer. Conversations
+are stored in the browser's localStorage, not by the gateway, so anyone using that browser profile can read them. The chat
+text is rendered by building DOM nodes (never as HTML), links open only if they are http, https or mailto, and a stop or a closed
+tab aborts the agent's turn.
+
+## The extension library (installed on the host)
+
+Installing from the Extensions page runs the **host's** npm or git as the gateway's user, so it is gated like the other code-
+changing features: a dashboard password and `EXTENSIONS_ENABLED`. What limits it: sources are only `npm:`, `git:` and `https://`
+forms (never a path or a flag); npm runs with `--ignore-scripts` and `npm_config_ignore_scripts=true` unless the operator ticks
+*allow install scripts* for that install; git clones only over https with hooks disabled and the global and system git
+configuration ignored; the environment is `PATH`, a private `HOME` and the npm and git switches, so the gateway's own environment and the operator's Pi folder are
+not reachable; each install is staged, checked (it must be a Pi package, within `EXTENSION_MAX_BYTES`) and only then swapped in,
+with a ten-minute limit. The package's code is **never executed on the host**: it is mounted read-only into containers and runs there under
+the agent's network policy and limits. Remember that an extension is trusted code inside the agent's container: it can read what the
+agent can read and use the network the agent has. Grants are per key and per agent, so an extension reaches only the agents you chose.
+Every install, update, removal and grant change is an audit row.
+
 ## Packages, MCP servers and bundles
 
 All of these end up as code an agent runs, so changing them needs a dashboard password and each can be switched off

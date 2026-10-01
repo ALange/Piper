@@ -11,16 +11,32 @@ The sidebar groups the pages by what you are doing:
 
 | Group | Page | What it holds |
 |---|---|---|
+| (top) | Playground | A chat with any key's agent, in the dashboard |
 | **Monitor** | Overview, Live chats, Spend, Audit | How the gateway is doing, what is running now, what it cost, what happened |
-| **Build** | Agents, Jobs, Files & profiles | Named agents (with teams, templates, import), prompts that run on their own, and what agents are given: files, profiles, packages, MCP servers, bundles |
+| **Build** | Agents, Extensions, Jobs, Files & profiles | Named agents (with teams, templates, import), prompts that run on their own, and what agents are given: files, profiles, packages, MCP servers, bundles |
 | **Infrastructure** | Containers, Models | Containers (with a terminal, images, the host's Pi), and the models that can be used |
 | **Admin** | API keys, Settings, Help | Keys and their limits, configuration, this handbook |
 
-Pages with several parts have tabs along the top (Agents: Agents, Teams, Templates & import, Create; Files & profiles: Files,
+Pages with several parts have tabs along the top (Agents: Agents, Teams, Templates & import, Quick create, Wizard; Files & profiles: Files,
 Profiles & packages; Containers: Containers, Terminal, Images, Pi on this host, Events & command; Help: Documentation,
 About). A link such as `#agents/teams` opens a tab directly, and the links of earlier versions (`#endpoints`,
 `#terminal`, `#profiles`, `#docs`, `#about`) still work. The old Agents page of live chats is now **Live chats**; the old
 Endpoints page is now **Agents**.
+
+## Playground
+
+The first item of the menu: a chat with an agent, laid out like the chat apps you know. Pick **who to talk to** (a key's main
+endpoint, or one of its agents) and optionally a **model** from what that key may use, then type. Answers stream in as they are
+written, with **Markdown** (headings, lists, tables, quotes, code blocks with a copy button) and, collapsed above the answer, the
+agent's **thinking** and each **tool call** with what it ran and what came back. **Enter** sends, **Shift+Enter** is a new line,
+**Stop** ends the turn (the agent's turn is stopped too), **retry** asks the last question again, **copy** copies an answer.
+The left column lists your chats (search, rename by double-click, delete); **export** downloads one as Markdown.
+
+It is a real chat: it runs as that key or agent, so the key's session cap, daily spend cap and model list apply, the cost is
+the key's and the agent's, and the agent can use its tools in its container. A chat keeps its agent for its whole life and
+continues after a gateway restart. The messages you see are kept **in this browser only** (the gateway keeps just the live session,
+which expires like any chat's); deleting a chat also ends its session. It needs a dashboard password and `PLAYGROUND_ENABLED`.
+Slash commands and image attachments are not part of it yet.
 
 ## Overview
 
@@ -81,6 +97,25 @@ Named, permanent agents of an API key, each on its own port, for different roles
 - **Rules.** The port accepts only the owning key and serves only the API. The agent always has one persistent
   container. Limits, spend and the model allow-list stay on the key. Deleting archives its profile and own
   workspace instead of deleting them.
+
+### The creation wizard
+
+**Agents → Wizard** creates an agent step by step, with a review before anything is made (the Quick create tab does the same
+in one form):
+
+1. **Key & template**: the key that owns the agent, and a template (or a blank agent), each shown with its description, skills and
+   hand-off setting.
+2. **Identity**: name, description, model, thinking level, own or shared workspace.
+3. **Instructions & skills**: the instructions (prefilled from the template) and the template's skills as checkboxes; you can leave
+   skills out and **add your own** (a name and a `SKILL.md` with a name and description header).
+4. **Extensions**: the agent follows its key, or gets **its own list** of library extensions and shared bundles; and optionally up
+   to five Pi packages to install into **its own profile** (queued after creation, with the output shown).
+5. **Limits & hand-offs**: container limits and network, and whether it may hand work to its key's other agents.
+6. **Review**: everything that will be created, with warnings (a missing name, no description).
+
+Everything is checked again on the server, in one place: names and paths, sizes, the model against the key's allow-list, container
+settings. If anything fails the agent is removed again, so nothing half-made is left. Granting extensions and installing packages
+need a dashboard password, like the Extensions page.
 
 ### Hand-offs between agents
 
@@ -186,6 +221,25 @@ Open one to see everything its agents get: its own skills and extensions, what e
 running agent has loaded, the workspace with download, the container settings and **Update container**.
 **lock** freezes a profile (mounted read-only, refused by the profile API); **reset** archives it and starts over.
 Bundles are operator-owned folders of skills, extensions and prompts under `shared/`, granted per key.
+
+### Extensions (library and access)
+
+The **Extensions** page installs Pi extensions **on this host** and decides who gets them.
+
+- **Library tab.** Install a package from `npm:name[@version]`, `git:host/owner/repo[@ref]` or an `https://` repository. The host's
+  own npm or git downloads it into the library (`EXTENSIONS_ROOT`), with **install scripts off** unless you tick *allow install
+  scripts* (they would run as the gateway's user), git hooks disabled, and an environment holding nothing but `PATH`. What arrives
+  must be a Pi package (a `pi` section in `package.json`, the `pi-package` keyword, or `extensions/`, `skills/` or `prompts/`
+  folders) and fit `EXTENSION_MAX_BYTES`, or it is removed again. **update** installs it again from the same source; **remove**
+  asks first when something gets it. The code is never run on the host.
+- **Access tab.** A matrix of who gets which library extension or shared bundle, at three levels: the **default** for every key
+  (`SHARED_BUNDLES`), a **key** (all of its agents) and an **agent**. A key or agent either *follows* the level above or has *its own
+  list*; the last column shows what it finally gets. A change stops the affected live chats, and each resumes on its next message
+  with the new set. An agent's own installs (Files & profiles → Profiles → Packages) are separate and always its own.
+- A granted extension is **mounted read-only into the container and run there**, under that agent's network policy and limits, the
+  same as a shared bundle.
+
+Needs a dashboard password; `EXTENSIONS_ENABLED` switches installs off.
 
 ### Packages and MCP servers
 

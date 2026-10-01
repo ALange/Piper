@@ -324,7 +324,7 @@ connection with that URL and key; the model list comes from `/v1/models`.
 After changing any of these, new chats pick it up; an existing chat's container is recreated on its
 next message when a mount, the image or a limit changed (what the agent installed in it is lost, its
 workspace, profile and session are not). For bundle contents, open chats pick it up on `/reload`.
-The dashboard's Files & profiles → Profiles shows what each key's agents actually get.
+The dashboard's Files & profiles → Profiles shows what each key's agents actually get. The **Extensions** page installs Pi packages on this host into `extensions/` (the host needs `npm`, and `git` for git sources) and grants them per key or agent.
 
 ## 9. Check the containers
 

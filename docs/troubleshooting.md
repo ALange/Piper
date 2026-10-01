@@ -33,6 +33,40 @@ strip: between them they name most problems. The log is `journalctl -u piper` (s
 | An **update** fails on the Pi step with "no network" | The container's policy is `none` | Expected; update Pi by hand or change the policy |
 | An **update** says a profile is "frozen or over its limit" | The profile is locked or over `PROFILE_MAX_BYTES`, so `/profile` is a throwaway copy and an extension update would be lost | Unlock or shrink the profile |
 
+## Playground
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| "needs a dashboard password" or "switched off" | It runs agents and spends a key's money | Settings → Access; `PLAYGROUND_ENABLED` |
+| The agent list is empty | No usable key (revoked or expired keys are hidden), or no agents on the key | Create a key; the key's main endpoint is always there |
+| "daily spend limit reached" / "all busy" | The key's caps apply to the Playground too | Raise the key's cap, or wait |
+| "model … is not allowed for this API key" | The model is outside the key's allow-list | Pick another from the list |
+| "The connection ended before the agent finished" | The gateway restarted, or a proxy cut the stream | Send again: the chat resumes; behind nginx use `proxy_buffering off` |
+| My chats are gone | They live in this browser's storage (cleared, another browser, a private window) | They cannot be recovered; use **export** to keep one |
+
+## Creation wizard
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| "needs a header with a description" for an added skill | A skill file must start with `---`, a `name:` and a `description:` | Add the header |
+| "there is already a skill called …" | The template ships a skill of that name | Leave the template's out (uncheck it) or use another name |
+| "needs a dashboard password" at the review | Granting extensions or installing packages is third-party code | Settings → Access, or leave them out |
+| The agent exists but a package did not install | Packages install after creation, one at a time; the output is on the last screen | Retry from Files & profiles → Profiles → the agent → Packages |
+| "no model …" or "not allowed for this key" | The model is not in the catalogue, or outside the key's allow-list | Pick one from the list, or blank for the default |
+
+## Extensions (library)
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Install says it needs a dashboard password, or is switched off | Installs put third-party code on the host | Settings → Access; `EXTENSIONS_ENABLED` |
+| "that is not a Pi package" | The package has no `pi` section, no `pi-package` keyword and no `extensions/`, `skills/` or `prompts/` folder | Check the source; it may be a library, not a Pi package |
+| "exited with code 1" and an npm 404 | The name or version does not exist | Check it on npmjs.com; try `git:` |
+| It installs but a native module fails in the agent | The package needs install scripts, which are off | Reinstall with *allow install scripts* (they run on the host as the gateway's user) |
+| "takes more than the … limit" | `EXTENSION_MAX_BYTES` | Raise it, or pick a lighter package |
+| An agent does not have a granted extension | Its list, or its key's, does not include it (the Access tab shows what it gets), or the chat has not restarted yet | Fix the grant; send the chat a message |
+| "granted to …; take it away from them first" | Removing an extension something still gets | Remove the grant, or remove it anyway |
+| "already the name of a shared bundle" | Bundles and library extensions share one set of names | Install under another name |
+
 ## Packages, MCP servers and bundles
 
 | Symptom | Cause | Fix |

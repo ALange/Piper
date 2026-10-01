@@ -50,6 +50,8 @@ import { pageIndex, renderPage, searchDocs } from "./lib/docs.mjs";
 import { piStatus } from "./lib/versions.mjs";
 import { liveRoutes } from "./lib/liveroutes.mjs";
 import { bundleRoutes, packageRoutes } from "./lib/bundleroutes.mjs";
+import { extensionRoutes } from "./lib/extroutes.mjs";
+import { playgroundRoutes } from "./lib/playground.mjs";
 import { jobApiRoutes, jobDashboardRoutes, triggerRoute } from "./lib/jobroutes.mjs";
 import { startJobs, stopJobs } from "./lib/jobs.mjs";
 import { startTeamServers, stopTeamServers } from "./lib/teams.mjs";
@@ -83,7 +85,11 @@ export * from "./lib/liveroutes.mjs";
 export * from "./lib/jobs.mjs";
 export * from "./lib/jobroutes.mjs";
 export * from "./lib/templates.mjs";
+export * from "./lib/wizard.mjs";
 export * from "./lib/bundleroutes.mjs";
+export * from "./lib/extlib.mjs";
+export * from "./lib/extroutes.mjs";
+export * from "./lib/playground.mjs";
 export * from "./lib/pipackages.mjs";
 export * from "./lib/teams.mjs";
 export * from "./lib/delegate.mjs";
@@ -200,11 +206,13 @@ async function handle(req, res) {
 			return res.end(JSON.stringify(await aboutInfo()));
 		}
 		if (path === "/dashboard/hostpi.json" || path === "/dashboard/hostpi/update") return await hostPiRoutes(req, res, path);
-		if (path === "/dashboard/agents.json" || path === "/dashboard/templates.json" || path === "/dashboard/teams.json" || path === "/dashboard/teams" || path.startsWith("/dashboard/teams/") || path === "/dashboard/templates" || path.startsWith("/dashboard/templates/") || path === "/dashboard/agents" || path.startsWith("/dashboard/agents/")) return await agentRoutes(req, res, path);
+		if (path === "/dashboard/agents.json" || path === "/dashboard/wizard.json" || path === "/dashboard/templates.json" || path === "/dashboard/teams.json" || path === "/dashboard/teams" || path.startsWith("/dashboard/teams/") || path === "/dashboard/templates" || path.startsWith("/dashboard/templates/") || path === "/dashboard/agents" || path.startsWith("/dashboard/agents/")) return await agentRoutes(req, res, path);
 		const updateMatch = /^\/dashboard\/profiles\/([A-Za-z0-9_-]+)\/update-container$/.exec(path);
 		if (updateMatch) return await updateScopeRoute(req, res, updateMatch[1]);
 		if (path === "/dashboard/profiles.json" || path.startsWith("/dashboard/profiles/")) return await profileAdminRoutes(req, res, path);
 		if ((path === "/dashboard/bundles.json" || path === "/dashboard/bundles" || path.startsWith("/dashboard/bundles/") || path.startsWith("/dashboard/bundlefiles/")) && (await bundleRoutes(req, res, path))) return;
+		if (path.startsWith("/dashboard/playground/") && (await playgroundRoutes(req, res, path))) return;
+		if (path.startsWith("/dashboard/extensions") && (await extensionRoutes(req, res, path))) return;
 		if (path.startsWith("/dashboard/packages/") && (await packageRoutes(req, res, path))) return;
 		const filesMatch = /^\/dashboard\/files\/([A-Za-z0-9_-]+)(\/.*)?$/.exec(path);
 		if (filesMatch) {

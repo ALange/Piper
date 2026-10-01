@@ -2,6 +2,24 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] - 2026-10-01
+
+### Added
+- **Extension library and per-agent access.** Pi extensions (`npm:`, `git:` or `https://` packages) can be installed **on the
+  host** from the dashboard into a library (`EXTENSIONS_ROOT`): the host's npm or git downloads them with install scripts off by
+  default, git hooks disabled and an environment that holds nothing but `PATH`, and the result must be a Pi package. They are
+  never run on the host: each is mounted read-only into the containers of the keys and agents it is granted to. Grants work at
+  three levels, the global default, a key (all its agents) and an individual agent, each following the one above unless it has
+  its own list. A new **Extensions** page has a Library tab (install, update, remove) and an Access tab (a matrix of who gets
+  what, with the effective result). Settings: `EXTENSIONS_ENABLED`, `EXTENSIONS_ROOT`, `EXTENSION_MAX_BYTES`.
+- **Agent creation wizard.** Agents → Wizard: key and template, identity, instructions and skills (leave template skills out, add
+  your own), extensions (follow the key or its own list, plus packages to install into its profile), limits and hand-offs, then a
+  review. The server validates it all in one place and removes the agent again if anything fails.
+- **Playground.** A chat with any key's agent, first in the menu: streaming Markdown answers, collapsible thinking and tool calls,
+  Stop, retry, copy, a list of chats with search, rename, delete and export, a model picker, phone-friendly. It runs as the chosen
+  key or agent (their limits and spend apply), keeps the messages in the browser only, and needs a dashboard password. Setting:
+  `PLAYGROUND_ENABLED`.
+
 ## [0.6.0] - 2026-10-01
 
 ### Added

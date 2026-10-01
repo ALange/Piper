@@ -1034,6 +1034,8 @@ on write, so a bad one is rejected with a message rather than reaching the runni
 | Containers | `CONTAINER_DISK_MB` | `0` | Warn when one container has written more than this to its own filesystem. `0` is off. |
 | Containers | `DISK_FREE_WARN_MB` | `5120` | Warn (banner and alert) when the disk Docker uses has less than this free. `0` is off. |
 | Containers | `TERMINAL_ENABLED`, `TERMINAL_IDLE_MS`, `TERMINAL_MAX_SESSIONS` | on, 15m, 4 | The dashboard terminal: whether it is allowed, how long without typing closes it, how many may be open at once. |
+| Agent | `PLAYGROUND_ENABLED` | on | The dashboard Playground (a chat with an agent); needs a dashboard password. |
+| Agent | `EXTENSIONS_ENABLED`, `EXTENSIONS_ROOT`, `EXTENSION_MAX_BYTES` | on, `extensions/`, 200 MB | The host extension library: whether installs are allowed, where it lives, the largest one package may be. |
 | Containers | `LIVE_VIEW_ENABLED`, `PACKAGES_ENABLED` | on, on | The live view of a chat; installing Pi packages and MCP servers from the dashboard. Both need a dashboard password. |
 | Agent | `EXPORT_MAX_BYTES`, `TEMPLATE_MAX_BYTES` | 20 MB, 5 MB | The most an exported or imported agent bundle, and a saved template, may hold. |
 | Agent | `DELEGATE_ENABLED`, `DELEGATE_MAX_DEPTH`, `DELEGATE_TIMEOUT_MS`, `TEAM_MAX_STEPS` | on, 3, 10m, 6 | Hand-offs between agents of a key: allowed, longest chain, longest hand-off; most steps in a team. |
@@ -1069,7 +1071,7 @@ Keys, profiles, the ledger and your dashboard password are untouched.
 
 ## Dashboard
 
-Twelve pages in four groups (Monitor, Build, Infrastructure, Admin) behind a hash route; the larger ones have tabs
+Fourteen pages in four groups (Monitor, Build, Infrastructure, Admin) behind a hash route; the larger ones have tabs
 (`#agents/teams`, `#containers/terminal`, `#files/profiles`, `#help/docs`). Links from earlier versions still work. The main ones:
 
 - **Overview** — live count, model usage, expiry reasons, and the reaping policy in force.

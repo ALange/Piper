@@ -56,7 +56,7 @@ Without systemd the log is `gw.log` in the gateway folder (`./piper.sh logs` fol
    changed gets a fresh container, or, for a persistent container, a rebuilt one that keeps what is installed.
 6. `./piper.sh doctor`.
 
-`gateway.db`, `profiles/`, `workspaces/`, `shared/` and `container-pi/` carry over. New settings appear with their
+`gateway.db`, `profiles/`, `workspaces/`, `shared/`, `extensions/` and `container-pi/` carry over. New settings appear with their
 defaults; renamed ones are migrated on start.
 
 ## Update Pi, then everything that follows it
@@ -92,7 +92,7 @@ them, or remove them by hand.
 ## Backups
 
 `./piper.sh backup [--out DIR] [--keep N] [--no-chats]` writes one owner-only (`0600`) `.tar.gz` of the database
-(a consistent copy, safe while running), profiles, workspaces, shared bundles, container Pi config and, unless
+(a consistent copy, safe while running), profiles, workspaces, shared bundles, the extension library, container Pi config and, unless
 `--no-chats`, chat sessions, with a manifest of checksums. It refuses when it would leave under 1 GB free. Containers
 are not included; a chat whose container is missing gets a fresh one. The archives are as safe as the disk they
 sit on: copy them off the machine.

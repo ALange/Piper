@@ -15,6 +15,7 @@ what is safe to delete. Paths are relative to the gateway folder unless they sta
 | `workspaces-chats/key-<hash>/` | The same for a persistent container, with `session/<chat>/` per chat | Conversation contents | yes |
 | `workspaces-run/` | Bridge sockets, one folder per container (transient; falls back to `/tmp/piper-<uid>-run` when the path would be too long for a socket) | no | no |
 | `workspaces-archive/` | Profiles that were reset, agents that were deleted; expires after `ARCHIVE_TTL_MS` | Old profile and workspace contents | no |
+| `extensions/<name>/` | The extension library: one folder per installed Pi package with an `entry.json`, mounted read-only where granted | Third-party code | yes |
 | `shared/<bundle>/` | Operator bundles of skills, extensions and prompts, granted read-only | no | yes |
 | `container-pi/` | `models.json` for container Pi, **with the API keys of the models you configured** (mode `0600`), and `settings.json` | **Yes** | yes |
 | `backups/` | Archives made by `./piper.sh backup` (mode `0600`) | As the data they hold | n/a |
@@ -26,7 +27,7 @@ what is safe to delete. Paths are relative to the gateway folder unless they sta
 | `.watchdog-state` | The watchdog's memory of whether it has said the gateway is down | no | no |
 
 Roots are settings: `PROFILE_ROOT`, `WORKSPACE_ROOT` (the chats, run and archive folders sit beside it),
-`SHARED_ROOT`, `CONTAINER_PI_DIR`. Put them on a disk with room. The operator's own Pi folder
+`SHARED_ROOT`, `EXTENSIONS_ROOT`, `CONTAINER_PI_DIR`. Put them on a disk with room. The operator's own Pi folder
 (`~/.pi/agent`) is **outside** this list: it holds the Pi login that the bridge uses, and nothing else reads it.
 
 ## The database

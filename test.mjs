@@ -18,6 +18,8 @@ const TEST_PROFILES = `${tmpdir()}/piper-test-profiles-${process.pid}`;
 process.env.PROFILE_ROOT = TEST_PROFILES;
 const TEST_SHARED = `${tmpdir()}/piper-test-shared-${process.pid}`;
 process.env.SHARED_ROOT = TEST_SHARED;
+const TEST_EXT = `${tmpdir()}/piper-test-extlib-${process.pid}`;
+process.env.EXTENSIONS_ROOT = TEST_EXT;
 const TEST_CONTAINER_PI = `${tmpdir()}/piper-test-container-pi-${process.pid}`;
 process.env.CONTAINER_PI_DIR = TEST_CONTAINER_PI;
 const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
@@ -1750,7 +1752,7 @@ assert.equal(isReloadCommand(undefined), false);
 		const db = new DatabaseSync(path);
 		db.exec("CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, source TEXT, updated_at INTEGER); CREATE TABLE chats (id_hash TEXT PRIMARY KEY, key_id TEXT, workspace TEXT NOT NULL); CREATE TABLE marker (n INTEGER)");
 		const put = db.prepare("INSERT INTO settings VALUES (?, ?, 'ui', 1)");
-		put.run("PROFILE_ROOT", join(dir, "profiles")); put.run("WORKSPACE_ROOT", join(dir, "workspaces")); put.run("SHARED_ROOT", join(dir, "shared")); put.run("CONTAINER_PI_DIR", join(dir, "container-pi")); put.run("PORT", "18771");
+		put.run("PROFILE_ROOT", join(dir, "profiles")); put.run("WORKSPACE_ROOT", join(dir, "workspaces")); put.run("SHARED_ROOT", join(dir, "shared")); put.run("EXTENSIONS_ROOT", join(dir, "extensions")); put.run("CONTAINER_PI_DIR", join(dir, "container-pi")); put.run("PORT", "18771");
 		db.prepare("INSERT INTO chats VALUES ('h1', 'k1', ?)").run(join(dir, "workspaces", "key-k1"));
 		db.prepare("INSERT INTO chats VALUES ('h2', 'k2', '/somewhere/else')").run();
 		db.exec("INSERT INTO marker VALUES (42)");
@@ -6397,7 +6399,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	const navPages = [...navHtml.matchAll(/<a[^>]*href="#([a-z]+)"/g)].map((m) => m[1]);
 	assert.deepEqual([...navPages].sort(), Object.keys(PAGES).sort(), "every nav item is a page and every page is in the nav");
 	assert.equal(new Set(navPages).size, navPages.length, "no page twice in the nav");
-	assert.equal(navPages.length, 12, "twelve items in the sidebar");
+	assert.equal(navPages.length, 14, "fourteen items in the sidebar");
 	assert.deepEqual([...navHtml.matchAll(/class="navgroup">([^<]+)</g)].map((m) => m[1]), ["Monitor", "Build", "Infrastructure", "Admin"]);
 
 	// Every tab shows a pane that exists, and a split pane's sections match the markup.
@@ -6448,6 +6450,479 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.ok(html.includes('class="pagetabs" id="tabbar"'), "the page tab bar has a class of its own, apart from the existing .tabs bars");
 }
 
+// Phase A (0.7): the extension library and grants.
+{
+	const X = await import("./server.mjs");
+	const { checkedSource, nameFromSource, gitTarget, installEnv, installCommands, looksLikePiPackage, treeBytes, installExtension, updateExtension, removeExtension, extensionJobView, resetExtensionJob, libraryOverview, ExtensionError, listLibrary, listShared, grantedBundles, bundleUsers, createBundle, extensionRoutes, setAccess, extensionsPayload, agents, apiKeys, config, packageDir, containerCreateArgs, piInvocation, containerSignature } = X;
+	const fsm = await import("node:fs");
+	const log = join(TEST_WS, "fake-tools.log");
+	const bin = mkdtempSync(join(tmpdir(), "fakenpm-"));
+	// A fake npm and git: they make what the real ones would, and record how they were called.
+	writeFileSync(join(bin, "npm"), `#!/usr/bin/env bash
+echo "npm $* | HOME=$HOME | ignore=$npm_config_ignore_scripts | secret=\${PIPER_TEST_SECRET:-none}" >> ${log}
+prefix=""; spec=""; args=("$@"); i=0
+while [ $i -lt $# ]; do case "\${args[$i]}" in --prefix) prefix="\${args[$((i+1))]}"; i=$((i+1));; install|--*) ;; *) spec="\${args[$i]}";; esac; i=$((i+1)); done
+name="\${spec%%@[0-9^~]*}"; [ -z "$spec" ] && exit 0
+case "$name" in failing) echo "npm error 404" >&2; exit 1;; esac
+mkdir -p "$prefix/node_modules/$name"
+echo "{\\"name\\":\\"$name\\",\\"version\\":\\"1.2.3\\",\\"keywords\\":[\\"pi-package\\"]}" > "$prefix/node_modules/$name/package.json"
+case "$name" in plainlib) echo "{\\"name\\":\\"$name\\",\\"version\\":\\"1.0.0\\"}" > "$prefix/node_modules/$name/package.json";; esac
+case "$name" in good*|plainlib) mkdir -p "$prefix/node_modules/$name/extensions"; echo "export default () => {};" > "$prefix/node_modules/$name/extensions/x.js";; esac
+case "$name" in plainlib) rm -rf "$prefix/node_modules/$name/extensions"; echo hi > "$prefix/node_modules/$name/readme.txt";; esac
+case "$name" in huge) head -c 3000000 /dev/zero > "$prefix/node_modules/$name/blob";; esac
+echo "{\\"dependencies\\":{\\"$name\\":\\"1.2.3\\"}}" > "$prefix/package.json"
+echo "added 1 package"
+`);
+	writeFileSync(join(bin, "git"), `#!/usr/bin/env bash
+echo "git $* | HOME=$HOME | cfg=$GIT_CONFIG_GLOBAL" >> ${log}
+target="\${@: -1}"; mkdir -p "$target/.git" "$target/skills/demo"
+echo "{\\"name\\":\\"fromgit\\",\\"version\\":\\"0.3.0\\",\\"pi\\":{\\"skills\\":[\\"./skills\\"]}}" > "$target/package.json"
+echo "# demo" > "$target/skills/demo/SKILL.md"
+`);
+	(await import("node:fs")).chmodSync(join(bin, "npm"), 0o755);
+	(await import("node:fs")).chmodSync(join(bin, "git"), 0o755);
+	const oldPath = process.env.PATH;
+	process.env.PATH = `${bin}:${oldPath}`;
+	process.env.PIPER_TEST_SECRET = "gateway-secret-value";
+	mkdirSync(TEST_WS, { recursive: true });
+	const waitJob = async () => { const end = Date.now() + 8000; while (Date.now() < end) { const j = extensionJobView(); if (j && j.state !== "running") return j; await new Promise((r) => setTimeout(r, 20)); } throw new Error("job timed out"); };
+
+	// Sources and names.
+	for (const good of ["npm:good-ext", "npm:@scope/pkg@1.2.3", "git:github.com/o/repo", "git:github.com/o/repo@v1", "https://github.com/o/repo"]) assert.equal(checkedSource(good), good);
+	for (const evil of ["", "./x", "/etc/passwd", "-g", "npm:--x", "npm:a b", "http://github.com/o/r", "git@github.com:o/r", "https://u:p@github.com/o/r", "npm:x;id", "x".repeat(300)]) assert.throws(() => checkedSource(evil), ExtensionError, evil);
+	assert.deepEqual(["npm:@scope/pkg@1.2.3", "npm:good-ext", "https://github.com/o/Repo.git", "git:github.com/o/repo@v1"].map(nameFromSource), ["scope-pkg", "good-ext", "repo", "repo"]);
+	assert.deepEqual(gitTarget("git:github.com/o/repo@v1"), { url: "https://github.com/o/repo", ref: "v1" });
+	assert.deepEqual(gitTarget("https://gitlab.com/g/s/r"), { url: "https://gitlab.com/g/s/r", ref: null });
+
+	// The commands and the environment of a host install.
+	const env = installEnv("/lib/x");
+	assert.deepEqual(Object.keys(env).filter((k) => !/^(PATH|HOME|TMPDIR|LANG|npm_config_|GIT_)/.test(k)), [], "nothing of the gateway's environment is passed on");
+	assert.equal(env.npm_config_ignore_scripts, "true");
+	assert.equal(installEnv("/x", { allowScripts: true }).npm_config_ignore_scripts, "false");
+	const [npmCmd] = installCommands("npm:good-ext", "/lib/.stage");
+	assert.deepEqual(npmCmd.args, ["install", "--prefix", "/lib/.stage", "--ignore-scripts", "--no-audit", "--no-fund", "--omit=dev", "--legacy-peer-deps", "--no-package-lock", "good-ext"]);
+	assert.ok(!installCommands("npm:good-ext", "/s", { allowScripts: true })[0].args.includes("--ignore-scripts"));
+	const [gitCmd] = installCommands("git:github.com/o/r@v1", "/lib/.stage");
+	assert.deepEqual(gitCmd.args.slice(0, 6), ["-c", "core.hooksPath=/dev/null", "-c", "protocol.allow=never", "-c", "protocol.https.allow=always"]);
+	assert.ok(gitCmd.args.includes("--depth") && gitCmd.args.includes("--branch") && gitCmd.args.includes("--"), "shallow, pinned, and the URL cannot be read as a flag");
+	assert.equal(gitCmd.args.at(-2), "https://github.com/o/r");
+
+	// Gates: the switch, the password-less route.
+	config.EXTENSIONS_ENABLED = false;
+	assert.throws(() => installExtension({ source: "npm:good-ext" }), (e) => e.status === 403);
+	config.EXTENSIONS_ENABLED = true;
+	assert.throws(() => installExtension({ source: "../x" }), ExtensionError);
+	assert.throws(() => installExtension({ source: "npm:good-ext", name: "bad name" }), /a name is/);
+
+	// Installing: npm.
+	resetExtensionJob();
+	installExtension({ source: "npm:good-ext" });
+	let done = await waitJob();
+	assert.equal(done.state, "done", done.lines.join("\n"));
+	const entry = listLibrary().find((e) => e.name === "good-ext");
+	assert.deepEqual([entry.entry, entry.version, entry.source, entry.kind], ["node_modules/good-ext", "1.2.3", "npm:good-ext", "package"]);
+	assert.ok(fsm.existsSync(join(TEST_EXT, "good-ext", "node_modules", "good-ext", "extensions", "x.js")));
+	assert.ok(!fsm.readdirSync(TEST_EXT).some((n) => n.startsWith(".staging")), "nothing is left staged");
+	const called = fsm.readFileSync(log, "utf8");
+	assert.match(called, /npm install --prefix .* --ignore-scripts/);
+	assert.match(called, /ignore=true \| secret=none/, "the gateway's environment did not reach npm");
+	assert.ok(!called.includes("gateway-secret-value"));
+	assert.equal(packageDir(entry), join(TEST_EXT, "good-ext", "node_modules/good-ext"));
+	// Installing: git.
+	installExtension({ source: "git:github.com/o/fromgit@v1", name: "fromgit" });
+	done = await waitJob();
+	assert.equal(done.state, "done", done.lines.join("\n"));
+	assert.equal(listLibrary().find((e) => e.name === "fromgit").entry, "src");
+	assert.ok(!fsm.existsSync(join(TEST_EXT, "fromgit", "src", ".git")), "the clone's .git is removed");
+	assert.match(fsm.readFileSync(log, "utf8"), /git -c core\.hooksPath=\/dev\/null .* clone --depth 1 --branch v1 -- https:\/\/github\.com\/o\/fromgit .*\| cfg=\/dev\/null/);
+	// What must not get in.
+	for (const [source, why] of [["npm:plainlib", /not a Pi package/], ["npm:failing", /exited with code 1/]]) {
+		installExtension({ source });
+		done = await waitJob();
+		assert.equal(done.state, "failed", source);
+		assert.match(done.lines.join("\n"), why, source);
+		assert.ok(!listLibrary().some((e) => e.name === nameFromSource(source)), `${source} is not in the library`);
+	}
+	assert.ok(!fsm.readdirSync(TEST_EXT).some((n) => n.startsWith(".")), "failed installs leave nothing behind");
+	config.EXTENSION_MAX_BYTES = 1024 * 1024;
+	installExtension({ source: "npm:huge" });
+	done = await waitJob();
+	assert.equal(done.state, "failed");
+	assert.match(done.lines.join("\n"), /limit/);
+	config.EXTENSION_MAX_BYTES = 200 * 1024 * 1024;
+	// Names: a bundle and an entry cannot share one.
+	mkdirSync(TEST_SHARED, { recursive: true });
+	createBundle("taken-name");
+	assert.throws(() => installExtension({ source: "npm:good-ext2", name: "taken-name" }), (e) => e.status === 409);
+	assert.throws(() => createBundle("good-ext"), /already the name of a library extension/);
+	assert.throws(() => installExtension({ source: "npm:other-thing", name: "good-ext" }), (e) => e.status === 409 && /already installed from/.test(e.message));
+	// Reinstall of the same source (update) swaps in place.
+	updateExtension("good-ext");
+	assert.equal((await waitJob()).state, "done");
+	assert.equal(listLibrary().filter((e) => e.name === "good-ext").length, 1);
+	assert.throws(() => updateExtension("nope"), (e) => e.status === 404);
+	assert.ok(treeBytes(join(TEST_EXT, "good-ext")) > 0);
+	assert.equal(looksLikePiPackage(join(TEST_EXT, "good-ext", "node_modules", "good-ext")), true);
+
+	// Grants: default -> key -> agent, and what each level gets.
+	const mkKey = (name) => { const c = apiKeys.create({ name, expiresAt: 0 }); return c.record ?? c; };
+	const key = mkKey("ext key");
+	const other = mkKey("ext other");
+	const a1 = agents.create({ keyId: key.id, name: "a1" });
+	const a2 = agents.create({ keyId: key.id, name: "a2" });
+	const scopeOf2 = (a) => `${a.keyId}--${a.id}`;
+	const got = (scope) => grantedBundles(scope, { fallback: "taken-name" }).map((b) => b.name);
+	assert.deepEqual(got(key.id), ["taken-name"], "the default");
+	apiKeys.update(key.id, { sharedBundles: "good-ext,fromgit" });
+	assert.deepEqual(got(key.id), ["fromgit", "good-ext"], "a key's list replaces the default");
+	assert.deepEqual(got(scopeOf2(a1)), ["fromgit", "good-ext"], "its agents follow the key");
+	agents.update(a1.id, { sharedBundles: "fromgit" });
+	assert.deepEqual(got(scopeOf2(a1)), ["fromgit"], "an agent's own list wins");
+	assert.deepEqual(got(scopeOf2(a2)), ["fromgit", "good-ext"], "a sibling still follows the key");
+	agents.update(a1.id, { sharedBundles: "" });
+	assert.deepEqual(got(scopeOf2(a1)), [], "none is a list too");
+	agents.update(a1.id, { sharedBundles: "*" });
+	assert.ok(got(scopeOf2(a1)).includes("good-ext") && got(scopeOf2(a1)).includes("taken-name"), "* is everything: bundles and the library");
+	agents.update(a1.id, { sharedBundles: "ghost,fromgit" });
+	assert.deepEqual(got(scopeOf2(a1)), ["fromgit"], "a name that does not exist is ignored");
+	assert.deepEqual(got(other.id), ["taken-name"], "another key keeps the default");
+	assert.deepEqual(bundleUsers("fromgit").map((u) => u.label), ["ext key", "ext key / a1", "ext key / a2"]);
+	assert.deepEqual(bundleUsers("good-ext").map((u) => u.label), ["ext key", "ext key / a2"], "a1 has its own list without it");
+
+	// Mounts: the entry's folder is mounted read-only and Pi is pointed at the package inside it.
+	const mounts = grantedBundles(scopeOf2(a2), { fallback: "" }).filter((b) => b.name === "good-ext");
+	const args = containerCreateArgs({ name: "c", sig: "s", image: "i", workspace: "/w", profileDir: "/p", chatDir: "/c", runDir: "/r", bridgePath: "/b.mjs", bundles: mounts });
+	assert.ok(args.includes(`${join(TEST_EXT, "good-ext")}:${CONTAINER_PATHS.shared}/good-ext:ro`));
+	const inv = piInvocation({ bundles: mounts, env: [] }, {});
+	assert.ok(inv.piArgs.includes(`${CONTAINER_PATHS.shared}/good-ext/node_modules/good-ext`), "-e names the package inside the mounted folder");
+	assert.notEqual(containerSignature({ bundles: [{ name: "x", path: "/p", entry: "a" }] }), containerSignature({ bundles: [{ name: "x", path: "/p", entry: "b" }] }), "a different entry rebuilds the container");
+
+	// Routes: password, install, access, remove.
+	const http = await import("node:http");
+	const srv = http.createServer((req, res) => void extensionRoutes(req, res, new URL(req.url, "http://x").pathname).then((h) => h || (res.writeHead(404), res.end())));
+	await new Promise((r) => srv.listen(0, "127.0.0.1", r));
+	const base = `http://127.0.0.1:${srv.address().port}`;
+	const call = (path, body) => fetch(base + path, { method: body === undefined ? "GET" : "POST", headers: { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+	X.clearPasswordHash();
+	assert.equal((await call("/dashboard/extensions/install", { source: "npm:good-ext3" })).status, 403, "no password, no install");
+	assert.equal((await call("/dashboard/extensions/access", { level: "key", id: key.id, list: "" })).status, 403);
+	const view = await (await call("/dashboard/extensions.json")).json();
+	assert.deepEqual([view.passwordSet, view.library.map((e) => e.name).sort()], [false, ["fromgit", "good-ext"]]);
+	assert.ok(view.keys.find((k) => k.id === key.id).agents.find((a) => a.id === a1.id).effective.includes("fromgit"));
+	X.setPasswordHash(X.hashPassword("a long enough password"));
+	assert.equal((await call("/dashboard/extensions/install", { source: "../x" })).status, 400);
+	assert.equal((await call("/dashboard/extensions/access", { level: "nonsense" })).status, 400);
+	assert.equal((await call("/dashboard/extensions/access", { level: "agent", id: "deadbeef", list: "" })).status, 404);
+	let r = await call("/dashboard/extensions/access", { level: "agent", id: a2.id, list: "fromgit" });
+	assert.equal(r.status, 200);
+	assert.equal(agents.get(a2.id).sharedBundles, "fromgit");
+	r = await call("/dashboard/extensions/access", { level: "agent", id: a2.id, list: "none" });
+	assert.equal(agents.get(a2.id).sharedBundles, "", "none is a list that gives nothing");
+	r = await call("/dashboard/extensions/access", { level: "agent", id: a2.id, list: "" });
+	assert.equal(agents.get(a2.id).sharedBundles, null, "blank follows the key");
+	r = await call("/dashboard/extensions/access", { level: "agent", id: a2.id, list: null });
+	assert.equal(agents.get(a2.id).sharedBundles, null, "null follows the key again");
+	await call("/dashboard/extensions/access", { level: "key", id: key.id, list: "bad name!" }).then((x) => assert.equal(x.status, 400));
+	assert.equal((await call("/dashboard/extensions/access", { level: "default", list: "taken-name,good-ext" })).status, 200);
+	assert.equal(config.SHARED_BUNDLES, "taken-name,good-ext");
+	await call("/dashboard/extensions/access", { level: "default", list: "base" });
+	// Removing something that is granted needs force.
+	assert.equal((await call("/dashboard/extensions/remove", { name: "good-ext" })).status, 409);
+	assert.equal((await call("/dashboard/extensions/remove", { name: "good-ext", force: true })).status, 200);
+	assert.ok(!fsm.existsSync(join(TEST_EXT, "good-ext")));
+	assert.equal((await call("/dashboard/extensions/remove", { name: "good-ext" })).status, 404);
+	assert.deepEqual(got(scopeOf2(a2)), ["fromgit"], "a removed entry is gone from what agents get");
+	X.clearPasswordHash();
+	await new Promise((r2) => srv.close(r2));
+	srv.closeAllConnections?.();
+	for (const a of [a1, a2]) agents.remove(a.id);
+	process.env.PATH = oldPath;
+	delete process.env.PIPER_TEST_SECRET;
+	rmSync(join(TEST_SHARED, "taken-name"), { recursive: true, force: true });
+}
+
+// Phase B (0.7): the agent creation wizard.
+{
+	const W = await import("./server.mjs");
+	const { wizardOptions, planWizard, createFromWizard, agents, apiKeys, profileOp, agentScope, listLibrary, config, deleteAgent } = W;
+	const fsm = await import("node:fs");
+	const bin = mkdtempSync(join(tmpdir(), "fakedocker4-"));
+	const helper = fileURLToPath(new URL("./piper-profile.mjs", import.meta.url));
+	writeFileSync(join(bin, "docker"), `#!/usr/bin/env bash
+dir=""; max=0; args=("$@"); rest=(); i=0
+while [ $i -lt $# ]; do
+  a="\${args[$i]}"
+  case "$a" in
+    -v) v="\${args[$((i+1))]}"; case "$v" in *:/data) dir="\${v%:/data}";; esac;;
+    -e) e="\${args[$((i+1))]}"; case "$e" in PROFILE_MAX_BYTES=*) max="\${e#*=}";; esac;;
+    /opt/piper/profile.mjs) rest=("\${args[@]:$((i+1))}"); break;;
+  esac
+  i=$((i+1))
+done
+[ -z "$dir" ] && exit 1
+cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
+`);
+	fsm.chmodSync(join(bin, "docker"), 0o755);
+	const oldPath = process.env.PATH;
+	process.env.PATH = `${bin}:${oldPath}`;
+	W.clearPasswordHash();
+	const made = apiKeys.create({ name: "wizard key", expiresAt: 0 });
+	const key = made.record ?? made;
+	const skill = (name, d = "does a thing") => `---\nname: ${name}\ndescription: ${d}\n---\nDo it.\n`;
+	// A library entry to grant (a folder the way an install leaves it).
+	mkdirSync(join(TEST_EXT, "wiz-ext", "node_modules", "wiz-ext", "extensions"), { recursive: true });
+	writeFileSync(join(TEST_EXT, "wiz-ext", "node_modules", "wiz-ext", "extensions", "x.js"), "export default () => {};");
+	writeFileSync(join(TEST_EXT, "wiz-ext", "entry.json"), JSON.stringify({ name: "wiz-ext", source: "npm:wiz-ext", version: "1.0.0", entry: "node_modules/wiz-ext" }));
+
+	// What the steps offer.
+	const opts = wizardOptions();
+	assert.ok(opts.keys.some((k) => k.id === key.id && k.usable));
+	const reviewer = opts.templates.find((t) => t.name === "reviewer");
+	assert.ok(reviewer.instructions.includes("Reviewer") && reviewer.skills.map((x) => x.name).includes("review-checklist"));
+	assert.ok(reviewer.skills.find((x) => x.name === "review-checklist").description.length > 10, "the skill's description comes from its header");
+	assert.equal(opts.templates.find((t) => t.name === "orchestrator").canDelegate, true);
+	assert.ok(opts.items.some((i) => i.name === "wiz-ext" && i.kind === "package"));
+	assert.equal(opts.maxPackages, 5);
+
+	// Refusals before anything is made.
+	const base = { keyId: key.id, name: "wiz-one", template: "reviewer" };
+	const refuse = (patch, re) => assert.throws(() => planWizard({ ...base, ...patch }), re, JSON.stringify(patch).slice(0, 80));
+	refuse({ keyId: "nope" }, /choose a key/);
+	refuse({ template: "nope" }, /no template/);
+	refuse({ skills: { exclude: ["not-there"] } }, /no skill "not-there"/);
+	refuse({ instructions: "x".repeat(70 * 1024) }, /limited to 64 KB/);
+	refuse({ skills: { add: [{ name: "../evil", content: skill("x") }] } }, /not a skill name/);
+	refuse({ skills: { add: [{ name: "a b", content: skill("x") }] } }, /not a skill name/);
+	refuse({ skills: { add: [{ name: "review-checklist", content: skill("review-checklist") }] } }, /already a skill/);
+	refuse({ skills: { add: [{ name: "headerless", content: "just text" }] } }, /needs a header/);
+	refuse({ skills: { add: [{ name: "big", content: skill("big") + "x".repeat(70 * 1024) }] } }, /over 64 KB/);
+	refuse({ skills: { add: Array.from({ length: 21 }, (_, i) => ({ name: `s${i}`, content: skill(`s${i}`) })) } }, /at most 20/);
+	refuse({ thinking: "extreme" }, /thinking must be/);
+	refuse({ extensions: "ghost" }, /no extension or bundle called "ghost"/);
+	refuse({ extensions: "wiz-ext" }, (e) => e.status === 403, "granting needs a dashboard password");
+	refuse({ packages: ["npm:x"] }, (e) => e.status === 403, "so does installing");
+	W.setPasswordHash(W.hashPassword("a long enough password"));
+	refuse({ packages: ["./local"] }, /package source/);
+	refuse({ packages: Array(6).fill("npm:x") }, /at most 5/);
+	assert.equal(planWizard({ ...base, extensions: "wiz-ext" }).sharedBundles, "wiz-ext");
+	assert.equal(planWizard({ ...base, extensions: ["wiz-ext"] }).sharedBundles, "wiz-ext");
+	assert.equal(planWizard({ ...base, extensions: "none" }).sharedBundles, "");
+	assert.equal(planWizard({ ...base, extensions: "" }).sharedBundles, null, "blank follows the key");
+	W.clearPasswordHash();
+	const before = agents.listByKey(key.id).length;
+
+	// A full create: template, edited instructions, one skill left out, one added, hand-offs on, limits.
+	const reviewerSkills = reviewer.skills.length;
+	W.setPasswordHash(W.hashPassword("a long enough password"));
+	const created = await createFromWizard({
+		keyId: key.id, name: "wiz-full", description: "reviews things", template: "reviewer", workspace: "own", thinking: "low",
+		instructions: "# Custom\n\nYou are the custom reviewer.\n", skills: { exclude: ["review-checklist"], add: [{ name: "my-skill", content: skill("my-skill", "my own") }] },
+		extensions: "wiz-ext", canDelegate: true, container: { memoryMb: 512 },
+	});
+	const a = created.agent;
+	assert.deepEqual([a.name, a.description, a.workspace, a.thinking, a.canDelegate, a.sharedBundles, a.container?.memoryMb], ["wiz-full", "reviews things", "own", "low", true, "wiz-ext", 512]);
+	const scope = agentScope(key.id, a.id);
+	assert.match(JSON.stringify(await profileOp(scope, { op: "instructions.get" })), /You are the custom reviewer/);
+	const skills = (await profileOp(scope, { op: "skills.list" })).map((x) => x.name);
+	assert.deepEqual(skills, ["my-skill"], "the excluded skill is gone and the added one is there");
+	assert.equal(W.grantedBundles(scope, { fallback: "" }).map((b) => b.name).join(), "wiz-ext", "the grant is in effect");
+	// A blank-template agent with no extras follows its key and has only what was typed.
+	const plain = await createFromWizard({ keyId: key.id, name: "wiz-plain", instructions: "Be brief." });
+	assert.equal(plain.agent.sharedBundles, null);
+	assert.match(JSON.stringify(await profileOp(agentScope(key.id, plain.agent.id), { op: "instructions.get" })), /Be brief/);
+	assert.deepEqual(await profileOp(agentScope(key.id, plain.agent.id), { op: "skills.list" }), []);
+	// Template instructions are kept when none are sent.
+	const kept = await createFromWizard({ keyId: key.id, name: "wiz-kept", template: "coder" });
+	assert.match(JSON.stringify(await profileOp(agentScope(key.id, kept.agent.id), { op: "instructions.get" })), /Coder/);
+	assert.equal(kept.agent.canDelegate, false);
+	// An orchestrator keeps its hand-offs unless told otherwise only via the explicit flag: the wizard's own choice wins.
+	const orch = await createFromWizard({ keyId: key.id, name: "wiz-orch", template: "orchestrator", canDelegate: true });
+	assert.equal(orch.agent.canDelegate, true);
+	// A failure after the agent exists removes it again: a name already taken, and a refused model.
+	await assert.rejects(createFromWizard({ keyId: key.id, name: "wiz-full" }), /already has an agent/);
+	await assert.rejects(createFromWizard({ keyId: key.id, name: "wiz-model", model: "no-such/model" }), /no model/);
+	assert.equal(agents.find(key.id, "wiz-model"), null);
+	await assert.rejects(createFromWizard({ keyId: key.id, name: "wiz-limits", container: { memoryMb: "lots" } }), /memory/);
+	assert.equal(agents.find(key.id, "wiz-limits"), null, "nothing is left behind");
+	assert.equal(agents.listByKey(key.id).length, before + 4);
+	// The page has every step.
+	const html = readFileSync(new URL("./dashboard.html", import.meta.url), "utf8");
+	for (const step of ["wzkey", "wzidentity", "wzinstructions", "wzextensions", "wzlimits", "wzreview"]) assert.ok(html.includes(`'${step}'`), `the wizard has the ${step} step`);
+	for (const a2 of agents.listByKey(key.id)) await deleteAgent(a2.id);
+	rmSync(join(TEST_EXT, "wiz-ext"), { recursive: true, force: true });
+	W.clearPasswordHash();
+	process.env.PATH = oldPath;
+}
+
+// Phase C (0.7): the Playground's backend.
+{
+	const G = await import("./server.mjs");
+	const { playgroundRoutes, playgroundTargets, setAgentTurnRunner, LiveLog, AgentRunError, apiKeys, agents, config, scopedSessionId, credentialFor, sessions, recentAudit } = G;
+	const http = await import("node:http");
+	const mk = (name) => { const c = apiKeys.create({ name, expiresAt: 0 }); return c.record ?? c; };
+	const key = mk("pg key");
+	const agent = agents.create({ keyId: key.id, name: "pg-agent" });
+	agents.update(agent.id, { description: "for the playground" });
+	const off = agents.create({ keyId: key.id, name: "pg-off" });
+	agents.update(off.id, { enabled: false });
+	const revoked = mk("pg revoked");
+	apiKeys.revoke(revoked.id);
+	const srv = http.createServer((req, res) => void playgroundRoutes(req, res, new URL(req.url, "http://x").pathname).then((h) => h || (res.writeHead(404), res.end())));
+	await new Promise((r) => srv.listen(0, "127.0.0.1", r));
+	const base = `http://127.0.0.1:${srv.address().port}/dashboard/playground`;
+	const post = (body, signal) => fetch(`${base}/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal });
+	const conv = "conv-1234567890";
+	const good = { keyId: key.id, agentId: agent.id, conversation: conv, message: "hello playground" };
+	const events = async (res) => {
+		const out = [];
+		let buf = "";
+		for await (const chunk of res.body) {
+			buf += new TextDecoder().decode(chunk);
+			let i;
+			while ((i = buf.indexOf("\n\n")) >= 0) {
+				const block = buf.slice(0, i);
+				buf = buf.slice(i + 2);
+				const ev = /^event: (.*)$/m.exec(block)?.[1];
+				const data = /^data: (.*)$/m.exec(block)?.[1];
+				if (ev) out.push([ev, JSON.parse(data)]);
+			}
+		}
+		return out;
+	};
+
+	// Gates.
+	G.clearPasswordHash();
+	assert.equal((await fetch(`${base}/targets.json`)).status, 403, "no password, no playground");
+	assert.equal((await post(good)).status, 403);
+	G.setPasswordHash(G.hashPassword("a long enough password"));
+	config.PLAYGROUND_ENABLED = false;
+	assert.equal((await post(good)).status, 403, "switched off");
+	config.PLAYGROUND_ENABLED = true;
+
+	// Targets: usable keys with their enabled agents and models.
+	const targets = await (await fetch(`${base}/targets.json`)).json();
+	const mine = targets.targets.find((t) => t.keyId === key.id);
+	assert.deepEqual(mine.agents.map((a) => a.name), ["pg-agent"], "a disabled agent is not offered");
+	assert.ok(Array.isArray(mine.models));
+	assert.ok(!targets.targets.some((t) => t.keyId === revoked.id), "a revoked key is not offered");
+
+	// Refusals before the stream.
+	for (const [patch, status] of [[{ message: "  " }, 400], [{ message: "x".repeat(40_000) }, 400], [{ conversation: "short" }, 400], [{ conversation: "../../etc/passwd-x" }, 400], [{ keyId: revoked.id, agentId: null }, 401], [{ keyId: "nope", agentId: null }, 401], [{ agentId: "deadbeef" }, 404], [{ agentId: off.id }, 409]]) {
+		const r = await post({ ...good, ...patch });
+		assert.equal(r.status, status, JSON.stringify(patch).slice(0, 60));
+		assert.match(r.headers.get("content-type"), /json/);
+	}
+
+	// A turn: the session's events come through, then done.
+	let seenCredential = null;
+	let seenSession = null;
+	setAgentTurnRunner(async ({ credential, clientSessionId, prompt, model, signal, onSession }) => {
+		seenCredential = credential;
+		seenSession = { clientSessionId, prompt, model };
+		const live = new LiveLog();
+		live.feed({ type: "message_start", message: { role: "user", content: prompt } });
+		onSession({ live });
+		live.feed({ type: "message_start", message: { role: "assistant" } });
+		live.feed({ type: "message_update", assistantMessageEvent: { type: "thinking_delta", delta: "hmm" } });
+		live.feed({ type: "tool_execution_start", toolCallId: "t1", toolName: "bash", args: { command: "ls" } });
+		live.feed({ type: "tool_execution_end", toolCallId: "t1", isError: false, result: { content: [{ type: "text", text: "a.txt" }] } });
+		live.feed({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "Hello " } });
+		live.feed({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "there" } });
+		return { text: "Hello there", reasoning: "hmm", usage: { total_tokens: 9 }, cost: 0.01 };
+	});
+	let r = await post({ ...good, model: "p/m" });
+	assert.equal(r.status, 200);
+	assert.equal(r.headers.get("content-type"), "text/event-stream; charset=utf-8");
+	let ev = await events(r);
+	assert.deepEqual(ev.map(([e]) => e).filter((e, i, a) => e !== a[i - 1]), ["item", "done"]);
+	const kinds = ev.filter(([e]) => e === "item").map(([, d]) => d.item.kind);
+	assert.ok(kinds.includes("thinking") && kinds.includes("tool") && kinds.includes("assistant") && !kinds.includes("user"), "the user's own message is not echoed");
+	const last = ev.at(-1);
+	assert.deepEqual([last[0], last[1].text, last[1].usage.total_tokens, last[1].cost], ["done", "Hello there", 9, 0.01]);
+	assert.equal(seenCredential.id, key.id);
+	assert.equal(seenCredential.agent.id, agent.id, "it runs as the chosen agent");
+	assert.deepEqual(seenSession, { clientSessionId: `playground:${conv}`, prompt: "hello playground", model: "p/m" });
+	r = await post({ ...good, conversation: conv });
+	await events(r);
+	const audits = recentAudit(200).filter((a) => a.action === "session.playground");
+	assert.equal(audits.length, 1, "a conversation is audited once, however many turns");
+	assert.equal(JSON.stringify(audits).includes("hello playground"), false, "never the message");
+	// Errors mid-stream are events.
+	setAgentTurnRunner(async () => { throw new AgentRunError("daily spend limit reached", 429, "spend_limit_exceeded", "rate_limit_error"); });
+	ev = await events(await post({ ...good, conversation: "conv-errors-0001" }));
+	assert.deepEqual([ev.at(-1)[0], ev.at(-1)[1].status, ev.at(-1)[1].code], ["error", 429, "spend_limit_exceeded"]);
+	setAgentTurnRunner(async () => { throw new Error("boom"); });
+	ev = await events(await post({ ...good, conversation: "conv-errors-0002" }));
+	assert.match(ev.at(-1)[1].message, /could not answer: boom/);
+	// Stop: the client goes away, the turn is aborted.
+	let aborted = null;
+	setAgentTurnRunner(async ({ signal }) => { await new Promise((resolve) => signal.addEventListener("abort", () => { aborted = true; resolve(); })); return { text: "", usage: {}, cost: 0 }; });
+	const controller = new AbortController();
+	const pending = post({ ...good, conversation: "conv-abort-00001" }, controller.signal);
+	const res3 = await pending;
+	controller.abort();
+	await res3.body?.cancel().catch(() => {});
+	const end = Date.now() + 2000;
+	while (!aborted && Date.now() < end) await new Promise((r2) => setTimeout(r2, 20));
+	assert.equal(aborted, true, "stopping aborts the agent's turn");
+	setAgentTurnRunner(null);
+
+	// Ending a conversation closes its session.
+	const credential = credentialFor(key.id, agent.id);
+	const scoped = scopedSessionId(credential, "playground:conv-delete-0001");
+	const opened = sessions.acquire(scoped, credential);
+	opened.record.sessionPromise.catch(() => {});
+	assert.equal(sessions.has(scoped), true);
+	const del = await (await fetch(`${base}/conversation/conv-delete-0001?keyId=${key.id}&agentId=${agent.id}`, { method: "DELETE" })).json();
+	assert.equal(del.ended, true);
+	assert.equal(sessions.has(scoped), false);
+	assert.equal((await (await fetch(`${base}/conversation/conv-delete-0001?keyId=${key.id}&agentId=${agent.id}`, { method: "DELETE" })).json()).ended, false, "nothing to end twice");
+	assert.equal((await fetch(`${base}/conversation/bad%20id?keyId=${key.id}`, { method: "DELETE" })).status, 404, "an id that is not one is not a route");
+	G.clearPasswordHash();
+	await new Promise((r2) => srv.close(r2));
+	srv.closeAllConnections?.();
+	for (const a of [agent, off]) agents.remove(a.id);
+}
+
+// Phase C (0.7): the Playground page: markdown renderer and markup.
+{
+	const html = readFileSync(new URL("./dashboard.html", import.meta.url), "utf8");
+	const vm = await import("node:vm");
+	const start = html.indexOf("function mdInline(text)");
+	const end = html.indexOf("function mdSafeHref(href)");
+	assert.ok(start > 0 && end > start);
+	const ctx = vm.createContext({});
+	vm.runInContext(`${html.slice(start, end)}\nthis.mdParse = mdParse; this.mdInline = mdInline;`, ctx);
+	const parse = (t) => JSON.parse(JSON.stringify(ctx.mdParse(t)));
+	const types = (t) => parse(t).map((b) => b.t);
+	assert.deepEqual(types("# H\n\ntext\n\n- a\n- b\n\n1. x\n2. y\n\n```js\ncode\n```\n\n> q\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n---"), ["h", "p", "ul", "ol", "code", "quote", "table", "hr"]);
+	const code = parse("```py\nprint('<script>alert(1)</script>')\n\n\nx = 1\n```")[0];
+	assert.deepEqual([code.t, code.lang], ["code", "py"]);
+	assert.ok(code.text.includes("<script>") && code.text.includes("\n\n\nx = 1"), "code is kept as it was written, as text");
+	assert.deepEqual(parse("```\nnever closed\nstill code")[0], { t: "code", lang: "", text: "never closed\nstill code" }, "a fence still open while streaming is code");
+	const nested = parse("- a\n  - b\n    - c\n- d")[0];
+	assert.equal(nested.items.length, 2);
+	assert.equal(nested.items[0].sub[0].items[0].sub[0].items[0].c[0].v, "c", "lists nest by indent");
+	assert.equal(parse("3. three\n4. four")[0].t, "ol");
+	const inline = (t) => JSON.parse(JSON.stringify(ctx.mdInline(t)));
+	assert.deepEqual(inline("a **b** c").map((n) => n.t), ["text", "b", "text"]);
+	assert.deepEqual(inline("`x < y` and *it* and ~~gone~~").map((n) => n.t), ["code", "text", "i", "text", "del"]);
+	assert.equal(inline("snake_case_word and 2*3*4")[0].t, "text", "intraword underscores are not emphasis");
+	assert.deepEqual(inline("<img src=x onerror=alert(1)> and <b>bold</b>").map((n) => n.t), ["text"], "html is only ever text");
+	assert.match(inline("[click](javascript:alert(1))")[0].href, /^javascript:/, "the parser keeps the target; rendering refuses it");
+	assert.match(html.slice(html.indexOf("function mdSafeHref"), html.indexOf("function mdInlineNodes")), /\^\(https\?:\\\/\\\/\|mailto:\)/, "only http, https and mailto become links");
+	assert.deepEqual(inline("see https://example.com/a.b, ok").map((n) => n.t), ["text", "a", "text"], "bare links are found and punctuation is left out");
+	assert.equal(inline("see https://example.com/a.b, ok")[1].href, "https://example.com/a.b");
+	assert.equal(types("a | b | c").join(), "p", "a pipe alone is not a table");
+	assert.deepEqual(types("Para one\nstill para one\n\nPara two"), ["p", "p"]);
+	// Model text never goes through innerHTML in the page's chat code, and every id the script uses exists.
+	const chatCode = html.slice(html.indexOf("/* ---- Markdown for the Playground"), html.indexOf("var TEMPLATES = [];"));
+	assert.ok(!/innerHTML|insertAdjacentHTML|document\.write/.test(chatCode), "no innerHTML in the Markdown or Playground code");
+	for (const id of ["pg", "pgside", "pgnew", "pgsearch", "pglist", "pgexport", "pgclear", "pgtarget", "pgmodel", "pgtitle", "pgscroll", "pgmsgs", "pgdown", "pginput", "pgsend", "pgnote", "pgtoggle"]) assert.ok(html.includes(`id="${id}"`), `the Playground has #${id}`);
+	assert.ok(/<a href="#playground"/.test(html.slice(html.indexOf('<nav id="nav">'), html.indexOf('<nav id="nav">') + 200)), "Playground is first in the menu");
+	assert.ok(/localStorage/.test(chatCode) && /try \{/.test(chatCode), "conversations are kept in the browser, guarded");
+}
+
 console.log("nextTurn + images: ok");
 rmSync(TEST_DB, { force: true });
 rmSync(TEST_WS, { recursive: true, force: true });
@@ -6456,4 +6931,5 @@ rmSync(`${TEST_WS}-run`, { recursive: true, force: true });
 rmSync(`${TEST_WS}-chats`, { recursive: true, force: true });
 rmSync(TEST_PROFILES, { recursive: true, force: true });
 rmSync(TEST_SHARED, { recursive: true, force: true });
+rmSync(TEST_EXT, { recursive: true, force: true });
 rmSync(TEST_CONTAINER_PI, { recursive: true, force: true });
