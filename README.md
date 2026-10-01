@@ -60,6 +60,8 @@ runtime dependencies beyond Node's standard library, the Pi package you already 
 - **Resource usage on the Overview** — host CPU, memory, load and disk, the gateway process, and the containers
   added up (with the heaviest named), with a short history, read cheaply from `/proc`, Docker's cached stats and
   the disk guard.
+- **Model speed** — each running agent's average generation and prompt-processing speed (tokens per second) in
+  the Agents table, and per-model charts of both on the Overview, from timing every model call's event stream.
 - **Documentation and About** — an administrator's handbook inside the dashboard (architecture, operations, every setting
   generated from the code, API, security, troubleshooting), with search; release notes, version and author.
 - **Pi versions at a glance** — the Containers and Agents pages show the Pi version each container and live agent

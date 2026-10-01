@@ -10,7 +10,15 @@ until a password exists.
 ## Overview
 
 Live numbers at a glance: conversations, working and idle agents, free slots, one-off requests, requests, models,
-spend, oldest agent. Below them a **Resources** section: host CPU, memory, load and free disk, the gateway
+spend, oldest agent. Below them a **Model speed** section: one card per model that agents used, with its average
+generation and prompt-processing speed (tokens per second), the number of calls and a chart of each over the last
+hour, 6 hours, day or week. Speed is timed from the agent's own event stream on every model call: generation is the
+output tokens after the first one over the time from the first token to the end; prompt speed is the processed
+prompt tokens (input plus cache writes, not cache reads) over the time to the first token, so it includes network
+and queueing time and reads low for short prompts. Calls with under 64 prompt tokens or under 8 output tokens are
+not counted for that figure, and a provider that does not stream cannot be timed. Averages are token totals over
+time totals. `SPEED_HISTORY_DAYS` (Settings → Server) sets how long the history is kept (0 keeps none); only model
+names, token counts and times are stored. Below it a **Resources** section: host CPU, memory, load and free disk, the gateway
 process, and the containers added up (running, CPU, memory against limits, processes, what they wrote to their
 own disks), two charts over the last hour, and the five heaviest containers. Charts are real samples taken while a
 dashboard is open, so they start empty after a restart. The top of every page shows a warning when chats cannot
@@ -19,7 +27,8 @@ start (Docker, the image or the network policy) or the disk is nearly full.
 ## Agents (live sessions)
 
 Every live conversation: session fingerprint, model, the **Pi version in its container** (green when it matches
-the gateway's, red when behind), age, idle time, time to expiry and what happens then (stops or ends), requests,
+the gateway's, red when behind), its average **generation speed** and **prompt processing speed** in tokens per
+second (hover for the last call and each model's figure), age, idle time, time to expiry and what happens then (stops or ends), requests,
 cost and state. **kill** ends one session; **kill all agents** ends every live session. Killing ends a chat for
 good, unlike idling, which only stops it.
 

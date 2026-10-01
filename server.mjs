@@ -42,6 +42,7 @@ import { audit, auditOnce, runWithActor } from "./lib/audit.mjs";
 import { resourceSnapshot } from "./lib/resources.mjs";
 import { piVersionsFor } from "./lib/piversions.mjs";
 import { aboutInfo, readPackage } from "./lib/about.mjs";
+import { speedHistory } from "./lib/speed.mjs";
 import { pageIndex, renderPage, searchDocs } from "./lib/docs.mjs";
 import { piStatus } from "./lib/versions.mjs";
 import { filesRoutes, keyIdForScope, profileAdminRoutes, profileRoutes } from "./lib/profiles.mjs";
@@ -77,6 +78,7 @@ export * from "./lib/versions.mjs";
 export * from "./lib/piversions.mjs";
 export * from "./lib/about.mjs";
 export * from "./lib/docs.mjs";
+export * from "./lib/speed.mjs";
 export * from "./lib/dashboard.mjs";
 
 // ------------------------------------------------------------------- server
@@ -158,6 +160,10 @@ async function handle(req, res) {
 			if (path === "/dashboard/docs/search.json") return send(200, { hits: searchDocs(new URL(req.url, "http://localhost").searchParams.get("q") ?? "") });
 			const page = renderPage(path.slice("/dashboard/docs/".length, -".json".length));
 			return page ? send(200, page) : sendError(res, 404, "No such page", "not_found");
+		}
+		if (req.method === "GET" && path === "/dashboard/speed.json") {
+			res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+			return res.end(JSON.stringify(speedHistory(new URL(req.url, "http://localhost").searchParams.get("range") ?? "1h")));
 		}
 		if (req.method === "GET" && path === "/dashboard/about.json") {
 			res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });

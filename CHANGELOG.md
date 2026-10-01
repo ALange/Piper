@@ -20,6 +20,9 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   logging), how long it is kept and how many rows. Secrets and message content are never written.
 - **Resource usage** on the Overview: host CPU, memory, load and disk, the gateway process, and the containers
   added up, with charts and the heaviest containers.
+- **Model speed.** The Agents table shows each running agent's average token generation speed and prompt
+  processing speed, and the Overview has a per-model chart of both over the last hour, 6 hours, day or week, kept for
+  a configurable number of days (only model names, token counts and times are stored).
 - **Pi version per container and per live agent**, marked green when it matches the gateway's and red when it is
   behind. The host's extensions are shown as a table.
 - **About** and **Documentation** pages: release notes and an administrator's wiki inside the dashboard.

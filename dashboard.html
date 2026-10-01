@@ -293,6 +293,14 @@
   .doc blockquote { border-left:3px solid #46617f; padding:2px 12px; color:var(--muted); background:#0f1319; }
   .doc a { color:#8fb4d8; }
   .doc hr { border:0; border-top:1px solid var(--border); margin:18px 0; }
+  .speedgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:14px; margin-bottom:14px; }
+  .speedcard h3 { text-transform:none; letter-spacing:0; font-size:13px; color:var(--fg); word-break:break-all; }
+  .speedcard h3 small { color:var(--dim); font-weight:400; }
+  .speedcard .nums { display:flex; gap:22px; margin:6px 0 4px; }
+  .speedcard .nums div { font-size:11px; color:var(--dim); }
+  .speedcard .nums b { display:block; font-size:20px; color:var(--fg); font-weight:600; }
+  .speedcard .nums small { font-weight:400; }
+  .speedcard .cap { color:var(--dim); font-size:10px; text-transform:uppercase; letter-spacing:.08em; margin:8px 0 2px; }
   .hit { padding:8px 0; border-bottom:1px solid var(--border); }
   .hit a { color:#8fb4d8; text-decoration:none; font-size:13px; }
   .hit small { display:block; color:var(--dim); }
@@ -420,6 +428,14 @@
     <div class="view on" id="view-overview">
       <div class="cards" id="cards"></div>
 
+    <div class="sectionhead" style="margin-top:14px"><h2>Model speed</h2>
+      <div class="ctrl"><span class="hint" id="spnote"></span>
+        <select id="sprange"><option value="1h">last hour</option><option value="6h">last 6 hours</option><option value="24h">last 24 hours</option><option value="7d">last 7 days</option></select>
+      </div>
+    </div>
+    <div id="spgrid" class="speedgrid"></div>
+    <p class="hint" id="spempty" hidden>Nothing measured in this range yet. Speed is timed on each model call an agent makes: <b>prompt</b> speed needs a prompt of at least 64 tokens and <b>generation</b> speed an answer of at least 8, and a provider that does not stream cannot be timed. Nothing but model names, token counts and times is kept.</p>
+
     <div class="sectionhead" style="margin-top:14px"><h2>Resources</h2><span class="hint" id="resnote"></span></div>
     <div class="cards" id="rescards"></div>
     <div class="grid3">
@@ -484,7 +500,7 @@
         </div>
         <table>
           <thead><tr>
-            <th>session</th><th>model</th><th title="the Pi version in the agent\u2019s container, against the one the gateway runs">Pi</th><th class="num">age</th><th class="num">last used</th>
+            <th>session</th><th>model</th><th title="the Pi version in the agent\u2019s container, against the one the gateway runs">Pi</th><th class="num" title="average token generation speed of this session, tokens per second">gen tok/s</th><th class="num" title="average prompt processing speed of this session, tokens per second">prompt tok/s</th><th class="num">age</th><th class="num">last used</th>
             <th class="num">expires in</th><th>on</th><th class="num">reqs</th><th class="num">cost</th><th>state</th><th></th>
           </tr></thead>
           <tbody id="rows"></tbody>
@@ -921,6 +937,20 @@ function tally(rows, keyOf) {
     .sort(function (a, b) { return b.value - a.value || a.label.localeCompare(b.label); });
 }
 
+/* Speed in tokens per second: 1 decimal under 100, none above; a dash until there is a measurement. */
+function tps(v) { return v == null ? '–' : v >= 100 ? Math.round(v).toLocaleString() : v.toFixed(1); }
+/* One agent's average (generation or prompt) with the last call and the calls behind it as a tooltip. */
+function speedCell(speed, kind) {
+  var v = speed && speed[kind];
+  var td = cell(tps(v), 'num' + (v == null ? ' pi-unknown' : ''));
+  if (!speed) { td.title = 'no measurement yet'; return td; }
+  var n = kind === 'gen' ? speed.genCalls : speed.promptCalls;
+  var last = speed.last && speed.last[kind];
+  var per = Object.keys(speed.byModel || {}).map(function (m) { return m + ': ' + tps(speed.byModel[m][kind]) + ' (' + speed.byModel[m].calls + ' call' + (speed.byModel[m].calls === 1 ? '' : 's') + ')'; });
+  td.title = (v == null ? 'no measurement yet: ' + (kind === 'prompt' ? 'prompts under 64 tokens are too short to time' : 'answers under 8 tokens are too short to time') : 'average over ' + n + ' call' + (n === 1 ? '' : 's') + (last != null ? '; last call ' + tps(last) : '')) + (per.length > 1 ? '\n' + per.join('\n') : '');
+  return td;
+}
+
 /* The Pi version of a container or an agent, coloured against the gateway's own. */
 function piCell(version, status, source, host) {
   status = version ? status || 'unknown' : 'unknown';
@@ -1109,7 +1139,7 @@ function render(d) {
   var tbody = $('rows');
   if (!S.length) {
     var tr = el('tr');
-    tr.appendChild(cell('no live agents', 'empty')).colSpan = 11;
+    tr.appendChild(cell('no live agents', 'empty')).colSpan = 13;
     tbody.replaceChildren(tr);
   } else {
     // Conversations first, then the one-off generations, each by whichever expires soonest.
@@ -1129,6 +1159,8 @@ function render(d) {
       tr.appendChild(fp);
       tr.appendChild(cell(modelKey(s)));
       tr.appendChild(piCell(s.piVersion, s.piStatus, null, d.hostPiVersion));
+      tr.appendChild(speedCell(s.speed, 'gen'));
+      tr.appendChild(speedCell(s.speed, 'prompt'));
       tr.appendChild(cell(dur(s.ageMs), 'num'));
       tr.appendChild(cell(dur(s.idleMs) + ' ago', 'num'));
       tr.appendChild(cell(dur(s.expiresInMs), 'num ' + (s.expiresInMs < 300000 ? 'soon' : 'ok')));
@@ -1881,6 +1913,8 @@ var LAYOUT = {
   MAX_IMAGE_BYTES: { tab: 'server', section: 'Requests', label: 'Largest fetched image', unit: 'bytes', bytes: true,
     summary: 'Images downloaded from a URL may not be bigger than this.',
     when: { key: 'ALLOW_IMAGE_URLS', checked: true, note: 'Only used when image URLs are fetched (Access tab).' } },
+  SPEED_HISTORY_DAYS: { tab: 'server', section: 'Logging', label: 'Keep model speed history for', unit: 'days',
+    summary: 'The Overview\u2019s model speed charts (prompt processing and generation, tokens per second, per model). Only model names, token counts and times are stored. 0 keeps no history; the figures per running agent still work.' },
   ACCESS_LOG: { tab: 'server', section: 'Logging', label: 'Access log',
     summary: 'Write one line per request to the gateway’s standard error.' },
   PI_AGENT_PACKAGE: { tab: 'server', section: 'Pi', label: 'Pi package location',
@@ -2646,6 +2680,74 @@ $('eprefresh').addEventListener('click', loadEndpoints);
 
 
 
+
+/* Model speed on the Overview: per model, prompt processing and generation in tokens per second over a range. */
+var SPEED = { timer: null, range: '1h' };
+function stopSpeedRefresh() { if (SPEED.timer) { clearInterval(SPEED.timer); SPEED.timer = null; } }
+function startSpeed() { loadSpeed(); SPEED.timer = setInterval(loadSpeed, 15000); }
+function loadSpeed() {
+  return fetch('dashboard/speed.json?range=' + encodeURIComponent($('sprange').value), { cache: 'no-store' }).then(readJson).then(renderSpeed)
+    .catch(function (e) { $('spnote').textContent = 'cannot load: ' + e.message; });
+}
+/* A time series with gaps where nothing was measured: points are dots, runs of adjacent buckets are lines. */
+function seriesEl(points, key, since, until, bucketMs, color) {
+  var W = 320, H = 70, pad = 4;
+  var vals = points.filter(function (p) { return p[key] != null; });
+  var box = el('div');
+  if (!vals.length) { var none = el('div', 'no measurement in this range'); none.className = 'empty'; none.style.fontSize = '11px'; box.appendChild(none); return box; }
+  var peak = Math.max.apply(null, vals.map(function (p) { return p[key]; })) * 1.1 || 1;
+  var x = function (t) { return pad + ((t - since) / Math.max(1, until - since)) * (W - pad * 2); };
+  var y = function (v) { return H - pad - (v / peak) * (H - pad * 2); };
+  var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'none', class: 'area' });
+  svg.appendChild(svgEl('line', { x1: pad, y1: H - pad, x2: W - pad, y2: H - pad, stroke: '#2a2a2a', 'stroke-width': 1 }));
+  var d = '';
+  var prev = null;
+  vals.forEach(function (p) {
+    var gap = prev === null || p.t - prev > bucketMs * 1.5;
+    d += (gap ? 'M' : 'L') + x(p.t).toFixed(1) + ' ' + y(p[key]).toFixed(1) + ' ';
+    prev = p.t;
+  });
+  svg.appendChild(svgEl('path', { d: d, fill: 'none', stroke: color, 'stroke-width': 1.6 }));
+  vals.forEach(function (p) {
+    var c = svgEl('circle', { cx: x(p.t).toFixed(1), cy: y(p[key]).toFixed(1), r: 2.4, fill: color });
+    var t = svgEl('title'); t.textContent = new Date(p.t).toLocaleString() + ': ' + tps(p[key]) + ' tok/s over ' + p.calls + ' call' + (p.calls === 1 ? '' : 's');
+    c.appendChild(t); svg.appendChild(c);
+  });
+  box.appendChild(svg);
+  var axis = el('div'); axis.className = 'axis';
+  axis.appendChild(el('span', 'low ' + tps(Math.min.apply(null, vals.map(function (p) { return p[key]; })))));
+  axis.appendChild(el('span', 'high ' + tps(Math.max.apply(null, vals.map(function (p) { return p[key]; })))));
+  axis.appendChild(el('span', 'latest ' + tps(vals[vals.length - 1][key])));
+  box.appendChild(axis);
+  return box;
+}
+function renderSpeed(d) {
+  var grid = $('spgrid');
+  grid.replaceChildren();
+  var models = d.models || [];
+  $('spempty').hidden = models.length > 0;
+  $('spnote').textContent = models.length ? models.length + ' model' + (models.length === 1 ? '' : 's') + ' · updated ' + new Date().toLocaleTimeString() : '';
+  models.forEach(function (m) {
+    var card = el('section'); card.className = 'panel speedcard';
+    var title = el('h3', m.provider ? m.model.slice(m.provider.length + 1) : m.model);
+    if (m.provider) { var sm = el('small', '  ' + m.provider); title.appendChild(sm); }
+    title.title = m.model;
+    card.appendChild(title);
+    var nums = el('div'); nums.className = 'nums';
+    function num(label, v) { var dv = el('div'); var b = el('b', tps(v)); b.appendChild(el('small', ' tok/s')); dv.appendChild(b); dv.appendChild(document.createTextNode(label)); return dv; }
+    nums.appendChild(num('generation', m.gen));
+    nums.appendChild(num('prompt processing', m.prompt));
+    var calls = el('div'); var cb = el('b', m.calls.toLocaleString()); calls.appendChild(cb); calls.appendChild(document.createTextNode('call' + (m.calls === 1 ? '' : 's'))); nums.appendChild(calls);
+    card.appendChild(nums);
+    card.appendChild(el('div', 'generation speed')).className = 'cap';
+    card.appendChild(seriesEl(m.points, 'gen', d.since, d.until, d.bucketMs, '#9fd6a8'));
+    card.appendChild(el('div', 'prompt processing speed')).className = 'cap';
+    card.appendChild(seriesEl(m.points, 'prompt', d.since, d.until, d.bucketMs, '#8fb4d8'));
+    grid.appendChild(card);
+  });
+}
+$('sprange').addEventListener('change', function () { loadSpeed(); });
+
 /* Resources: the machine, the gateway process and the containers, from /dashboard.json's `resources`. */
 function pct(v) { return v == null ? '–' : v.toFixed(v < 10 ? 1 : 0) + '%'; }
 function gb(n) { return (n / 1073741824).toFixed(n >= 10737418240 ? 0 : 1) + ' GB'; }
@@ -3098,6 +3200,8 @@ function route() {
   $('sectiontitle').textContent = VIEWS[name].section;
   stopContainersPolling();
   stopAuditRefresh();
+  stopSpeedRefresh();
+  if (name === 'overview') startSpeed();
   if (name === 'about') loadAbout();
   if (name === 'docs') startDocs(sub[1], sub[2]);
   if (name === 'audit') startAudit();

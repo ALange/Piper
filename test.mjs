@@ -23,7 +23,7 @@ process.env.CONTAINER_PI_DIR = TEST_CONTAINER_PI;
 const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 // Seeded at startup, which is when a validator that reads a not-yet-defined constant would fail.
 process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
-const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, recentAudit: recentAuditRows } = await import("./server.mjs");
+const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, recentAudit: recentAuditRows } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
 
@@ -4604,6 +4604,173 @@ assert.equal(isReloadCommand(undefined), false);
 	for (const file of shipped) assert.ok(!forbidden.test(withoutModelIds(readText(`./${file}`))), `${file} says nothing about AI authorship`);
 	assert.ok(!forbidden.test(JSON.stringify(about)), "nor does the About payload");
 	for (const html of Object.values(rendered)) assert.ok(!forbidden.test(withoutModelIds(html.html)));
+}
+
+// Model speed: timed from each call's events, averaged per session, kept per model over time.
+{
+	const { EventEmitter } = await import("node:events");
+	const { PassThrough } = await import("node:stream");
+	const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 0.01, `${msg}: ${a} is not ${b}`);
+
+	// One call: what counts as prompt, what as generation, and what is not a measurement at all.
+	const call = (usage, start, first, end) => callSpeed({ startMs: start, firstMs: first, endMs: end, usage });
+	const good = call({ input: 1000, output: 101, cacheRead: 5000, cacheWrite: 0 }, 0, 500, 2500);
+	assert.deepEqual(good, { prompt: { tokens: 1000, ms: 500 }, gen: { tokens: 100, ms: 2000 } }, "cache reads were not processed; the first output token is the clock's start");
+	assert.equal(call({ input: 800, cacheWrite: 200, output: 51 }, 0, 100, 600).prompt.tokens, 1000, "cache writes were processed");
+	assert.equal(call({ input: 10, output: 101 }, 0, 500, 2500).prompt, null, "a short prompt is mostly latency");
+	assert.equal(call({ input: 10, output: 101 }, 0, 500, 2500).gen.tokens, 100);
+	assert.equal(call({ input: 1000, output: 3 }, 0, 500, 700).gen, null, "a short answer is too short to time");
+	assert.equal(call({ input: 1000, output: 3 }, 0, 500, 700).prompt.tokens, 1000, "but its prompt still counts");
+	assert.equal(call({ input: 1000, output: 500 }, 0, 4000, 4010), null, "everything in one burst: the provider did not stream");
+	assert.notEqual(call({ input: 1000, output: 10 }, 0, 500, 505), null, "a short answer may arrive in one burst");
+	assert.equal(call({ input: 1000, output: 100 }, 0, 20, 2000).prompt, null, "a first token under 50 ms is not a processing time");
+	assert.equal(call({ input: 1000, output: 100 }, 500, 100, 900), null, "time does not run backwards");
+	assert.equal(call(null, 0, 1, 2), null);
+	assert.equal(call({ input: 1000, output: 100 }, 0, null, 2000), null, "no token ever arrived");
+	assert.equal(MIN_PROMPT_TOKENS, 64);
+
+	// Averages are totals over totals: a long call weighs more than a short one.
+	const stats = newSpeedStats();
+	addSpeed(stats, { prompt: { tokens: 1000, ms: 500 }, gen: { tokens: 100, ms: 2000 } }, "p/a"); // 2000 and 50 per second
+	addSpeed(stats, { prompt: { tokens: 200, ms: 100 }, gen: { tokens: 50, ms: 500 } }, "p/b"); // 2000 and 100 per second
+	const view = speedView(stats);
+	near(view.prompt, 2000, "prompt");
+	near(view.gen, 60, "weighted generation speed (150 tokens in 2.5 s), not the 75 a mean of ratios would give");
+	assert.deepEqual([view.calls, view.promptCalls, view.genCalls], [2, 2, 2]);
+	near(view.last.gen, 100, "the last call");
+	assert.equal(view.last.model, "p/b");
+	near(view.byModel["p/a"].gen, 50, "per model within the session");
+	assert.deepEqual(speedView(newSpeedStats()), { calls: 0, prompt: null, gen: null, promptCalls: 0, genCalls: 0, last: null, byModel: {} }, "no data is null, never zero or NaN");
+
+	// The session times calls from its event stream with an injected clock.
+	const fake = () => {
+		const child = new EventEmitter();
+		child.stdout = new PassThrough();
+		child.stderr = new PassThrough();
+		child.exitCode = null;
+		child.signalCode = null;
+		child.kill = () => {};
+		child.stdin = new PassThrough();
+		child.stdin.on("data", (chunk) => {
+			for (const line of String(chunk).split("\n").filter(Boolean)) {
+				const command = JSON.parse(line);
+				child.stdout.write(`${JSON.stringify({ type: "response", id: command.id, command: command.type, success: true, data: command.type === "get_state" ? { model: { provider: "p", id: "m", input: ["text"] }, isStreaming: false } : undefined })}\n`);
+			}
+		});
+		return child;
+	};
+	const child = fake();
+	const times = [];
+	const session = await new PiRpcSession(child, { clock: () => times.shift() }).init(2000);
+	const emit = (record) => child.stdout.write(`${JSON.stringify(record)}\n`);
+	const settle = () => new Promise((r) => setTimeout(r, 15));
+	const assistant = (extra = {}) => ({ role: "assistant", provider: "prov", model: "fast", stopReason: "stop", ...extra });
+	const run = async (clockTimes, { usage, message = {}, deltas = 1 } = {}) => {
+		times.push(...clockTimes);
+		emit({ type: "message_start", message: assistant() });
+		for (let i = 0; i < deltas; i++) emit({ type: "message_update", assistantMessageEvent: { type: i === 0 ? "thinking_delta" : "text_delta", delta: "x" } });
+		emit({ type: "message_end", message: assistant({ usage, ...message }) });
+		await settle();
+		times.length = 0;
+	};
+	assert.equal(session.getSpeed().gen, null, "nothing measured yet");
+	await run([0, 500, 2500], { usage: { input: 1000, output: 101, cacheRead: 5000, cacheWrite: 0 }, deltas: 3 });
+	let v = session.getSpeed();
+	near(v.prompt, 2000, "prompt tokens per second");
+	near(v.gen, 50, "generation tokens per second");
+	assert.equal(v.last.model, "prov/fast");
+	// A second model in the same session, a call that failed, one aborted, one that did not stream, one with no usage.
+	const history0 = speedHistory("1h").models.reduce((n, m) => n + m.calls, 0);
+	await run([0, 100, 600], { usage: { input: 200, output: 51 }, message: { model: "slow" } });
+	near(session.getSpeed().gen, 60, "the session average is weighted over both calls");
+	assert.deepEqual(Object.keys(session.getSpeed().byModel).sort(), ["prov/fast", "prov/slow"]);
+	for (const [label, opts] of [["error", { message: { stopReason: "error" } }], ["aborted", { message: { stopReason: "aborted" } }], ["no usage", { usage: null }], ["no deltas", { deltas: 0 }]]) {
+		const before = JSON.stringify(session.getSpeed());
+		await run([0, 100, 900], { usage: { input: 5000, output: 400 }, ...opts });
+		assert.equal(JSON.stringify(session.getSpeed()), before, `a call that ${label} is not a measurement`);
+	}
+	await run([0, 4000, 4005], { usage: { input: 5000, output: 400 } });
+	near(session.getSpeed().prompt, 1200 * 1000 / 600, "a call that arrived in one burst did not change it");
+	await run([0, 500, 2500], { usage: { input: 1000, output: 101 }, message: { role: "user" } });
+	assert.equal(speedHistory("1h").models.reduce((n, m) => n + m.calls, 0), history0 + 1, "only the second call was added to the history");
+
+	// The history: one row per minute and model, ranges, buckets, and the setting that switches it off.
+	const now = Date.now();
+	db.prepare("DELETE FROM speed_minutes").run();
+	config.SPEED_HISTORY_DAYS = 14;
+	for (let m = 0; m < 5; m++) recordSpeed("alpha/one", { prompt: { tokens: 1000, ms: 500 }, gen: { tokens: 100, ms: 2000 } }, now - m * 60_000);
+	recordSpeed("beta/two", { prompt: null, gen: { tokens: 300, ms: 3000 } }, now - 10 * 60_000);
+	recordSpeed("alpha/one", { prompt: { tokens: 3000, ms: 3000 }, gen: { tokens: 400, ms: 2000 } }, now - 2 * 3_600_000);
+	const hour = speedHistory("1h", now);
+	assert.deepEqual([hour.range, hour.bucketMs], ["1h", 60_000]);
+	assert.deepEqual(hour.models.map((m) => m.model), ["alpha/one", "beta/two"], "the most used first");
+	const alpha = hour.models[0];
+	assert.deepEqual([alpha.calls, alpha.provider], [5, "alpha"]);
+	near(alpha.gen, 50, "five identical minutes");
+	near(alpha.prompt, 2000, "prompt");
+	assert.equal(alpha.points.length, 5, "a point per minute that had calls");
+	assert.equal(hour.models[1].prompt, null, "a model with no prompt measurement has none, not zero");
+	near(hour.models[1].gen, 100, "beta");
+	const day = speedHistory("24h", now);
+	const alpha24 = day.models.find((m) => m.model === "alpha/one");
+	assert.equal(alpha24.calls, 6, "the call two hours ago is in 24 h");
+	assert.equal(day.bucketMs, 15 * 60_000);
+	assert.ok(alpha24.points.length <= 3, "the minutes fall into 15-minute buckets");
+	near(alpha24.gen, (500 + 400) / ((10_000 + 2000) / 1000), "weighted over the day: 900 tokens in 12 s");
+	assert.equal(speedHistory("bogus", now).range, "1h", "an unknown range is the default");
+	assert.ok(Object.keys(SPEED_RANGES).join() === "1h,6h,24h,7d");
+	assert.equal(speedHistory("1h", now + 3 * 86_400_000).models.length, 0, "an empty range is an empty list");
+	// Same minute, same model: one row, summed.
+	db.prepare("DELETE FROM speed_minutes").run();
+	recordSpeed("m/x", { prompt: { tokens: 100, ms: 100 }, gen: null }, now);
+	recordSpeed("m/x", { prompt: { tokens: 100, ms: 300 }, gen: null }, now + 1000);
+	assert.equal(db.prepare("SELECT COUNT(*) AS n FROM speed_minutes").get().n, 1);
+	near(speedHistory("1h", now).models[0].prompt, 500, "200 tokens in 0.4 s");
+	// Switched off: nothing is kept; retention.
+	config.SPEED_HISTORY_DAYS = 0;
+	assert.equal(recordSpeed("m/y", { prompt: { tokens: 100, ms: 100 }, gen: null }, now), false);
+	assert.equal(db.prepare("SELECT COUNT(*) AS n FROM speed_minutes WHERE model = 'm/y'").get().n, 0);
+	assert.equal(purgeSpeed(now), 1, "switching it off drops what was kept");
+	config.SPEED_HISTORY_DAYS = 2;
+	recordSpeed("old/model", { prompt: { tokens: 100, ms: 100 }, gen: null }, now - 3 * 86_400_000);
+	recordSpeed("new/model", { prompt: { tokens: 100, ms: 100 }, gen: null }, now - 3_600_000);
+	assert.equal(purgeSpeed(now), 1, "older than the retention goes");
+	assert.deepEqual(db.prepare("SELECT model FROM speed_minutes").all().map((r) => r.model), ["new/model"]);
+	config.SPEED_HISTORY_DAYS = 14;
+	db.prepare("DELETE FROM speed_minutes").run();
+	assert.equal(recordSpeed(null, { prompt: null, gen: null }, now), false, "no model, nothing to record");
+
+	// The Agents table and the Overview get it.
+	const ctl = new SessionController({ create: async () => ({ getSpeed: () => ({ gen: 61.5, prompt: 1800, genCalls: 4, promptCalls: 4, calls: 4, last: { model: "p/m", gen: 60, prompt: 1700 }, byModel: {} }), getSessionStats: () => ({ cost: 0, tokens: { total: 0 } }), model: { provider: "p", id: "m" }, dispose() {} }), maxSessions: 4, maxLifetimeMs: 1e6, idleMs: 1e6, sweepMs: 0 });
+	const acquired = ctl.acquire("speed-row", null);
+	await acquired.record.sessionPromise;
+	const row = (await ctl.snapshot()).sessions[0];
+	assert.deepEqual([row.speed.gen, row.speed.prompt, row.speed.genCalls], [61.5, 1800, 4], "each running agent's row carries its speed");
+	const plain = new SessionController({ create: async () => ({ dispose() {} }), maxSessions: 4, maxLifetimeMs: 1e6, idleMs: 1e6, sweepMs: 0 });
+	const bare = plain.acquire("no-speed", null);
+	await bare.record.sessionPromise;
+	assert.equal((await plain.snapshot()).sessions[0].speed, null, "a session that cannot say has none");
+	ctl.closeAll();
+	plain.closeAll();
+
+	const { server } = await import("./server.mjs");
+	const accessLog = config.ACCESS_LOG;
+	config.ACCESS_LOG = false;
+	clearPasswordHash();
+	recordSpeed("route/model", { prompt: { tokens: 600, ms: 200 }, gen: { tokens: 90, ms: 1000 } }, Date.now());
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	const base = `http://127.0.0.1:${server.address().port}`;
+	const sp = await (await fetch(`${base}/dashboard/speed.json?range=6h`)).json();
+	assert.deepEqual([sp.range, sp.bucketMs, sp.models[0].model], ["6h", 300_000, "route/model"]);
+	near(sp.models[0].gen, 90, "gen over the route");
+	assert.equal((await (await fetch(`${base}/dashboard/speed.json`)).json()).range, "1h");
+	setPasswordHash(hashPassword("a long enough password"));
+	assert.equal((await fetch(`${base}/dashboard/speed.json`)).status, 401, "not without signing in");
+	clearPasswordHash();
+	await new Promise((r) => server.close(r));
+	config.ACCESS_LOG = accessLog;
+	db.prepare("DELETE FROM speed_minutes").run();
+	session.dispose?.();
 }
 
 console.log("nextTurn + images: ok");
