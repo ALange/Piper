@@ -71,6 +71,38 @@ Everything Docker-related.
 - **Health.** In Settings → Containers: whether Docker, the image and the network policy are in order, with a
   button to look again.
 
+## Terminal
+
+An interactive **root shell inside a running container**, in its `/workspace`: pick a container (or press **terminal**
+on its row on the Containers page) and **connect**. It is a real terminal: colours, line editing, full-screen programs
+such as `vi` and `top`, resizing with the window, Ctrl-C. Rules:
+
+- It needs a **dashboard password** (like the command box), only attaches to a container that is **already running**
+  (it never starts one), and the page must have been served by this gateway.
+- It ends when you disconnect, when the shell exits, after `TERMINAL_IDLE_MS` with no typing (15 minutes by default),
+  or when the container stops. Jobs the shell started in the foreground or background are ended with it; start
+  something with `setsid` or `nohup setsid` if it must outlive the terminal.
+- At most `TERMINAL_MAX_SESSIONS` (4) are open at once, and `TERMINAL_ENABLED` switches the feature off.
+- Every open and close is in the audit log (container, who, from where, how long, bytes typed and shown). **What you
+  type and what is printed is never recorded.**
+
+## Files
+
+Browse the **workspace** (what the agents see at `/workspace`) or the **profile** (skills, extensions, `AGENTS.md`,
+settings) of a key or an agent. Folders first, then files; click a folder to enter it. **upload** takes many files
+(or drop them on the table), with progress; per row: **download**, **rename** (also moves: give a new path),
+**delete**; **new folder** and **new file** in the current folder. Clicking a text file opens an **editor**: Ctrl+S
+saves, and if an agent changed the file after you opened it the save is refused as a conflict, with **reload from
+disk** and **overwrite anyway**. Binary and very large files (over 1 MB) are download-only.
+
+- A **locked** profile is read-only here, a profile over `PROFILE_MAX_BYTES` refuses saves, and a workspace over
+  `WORKSPACE_MAX_BYTES` is frozen for writes (delete still works, to make room). Uploads are limited by
+  `FILE_UPLOAD_MAX_BYTES`.
+- Everything runs in a throwaway container with only that folder mounted; **links an agent planted are never
+  followed**, in the browser or the downloads.
+- Changes are audited with the path (`files.*` rows), never the content. Editing a profile reloads that scope's live
+  chats, as the profile API does.
+
 ## Models
 
 Every model the gateway can route to, grouped by provider, from the operator's Pi and from the container

@@ -2,6 +2,23 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-10-01
+
+### Added
+- **Terminal.** An interactive root shell inside a running container, from the dashboard, with full-screen programs
+  (vim, top), resizing and Ctrl-C. It needs a dashboard password, checks the request's origin, limits how many are
+  open and closes idle ones, and every open and close is recorded without what was typed. Jobs a shell started do
+  not outlive it. Settings: allow terminals, idle time, how many at once.
+- **File browser.** Browse a key's or an agent's workspace and profile: folders, upload with progress and drag and
+  drop, download, rename and move, delete, new folders and files, and a text editor that refuses to overwrite a file
+  an agent changed meanwhile. Profile edits respect locks and size limits; changes are audited by path, never content.
+
+### Changed
+- Model speed is timed from the request going out (the event before the reply is announced), so providers that hold
+  their response until the first token now report a prompt speed too.
+- The dashboard serves xterm.js and its fit addon (MIT, in `vendor/`, listed in `THIRD_PARTY.md` and on the About
+  page) from the gateway; they load only when the Terminal page is opened.
+
 ## [0.4.0] - 2026-09-30
 
 ### Added

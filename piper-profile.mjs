@@ -205,25 +205,113 @@ function filePath(rel) {
 	return target;
 }
 
+/** lstat that answers null for a path that is not there, or sits under a file (ENOTDIR), instead of throwing. */
+function statOrNull(path) {
+	try {
+		return lstatSync(path);
+	} catch (err) {
+		if (err.code === "ENOENT" || err.code === "ENOTDIR") return null;
+		throw err;
+	}
+}
+
 const OPS = {
 	// The key's workspace, when this helper runs over it: list and delete. Reading and writing
 	// file contents go through the raw modes below, so large files never pass through JSON.
-	"files.list": ({ path }) => {
+	// `sizes: false` skips adding up each folder (a browser does not need it and it walks the tree); `meta: true`
+	// answers {entries, truncated} instead of the bare list, so a page can say it is showing the first 5,000.
+	"files.list": ({ path, sizes = true, meta = false }) => {
 		const dir = filePath(path);
 		if (!existsSync(dir)) throw new Refusal(`no such folder: ${path || "/"}`);
 		if (!lstatSync(dir).isDirectory()) throw new Refusal(`not a folder: ${path}`);
-		return readdirSync(dir)
-			.sort()
-			.slice(0, 5000)
-			.map((name) => {
-				const stat = lstatSync(join(dir, name));
-				return {
-					name,
-					type: stat.isDirectory() ? "dir" : stat.isSymbolicLink() ? "link" : "file",
-					bytes: stat.isDirectory() ? sizeOf(join(dir, name)) : stat.size,
-					modified: stat.mtimeMs,
-				};
-			});
+		const names = readdirSync(dir).sort();
+		const entries = names.slice(0, 5000).map((name) => {
+			const stat = lstatSync(join(dir, name));
+			return {
+				name,
+				type: stat.isDirectory() ? "dir" : stat.isSymbolicLink() ? "link" : "file",
+				bytes: stat.isDirectory() ? (sizes ? sizeOf(join(dir, name)) : null) : stat.size,
+				modified: stat.mtimeMs,
+			};
+		});
+		return meta ? { entries, truncated: names.length > 5000, total: names.length } : entries;
+	},
+	"files.mkdir": ({ path }) => {
+		const target = filePath(path);
+		if (target === ROOT) throw new Refusal("that is the folder itself");
+		const stat = statOrNull(target);
+		if (stat) {
+			if (stat.isDirectory()) return { path, created: false };
+			throw new Refusal(`a file is in the way: ${path}`);
+		}
+		try {
+			mkdirSync(target, { recursive: true });
+		} catch (err) {
+			throw new Refusal(`cannot make that folder: ${err.code ?? err.message}`);
+		}
+		return { path, created: true };
+	},
+	// Rename or move inside the folder. Never the root, never into itself, never over something unless asked, and
+	// never over a folder.
+	"files.move": ({ from, to, overwrite = false }) => {
+		const source = filePath(from);
+		const target = filePath(to);
+		if (source === ROOT || target === ROOT) throw new Refusal("the folder itself cannot be moved or replaced");
+		const have = statOrNull(source);
+		if (!have) throw new Refusal(`no such file: ${from}`);
+		const rel = relative(source, target);
+		if (rel === "") return { from, to, moved: false };
+		if (have.isDirectory() && !rel.startsWith("..") && !isAbsolute(rel)) throw new Refusal("a folder cannot be moved into itself");
+		const there = statOrNull(target);
+		if (there) {
+			if (!overwrite) throw new Refusal(`${to} already exists`);
+			if (there.isDirectory() || have.isDirectory()) throw new Refusal("a folder cannot be replaced; delete it first");
+		}
+		try {
+			mkdirSync(dirname(target), { recursive: true });
+			renameSync(source, target);
+		} catch (err) {
+			throw new Refusal(`cannot move it: ${err.code ?? err.message}`);
+		}
+		return { from, to, moved: true };
+	},
+	// A text file for an editor: its text and when it was last changed, or why it is not shown as text.
+	"files.readtext": ({ path, max }) => {
+		const target = filePath(path);
+		const stat = statOrNull(target);
+		if (!stat) throw new Refusal(`no such file: ${path}`);
+		if (!stat.isFile()) throw new Refusal(`not a regular file: ${path}`);
+		const limit = Math.min(Number(max) || 1024 * 1024, 4 * 1024 * 1024);
+		if (stat.size > limit) return { tooBig: true, bytes: stat.size, modified: stat.mtimeMs };
+		const buffer = readFileSync(target);
+		if (buffer.includes(0)) return { binary: true, bytes: stat.size, modified: stat.mtimeMs };
+		let text;
+		try {
+			text = new TextDecoder("utf-8", { fatal: true }).decode(buffer);
+		} catch {
+			return { binary: true, bytes: stat.size, modified: stat.mtimeMs };
+		}
+		return { text, bytes: stat.size, modified: stat.mtimeMs };
+	},
+	// Save an editor's text. `expectModified` is what the editor was given when it opened the file: if the file has
+	// changed since (an agent wrote it), the save is refused as a conflict instead of overwriting that work.
+	"files.writetext": ({ path, text, expectModified, max }) => {
+		if (typeof text !== "string") throw new Refusal("the text to save must be a string");
+		const bytes = Buffer.byteLength(text);
+		const limit = Math.min(Number(max) || 1024 * 1024, 4 * 1024 * 1024);
+		if (bytes > limit) throw new Refusal(`too large to save here: ${bytes} bytes (the limit is ${limit})`);
+		const target = filePath(path);
+		if (target === ROOT) throw new Refusal("that is the folder itself");
+		const stat = statOrNull(target);
+		if (stat && !stat.isFile()) throw new Refusal(`not a regular file: ${path}`);
+		const expected = expectModified === undefined || expectModified === null ? null : Number(expectModified);
+		if (expected !== null) {
+			if (!stat) throw new Refusal("conflict: the file was removed since you opened it");
+			if (Math.abs(stat.mtimeMs - expected) > 1) throw new Refusal("conflict: the file changed since you opened it");
+		}
+		checkQuota(bytes, stat?.size ?? 0);
+		writeAtomic(target, text);
+		return { bytes, modified: lstatSync(target).mtimeMs, created: !stat };
 	},
 	"files.delete": ({ path }) => {
 		const target = filePath(path);
