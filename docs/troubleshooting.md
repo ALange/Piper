@@ -33,6 +33,21 @@ strip: between them they name most problems. The log is `journalctl -u piper` (s
 | An **update** fails on the Pi step with "no network" | The container's policy is `none` | Expected; update Pi by hand or change the policy |
 | An **update** says a profile is "frozen or over its limit" | The profile is locked or over `PROFILE_MAX_BYTES`, so `/profile` is a throwaway copy and an extension update would be lost | Unlock or shrink the profile |
 
+## Terminal and files
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| The terminal button is greyed or the connection is refused with 403 | No dashboard password, or terminals are off | Set a password (Settings → Access); `TERMINAL_ENABLED` under Settings → Containers |
+| 409 "the container is not running" | A chat's container runs only while the chat is | Send the chat a message, or use a persistent container |
+| 429 | `TERMINAL_MAX_SESSIONS` terminals are open | Close one, or raise the limit |
+| It connects and then closes at once, "the shell could not start" | The container has no `python3` (the terminal's helper needs it; every Piper image has it) | Use a Piper image, or install python3 in that container |
+| The terminal closes after a quiet while | `TERMINAL_IDLE_MS` | Raise it, or 0 for never |
+| Behind a proxy it never connects | The proxy does not pass WebSocket upgrades, or rewrites `Host` without `X-Forwarded-Host` | nginx: `proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade"; proxy_read_timeout 1h;` and pass `Host` or `X-Forwarded-Host` |
+| A background job vanished when the terminal closed | Jobs belong to the shell's session and end with it | Start it with `setsid` (or `nohup setsid cmd &`) |
+| File save says "conflict: the file changed" | An agent (or another tab) wrote it after you opened it | **reload from disk**, or **overwrite anyway** |
+| File writes say "frozen" or "locked" | The workspace is over `WORKSPACE_MAX_BYTES` (delete something), or the profile is locked (Profiles → unlock) | As said |
+| A file in the browser shows as a link and cannot be opened | An agent made a symlink; links are never followed | Delete or replace it |
+
 ## Agent endpoints
 
 | Symptom | Cause and confirmation | Fix |

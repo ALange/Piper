@@ -23,7 +23,7 @@ process.env.CONTAINER_PI_DIR = TEST_CONTAINER_PI;
 const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 // Seeded at startup, which is when a validator that reads a not-yet-defined constant would fail.
 process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
-const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, recentAudit: recentAuditRows } = await import("./server.mjs");
+const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, recentAudit: recentAuditRows } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
 
@@ -1039,6 +1039,86 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(run({ op: "instructions.put", text: 5 }).ok, false, "instructions are text");
 	assert.equal(run({ op: "instructions.put", text: "x".repeat(65 * 1024) }).ok, false, "and at most 64 KB");
 	assert.equal(run({ op: "summary" }).result.hasAgentsMd, true, "Pi will see it");
+
+	// The file browser's operations: folders, moves, text for an editor, and the refusals around them.
+	{
+		const sub = join(dir, "fb");
+		mkdirSync(sub, { recursive: true });
+		const files = (extra = {}) => run({ op: "files.list", path: "", ...extra });
+		assert.deepEqual(run({ op: "files.mkdir", path: "fb/a/b/c" }).result, { path: "fb/a/b/c", created: true }, "nested folders at once");
+		assert.deepEqual(run({ op: "files.mkdir", path: "fb/a/b/c" }).result, { path: "fb/a/b/c", created: false }, "making one that exists is fine");
+		writeFileSync(join(sub, "file.txt"), "hello");
+		for (const bad of [["", "that is the folder itself"], ["fb/file.txt", "a file is in the way"], ["../x", "invalid path"], ["fb/file.txt/inner", "cannot make that folder"]]) {
+			const r2 = run({ op: "files.mkdir", path: bad[0] });
+			assert.equal(r2.ok, false, `mkdir ${JSON.stringify(bad[0])}`);
+			assert.match(r2.error, new RegExp(bad[1]));
+		}
+		// Listing: with and without folder sizes, and with the truncation facts.
+		const plain = run({ op: "files.list", path: "fb" }).result;
+		assert.ok(Array.isArray(plain) && plain.find((e) => e.name === "a").type === "dir" && typeof plain.find((e) => e.name === "file.txt").modified === "number");
+		const light = run({ op: "files.list", path: "fb", sizes: false, meta: true }).result;
+		assert.deepEqual([light.truncated, light.total, light.entries.find((e) => e.name === "a").bytes], [false, 2, null], "a folder's size is skipped on request");
+		// Move and rename.
+		assert.deepEqual(run({ op: "files.move", from: "fb/file.txt", to: "fb/a/moved.txt" }).result, { from: "fb/file.txt", to: "fb/a/moved.txt", moved: true });
+		assert.equal(readFileSync(join(sub, "a", "moved.txt"), "utf8"), "hello");
+		assert.equal(run({ op: "files.move", from: "fb/a/moved.txt", to: "fb/new/deep/name.txt" }).ok, true, "a move makes the folders it needs");
+		writeFileSync(join(sub, "other.txt"), "other");
+		assert.match(run({ op: "files.move", from: "fb/other.txt", to: "fb/new/deep/name.txt" }).error, /already exists/, "never over something unless asked");
+		assert.equal(run({ op: "files.move", from: "fb/other.txt", to: "fb/new/deep/name.txt", overwrite: true }).ok, true);
+		assert.equal(readFileSync(join(sub, "new", "deep", "name.txt"), "utf8"), "other");
+		assert.match(run({ op: "files.move", from: "fb/new", to: "fb/new/deep/inside" }).error, /into itself/);
+		assert.match(run({ op: "files.move", from: "fb/a", to: "fb/new", overwrite: true }).error, /folder cannot be replaced/, "a folder is never replaced");
+		assert.match(run({ op: "files.move", from: "fb/missing", to: "fb/x" }).error, /no such file/);
+		assert.match(run({ op: "files.move", from: "", to: "fb/x" }).error, /the folder itself/);
+		assert.match(run({ op: "files.move", from: "fb/a", to: "" }).error, /the folder itself/);
+		assert.match(run({ op: "files.move", from: "fb/a", to: "../out" }).error, /invalid path/);
+		assert.equal(run({ op: "files.move", from: "fb/a", to: "fb/a" }).result.moved, false, "to the same place is nothing");
+		// Links planted by an agent are never followed, on any side.
+		symlinkSync("/etc", join(sub, "evil"));
+		symlinkSync("/etc/hostname", join(sub, "evilfile"));
+		for (const op of [{ op: "files.mkdir", path: "fb/evil/x" }, { op: "files.move", from: "fb/new/deep/name.txt", to: "fb/evil/stolen" }, { op: "files.move", from: "fb/evil/hostname", to: "fb/got" }, { op: "files.readtext", path: "fb/evilfile" }, { op: "files.writetext", path: "fb/evilfile", text: "x" }, { op: "files.writetext", path: "fb/evil/inside", text: "x" }]) {
+			const r2 = run(op);
+			assert.equal(r2.ok, false, `${op.op} through a link is refused`);
+		}
+		assert.equal(existsSync("/etc/stolen"), false);
+		// Text for an editor.
+		const text = run({ op: "files.readtext", path: "fb/new/deep/name.txt" }).result;
+		assert.deepEqual([text.text, text.bytes, typeof text.modified], ["other", 5, "number"]);
+		writeFileSync(join(sub, "bin.dat"), Buffer.from([1, 2, 0, 3]));
+		writeFileSync(join(sub, "bad.txt"), Buffer.from([0xff, 0xfe, 0x41]));
+		writeFileSync(join(sub, "unicode.txt"), "żółć 日本 😀\n");
+		assert.deepEqual(run({ op: "files.readtext", path: "fb/bin.dat" }).result.binary, true, "a NUL byte: binary");
+		assert.equal(run({ op: "files.readtext", path: "fb/bad.txt" }).result.binary, true, "not valid UTF-8: binary");
+		assert.equal(run({ op: "files.readtext", path: "fb/unicode.txt" }).result.text, "żółć 日本 😀\n");
+		writeFileSync(join(sub, "big.txt"), "x".repeat(2000));
+		assert.deepEqual(Object.keys(run({ op: "files.readtext", path: "fb/big.txt", max: 1000 }).result).sort(), ["bytes", "modified", "tooBig"], "over the limit: not sent");
+		assert.match(run({ op: "files.readtext", path: "fb/a" }).error, /not a regular file/);
+		assert.match(run({ op: "files.readtext", path: "fb/nope" }).error, /no such file/);
+		// Saving: a round trip, a conflict, limits.
+		const opened = run({ op: "files.readtext", path: "fb/unicode.txt" }).result;
+		const saved = run({ op: "files.writetext", path: "fb/unicode.txt", text: "changed ✓\n", expectModified: opened.modified }).result;
+		assert.deepEqual([saved.bytes, saved.created, saved.modified >= opened.modified], [Buffer.byteLength("changed ✓\n"), false, true]);
+		assert.equal(readFileSync(join(sub, "unicode.txt"), "utf8"), "changed ✓\n");
+		const stale = run({ op: "files.writetext", path: "fb/unicode.txt", text: "mine\n", expectModified: opened.modified - 5000 });
+		assert.match(stale.error, /^conflict: the file changed/);
+		assert.equal(readFileSync(join(sub, "unicode.txt"), "utf8"), "changed ✓\n", "a conflict saves nothing");
+		assert.equal(run({ op: "files.writetext", path: "fb/created/new.txt", text: "fresh" }).result.created, true, "no expectation: a new file and its folders");
+		assert.match(run({ op: "files.writetext", path: "fb/gone.txt", text: "x", expectModified: 123 }).error, /^conflict: the file was removed/);
+		assert.match(run({ op: "files.writetext", path: "fb/a", text: "x" }).error, /not a regular file/);
+		assert.match(run({ op: "files.writetext", path: "fb/x.txt", text: 5 }).error, /must be a string/);
+		assert.match(run({ op: "files.writetext", path: "fb/x.txt", text: "x".repeat(2000), max: 1000 }).error, /too large/);
+		assert.match(run({ op: "files.writetext", path: "", text: "x" }).error, /the folder itself/);
+		assert.match(run({ op: "files.writetext", path: "fb/q.txt", text: "x".repeat(600) }, 1000).error, /quota/, "the size limit is enforced like any profile write");
+		assert.equal(existsSync(join(sub, "q.txt")), false);
+		assert.equal(readdirSync(sub).some((n) => n.endsWith(".piper-tmp")), false, "no temp file is left behind");
+		const many = join(dir, "many");
+		mkdirSync(many);
+		for (let i = 0; i < 5003; i++) writeFileSync(join(many, `f${String(i).padStart(5, "0")}`), "");
+		const cut = run({ op: "files.list", path: "many", meta: true, sizes: false }).result;
+		assert.deepEqual([cut.entries.length, cut.truncated, cut.total], [5000, true, 5003], "a huge folder says it was cut");
+		rmSync(many, { recursive: true, force: true });
+		rmSync(sub, { recursive: true, force: true });
+	}
 
 	const skill = { op: "skills.put", name: "demo", files: { "SKILL.md": "---\nname: demo\ndescription: Says hi.\n---\nhi", "scripts/run.sh": "echo hi" } };
 	assert.deepEqual(run(skill).result, { name: "demo", description: "Says hi." });
@@ -4744,10 +4824,12 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(speedHistory("1h", now + 3 * 86_400_000).models.length, 0, "an empty range is an empty list");
 	// Same minute, same model: one row, summed.
 	db.prepare("DELETE FROM speed_minutes").run();
-	recordSpeed("m/x", { prompt: { tokens: 100, ms: 100 }, gen: null }, now);
-	recordSpeed("m/x", { prompt: { tokens: 100, ms: 300 }, gen: null }, now + 1000);
+	// (Aligned to the middle of a minute: "now" plus a second can be the next one, which made this flaky.)
+	const sameMinute = Math.floor(now / 60_000) * 60_000 + 20_000;
+	recordSpeed("m/x", { prompt: { tokens: 100, ms: 100 }, gen: null }, sameMinute);
+	recordSpeed("m/x", { prompt: { tokens: 100, ms: 300 }, gen: null }, sameMinute + 1000);
 	assert.equal(db.prepare("SELECT COUNT(*) AS n FROM speed_minutes").get().n, 1);
-	near(speedHistory("1h", now).models[0].prompt, 500, "200 tokens in 0.4 s");
+	near(speedHistory("1h", sameMinute + 2000).models[0].prompt, 500, "200 tokens in 0.4 s");
 	// Switched off: nothing is kept; retention.
 	config.SPEED_HISTORY_DAYS = 0;
 	assert.equal(recordSpeed("m/y", { prompt: { tokens: 100, ms: 100 }, gen: null }, now), false);
@@ -4793,6 +4875,621 @@ assert.equal(isReloadCommand(undefined), false);
 	config.ACCESS_LOG = accessLog;
 	db.prepare("DELETE FROM speed_minutes").run();
 	session.dispose?.();
+}
+
+// The terminal: a WebSocket server written for it, a pty helper run for real, and the whole path with a local stand-in for docker exec.
+{
+	const http = await import("node:http");
+	const net = await import("node:net");
+	const { spawn: spawnProc, spawnSync } = await import("node:child_process");
+	const settle = (ms = 30) => new Promise((r) => setTimeout(r, ms));
+	const until = async (fn, ms = 4000, what = "condition") => {
+		const end = Date.now() + ms;
+		while (Date.now() < end) {
+			const v = fn();
+			if (v) return v;
+			await settle(10);
+		}
+		throw new Error(`timed out waiting for ${what}`);
+	};
+
+	// The handshake's accept value, from RFC 6455 itself.
+	assert.equal(acceptKey("dGhlIHNhbXBsZSBub25jZQ=="), "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=");
+	// What a frame looks like on the wire.
+	assert.deepEqual([...encodeFrame(1, "hi")], [0x81, 2, 0x68, 0x69]);
+	assert.deepEqual([...encodeFrame(2, Buffer.alloc(200)).subarray(0, 4)], [0x82, 126, 0, 200]);
+	assert.deepEqual([...encodeFrame(2, Buffer.alloc(70000)).subarray(0, 10)], [0x82, 127, 0, 0, 0, 0, 0, 1, 0x11, 0x70]);
+
+	// A server that hands every connection to `upgrade`, and a raw client that can send anything.
+	const peers = [];
+	const wsServer = http.createServer();
+	wsServer.on("upgrade", (req, socket, head) => {
+		const peer = upgrade(req, socket, head, { maxMessage: 70_000, pingMs: 60_000, closeWaitMs: 300 });
+		if (!peer) return;
+		const record = { peer, messages: [], closed: null };
+		peers.push(record);
+		peer.onMessage = (data, binary) => {
+			record.messages.push([binary, data]);
+			if (!binary && data === "echo-me") peer.send("echoed");
+			if (binary) peer.send(Buffer.from(data));
+		};
+		peer.onClose = (code, reason) => (record.closed = [code, reason]);
+	});
+	await new Promise((r) => wsServer.listen(0, "127.0.0.1", r));
+	const port = wsServer.address().port;
+	const mask = (payload) => {
+		const key = Buffer.from([1, 2, 3, 4]);
+		const out = Buffer.from(payload);
+		for (let i = 0; i < out.length; i++) out[i] ^= key[i & 3];
+		return [key, out];
+	};
+	const clientFrame = (opcode, payload = Buffer.alloc(0), { fin = true, masked = true, rsv = 0, lenForm } = {}) => {
+		const body = Buffer.from(payload);
+		const [key, data] = masked ? mask(body) : [Buffer.alloc(0), body];
+		let header;
+		const m = masked ? 0x80 : 0;
+		if (lenForm === 64 || body.length >= 65536) {
+			header = Buffer.alloc(10);
+			header[1] = m | 127;
+			header.writeBigUInt64BE(BigInt(body.length), 2);
+		} else if (lenForm === 16 || body.length >= 126) header = Buffer.from([0, m | 126, body.length >> 8, body.length & 0xff]);
+		else header = Buffer.from([0, m | body.length]);
+		header[0] = (fin ? 0x80 : 0) | rsv | opcode;
+		return Buffer.concat([header, key, data]);
+	};
+	const connect = async (headers = {}) => {
+		const socket = net.connect(port, "127.0.0.1");
+		await new Promise((r) => socket.once("connect", r));
+		const client = { socket, raw: Buffer.alloc(0), head: null, frames: [], ended: false };
+		socket.on("data", (chunk) => {
+			client.raw = Buffer.concat([client.raw, chunk]);
+			if (!client.head) {
+				const at = client.raw.indexOf("\r\n\r\n");
+				if (at < 0) return;
+				client.head = client.raw.subarray(0, at).toString();
+				client.raw = client.raw.subarray(at + 4);
+			}
+			while (client.raw.length >= 2) {
+				let len = client.raw[1] & 0x7f;
+				let off = 2;
+				if (len === 126) { if (client.raw.length < 4) break; len = client.raw.readUInt16BE(2); off = 4; }
+				else if (len === 127) { if (client.raw.length < 10) break; len = Number(client.raw.readBigUInt64BE(2)); off = 10; }
+				if (client.raw.length < off + len) break;
+				client.frames.push({ fin: Boolean(client.raw[0] & 0x80), opcode: client.raw[0] & 0xf, payload: client.raw.subarray(off, off + len) });
+				client.raw = client.raw.subarray(off + len);
+			}
+		});
+		socket.on("close", () => (client.ended = true));
+		socket.on("error", () => {});
+		const h = { Host: `127.0.0.1:${port}`, Upgrade: "websocket", Connection: "Upgrade", "Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==", "Sec-WebSocket-Version": "13", ...headers };
+		socket.write(`GET /t HTTP/1.1\r\n${Object.entries(h).filter(([, v]) => v !== null).map(([k, v]) => `${k}: ${v}`).join("\r\n")}\r\n\r\n`);
+		await until(() => client.head || client.ended, 3000, "the handshake answer");
+		return client;
+	};
+	const closeCode = (client) => client.frames.find((f) => f.opcode === 8)?.payload.readUInt16BE(0);
+
+	// Handshake: accepted with the right value; refused with the right status otherwise.
+	const good = await connect();
+	assert.match(good.head, /^HTTP\/1\.1 101 /);
+	assert.match(good.head, /Sec-WebSocket-Accept: s3pPLMBiTxaQ9kYGzzhZRbK\+xOo=/);
+	assert.equal((await connect({ "Sec-WebSocket-Version": "8" })).head.split("\r\n")[0], "HTTP/1.1 426 Upgrade Required");
+	assert.match((await connect({ "Sec-WebSocket-Version": "8" })).head, /Sec-WebSocket-Version: 13/);
+	assert.match((await connect({ "Sec-WebSocket-Key": "short" })).head, /^HTTP\/1\.1 400 /);
+	assert.match((await connect({ Upgrade: "h2c" })).head, /^HTTP\/1\.1 400 /);
+
+	// Messages: text, binary, all three length forms, fragmentation, ping.
+	good.socket.write(clientFrame(1, "echo-me"));
+	await until(() => good.frames.length, 2000, "an echo");
+	assert.deepEqual([good.frames[0].opcode, good.frames[0].payload.toString()], [1, "echoed"], "a text message and a text answer");
+	for (const size of [0, 125, 126, 300, 65535, 65536, 69999]) {
+		const before = good.frames.length;
+		const data = Buffer.alloc(size, size & 0xff);
+		good.socket.write(clientFrame(2, data));
+		await until(() => good.frames.length > before, 3000, `the echo of ${size} bytes`);
+		assert.ok(good.frames.at(-1).payload.equals(data), `${size} bytes come back intact`);
+	}
+	good.socket.write(clientFrame(2, Buffer.from("a"), { fin: false }));
+	good.socket.write(clientFrame(9, Buffer.from("ping!")));
+	good.socket.write(clientFrame(0, Buffer.from("b"), { fin: false }));
+	good.socket.write(clientFrame(0, Buffer.from("c")));
+	await until(() => good.frames.some((f) => f.opcode === 10), 2000, "the pong");
+	assert.equal(good.frames.find((f) => f.opcode === 10).payload.toString(), "ping!", "a ping is answered with its own payload, even between fragments");
+	await until(() => peers[0].messages.some(([, d]) => Buffer.isBuffer(d) && d.toString() === "abc"), 2000, "the reassembled message");
+	good.socket.write(clientFrame(2, Buffer.concat([Buffer.from([0xf0, 0x9f]), Buffer.from([0x98, 0x80])]), { fin: false }));
+	good.socket.write(clientFrame(0, Buffer.from("é")));
+	good.socket.write(clientFrame(1, Buffer.from("é"), { lenForm: 16 }));
+	await until(() => peers[0].messages.some(([b, d]) => !b && d === "é"), 2000, "text sent with a 16-bit length for a short payload");
+	// The packet boundary can fall anywhere.
+	const whole = Buffer.concat([clientFrame(1, "split-a"), clientFrame(1, "split-b")]);
+	for (const byte of whole) good.socket.write(Buffer.from([byte]));
+	await until(() => peers[0].messages.filter(([b, d]) => !b && /^split-/.test(d)).length === 2, 2000, "two messages sent a byte at a time");
+
+	// Everything the RFC says to refuse, with the code it says to use.
+	const refused = async (label, frame, code) => {
+		const c = await connect();
+		c.socket.write(frame);
+		await until(() => closeCode(c) !== undefined || c.ended, 2000, label);
+		assert.equal(closeCode(c), code, label);
+		await until(() => c.ended, 2000, `${label}: the connection ends`);
+	};
+	await refused("an unmasked client frame", clientFrame(1, "x", { masked: false }), 1002);
+	await refused("reserved bits", clientFrame(1, "x", { rsv: 0x40 }), 1002);
+	await refused("an unknown opcode", clientFrame(3, "x"), 1002);
+	await refused("a fragmented control frame", clientFrame(9, "x", { fin: false }), 1002);
+	await refused("an oversize control frame", clientFrame(9, Buffer.alloc(126)), 1002);
+	await refused("a continuation with nothing to continue", clientFrame(0, "x"), 1002);
+	await refused("a new message inside a fragmented one", Buffer.concat([clientFrame(1, "a", { fin: false }), clientFrame(1, "b")]), 1002);
+	await refused("a message over the limit (length in the header)", clientFrame(2, Buffer.alloc(70_001)), 1009);
+	await refused("a huge 64-bit length", (() => { const f = clientFrame(2, "x", { lenForm: 64 }); f.writeBigUInt64BE(2n ** 40n, 2); return f; })(), 1009);
+	await refused("a fragmented message over the limit", Buffer.concat([clientFrame(2, Buffer.alloc(40_000), { fin: false }), clientFrame(0, Buffer.alloc(40_000))]), 1009);
+	await refused("invalid UTF-8 in text", clientFrame(1, Buffer.from([0xff, 0xfe])), 1007);
+	await refused("a one-byte close payload", clientFrame(8, Buffer.from([1])), 1002);
+	await refused("a reserved close code", clientFrame(8, Buffer.from([0x03, 0xed])), 1002);
+
+	// Closing: the client's close is answered and ends the connection; the server's close waits for the answer.
+	const polite = await connect();
+	const politeRecord = peers.at(-1);
+	polite.socket.write(clientFrame(8, Buffer.concat([Buffer.from([0x03, 0xe9]), Buffer.from("bye")])));
+	await until(() => polite.ended, 2000, "the polite close to end");
+	assert.equal(closeCode(polite), 1001);
+	assert.deepEqual(politeRecord.closed, [1001, "bye"], "the server is told the code and the reason");
+	const servered = await connect();
+	const serverRecord = peers.at(-1);
+	serverRecord.peer.close(1000, "done");
+	await until(() => closeCode(servered) === 1000, 2000, "the server's close frame");
+	assert.equal(serverRecord.peer.open, false);
+	assert.equal(serverRecord.peer.send("late"), false, "nothing is sent after a close");
+	servered.socket.write(clientFrame(8, Buffer.from([0x03, 0xe8])));
+	await until(() => serverRecord.closed, 2000, "the close to complete");
+	const vanished = await connect();
+	const vanishedRecord = peers.at(-1);
+	vanished.socket.destroy();
+	await until(() => vanishedRecord.closed, 2000, "a dropped connection to be noticed");
+	assert.equal(vanishedRecord.closed[0], 1006);
+	// A client that never answers pings is closed.
+	const quiet = http.createServer();
+	let quietPeer;
+	quiet.on("upgrade", (req, socket, head) => { quietPeer = upgrade(req, socket, head, { pingMs: 40, closeWaitMs: 100 }); quietPeer.onClose = (code) => (quietPeer.code = code); });
+	await new Promise((r) => quiet.listen(0, "127.0.0.1", r));
+	const quietSocket = net.connect(quiet.address().port, "127.0.0.1");
+	quietSocket.on("error", () => {});
+	quietSocket.write("GET /q HTTP/1.1\r\nHost: x\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n\r\n");
+	await until(() => quietPeer?.code, 3000, "the silent client to be dropped");
+	assert.equal(quietPeer.code, 1001);
+	quietSocket.destroy();
+	await new Promise((r) => quiet.close(r));
+	// Node's own client speaks to it.
+	const echoed = await new Promise((resolve, reject) => {
+		const ws = new WebSocket(`ws://127.0.0.1:${port}/t`);
+		ws.binaryType = "arraybuffer";
+		ws.onopen = () => ws.send("echo-me");
+		ws.onmessage = (e) => { ws.close(); resolve(e.data); };
+		ws.onerror = () => reject(new Error("the client could not connect"));
+	});
+	assert.equal(echoed, "echoed", "Node's WebSocket client works against it");
+	for (const c of [good]) c.socket.destroy();
+	await new Promise((r) => wsServer.close(r));
+
+	// The pty helper, run for real: it is plain Python, so it needs no container to be tested.
+	const pythonOk = spawnSync("python3", ["--version"]).status === 0;
+	if (!pythonOk) console.log("python3 not found: the terminal helper was not run");
+	else {
+		const helper = (size = "80x24") => {
+			const child = spawnProc("python3", ["-u", "-c", TERMINAL_HELPER, "piper-term-test"], { env: { ...process.env, TERM: "xterm-256color", PIPER_TERM_SIZE: size, HOME: tmpdir(), PS1: "" }, stdio: ["pipe", "pipe", "pipe"], cwd: tmpdir() });
+			const h = { child, out: "", err: "", exit: null };
+			child.stdout.setEncoding("utf8").on("data", (d) => (h.out += d));
+			child.stderr.setEncoding("utf8").on("data", (d) => (h.err += d));
+			child.on("close", (code) => (h.exit = code));
+			h.type = (text) => child.stdin.write(Buffer.concat([Buffer.from(`D${Buffer.byteLength(text)}\n`), Buffer.from(text)]));
+			h.typeBytes = (bytes) => child.stdin.write(Buffer.concat([Buffer.from(`D${bytes.length}\n`), Buffer.from(bytes)]));
+			h.resize = (c, r) => child.stdin.write(`R${c}x${r}\n`);
+			return h;
+		};
+		const t = helper("100x30");
+		t.type("echo hello-$((6*7))\n");
+		await until(() => t.out.includes("hello-42"), 5000, "the shell's answer");
+		t.type("stty size\n");
+		await until(() => /30 100/.test(t.out), 3000, "the starting size");
+		t.resize(132, 43);
+		await settle(100);
+		t.type("stty size\n");
+		await until(() => /43 132/.test(t.out), 3000, "the size after a resize");
+		t.resize(1000, 1);
+		await settle(80);
+		t.type("stty size\n");
+		await until(() => /2 500/.test(t.out), 3000, "a resize clamped to sane limits");
+		t.typeBytes([0x65, 0x63, 0x68, 0x6f, 0x20, 0xc3]);
+		await settle(60);
+		t.typeBytes([0xa9, 0x0a]);
+		await until(() => t.out.includes("é"), 3000, "a character split across two frames");
+		t.type("sleep 30\n");
+		await settle(300);
+		t.type("\x03");
+		await settle(200);
+		t.type("echo after-interrupt\n");
+		await until(() => t.out.includes("after-interrupt"), 3000, "a prompt after Ctrl-C");
+		t.type("echo $TERM; exit 3\n");
+		await until(() => t.exit !== null, 5000, "the helper to finish");
+		assert.match(t.out, /xterm-256color/);
+		assert.match(t.err, /X3\s*$/, "the exit code goes on stderr");
+		assert.equal(t.exit, 0, "the helper itself ends cleanly");
+		// Stdin ending hangs the shell up: nothing is left behind.
+		const e = helper();
+		e.type("echo ready\n");
+		await until(() => e.out.includes("ready"), 5000, "a shell");
+		e.type("sleep 60 &\n");
+		e.child.stdin.end();
+		await until(() => e.exit !== null, 6000, "the helper to end when stdin ends");
+		assert.match(e.err, /X\d+/, "it still reports how the shell ended");
+		// Exactly `sleep N`: matching on the whole command line would find the tool that runs this very test.
+		const sleeping = (n) => spawnSync("sh", ["-c", `for p in $(pgrep -x sleep); do ps -o args= -p $p; done | grep -qx 'sleep ${n}'`]).status === 0;
+		// A job the shell started does not outlive it, whether the shell exits or is hung up on.
+		const jobs = helper();
+		jobs.type("sleep 4242 &\n");
+		await settle(300);
+		assert.equal(sleeping(4242), true, "the job is running before the shell ends");
+		jobs.type("exit\n");
+		await until(() => jobs.exit !== null, 6000, "the helper to end after exit");
+		await settle(100);
+		assert.equal(sleeping(4242), false, "the job did not outlive its shell");
+		const hung = helper();
+		hung.type("sleep 4343 &\n");
+		await settle(300);
+		hung.child.stdin.end();
+		await until(() => hung.exit !== null, 6000, "the helper to end when hung up on");
+		await settle(100);
+		assert.equal(sleeping(4343), false, "nor when the connection simply ends");
+		// Garbage in the framing does not hurt it.
+		const g = helper();
+		g.child.stdin.write("Zjunk\nD99999999999x\nD5\nabc");
+		g.type("de\n");
+		g.type("echo still-here\n");
+		await until(() => g.out.includes("still-here"), 5000, "the helper to survive bad frames");
+		g.child.stdin.end();
+		await until(() => g.exit !== null, 6000, "the helper to end");
+	}
+
+	// The whole path: HTTP upgrade, every refusal, the shell (a local stand-in for `docker exec`), audit, limits.
+	if (pythonOk) {
+		const { server } = await import("./server.mjs");
+		const accessLog = config.ACCESS_LOG;
+		config.ACCESS_LOG = false;
+		const name = containerName(chatIdHash("terminal-test"));
+		const stopped = containerName(chatIdHash("terminal-stopped"));
+		const foreign = "some-other-container";
+		const execCalls = [];
+		setRunner(async (bin, args) => {
+			if (args[0] === "inspect") {
+				const infos = args.slice(args.indexOf("container") + 1).map((n) => ({ Name: `/${n}`, Id: `id-${n}`, State: { Running: n === name }, Config: { Image: "piper-agent", Labels: { "piper.managed": "1", "piper.key": "" } } }));
+				return { code: 0, stdout: JSON.stringify(infos), stderr: "" };
+			}
+			if (args[0] === "exec") execCalls.push(args);
+			return { code: 0, stdout: "", stderr: "" };
+		});
+		const standIn = (bin, args) => {
+			const at = args.indexOf(name);
+			const env = Object.fromEntries(args.flatMap((a, i) => (a === "-e" ? [args[i + 1].split(/=(.*)/s).slice(0, 2)] : [])));
+			return spawnProc("python3", ["-u", "-c", args[at + 4], args[at + 5]], { env: { ...process.env, ...env, HOME: tmpdir(), PS1: "" }, stdio: ["pipe", "pipe", "pipe"], cwd: tmpdir() });
+		};
+		const PASS = "a long enough password";
+		clearPasswordHash();
+		// terminalUpgrade is called by hand with the stand-in; a real server upgrade uses the same function.
+		await new Promise((r) => server.listen(0, "127.0.0.1", r));
+		const sport = server.address().port;
+		server.removeAllListeners("upgrade");
+		server.on("upgrade", (req, socket, head) => { socket.on("error", () => {}); terminalUpgrade(req, socket, head, { spawnFn: standIn }).catch(() => socket.destroy()); });
+		const dashPost = async (path, body, cookie) => {
+			const res = await fetch(`http://127.0.0.1:${sport}${path}`, { method: "POST", headers: { "content-type": "application/json", ...(cookie ? { cookie } : {}) }, body: JSON.stringify(body) });
+			return { status: res.status, cookie: res.headers.get("set-cookie")?.split(";")[0] ?? null };
+		};
+		const attempt = (target, { cookie, origin, query = "" } = {}) => new Promise((resolve) => {
+			const headers = { ...(cookie ? { cookie } : {}), ...(origin ? { origin } : {}) };
+			const ws = new WebSocket(`ws://127.0.0.1:${sport}/dashboard/terminal/${target}${query}`, { headers });
+			const got = { opened: false, messages: [], binary: "", closed: null };
+			ws.binaryType = "arraybuffer";
+			ws.onopen = () => { got.opened = true; resolve({ ws, got }); };
+			ws.onmessage = (e) => (typeof e.data === "string" ? got.messages.push(JSON.parse(e.data)) : (got.binary += Buffer.from(e.data).toString()));
+			ws.onerror = () => resolve({ ws, got });
+			ws.onclose = (e) => (got.closed = [e.code, e.reason]);
+		});
+		const rawStatus = (target, headers = {}) => new Promise((resolve) => {
+			const req = http.request({ port: sport, host: "127.0.0.1", path: `/dashboard/terminal/${target}`, headers: { Connection: "Upgrade", Upgrade: "websocket", "Sec-WebSocket-Version": "13", "Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==", ...headers } });
+			req.on("response", (res) => { let body = ""; res.on("data", (d) => (body += d)); res.on("end", () => resolve({ status: res.statusCode, body })); });
+			req.on("upgrade", (res, socket) => { socket.destroy(); resolve({ status: 101 }); });
+			req.on("error", () => resolve({ status: 0 }));
+			req.end();
+		});
+		// Without a password: refused, with a reason that says what to do.
+		let r = await rawStatus(name);
+		assert.equal(r.status, 403);
+		assert.match(r.body, /dashboard password/);
+		assert.equal(terminalCount(), 0);
+		assert.equal((await dashPost("/dashboard/password", { next: PASS })).status, 200);
+		const login = await dashPost("/dashboard/login", { password: PASS });
+		const cookie = login.cookie;
+		assert.ok(cookie);
+		assert.equal((await rawStatus(name)).status, 401, "no cookie");
+		assert.equal((await rawStatus(name, { Cookie: "piper_session=forged" })).status, 401, "a forged cookie");
+		assert.equal((await rawStatus(name, { Cookie: cookie, Origin: "http://evil.example" })).status, 403, "a page from another origin");
+		assert.equal((await rawStatus(foreign, { Cookie: cookie })).status, 404, "not one of this gateway's containers");
+		assert.equal((await rawStatus(stopped, { Cookie: cookie })).status, 409, "not running");
+		assert.equal((await rawStatus("../etc/passwd", { Cookie: cookie })).status, 404, "a path that is not a container name");
+		const wrongPath = await new Promise((resolve) => http.get({ port: sport, host: "127.0.0.1", path: "/dashboard/other", headers: { Connection: "Upgrade", Upgrade: "websocket" } }).on("response", (res) => resolve(res.statusCode)).on("error", () => resolve(0)));
+		assert.equal(wrongPath, 404, "only the terminal path upgrades");
+		assert.equal(terminalCount(), 0, "nothing opened for any refusal");
+		assert.equal(sameOrigin({ headers: { origin: "http://x:1", host: "x:1" } }), true);
+		assert.equal(sameOrigin({ headers: { origin: "http://x:1", host: "y:1", "x-forwarded-host": "x:1" } }), true, "behind a proxy that rewrites Host");
+		assert.equal(sameOrigin({ headers: { origin: "null", host: "x:1" } }), false);
+		assert.equal(sameOrigin({ headers: { host: "x:1" } }), true, "no Origin: not a browser");
+		// Settings that switch it off.
+		config.TERMINAL_ENABLED = false;
+		assert.equal((await rawStatus(name, { Cookie: cookie })).status, 403, "switched off");
+		config.TERMINAL_ENABLED = true;
+
+		// A real session.
+		const auditBefore = queryAudit({ q: "terminal.", limit: 100 }).rows.length;
+		const { ws, got } = await attempt(name, { cookie, origin: `http://127.0.0.1:${sport}`, query: "?cols=90&rows=20" });
+		assert.equal(got.opened, true);
+		await until(() => terminalCount() === 1, 2000, "the terminal to count");
+		ws.send(Buffer.from("echo from-$((40+2)); stty size\n"));
+		await until(() => got.binary.includes("from-42") && /20 90/.test(got.binary), 5000, `output and the size from the URL (got ${JSON.stringify(got.binary.slice(-300))}, ${JSON.stringify(got.messages)}, closed ${JSON.stringify(got.closed)})`);
+		ws.send(JSON.stringify({ t: "resize", cols: 120, rows: 40 }));
+		await settle(150);
+		ws.send(Buffer.from("stty size\n"));
+		await until(() => /40 120/.test(got.binary), 3000, "a resize over the socket");
+		ws.send("not json at all");
+		ws.send(JSON.stringify({ t: "unknown" }));
+		ws.send(Buffer.from("echo still-alive\n"));
+		await until(() => got.binary.includes("still-alive"), 3000, "bad control messages being ignored");
+		ws.send(Buffer.from("exit 4\n"));
+		await until(() => got.messages.some((m) => m.t === "exit" && m.code === 4), 5000, "the exit message");
+		await until(() => got.closed, 3000, "the socket to close after the shell");
+		assert.equal(terminalCount(), 0);
+		const rows = queryAudit({ q: "terminal.", limit: 100 }).rows;
+		assert.equal(rows.length, auditBefore + 2, "one row to open and one to close");
+		const closeRow = rows.find((x) => x.action === "terminal.close");
+		assert.match(closeRow.detail, /the shell exited \(code 4\); \d+ s, \d+ bytes typed, \d+ bytes shown/);
+		assert.deepEqual([closeRow.actor, Boolean(closeRow.ip)], ["dashboard", true], "who and from where");
+		assert.ok(!JSON.stringify(rows).includes("from-42") && !JSON.stringify(rows).includes("still-alive"), "what was typed or shown is never recorded");
+		// Hanging up: the shell is told, the sweep by name runs, no terminal is left counted.
+		execCalls.length = 0;
+		const second = await attempt(name, { cookie });
+		second.ws.send(Buffer.from("echo x\n"));
+		await until(() => second.got.binary.includes("x"), 3000, "a second shell");
+		second.ws.close();
+		await until(() => terminalCount() === 0, 3000, "the count to drop when the browser leaves");
+		await until(() => execCalls.some((a) => a.includes("pkill") && a.some((x) => /^piper-term-[0-9a-f]{8}$/.test(x))), 5000, "the by-name hang-up after a couple of seconds");
+		const hangup = queryAudit({ q: "terminal.close", limit: 5 }).rows[0];
+		assert.match(hangup.detail, /closed by the browser/);
+		assert.deepEqual([hangup.actor, Boolean(hangup.ip)], ["dashboard", true], "a close from the browser still says who opened it");
+		// The limit, and the idle timeout.
+		config.TERMINAL_MAX_SESSIONS = 2;
+		const a1 = await attempt(name, { cookie });
+		const a2 = await attempt(name, { cookie });
+		assert.deepEqual([a1.got.opened, a2.got.opened, terminalCount()], [true, true, 2]);
+		assert.equal((await rawStatus(name, { Cookie: cookie })).status, 429, "over the limit");
+		a1.ws.close();
+		a2.ws.close();
+		await until(() => terminalCount() === 0, 3000, "both to close");
+		config.TERMINAL_MAX_SESSIONS = 4;
+		config.TERMINAL_IDLE_MS = 400;
+		const idle = await attempt(name, { cookie });
+		await until(() => idle.got.messages.some((m) => m.t === "idle"), 3000, "the idle notice");
+		await until(() => idle.got.closed, 3000, "the idle close");
+		assert.match(queryAudit({ q: "terminal.close", limit: 3 }).rows[0].detail, /idle/);
+		config.TERMINAL_IDLE_MS = 15 * 60_000;
+		// Typing keeps it open.
+		config.TERMINAL_IDLE_MS = 500;
+		const busy = await attempt(name, { cookie });
+		for (let i = 0; i < 5; i++) { busy.ws.send(Buffer.from(" ")); await settle(200); }
+		assert.equal(busy.got.closed, null, "input keeps a terminal open past the idle time");
+		config.TERMINAL_IDLE_MS = 15 * 60_000;
+		closeAllTerminals("test over");
+		await until(() => busy.got.closed, 3000, "closeAllTerminals");
+		await until(() => terminalCount() === 0, 3000, "none left");
+		// A shell that cannot start is explained, not silent.
+		const broken = http.createServer();
+		const brokenSpawn = () => spawnProc("sh", ["-c", "echo 'exec: \"python3\": executable file not found in $PATH' >&2; exit 127"], { stdio: ["pipe", "pipe", "pipe"] });
+		server.removeAllListeners("upgrade");
+		server.on("upgrade", (req, socket, head) => { socket.on("error", () => {}); terminalUpgrade(req, socket, head, { spawnFn: brokenSpawn }).catch(() => socket.destroy()); });
+		const nope = await attempt(name, { cookie });
+		await until(() => nope.got.messages.some((m) => m.t === "error"), 4000, "the explanation");
+		assert.match(nope.got.messages.find((m) => m.t === "error").message, /the shell could not start: .*not found/);
+		await until(() => nope.got.closed, 3000, "the close");
+		void broken;
+		assert.equal(terminalLabel(name, { Config: { Labels: { "piper.key": "" } } }), name);
+		assert.match(terminalLabel(name, { Config: { Labels: { "piper.key": "no-such-key" } } }), /\(deleted key\) · /);
+		clearPasswordHash();
+		await new Promise((r) => server.close(r));
+		config.ACCESS_LOG = accessLog;
+		setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+	}
+}
+
+// The file browser's routes, with a stand-in `docker` that runs the helper locally in the mounted folder.
+{
+	const fsx = await import("node:fs");
+	const { server } = await import("./server.mjs");
+	const accessLog = config.ACCESS_LOG;
+	config.ACCESS_LOG = false;
+	const bin = mkdtempSync(join(tmpdir(), "fakedocker-"));
+	const helper = fileURLToPath(new URL("./piper-profile.mjs", import.meta.url));
+	writeFileSync(join(bin, "docker"), `#!/usr/bin/env bash
+dir=""; max=0; args=("$@"); rest=(); i=0
+while [ $i -lt $# ]; do
+  a="\${args[$i]}"
+  case "$a" in
+    -v) v="\${args[$((i+1))]}"; case "$v" in *:/data) dir="\${v%:/data}";; esac;;
+    -e) e="\${args[$((i+1))]}"; case "$e" in PROFILE_MAX_BYTES=*) max="\${e#*=}";; esac;;
+    /opt/piper/profile.mjs) rest=("\${args[@]:$((i+1))}"); break;;
+  esac
+  i=$((i+1))
+done
+cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
+`);
+	fsx.chmodSync(join(bin, "docker"), 0o755);
+	const oldPath = process.env.PATH;
+	process.env.PATH = `${bin}:${oldPath}`;
+	clearPasswordHash();
+	const { record: key } = apiKeys.create({ name: "file browser", expiresAt: 0 });
+	const { record: other } = apiKeys.create({ name: "someone else", expiresAt: 0 });
+	const scopeName = scopeOf(key.id);
+	const http = await import("node:http");
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	const base = `http://127.0.0.1:${server.address().port}`;
+	const call = async (method, path, { body, json, query = "" } = {}) => {
+		const res = await fetch(`${base}/dashboard/files/${scopeName}${path}${query}`, { method, headers: json !== undefined ? { "content-type": "application/json" } : {}, body: json !== undefined ? JSON.stringify(json) : body });
+		const type = res.headers.get("content-type") ?? "";
+		const raw = Buffer.from(await res.arrayBuffer());
+		return { status: res.status, json: type.includes("json") ? JSON.parse(raw.toString()) : null, raw };
+	};
+	const ws = ensureWorkspace(key.id);
+	const prof = ensureProfile(key.id);
+
+	// Listing: workspace by default, the profile on request, folders sized only when asked.
+	writeFileSync(join(ws, "readme.md"), "# hi\n");
+	mkdirSync(join(ws, "src/deep"), { recursive: true });
+	let r = await call("GET", "/");
+	assert.equal(r.status, 200);
+	assert.deepEqual([r.json.root, r.json.path, r.json.truncated, r.json.total], ["workspace", "", false, 2]);
+	assert.deepEqual(r.json.entries.map((e) => [e.name, e.type]), [["readme.md", "file"], ["src", "dir"]]);
+	assert.equal(r.json.entries.find((e) => e.name === "src").bytes, null, "no folder walk for a listing");
+	r = await call("GET", "/src/");
+	assert.equal(r.json.path, "src");
+	r = await call("GET", "", { query: "?root=profile&as=list" });
+	assert.equal(r.json.root, "profile");
+	assert.ok(r.json.entries.some((e) => e.name === "settings.json"), "the profile has its settings.json");
+
+	// Make, save, read back, conflict, move, download, delete: all in the workspace.
+	assert.equal((await call("POST", "/docs/notes", { query: "?op=mkdir" })).json.created, true);
+	r = await call("PUT", "/docs/notes/todo.txt", { query: "?as=text", json: { text: "first line\n" } });
+	assert.equal(r.status, 200);
+	const firstModified = r.json.modified;
+	assert.equal(readFileSync(join(ws, "docs/notes/todo.txt"), "utf8"), "first line\n");
+	r = await call("GET", "/docs/notes/todo.txt", { query: "?as=text" });
+	assert.deepEqual([r.json.text, r.json.modified], ["first line\n", firstModified]);
+	await new Promise((r) => setTimeout(r, 20));
+	writeFileSync(join(ws, "docs/notes/todo.txt"), "the agent wrote this\n");
+	utimesSync(join(ws, "docs/notes/todo.txt"), new Date(), new Date(Date.now() + 5000));
+	r = await call("PUT", "/docs/notes/todo.txt", { query: "?as=text", json: { text: "mine\n", expectModified: firstModified } });
+	assert.deepEqual([r.status, r.json.error.code], [409, "conflict"], "an edit over an agent's newer work is a conflict");
+	assert.match(r.json.error.message, /changed since you opened it/);
+	assert.equal(readFileSync(join(ws, "docs/notes/todo.txt"), "utf8"), "the agent wrote this\n");
+	r = await call("POST", "/docs/notes/todo.txt", { query: "?op=move", json: { to: "docs/done/todo-renamed.txt" } });
+	assert.deepEqual([r.status, r.json.moved], [200, true]);
+	assert.equal(existsSync(join(ws, "docs/done/todo-renamed.txt")), true);
+	r = await call("POST", "/docs/done/todo-renamed.txt", { query: "?op=move", json: { to: "readme.md" } });
+	assert.equal(r.status, 400, "no overwrite unless asked");
+	r = await call("POST", "/docs/done/todo-renamed.txt", { query: "?op=move", json: {} });
+	assert.equal(r.status, 400);
+	r = await call("GET", "/docs/done/todo-renamed.txt");
+	assert.deepEqual([r.status, r.raw.toString()], [200, "the agent wrote this\n"], "a download is the bytes");
+	r = await call("PUT", "/uploaded.bin", { body: Buffer.from([0, 1, 2, 255]) });
+	assert.equal(r.status, 200, "an upload still works");
+	assert.deepEqual([...readFileSync(join(ws, "uploaded.bin"))], [0, 1, 2, 255]);
+	assert.equal((await call("GET", "/uploaded.bin", { query: "?as=text" })).json.binary, true);
+	assert.equal((await call("DELETE", "/docs")).status, 200);
+	assert.equal(existsSync(join(ws, "docs")), false);
+	assert.equal((await call("GET", "/nope.txt", { query: "?as=text" })).status, 400);
+	assert.equal((await call("PATCH", "/x")).status, 405);
+
+	// The profile: editable, and locked means read-only.
+	r = await call("PUT", "/AGENTS.md", { query: "?root=profile&as=text", json: { text: "You are the architect.\n" } });
+	assert.equal(r.status, 200);
+	assert.equal(readFileSync(join(prof, "AGENTS.md"), "utf8"), "You are the architect.\n", "written into the profile, not the workspace");
+	assert.equal(existsSync(join(ws, "AGENTS.md")), false);
+	setProfileLock(scopeName, true);
+	for (const [method, path, extra] of [["PUT", "/AGENTS.md", { query: "?root=profile&as=text", json: { text: "x" } }], ["PUT", "/up.txt", { query: "?root=profile", body: "x" }], ["POST", "/d", { query: "?root=profile&op=mkdir" }], ["POST", "/AGENTS.md", { query: "?root=profile&op=move", json: { to: "B.md" } }], ["DELETE", "/AGENTS.md", { query: "?root=profile" }]]) {
+		const locked = await call(method, path, extra);
+		assert.equal(locked.status, 423, `${method} ${path} on a locked profile`);
+		assert.equal(locked.json.error.code, "locked");
+	}
+	assert.equal(readFileSync(join(prof, "AGENTS.md"), "utf8"), "You are the architect.\n", "nothing changed");
+	assert.equal((await call("GET", "/AGENTS.md", { query: "?root=profile&as=text" })).status, 200, "reading is fine");
+	assert.equal((await call("PUT", "/ok.txt", { body: "workspace is not the profile" })).status, 200, "the workspace is not locked with it");
+	setProfileLock(scopeName, false);
+	assert.equal((await call("DELETE", "/AGENTS.md", { query: "?root=profile" })).status, 200);
+	// Quotas: a profile over its limit refuses saves; a frozen workspace refuses writes but still deletes.
+	const oldProfileMax = config.PROFILE_MAX_BYTES;
+	config.PROFILE_MAX_BYTES = 500;
+	r = await call("PUT", "/big.md", { query: "?root=profile&as=text", json: { text: "x".repeat(600) } });
+	assert.equal(r.status, 400);
+	assert.match(r.json.error.message, /quota/);
+	config.PROFILE_MAX_BYTES = oldProfileMax;
+	const oldWsMax = config.WORKSPACE_MAX_BYTES;
+	writeFileSync(join(ws, "filler.bin"), Buffer.alloc(4000));
+	invalidateSize(ws);
+	config.WORKSPACE_MAX_BYTES = 1000;
+	for (const [method, path, extra] of [["PUT", "/more.txt", { body: "x" }], ["PUT", "/t.txt", { query: "?as=text", json: { text: "x" } }], ["POST", "/f", { query: "?op=mkdir" }]]) {
+		const frozen = await call(method, path, extra);
+		assert.equal(frozen.status, 423, `${method} on a frozen workspace`);
+		assert.match(frozen.json.error.message, /frozen/);
+	}
+	assert.equal((await call("DELETE", "/filler.bin")).status, 200, "deleting is how space is made");
+	invalidateSize(ws);
+	config.WORKSPACE_MAX_BYTES = oldWsMax;
+	// An agent's links go nowhere, through the routes too.
+	symlinkSync("/etc", join(ws, "etc-link"));
+	assert.equal((await call("GET", "/etc-link/hostname")).status === 200, false, "a download through a link is refused");
+	assert.equal((await call("PUT", "/etc-link/pwned", { query: "?as=text", json: { text: "x" } })).status, 400);
+	assert.equal(existsSync("/etc/pwned"), false);
+	const rawGet = (path) => new Promise((resolve) => http.get({ port: server.address().port, host: "127.0.0.1", path }, (res) => { let body = ""; res.on("data", (d) => (body += d)); res.on("end", () => resolve({ status: res.statusCode, body })); }).on("error", () => resolve({ status: 0, body: "" })));
+	for (const evil of [`/dashboard/files/${scopeName}/%2e%2e/%2e%2e/etc/passwd?as=text`, `/dashboard/files/${scopeName}/..%2f..%2fetc%2fpasswd?as=text`, `/dashboard/files/${scopeName}/%2fetc%2fpasswd?as=text`]) {
+		const evilReply = await rawGet(evil);
+		assert.ok(evilReply.status === 400 || evilReply.status === 404, `${evil} -> ${evilReply.status}`);
+		assert.ok(!evilReply.body.includes("root:"), "no file outside the folder is ever read");
+	}
+	// An agent with a shared workspace browses the key's; with its own, its own.
+	const agent = agents.create({ keyId: key.id, name: "browsable", workspace: "shared" });
+	const agentScopeName = scopeOf(agentScope(key.id, agent.id));
+	const viaAgent = await fetch(`${base}/dashboard/files/${agentScopeName}/`);
+	assert.ok((await viaAgent.json()).entries.some((e) => e.name === "readme.md"), "a shared agent sees the key's workspace");
+	agents.remove(agent.id);
+	// What is recorded: the path, never the content; and nobody else's scope is reachable by guessing.
+	const trail = queryAudit({ q: "files.", limit: 200 }).rows.filter((x) => x.action.startsWith("files."));
+	assert.ok(["files.mkdir", "files.write", "files.move", "files.upload", "files.delete"].every((a) => trail.some((x) => x.action === a)), "each kind of change is recorded");
+	assert.ok(trail.every((x) => x.category === "keys" && x.actor === "dashboard"));
+	assert.ok(trail.some((x) => x.detail === "workspace:docs/notes/todo.txt"));
+	assert.ok(!JSON.stringify(trail).includes("the agent wrote this") && !JSON.stringify(trail).includes("architect"), "content is not in the log");
+	assert.equal((await fetch(`${base}/dashboard/files/key-no-such-key/`)).status, 200 || 404, "an unknown scope just has an empty folder");
+	void other;
+	// Locked dashboard.
+	setPasswordHash(hashPassword("a long enough password"));
+	assert.equal((await fetch(`${base}/dashboard/files/${scopeName}/`)).status, 401);
+	clearPasswordHash();
+
+	await new Promise((r) => server.close(r));
+	process.env.PATH = oldPath;
+	rmSync(bin, { recursive: true, force: true });
+	config.ACCESS_LOG = accessLog;
+}
+
+// The vendored terminal files: exactly the listed ones, nothing else, only behind the dashboard.
+{
+	const { server } = await import("./server.mjs");
+	const accessLog = config.ACCESS_LOG;
+	config.ACCESS_LOG = false;
+	clearPasswordHash();
+	assert.deepEqual(Object.keys(VENDOR_FILES).sort(), ["xterm/LICENSE", "xterm/addon-fit.js", "xterm/xterm.css", "xterm/xterm.js"]);
+	for (const name of Object.keys(VENDOR_FILES)) assert.ok(vendorFile(name).body.length > 500, `${name} is there`);
+	assert.match(vendorFile("xterm/LICENSE").body.toString(), /Permission is hereby granted/, "the licence travels with the code");
+	for (const bad of ["../package.json", "xterm/../../package.json", "xterm/xterm.js.map", "xterm", "", "xterm/xterm.js/", "XTERM/xterm.js", "xterm%2Fxterm.js", "__proto__", "constructor"]) assert.equal(vendorFile(bad), null, JSON.stringify(bad));
+	assert.deepEqual(THIRD_PARTY.map((t) => t.name), ["xterm.js", "xterm.js fit addon"]);
+	for (const row of THIRD_PARTY) assert.ok(readFileSync(new URL("./THIRD_PARTY.md", import.meta.url), "utf8").includes(row.version), `THIRD_PARTY.md names ${row.name} ${row.version}`);
+	assert.ok(JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")).dependencies === undefined, "still no runtime dependencies");
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	const base = `http://127.0.0.1:${server.address().port}`;
+	const js = await fetch(`${base}/dashboard/vendor/xterm/xterm.js`);
+	assert.deepEqual([js.status, js.headers.get("content-type"), js.headers.get("x-content-type-options")], [200, "text/javascript; charset=utf-8", "nosniff"]);
+	assert.equal((await fetch(`${base}/dashboard/vendor/xterm/xterm.css`)).headers.get("content-type"), "text/css; charset=utf-8");
+	for (const evil of ["/dashboard/vendor/../package.json", "/dashboard/vendor/xterm/%2e%2e/%2e%2e/package.json", "/dashboard/vendor/xterm/nope.js", "/dashboard/vendor/"]) assert.equal((await fetch(`${base}${evil}`)).status, 404, evil);
+	setPasswordHash(hashPassword("a long enough password"));
+	assert.equal((await fetch(`${base}/dashboard/vendor/xterm/xterm.js`)).status, 401, "not served to someone who is not signed in");
+	clearPasswordHash();
+	const about = await (await fetch(`${base}/dashboard/about.json`)).json();
+	assert.deepEqual(about.thirdParty.map((t) => t.licence), ["MIT", "MIT"], "credited on the About page");
+	await new Promise((r) => server.close(r));
+	config.ACCESS_LOG = accessLog;
 }
 
 console.log("nextTurn + images: ok");

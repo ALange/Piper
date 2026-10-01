@@ -94,6 +94,21 @@ An agent on its own port serves `GET /health`, `GET /v1/models`, `POST /v1/chat/
 only for the key that owns it. Anything else (the dashboard, settings, other routes) is `404`. `OPTIONS` is answered
 for browser clients.
 
+## Files and the terminal (dashboard)
+
+The file browser uses `/dashboard/files/<scope>/<path>` (scope is `key-<id>` or `key-<id>--<agent>`; add `?root=profile`
+for the profile). `GET` a folder or `?as=list` lists (`{entries, truncated, total}`), `GET ?as=text` returns an editor's
+text (`{text, bytes, modified}`, or `{binary: true}` / `{tooBig: true}`), a plain `GET` downloads, `PUT` uploads, `PUT
+?as=text` with `{"text", "expectModified"}` saves (**409 `conflict`** when the file changed since `expectModified`),
+`POST ?op=mkdir`, `POST ?op=move` with `{"to", "overwrite"}`, `DELETE` removes. A locked profile or a frozen workspace
+answers 423.
+
+The terminal is a **WebSocket** at `/dashboard/terminal/<container>?cols=&rows=` (dashboard cookie, same origin, running
+container). Browser to gateway: a binary message is keystrokes, a text message is JSON `{"t":"resize","cols","rows"}`.
+Gateway to browser: binary is the shell's output, text is JSON (`{"t":"exit","code"}`, `{"t":"error","message"}`,
+`{"t":"idle"}`). Refusals are plain HTTP answers to the upgrade: 401 not signed in, 403 no dashboard password, wrong
+origin or terminals off, 404 not one of this gateway's containers, 409 not running, 429 too many open.
+
 ## Health: `GET /health`
 
 No key needed: `{"status":"ok","sessions":{…},"docker":true|false|null,"diskFreeMb":…}`.
