@@ -428,14 +428,6 @@
     <div class="view on" id="view-overview">
       <div class="cards" id="cards"></div>
 
-    <div class="sectionhead" style="margin-top:14px"><h2>Model speed</h2>
-      <div class="ctrl"><span class="hint" id="spnote"></span>
-        <select id="sprange"><option value="1h">last hour</option><option value="6h">last 6 hours</option><option value="24h">last 24 hours</option><option value="7d">last 7 days</option></select>
-      </div>
-    </div>
-    <div id="spgrid" class="speedgrid"></div>
-    <p class="hint" id="spempty" hidden>Nothing measured in this range yet. Speed is timed on each model call an agent makes: <b>prompt</b> speed needs a prompt of at least 64 tokens and <b>generation</b> speed an answer of at least 8, and a provider that does not stream cannot be timed. Nothing but model names, token counts and times is kept.</p>
-
     <div class="sectionhead" style="margin-top:14px"><h2>Resources</h2><span class="hint" id="resnote"></span></div>
     <div class="cards" id="rescards"></div>
     <div class="grid3">
@@ -486,6 +478,14 @@
         <dl class="limits" id="limits"></dl>
       </section>
     </div>
+
+    <div class="sectionhead" style="margin-top:14px"><h2>Model speed</h2>
+      <div class="ctrl"><span class="hint" id="spnote"></span>
+        <select id="sprange"><option value="1h">last hour</option><option value="6h">last 6 hours</option><option value="24h">last 24 hours</option><option value="7d">last 7 days</option></select>
+      </div>
+    </div>
+    <div id="spgrid" class="speedgrid"></div>
+    <p class="hint" id="spempty" hidden>Nothing measured in this range yet. Speed is timed on each model call an agent makes: <b>prompt</b> speed needs a prompt of at least 64 tokens and <b>generation</b> speed an answer of at least 8, and a provider that does not stream cannot be timed. Nothing but model names, token counts and times is kept.</p>
 
     </div><!-- /view-overview -->
 

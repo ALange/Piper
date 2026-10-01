@@ -4660,39 +4660,61 @@ assert.equal(isReloadCommand(undefined), false);
 		return child;
 	};
 	const child = fake();
-	const times = [];
-	const session = await new PiRpcSession(child, { clock: () => times.shift() }).init(2000);
+	const clock = { times: [] };
+	const session = await new PiRpcSession(child, { clock: () => (clock.times.length ? clock.times.shift() : 0) }).init(2000);
 	const emit = (record) => child.stdout.write(`${JSON.stringify(record)}\n`);
 	const settle = () => new Promise((r) => setTimeout(r, 15));
 	const assistant = (extra = {}) => ({ role: "assistant", provider: "prov", model: "fast", stopReason: "stop", ...extra });
-	const run = async (clockTimes, { usage, message = {}, deltas = 1 } = {}) => {
-		times.push(...clockTimes);
+	// One call as the stream shows it: the event before it (the request going out), the reply announced, deltas, the end.
+	// `at` lists the arrival time of each event in that order: [boundary, start, ...one per delta, end].
+	const run = async (at, { usage, message = {}, deltas = 1, boundary = true } = {}) => {
+		const times = boundary ? at : at.slice(1);
+		clock.times.push(...times);
+		if (boundary) emit({ type: "agent_start" });
 		emit({ type: "message_start", message: assistant() });
 		for (let i = 0; i < deltas; i++) emit({ type: "message_update", assistantMessageEvent: { type: i === 0 ? "thinking_delta" : "text_delta", delta: "x" } });
 		emit({ type: "message_end", message: assistant({ usage, ...message }) });
 		await settle();
-		times.length = 0;
+		clock.times.length = 0;
 	};
 	assert.equal(session.getSpeed().gen, null, "nothing measured yet");
-	await run([0, 500, 2500], { usage: { input: 1000, output: 101, cacheRead: 5000, cacheWrite: 0 }, deltas: 3 });
+	await run([0, 0, 500, 501, 502, 2500], { usage: { input: 1000, output: 101, cacheRead: 5000, cacheWrite: 0 }, deltas: 3 });
 	let v = session.getSpeed();
 	near(v.prompt, 2000, "prompt tokens per second");
 	near(v.gen, 50, "generation tokens per second");
 	assert.equal(v.last.model, "prov/fast");
 	// A second model in the same session, a call that failed, one aborted, one that did not stream, one with no usage.
 	const history0 = speedHistory("1h").models.reduce((n, m) => n + m.calls, 0);
-	await run([0, 100, 600], { usage: { input: 200, output: 51 }, message: { model: "slow" } });
+	await run([0, 0, 100, 600], { usage: { input: 200, output: 51 }, message: { model: "slow" } });
 	near(session.getSpeed().gen, 60, "the session average is weighted over both calls");
 	assert.deepEqual(Object.keys(session.getSpeed().byModel).sort(), ["prov/fast", "prov/slow"]);
 	for (const [label, opts] of [["error", { message: { stopReason: "error" } }], ["aborted", { message: { stopReason: "aborted" } }], ["no usage", { usage: null }], ["no deltas", { deltas: 0 }]]) {
 		const before = JSON.stringify(session.getSpeed());
-		await run([0, 100, 900], { usage: { input: 5000, output: 400 }, ...opts });
+		await run([0, 0, ...(opts.deltas === 0 ? [] : [100]), 900], { usage: { input: 5000, output: 400 }, ...opts });
 		assert.equal(JSON.stringify(session.getSpeed()), before, `a call that ${label} is not a measurement`);
 	}
-	await run([0, 4000, 4005], { usage: { input: 5000, output: 400 } });
+	await run([0, 0, 4000, 4005], { usage: { input: 5000, output: 400 } });
 	near(session.getSpeed().prompt, 1200 * 1000 / 600, "a call that arrived in one burst did not change it");
-	await run([0, 500, 2500], { usage: { input: 1000, output: 101 }, message: { role: "user" } });
-	assert.equal(speedHistory("1h").models.reduce((n, m) => n + m.calls, 0), history0 + 1, "only the second call was added to the history");
+	// A provider that holds its reply until the first token: Pi announces the reply only then, so the call is timed
+	// from the event before it. Without that, this one would read as a time to first token of nothing.
+	const beforeLate = JSON.stringify(session.getSpeed().prompt);
+	await run([1000, 1990, 2000, 4000], { usage: { input: 3000, output: 101 } });
+	assert.notEqual(JSON.stringify(session.getSpeed().prompt), beforeLate, "the prompt was timed from the request, 1000 ms before the first token");
+	near(session.getSpeed().prompt, (1000 + 200 + 3000) / ((500 + 100 + 1000) / 1000), "1000 + 200 + 3000 prompt tokens over 500 + 100 + 1000 ms");
+	// Tool turns: the call is timed from the tool result, not from the previous reply.
+	const toolBefore = session.getSpeed().calls;
+	clock.times.push(9000, 9000, 9600, 9700, 10200);
+	emit({ type: "tool_execution_end", toolName: "bash" });
+	emit({ type: "message_start", message: assistant() });
+	emit({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "x" } });
+	emit({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "y" } });
+	emit({ type: "message_end", message: assistant({ usage: { input: 3000, output: 21 } }) });
+	await settle();
+	clock.times.length = 0;
+	assert.equal(session.getSpeed().calls, toolBefore + 1);
+	near(session.getSpeed().last.prompt, 3000 / 0.6, "3000 tokens, 600 ms after the tool finished");
+	await run([0, 0, 500, 2500], { usage: { input: 1000, output: 101 }, message: { role: "user" } });
+	assert.equal(speedHistory("1h").models.reduce((n, m) => n + m.calls, 0), history0 + 3, "the second call, the late-announced one and the tool turn were added; a user message was not");
 
 	// The history: one row per minute and model, ranges, buckets, and the setting that switches it off.
 	const now = Date.now();

@@ -14,8 +14,9 @@ spend, oldest agent. Below them a **Model speed** section: one card per model th
 generation and prompt-processing speed (tokens per second), the number of calls and a chart of each over the last
 hour, 6 hours, day or week. Speed is timed from the agent's own event stream on every model call: generation is the
 output tokens after the first one over the time from the first token to the end; prompt speed is the processed
-prompt tokens (input plus cache writes, not cache reads) over the time to the first token, so it includes network
-and queueing time and reads low for short prompts. Calls with under 64 prompt tokens or under 8 output tokens are
+prompt tokens (input plus cache writes, not cache reads) over the time from the request going out (the event before
+the reply is announced: the prompt, or a tool result) to the first token, so it includes network and queueing time
+and reads low for short prompts. Calls with under 64 prompt tokens or under 8 output tokens are
 not counted for that figure, and a provider that does not stream cannot be timed. Averages are token totals over
 time totals. `SPEED_HISTORY_DAYS` (Settings → Server) sets how long the history is kept (0 keeps none); only model
 names, token counts and times are stored. Below it a **Resources** section: host CPU, memory, load and free disk, the gateway
