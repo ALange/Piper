@@ -2,6 +2,41 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-10-01
+
+### Added
+- **Live view.** *watch* on the Agents page follows a running chat as it happens (messages, thinking, each tool call
+  and its result), with an *interrupt* button and a Markdown/JSON transcript download. Needs a dashboard password;
+  watches, interrupts and downloads are audited without content. Setting: `LIVE_VIEW_ENABLED`.
+- **Spend per agent.** Spend records which agent endpoint a session belonged to; the Spend page has a "by key and
+  agent" table and the Endpoints page shows each agent's spend today.
+
+- **Packages and MCP servers from the dashboard.** The Profiles detail view installs and removes Pi packages (`npm:`,
+  `git:` or `https://` sources only) and adds, removes, enables and tests MCP servers, each as Pi's own command in a
+  throwaway container with only that profile mounted. Secrets are never written to `mcp.json` (only `${NAME}` references).
+  Needs a dashboard password. Setting: `PACKAGES_ENABLED`.
+- **Shared bundles from the dashboard.** Files → Bundles creates, edits and deletes the bundles under `SHARED_ROOT` with the
+  same browser and editor, and reloads the live chats of every key that gets the bundle.
+- **Hand-offs between agents.** An agent can be allowed to give tasks to the other agents of its key (`piper_agents`,
+  `piper_delegate`), with a description for each agent, a depth limit, no loops, a timeout, and the cost on the key. The
+  caller stopping stops the colleague. Settings: `DELEGATE_ENABLED`, `DELEGATE_MAX_DEPTH`, `DELEGATE_TIMEOUT_MS`.
+- **Teams.** A chain of agents behind an OpenAI-compatible endpoint of its own: each step's instruction gets the task and the
+  previous answer, progress streams as reasoning, and a failing step is named. Setting: `TEAM_MAX_STEPS`.
+- **Agent templates, clone, export and import.** New agents can start from a template (five ship: architect, coder,
+  researcher, reviewer, devops), an agent can be saved as a template, cloned, or exported to one JSON file and imported
+  into any key. A bundle holds regular files only, is validated path by path and written by the profile helper, never
+  carries keys, environment, mounts or network, and needs a dashboard password to import. Agents also gain a description.
+  Settings: `EXPORT_MAX_BYTES`, `TEMPLATE_MAX_BYTES`.
+- **Jobs.** Prompts an agent runs on its own: on a schedule (every N minutes or hours, daily, chosen weekdays, once),
+  from a webhook with a per-job token, or asynchronously through `POST /v1/piper/jobs`. They run as the owning key and
+  agent (its limits, spend cap and model list apply), never overlap, make up a missed run once, stop at a time limit
+  and keep a history with results and cost. Finished runs can be POSTed to a signed webhook. A Jobs page manages them.
+  Settings: `JOBS_ENABLED`, `JOBS_MAX_PARALLEL`, `JOBS_MIN_INTERVAL_MS`, `JOBS_MAX_PER_KEY`, `JOBS_RESULT_DAYS`.
+
+### Changed
+- A chat request and a run without a client (`runAgentTurn`, the base for jobs, delegation and teams) now share one
+  path for session limits, crashed-session replacement, spend cap and model allow-list.
+
 ## [0.5.0] - 2026-10-01
 
 ### Added

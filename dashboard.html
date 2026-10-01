@@ -72,6 +72,22 @@
   /* panels */
   .grid2 { display:grid; grid-template-columns:1.35fr 1fr; gap:14px; margin-bottom:14px; }
   .grid3 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-bottom:14px; }
+  /* live view drawer */
+  #livedrawer { position:fixed; top:0; right:0; bottom:0; width:min(640px,100vw); background:var(--panel); border-left:1px solid var(--border);
+                box-shadow:-8px 0 24px rgba(0,0,0,.5); z-index:50; display:flex; flex-direction:column; }
+  #livedrawer[hidden] { display:none; }
+  #livedrawer header { padding:12px 14px; border-bottom:1px solid var(--border); display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  #livedrawer header b { flex:1 1 100%; font-size:13px; }
+  #livedrawer .livestate { color:var(--muted); font-size:11px; flex:1 1 auto; }
+  #livelog { flex:1; overflow:auto; padding:12px 14px; }
+  .li { margin:0 0 10px; padding:8px 10px; border:1px solid var(--border-soft); border-radius:8px; white-space:pre-wrap; word-break:break-word; }
+  .li small { display:block; color:var(--dim); font-size:10px; text-transform:uppercase; letter-spacing:.08em; margin-bottom:3px; }
+  .li.user { border-color:#2d3a52; background:#0e131c; }
+  .li.thinking { color:var(--dim); font-style:italic; }
+  .li.note { color:var(--amber); }
+  .li.tool { color:var(--muted); }
+  .li.tool.error { border-color:#5a2a2a; }
+  .li.tool pre { margin:6px 0 0; max-height:160px; overflow:auto; color:var(--fg); white-space:pre-wrap; }
   .panel { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:14px 15px 15px; }
   .panel h3 { font-size:11px; margin:0 0 3px; text-transform:uppercase; letter-spacing:.1em; color:#cfd3d7; }
   .panel .hint { color:var(--dim); font-size:11px; margin:0 0 14px; }
@@ -402,6 +418,7 @@
       <a href="#terminal"><span class="ic">&#9002;</span>Terminal</a>
       <a href="#files"><span class="ic">&#9776;</span>Files</a>
       <a href="#endpoints"><span class="ic">&#8644;</span>Endpoints</a>
+      <a href="#jobs"><span class="ic">&#9201;</span>Jobs</a>
       <a href="#models"><span class="ic">&#9678;</span>Models</a>
       <a href="#spend"><span class="ic">&#36;</span>Spend</a>
       <a href="#apikeys"><span class="ic">&#9636;</span>API Management</a>
@@ -620,7 +637,9 @@
           </div>
           <div class="ctrl">
             <select id="fbscope"></select>
-            <span class="seg"><button id="fbws" class="on">Workspace</button><button id="fbprof">Profile</button></span>
+            <select id="fbbundle" hidden></select>
+            <button id="fbnewbundle" hidden>new bundle</button><button id="fbdelbundle" hidden>delete bundle</button>
+            <span class="seg"><button id="fbws" class="on">Workspace</button><button id="fbprof">Profile</button><button id="fbshared" title="Shared bundles: skills, extensions and prompts the operator hands to keys">Bundles</button></span>
           </div>
         </div>
         <div class="crumb" id="fbcrumb"></div>
@@ -729,6 +748,64 @@
       </section>
     </div><!-- /view-audit -->
 
+    <div class="view" id="view-jobs">
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Jobs</h3>
+            <p class="hint" style="margin:0" id="jobnote">A prompt an agent runs without anyone at a client: on a schedule, when a webhook calls, or on request through <code>POST /v1/piper/jobs</code>. A job runs as its key (and agent), so that key&rsquo;s limits, spend cap and model list apply and the cost is its own.</p>
+          </div>
+          <button id="jobrefresh">refresh</button>
+          <button id="jobnew">new job</button>
+        </div>
+        <table>
+          <thead><tr><th>job</th><th>runs as</th><th>when</th><th>next run</th><th>last</th><th>on</th><th></th></tr></thead>
+          <tbody id="jobrows"></tbody>
+        </table>
+        <p class="hint" id="jobempty" hidden>No jobs yet.</p>
+      </section>
+      <section class="panel" id="jobform" hidden>
+        <h3 id="jobformtitle">New job</h3>
+        <div class="keyform">
+          <select id="jobkey"></select>
+          <select id="jobagent" title="which endpoint of the key runs it"></select>
+          <input id="jobname" placeholder="name, e.g. morning report">
+          <input id="jobmodel" placeholder="model (optional)">
+        </div>
+        <div style="margin:8px 0"><textarea id="jobprompt" rows="5" placeholder="The prompt. {{payload}} is replaced by the body of a webhook call." style="width:100%;box-sizing:border-box;background:#141414;color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:12px"></textarea></div>
+        <div class="keyform">
+          <select id="jobkind">
+            <option value="manual">only when started (or by webhook)</option>
+            <option value="interval">every N minutes or hours</option>
+            <option value="daily">every day at</option>
+            <option value="weekly">on weekdays at</option>
+            <option value="once">once at</option>
+          </select>
+          <span id="jobevery" hidden><input id="jobevern" type="number" min="1" value="1" style="width:70px"> <select id="jobunit"><option value="minutes">minutes</option><option value="hours">hours</option></select></span>
+          <input id="jobat" type="time" hidden>
+          <input id="jobonce" type="datetime-local" hidden>
+          <span id="jobdays" hidden></span>
+        </div>
+        <div class="keyform" style="margin-top:8px">
+          <select id="jobmode" title="continue: one conversation, so the agent remembers earlier runs. fresh: a new conversation each time."><option value="fresh">fresh conversation each run</option><option value="continue">continue one conversation</option></select>
+          <input id="jobtimeout" type="number" min="1" max="120" value="10" style="width:90px" title="minutes before the run is stopped"> <span class="hint small">minutes at most</span>
+          <input id="jobhook" placeholder="webhook URL for the result (optional)">
+          <label class="ctrl"><input id="jobon" type="checkbox" checked> enabled</label>
+        </div>
+        <p class="hint small">Times are in this gateway&rsquo;s local time.</p>
+        <div class="fieldrow" style="margin-top:8px"><button id="jobsave">save</button><button id="jobcancel">close</button><span class="passnote" id="jobformnote"></span></div>
+      </section>
+      <section class="panel" id="jobdetail" hidden>
+        <div class="toolbar"><h3 id="jobdetailtitle">History</h3><button id="jobdetailclose">close</button></div>
+        <div id="jobtriggerbox"></div>
+        <table>
+          <thead><tr><th>#</th><th>started</th><th>by</th><th>status</th><th class="num">took</th><th class="num">cost</th><th>result</th><th></th></tr></thead>
+          <tbody id="jobruns"></tbody>
+        </table>
+        <pre id="jobresult" hidden style="white-space:pre-wrap;max-height:320px;overflow:auto;background:#0c0c0c;border:1px solid var(--border);border-radius:8px;padding:10px"></pre>
+      </section>
+    </div><!-- /view-jobs -->
+
     <div class="view" id="view-endpoints">
       <section class="panel">
         <div class="toolbar">
@@ -740,20 +817,55 @@
         </div>
         <table>
           <thead><tr>
-            <th>agent</th><th>key</th><th>endpoint</th><th>state</th><th>workspace</th><th>model</th><th class="num">chats</th><th></th>
+            <th>agent</th><th>key</th><th>endpoint</th><th>state</th><th>workspace</th><th>model</th><th class="num">chats</th><th class="num" title="what this agent has spent today, closed and running sessions">today</th><th></th>
           </tr></thead>
           <tbody id="eprows"></tbody>
         </table>
         <p class="hint" id="epempty" hidden>No agent endpoints yet. Create one below.</p>
       </section>
+      <section class="panel" id="teamsec">
+        <div class="toolbar">
+          <div>
+            <h3>Teams</h3>
+            <p class="hint" style="margin:0">A team is a chain of agents of one key behind an endpoint of its own. A request runs the steps in order: each step&rsquo;s instruction gets <code>{{task}}</code> (what was asked) and <code>{{previous}}</code> (the last step&rsquo;s answer); the last answer is the reply, and progress streams as reasoning. Spend and limits are the key&rsquo;s.</p>
+          </div>
+          <button id="teamnew">new team</button>
+        </div>
+        <table><thead><tr><th>team</th><th>key</th><th>endpoint</th><th>steps</th><th>state</th><th></th></tr></thead><tbody id="teamrows"></tbody></table>
+        <p class="hint" id="teamempty" hidden>No teams yet.</p>
+        <div id="teamform" hidden style="margin-top:10px">
+          <div class="keyform"><select id="teamkey"></select><input id="teamname" placeholder="name, e.g. build-pipeline"><input id="teamdesc" placeholder="description (optional)"></div>
+          <div id="teamsteps" style="margin:8px 0"></div>
+          <div class="fieldrow"><button id="teamaddstep">add step</button><button id="teamsave">create team</button><button id="teamcancel">close</button><span class="passnote" id="teamnote"></span></div>
+        </div>
+      </section>
       <section class="panel" id="epeditor" hidden>
         <h3 id="epedtitle">Edit</h3>
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">name</label><input type="text" id="epedname"></div>
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">model</label><input type="text" id="epedmodel" placeholder="provider/model, blank = the default"><select id="epedthink"></select></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">description</label><input type="text" id="epeddesc" placeholder="what it is for: colleagues see this when choosing who to ask" maxlength="300"></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">hand-offs</label><label class="ctrl" title="Gives this agent two tools: list its colleagues and hand a task to one, then use the answer. Only agents of the same key, bounded in depth; each hand-off is a turn that counts against the key."><input type="checkbox" id="epeddeleg"> may hand work to the other agents of its key</label></div>
         <div style="margin-bottom:8px"><label class="hint" for="epedinstr">instructions (the agent's AGENTS.md: who it is and how it works)</label><textarea id="epedinstr" rows="9" style="width:100%;box-sizing:border-box;background:#141414;color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:12px"></textarea></div>
         <div id="epedctr"></div>
         <div class="fieldrow" style="margin-top:8px"><button id="epedsave">save</button><button id="epedcancel">close</button><span class="hint small" id="epednote"></span></div>
         <p class="hint small" id="epedcurl"></p>
+      </section>
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Templates and import</h3>
+            <p class="hint" style="margin:0" id="tplnote">A template is a ready-made profile: instructions, skills and settings. Pick one when creating an agent, or save an existing agent as a template (the <b>save as template</b> button). An agent can also be exported to a file and imported into any key, here or on another gateway.</p>
+          </div>
+        </div>
+        <table><thead><tr><th>template</th><th>about</th><th>files</th><th></th></tr></thead><tbody id="tplrows"></tbody></table>
+        <div class="fieldrow" style="margin-top:10px">
+          <select id="impkey"></select>
+          <input id="impname" placeholder="name (blank: the file's own)">
+          <input type="file" id="impfile" accept=".json,application/json">
+          <button id="impgo">import agent</button>
+          <span class="passnote" id="impnote"></span>
+        </div>
+        <p class="hint small">A bundle can carry extensions, which are code that runs in the agent&rsquo;s container: import only files you trust. Needs a dashboard password. Environment, mounts, images and network are never part of a bundle.</p>
       </section>
       <section class="panel">
         <h3>Create an agent endpoint</h3>
@@ -761,6 +873,7 @@
         <div class="keyform">
           <select id="epkey"></select>
           <input id="epname" placeholder="name, e.g. architect">
+          <select id="eptemplate" title="Start from a ready-made profile: its instructions, skills and settings."></select>
           <select id="epws" title="own: a separate /workspace for this agent. shared: the key's existing workspace, so the agents of the key see the same files.">
             <option value="own">own workspace</option>
             <option value="shared">shared with the key</option>
@@ -812,6 +925,14 @@
           </table>
         </section>
       </div>
+      <section class="panel" style="margin-bottom:14px">
+        <h3>By key and agent</h3>
+        <p class="hint">A key&rsquo;s agent endpoints share its limits but are billed separately here. Sessions on the key&rsquo;s main endpoint (and everything before agents existed) are the key alone.</p>
+        <table>
+          <thead><tr><th>key / agent</th><th class="num">sessions</th><th class="num">tokens</th><th class="num">cost</th></tr></thead>
+          <tbody id="spendagents"></tbody>
+        </table>
+      </section>
       <p class="hint" id="spendnote">A session is billed to the ledger when it closes, so agents that
         are still running appear under <b>live now</b> and move here once they are reaped or killed.
         Providers priced at zero — the local ones — record their tokens but contribute no cost.</p>
@@ -958,6 +1079,17 @@
   </div>
 </div>
 
+<div id="livedrawer" hidden role="dialog" aria-label="Live view">
+  <header>
+    <b id="livetitle">Live view</b>
+    <span class="livestate" id="livestate"></span>
+    <button id="liveint" title="Stop the turn that is running now">interrupt</button>
+    <a id="livedl" href="#" title="Download the conversation so far as Markdown">transcript</a>
+    <label class="ctrl"><input id="livefollow" type="checkbox" checked> follow</label>
+    <button id="liveclose">close</button>
+  </header>
+  <div id="livelog"></div>
+</div>
 <script>
 /* Everything below builds DOM nodes and assigns via textContent/setAttribute. No HTML string is
    ever parsed into the document, so a model id or provider name coming out of models.json cannot
@@ -1247,6 +1379,11 @@ function render(d) {
       tr.appendChild(costCell);
       tr.appendChild(cell(s.inflight > 0 ? 'working' : 'idle', s.inflight > 0 ? 'busy' : ''));
       var action = el('td');
+      var look = el('button', 'watch');
+      look.setAttribute('data-watch', s.fingerprint);
+      look.title = 'See what this chat is doing, live';
+      action.appendChild(look);
+      action.appendChild(document.createTextNode(' '));
       var btn = el('button', 'kill');
       btn.setAttribute('data-fp', s.fingerprint);
       action.appendChild(btn);
@@ -1279,6 +1416,17 @@ function renderSpend() {
     cardEl('cache write', tok(t.cacheWrite), '', 'first-time prompt cache')
   );
 
+  var arows = $('spendagents');
+  arows.replaceChildren();
+  (d.byAgent || []).forEach(function (r) {
+    var tr = el('tr');
+    tr.appendChild(cell(r.label));
+    tr.appendChild(cell(r.sessions, 'num'));
+    tr.appendChild(cell(tok(r.tokens), 'num'));
+    tr.appendChild(cell(money(r.cost), 'num'));
+    arows.appendChild(tr);
+  });
+  if (!(d.byAgent || []).length) { var etr = el('tr'); etr.appendChild(cell('nothing billed yet', 'empty')).colSpan = 4; arows.appendChild(etr); }
   var rows = $('spendrows');
   var months = { empty: 'nothing billed yet' };
   if (!d.byModel.length) {
@@ -1703,8 +1851,89 @@ function schedule() {
   timer = POLL > 0 ? setInterval(tick, POLL) : null;
 }
 
+
+/* Live view: a Server-Sent Events stream of one chat, drawn into the drawer. The chat is named by its fingerprint. */
+var LIVE = { fp: null, source: null, items: {} };
+function liveItem(item) {
+  var box = LIVE.items[item.id];
+  if (!box) {
+    box = el('div');
+    box.appendChild(el('small'));
+    box.appendChild(el('div'));
+    LIVE.items[item.id] = box;
+    $('livelog').appendChild(box);
+  }
+  box.className = 'li ' + item.kind + (item.state === 'error' ? ' error' : '');
+  var label = item.kind === 'tool' ? (item.state === 'running' ? 'tool \u00b7 running' : 'tool \u00b7 ' + item.state) : ({ user: 'you', assistant: 'agent', thinking: 'thinking', note: 'note' }[item.kind] || item.kind);
+  box.firstChild.textContent = label;
+  box.lastChild.textContent = item.kind === 'tool' ? item.summary : item.text;
+  var pre = box.querySelector('pre');
+  if (item.kind === 'tool' && item.result) {
+    if (!pre) { pre = el('pre'); box.appendChild(pre); }
+    pre.textContent = item.result;
+  }
+  if ($('livefollow').checked) $('livelog').scrollTop = $('livelog').scrollHeight;
+}
+function liveState(st) {
+  if (!st) return;
+  $('livestate').textContent = (st.working || st.inflight ? 'working' : 'idle') + (st.model ? ' \u00b7 ' + st.model : '') + ' \u00b7 ' + tok(st.tokens || 0) + ' tokens \u00b7 ' + money(st.cost || 0);
+}
+function liveClose() {
+  if (LIVE.source) LIVE.source.close();
+  LIVE.source = null;
+  LIVE.fp = null;
+  $('livedrawer').hidden = true;
+}
+function liveOpen(fp) {
+  liveClose();
+  LIVE.fp = fp;
+  LIVE.items = {};
+  $('livelog').textContent = '';
+  $('livetitle').textContent = 'Live view';
+  $('livestate').textContent = 'connecting\u2026';
+  $('livedl').href = 'dashboard/session/' + encodeURIComponent(fp) + '/transcript.md';
+  $('livedrawer').hidden = false;
+  var src = new EventSource('dashboard/session/' + encodeURIComponent(fp) + '/events');
+  LIVE.source = src;
+  var parse = function (e) { try { return JSON.parse(e.data); } catch (x) { return null; } };
+  src.addEventListener('snapshot', function (e) {
+    var d = parse(e);
+    if (!d) return;
+    if (d.chat) $('livetitle').textContent = 'Live view \u00b7 ' + d.chat.key + (d.chat.agent ? ' / ' + d.chat.agent : '');
+    (d.items || []).forEach(liveItem);
+    liveState(d.state);
+  });
+  ['add', 'update'].forEach(function (op) { src.addEventListener(op, function (e) { var d = parse(e); if (d) liveItem(d.item); }); });
+  src.addEventListener('state', function (e) { var d = parse(e); if (d) liveState(d.state); });
+  src.addEventListener('end', function (e) {
+    var d = parse(e);
+    $('livestate').textContent = 'ended: ' + ((d && d.reason) || 'the chat stopped');
+    src.close();
+  });
+  src.onerror = function () {
+    // The browser would retry forever on a refusal; find out why once, and stop.
+    src.close();
+    var probe = new AbortController();
+    fetch('dashboard/session/' + encodeURIComponent(fp) + '/events', { signal: probe.signal }).then(function (r) {
+      if (r.ok) { probe.abort(); return { error: { message: 'the connection dropped' } }; }
+      return r.json();
+    }).then(function (j) { $('livestate').textContent = (j && j.error && j.error.message) || 'cannot watch this chat'; })
+      .catch(function () { $('livestate').textContent = 'cannot watch this chat'; });
+  };
+}
+$('liveclose').addEventListener('click', liveClose);
+$('liveint').addEventListener('click', function () {
+  if (!LIVE.fp) return;
+  fetch('dashboard/session/' + encodeURIComponent(LIVE.fp) + '/interrupt', { method: 'POST' })
+    .then(function (r) { return r.json(); })
+    .then(function (j) { if (!j.wasRunning) $('livestate').textContent = 'nothing is running right now'; })
+    .catch(function () {});
+});
+
 /* Kill targets a fingerprint; the server resolves it to the real id, which this page never holds. */
 $('rows').addEventListener('click', function (e) {
+  var watch = e.target.closest ? e.target.closest('button[data-watch]') : null;
+  if (watch) { liveOpen(watch.getAttribute('data-watch')); return; }
   var btn = e.target.closest ? e.target.closest('button[data-fp]') : null;
   if (!btn) return;
   btn.disabled = true;
@@ -1865,6 +2094,7 @@ var SETTING_FIELDS = {};
 
 var SETTING_TABS = [
   { id: 'containers', label: 'Containers', intro: 'Each chat’s agent runs in its own Docker container, with full rights inside it. These settings decide what a container can reach and how much of the machine it may use.' },
+  { id: 'jobs', label: 'Jobs', intro: 'Jobs themselves are on the Jobs page. These limits keep unattended runs from costing more than you meant.' },
   { id: 'sessions', label: 'Sessions', intro: 'How long agents live and what they show while they work.' },
   { id: 'limits', label: 'Usage limits', intro: 'Defaults for every API key. Each key can override them on the API Management page.' },
   { id: 'profiles', label: 'Profiles', intro: 'Each API key’s own skills, extensions and settings, and the shared bundles you hand out on top.' },
@@ -1900,6 +2130,28 @@ var LAYOUT = {
     summary: 'What one chat\u2019s container wrote to its own filesystem (what the agent installed and downloaded). A warning only; recreate the container on the Containers page. 0 turns it off.' },
   ALERT_WEBHOOK_URL: { tab: 'containers', section: 'Disk and alerts', label: 'Alert webhook', placeholder: 'https://hooks.slack.com/services/\u2026',
     summary: 'Gets a JSON POST when Docker is unreachable, the firewall rules are missing, the disk is low, a container is killed for memory, or the gateway stops answering. Slack and Discord webhooks work as they are.' },
+  DELEGATE_ENABLED: { tab: 'sessions', section: 'Hand-offs and teams', label: 'Allow hand-offs between agents',
+    summary: 'Agents switched to delegate can give a task to another agent of the same key. Off removes the tools and refuses every hand-off.' },
+  DELEGATE_MAX_DEPTH: { tab: 'sessions', section: 'Hand-offs and teams', label: 'Longest chain of hand-offs', unit: 'hand-offs',
+    summary: 'An agent delegating to one that delegates again counts 2. Nobody already in the chain is called again.' },
+  DELEGATE_TIMEOUT_MS: { tab: 'sessions', section: 'Hand-offs and teams', label: 'Longest hand-off',
+    summary: 'After this the calling agent is told it timed out and the colleague\u2019s turn is stopped.' },
+  TEAM_MAX_STEPS: { tab: 'sessions', section: 'Hand-offs and teams', label: 'Most steps in a team', unit: 'steps',
+    summary: 'A team is a chain of agents on an endpoint of its own.' },
+  PACKAGES_ENABLED: { tab: 'containers', section: 'Packages', label: 'Allow packages and MCP servers',
+    summary: 'Install Pi packages and MCP servers into a key\u2019s or agent\u2019s profile from the Profiles page. They run third-party code in the agent\u2019s container, so it needs a dashboard password. Off refuses all of it.' },
+  LIVE_VIEW_ENABLED: { tab: 'containers', section: 'Live view', label: 'Allow the live view',
+    summary: 'Watch a running chat from the Agents page: what is said, thinking and tool calls, with interrupt and a transcript download. Needs a dashboard password; watches are audited, never the content. Off refuses all of it.' },
+  JOBS_ENABLED: { tab: 'jobs', section: 'Jobs', label: 'Run jobs',
+    summary: 'Scheduled and webhook-started runs of an agent, and asynchronous requests through POST /v1/piper/jobs. Off stops the scheduler and refuses new runs.' },
+  JOBS_MAX_PARALLEL: { tab: 'jobs', section: 'Jobs', label: 'Runs at once', unit: 'runs',
+    summary: 'Each run is a whole agent turn in its own container, so each uses memory and model quota.' },
+  JOBS_MIN_INTERVAL_MS: { tab: 'jobs', section: 'Jobs', label: 'Least time between webhook triggers',
+    summary: 'A job\u2019s webhook called faster than this is answered 429. 0 allows any rate.' },
+  JOBS_MAX_PER_KEY: { tab: 'jobs', section: 'Jobs', label: 'Most waiting or running runs per key', unit: 'runs',
+    summary: 'Counts a key\u2019s schedules, triggers and API submissions together.' },
+  JOBS_RESULT_DAYS: { tab: 'jobs', section: 'Jobs', label: 'Keep results for', unit: 'days',
+    summary: 'Finished runs and their text are deleted after this long.' },
   TERMINAL_ENABLED: { tab: 'containers', section: 'Terminal', label: 'Allow terminals',
     summary: 'An interactive root shell in a running container, from the Terminal page. Needs a dashboard password; every open and close is audited, never what is typed. Off refuses all of them.' },
   TERMINAL_IDLE_MS: { tab: 'containers', section: 'Terminal', label: 'Close an idle terminal after',
@@ -2531,6 +2783,7 @@ $('settingsearch').addEventListener('input', applySettingFilter);
 var VIEWS = {
   overview: { title:'Gateway Overview', subtitle:'Live Pi agents, their models, and when each one will be reaped', section:'Overview' },
   agents:   { title:'Agents', subtitle:'Every live Pi agent, with its expiry and a kill control', section:'Agents' },
+  jobs:     { title:'Jobs', subtitle:'Prompts an agent runs on a schedule, by webhook or on request', section:'Jobs' },
   endpoints: { title:'Endpoints', subtitle:'Named, permanent agents of an API key, each on its own OpenAI-compatible port', section:'Endpoints' },
   docs:     { title:'Documentation', subtitle:'The administrator\u2019s handbook: architecture, deployment, operation, configuration, API and troubleshooting', section:'Documentation' },
   about:    { title:'About', subtitle:'Piper, its version, release notes and author', section:'About' },
@@ -2647,6 +2900,203 @@ function epContainerInputs(box, own) {
     return out;
   };
 }
+
+/* ---- jobs ---- */
+var JOBS = null;
+var JOB_EDIT = null;
+var JOB_OPEN = null;
+var DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+function when(ms) { return ms ? new Date(ms).toLocaleString() : '-'; }
+function loadJobs() {
+  return Promise.all([fetch('dashboard/jobs.json', { cache: 'no-store' }).then(readJson), fetch('dashboard/agents.json', { cache: 'no-store' }).then(readJson)])
+    .then(function (r) { JOBS = { jobs: r[0].jobs, keys: r[1].keys, agents: r[1].agents }; renderJobs(); if (JOB_OPEN) loadJobRuns(JOB_OPEN); })
+    .catch(function (e) { $('jobnote').textContent = 'cannot load jobs: ' + e.message; });
+}
+function jobStatusCell(job) {
+  var c = el('td', job.last ? job.last.status : 'never run');
+  if (job.last) c.className = job.last.status === 'ok' ? 'ok' : job.last.status === 'running' || job.last.status === 'queued' ? 'busy' : 'bad';
+  return c;
+}
+function renderJobs() {
+  var body = $('jobrows');
+  body.replaceChildren();
+  $('jobempty').hidden = JOBS.jobs.length > 0;
+  JOBS.jobs.forEach(function (j) {
+    var key = JOBS.keys.filter(function (k) { return k.id === j.keyId; })[0];
+    var tr = el('tr');
+    var name = el('td', j.name);
+    if (j.origin === 'api') name.appendChild(el('span', ' api')).className = 'badge';
+    if (j.hasTrigger) name.title = 'has a webhook trigger';
+    tr.appendChild(name);
+    tr.appendChild(el('td', (key ? key.name : j.keyId.slice(0, 8)) + (j.agent ? ' / ' + j.agent : '')));
+    tr.appendChild(el('td', j.scheduleText));
+    tr.appendChild(el('td', j.enabled ? when(j.nextRunAt) : '-'));
+    tr.appendChild(jobStatusCell(j));
+    tr.appendChild(el('td', j.enabled ? 'yes' : 'no'));
+    var act = el('td');
+    [['run', 'run now'], ['runs', 'history'], ['edit', 'edit'], ['del', 'delete']].forEach(function (a) {
+      var b = el('button', a[1]); b.setAttribute('data-job', j.id); b.setAttribute('data-act', a[0]);
+      act.appendChild(b); act.appendChild(document.createTextNode(' '));
+    });
+    tr.appendChild(act);
+    body.appendChild(tr);
+  });
+}
+function jobKindFields() {
+  var k = $('jobkind').value;
+  $('jobevery').hidden = k !== 'interval';
+  $('jobat').hidden = !(k === 'daily' || k === 'weekly');
+  $('jobdays').hidden = k !== 'weekly';
+  $('jobonce').hidden = k !== 'once';
+}
+function jobAgents() {
+  var sel = $('jobagent');
+  var keep = sel.value;
+  sel.replaceChildren();
+  var main = el('option', "the key's main endpoint"); main.value = ''; sel.appendChild(main);
+  JOBS.agents.filter(function (a) { return a.keyId === $('jobkey').value || a.key === ($('jobkey').selectedOptions[0] || {}).textContent; }).forEach(function (a) { var o = el('option', a.name); o.value = a.id; sel.appendChild(o); });
+  sel.value = keep;
+}
+function openJobForm(job) {
+  JOB_EDIT = job ? job.id : null;
+  $('jobformtitle').textContent = job ? 'Edit ' + job.name : 'New job';
+  $('jobform').hidden = false;
+  $('jobkey').replaceChildren();
+  JOBS.keys.filter(function (k) { return k.usable || (job && k.id === job.keyId); }).forEach(function (k) { var o = el('option', k.name); o.value = k.id; $('jobkey').appendChild(o); });
+  $('jobkey').disabled = Boolean(job);
+  if (job) $('jobkey').value = job.keyId;
+  jobAgents();
+  $('jobagent').value = job && job.agentId || '';
+  $('jobname').value = job ? job.name : '';
+  $('jobmodel').value = job && job.model || '';
+  $('jobprompt').value = job ? job.prompt : '';
+  var s = job ? job.schedule : { kind: 'manual' };
+  $('jobkind').value = s.kind;
+  $('jobevern').value = s.every || 1;
+  $('jobunit').value = s.unit || 'minutes';
+  $('jobat').value = s.at && typeof s.at === 'string' ? s.at : '07:30';
+  $('jobonce').value = s.kind === 'once' ? new Date(s.at - new Date(s.at).getTimezoneOffset() * 60000).toISOString().slice(0, 16) : '';
+  $('jobdays').replaceChildren();
+  DAYS.forEach(function (d, i) {
+    var l = el('label'); l.className = 'ctrl';
+    var c = el('input'); c.type = 'checkbox'; c.value = String(i); c.checked = Boolean(s.days && s.days.indexOf(i) >= 0);
+    l.appendChild(c); l.appendChild(document.createTextNode(' ' + d + ' '));
+    $('jobdays').appendChild(l);
+  });
+  $('jobmode').value = job ? job.sessionMode : 'fresh';
+  $('jobtimeout').value = job ? Math.round(job.timeoutMs / 60000) || 1 : 10;
+  $('jobhook').value = job && job.webhookUrl || '';
+  $('jobon').checked = job ? job.enabled : true;
+  $('jobformnote').textContent = '';
+  jobKindFields();
+}
+function jobSchedule() {
+  var k = $('jobkind').value;
+  if (k === 'interval') return { kind: k, every: Number($('jobevern').value), unit: $('jobunit').value };
+  if (k === 'daily') return { kind: k, at: $('jobat').value };
+  if (k === 'weekly') return { kind: k, at: $('jobat').value, days: Array.prototype.map.call($('jobdays').querySelectorAll('input:checked'), function (c) { return Number(c.value); }) };
+  if (k === 'once') return { kind: k, at: $('jobonce').value ? new Date($('jobonce').value).getTime() : NaN };
+  return { kind: 'manual' };
+}
+function showSecret(title, value, hint) {
+  var box = $('jobtriggerbox');
+  var p = el('p'); p.className = 'passnote';
+  p.appendChild(el('b', title + ' (shown once): '));
+  var code = el('code', value); p.appendChild(code);
+  if (hint) p.appendChild(el('span', '  ' + hint));
+  box.appendChild(p);
+}
+function loadJobRuns(id) {
+  JOB_OPEN = id;
+  var job = JOBS.jobs.filter(function (j) { return j.id === id; })[0];
+  $('jobdetail').hidden = false;
+  $('jobdetailtitle').textContent = 'History of ' + (job ? job.name : id);
+  var box = $('jobtriggerbox');
+  if (!box.getAttribute('data-for') || box.getAttribute('data-for') !== id) {
+    box.replaceChildren();
+    box.setAttribute('data-for', id);
+    var row = el('div'); row.className = 'fieldrow';
+    var gen = el('button', job && job.hasTrigger ? 'new trigger token' : 'create webhook trigger');
+    gen.addEventListener('click', function () {
+      epPost('dashboard/jobs/' + id + '/trigger').then(function (r) {
+        showSecret('Trigger token', r.token, 'POST ' + location.origin + r.path + ' with  Authorization: Bearer <token>  (or X-Piper-Token). The request body becomes {{payload}}.');
+        loadJobs();
+      }).catch(function (e) { $('jobnote').textContent = e.message; });
+    });
+    row.appendChild(gen);
+    if (job && job.webhookUrl) {
+      var sec = el('button', 'new signing secret');
+      sec.addEventListener('click', function () { epPost('dashboard/jobs/' + id + '/webhook-secret').then(function (r) { showSecret('Signing secret', r.secret, 'verifies X-Piper-Signature on the result webhook'); }); });
+      row.appendChild(sec);
+    }
+    if (job && job.hasTrigger) {
+      var rev = el('button', 'revoke trigger');
+      rev.addEventListener('click', function () { epPost('dashboard/jobs/' + id + '/trigger', undefined, 'DELETE').then(loadJobs); });
+      row.appendChild(rev);
+    }
+    box.appendChild(row);
+  }
+  fetch('dashboard/jobs/' + id + '/runs', { cache: 'no-store' }).then(readJson).then(function (d) {
+    var body = $('jobruns');
+    body.replaceChildren();
+    d.runs.forEach(function (r) {
+      var tr = el('tr');
+      tr.appendChild(el('td', r.id));
+      tr.appendChild(el('td', when(r.startedAt || r.queuedAt)));
+      tr.appendChild(el('td', r.trigger));
+      var st = el('td', r.status); st.className = r.status === 'ok' ? 'ok' : r.status === 'running' || r.status === 'queued' ? 'busy' : 'bad'; st.title = r.error || r.note || r.webhook || '';
+      tr.appendChild(st);
+      tr.appendChild(el('td', r.startedAt && r.endedAt ? dur(r.endedAt - r.startedAt) : '-')).className = 'num';
+      tr.appendChild(el('td', money(r.cost))).className = 'num';
+      tr.appendChild(el('td', r.error || r.preview));
+      var act = el('td');
+      var v = el('button', 'view'); v.setAttribute('data-run', r.id); act.appendChild(v);
+      if (r.status === 'running' || r.status === 'queued') { var c = el('button', 'cancel'); c.setAttribute('data-cancel', r.id); act.appendChild(document.createTextNode(' ')); act.appendChild(c); }
+      tr.appendChild(act);
+      body.appendChild(tr);
+    });
+  });
+}
+$('jobrefresh').addEventListener('click', loadJobs);
+$('jobnew').addEventListener('click', function () { if (JOBS) openJobForm(null); });
+$('jobcancel').addEventListener('click', function () { $('jobform').hidden = true; });
+$('jobdetailclose').addEventListener('click', function () { JOB_OPEN = null; $('jobdetail').hidden = true; $('jobtriggerbox').removeAttribute('data-for'); });
+$('jobkind').addEventListener('change', jobKindFields);
+$('jobkey').addEventListener('change', jobAgents);
+$('jobsave').addEventListener('click', function () {
+  var body = { name: $('jobname').value.trim(), prompt: $('jobprompt').value, model: $('jobmodel').value.trim() || null, agentId: $('jobagent').value || null, schedule: jobSchedule(), sessionMode: $('jobmode').value, timeoutMs: String(Number($('jobtimeout').value) * 60000), webhookUrl: $('jobhook').value.trim(), enabled: $('jobon').checked };
+  var p;
+  if (JOB_EDIT) p = epPost('dashboard/jobs/' + JOB_EDIT, body, 'PATCH');
+  else { body.keyId = $('jobkey').value; p = epPost('dashboard/jobs', body); }
+  p.then(function (r) {
+    $('jobform').hidden = true;
+    return loadJobs().then(function () {
+      if (r.webhookSecret) { loadJobRuns(r.job.id); showSecret('Signing secret', r.webhookSecret, 'verifies X-Piper-Signature on the result webhook'); }
+    });
+  }).catch(function (e) { $('jobformnote').textContent = e.message; });
+});
+$('jobrows').addEventListener('click', function (e) {
+  var b = e.target.closest ? e.target.closest('button[data-job]') : null;
+  if (!b) return;
+  var id = b.getAttribute('data-job'), act = b.getAttribute('data-act');
+  var job = JOBS.jobs.filter(function (j) { return j.id === id; })[0];
+  if (act === 'edit') openJobForm(job);
+  else if (act === 'runs') { $('jobtriggerbox').removeAttribute('data-for'); $('jobresult').hidden = true; loadJobRuns(id); }
+  else if (act === 'run') epPost('dashboard/jobs/' + id + '/run').then(function () { $('jobtriggerbox').removeAttribute('data-for'); loadJobs(); loadJobRuns(id); }).catch(function (e2) { $('jobnote').textContent = e2.message; });
+  else if (act === 'del' && confirm('Delete "' + job.name + '" and its history?')) epPost('dashboard/jobs/' + id, undefined, 'DELETE').then(function () { if (JOB_OPEN === id) $('jobdetailclose').click(); loadJobs(); });
+});
+$('jobruns').addEventListener('click', function (e) {
+  var v = e.target.closest ? e.target.closest('button[data-run]') : null;
+  var c = e.target.closest ? e.target.closest('button[data-cancel]') : null;
+  if (c) { epPost('dashboard/jobs/runs/' + c.getAttribute('data-cancel') + '/cancel').then(function () { loadJobRuns(JOB_OPEN); }); return; }
+  if (!v) return;
+  fetch('dashboard/jobs/runs/' + v.getAttribute('data-run'), { cache: 'no-store' }).then(readJson).then(function (d) {
+    $('jobresult').hidden = false;
+    $('jobresult').textContent = (d.run.error ? 'error: ' + d.run.error + '\n\n' : '') + (d.run.text || '(no text)') + '\n\n--- prompt ---\n' + d.run.prompt;
+  });
+});
+setInterval(function () { if (JOB_OPEN && !document.hidden && location.hash === '#jobs') loadJobRuns(JOB_OPEN); }, 5000);
+
 function epUrl(a) { return location.protocol + '//' + location.hostname + ':' + a.port + '/v1'; }
 function epPost(url, body, method) {
   return fetch(url, { method: method || 'POST', headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) })
@@ -2678,6 +3128,7 @@ function renderEndpoints(d) {
     tr.appendChild(cell(a.workspace === 'shared' ? 'shared with key' : 'own'));
     tr.appendChild(cell(a.model || 'default'));
     tr.appendChild(cell(a.chats, 'num'));
+    tr.appendChild(cell(money(a.spendToday || 0), 'num'));
     var actions = el('td');
     function btn(label, fn, title) {
       var b = el('button', label); if (title) b.title = title;
@@ -2688,6 +3139,9 @@ function renderEndpoints(d) {
     btn('new port', function () { if (confirm('Give ' + a.name + ' a new port? Clients must switch to the new address.')) epAct(a, 'new-port'); });
     btn('reset', function () { if (confirm('Reset ' + a.name + '’s container? Everything installed in it is deleted; its instructions, skills and files stay.')) epAct(a, 'reset'); }, 'remove the container and what is installed in it');
     btn('update', function () { if (confirm('Update ' + a.name + '’s container? Its chats stop and resume afterwards; what is installed is kept; Pi is set to the gateway’s version and its extensions are updated.')) startUpdateJob('dashboard/agents/' + a.id + '/update', 'Update ' + a.name); }, 'rebuild its container keeping what is installed, update Pi and extensions');
+    btn('clone', function () { var n = prompt('Name for the copy of ' + a.name + ' (lowercase letters, digits, hyphens):', a.name + '-copy'); if (n) epPost('dashboard/agents/' + a.id + '/clone', { name: n }).then(function (j) { EP_DATA = j; renderEndpoints(j); $('epnote').textContent = a.name + ' cloned as ' + n + ': its profile was copied; its workspace and container start empty'; }).catch(function (e) { $('epnote').textContent = e.message; }); }, 'a new agent of the same key with this one\u2019s instructions, skills, extensions and settings');
+    btn('export', function () { location.href = 'dashboard/agents/' + a.id + '/export'; }, 'download its profile and settings as one file (no keys or secrets)');
+    btn('save as template', function () { var n = prompt('Template name (lowercase letters, digits, hyphens):', a.name); if (n) epPost('dashboard/templates', { fromAgent: a.id, name: n, description: a.description || '' }).then(function (j) { loadTemplates(j.templates); $('epnote').textContent = 'saved template ' + n; }).catch(function (e) { $('epnote').textContent = e.message; }); }, 'keep a copy of its profile to start new agents from');
     btn('delete', function () { if (confirm('Delete ' + a.name + '? Its port closes and its container is removed; its profile and own workspace are archived.')) epDelete(a); });
     tr.appendChild(actions);
     tbody.appendChild(tr);
@@ -2697,9 +3151,132 @@ function renderEndpoints(d) {
   $('epkey').replaceChildren();
   d.keys.filter(function (k) { return k.usable; }).forEach(function (k) { var o = el('option', k.name); o.value = k.id; $('epkey').appendChild(o); });
   if (keep) $('epkey').value = keep;
+  $('impkey').replaceChildren();
+  d.keys.filter(function (k) { return k.usable; }).forEach(function (k) { var o = el('option', k.name); o.value = k.id; $('impkey').appendChild(o); });
+  loadTemplates();
+  loadTeams();
   $('epcreate').disabled = !$('epkey').options.length;
   if (!$('epkey').options.length) $('epcreatenote').textContent = 'create an API key first (API Management)';
 }
+
+
+var TEAMS = null;
+function loadTeams() {
+  return fetch('dashboard/teams.json', { cache: 'no-store' }).then(readJson).then(function (d) { TEAMS = d; renderTeams(); })
+    .catch(function (e) { $('teamempty').hidden = false; $('teamempty').textContent = 'cannot load teams: ' + e.message; });
+}
+function renderTeams() {
+  var body = $('teamrows');
+  body.replaceChildren();
+  $('teamempty').hidden = TEAMS.teams.length > 0;
+  $('teamempty').textContent = 'No teams yet.';
+  TEAMS.teams.forEach(function (t) {
+    var tr = el('tr');
+    var n = el('td', t.name); if (t.description) n.title = t.description; tr.appendChild(n);
+    tr.appendChild(el('td', t.key));
+    var url = el('td');
+    url.className = 'mono';
+    url.textContent = t.status === 'listening' ? location.protocol + '//' + location.hostname + ':' + t.port + '/v1' : (t.status === 'disabled' ? '-' : 'not listening');
+    tr.appendChild(url);
+    var steps = el('td', t.steps.map(function (s) { return s.agent || '(deleted)'; }).join(' → '));
+    if (t.broken) { steps.className = 'bad'; steps.title = 'an agent of this team was deleted: edit the team'; }
+    tr.appendChild(steps);
+    tr.appendChild(el('td', t.status));
+    var act = el('td');
+    [[t.enabled ? 'disable' : 'enable', function () { epPost('dashboard/teams/' + t.id, { enabled: !t.enabled }, 'PATCH').then(loadTeams).catch(function (e) { $('teamnote').textContent = e.message; }); }],
+     ['delete', function () { if (confirm('Delete the team "' + t.name + '"? Its port closes; the agents stay.')) epPost('dashboard/teams/' + t.id, undefined, 'DELETE').then(loadTeams); }]].forEach(function (a) {
+      var b = el('button', a[0]); b.addEventListener('click', a[1]); act.appendChild(b); act.appendChild(document.createTextNode(' '));
+    });
+    tr.appendChild(act);
+    body.appendChild(tr);
+  });
+}
+function teamKeyAgents() {
+  var keyId = $('teamkey').value;
+  return EP_DATA ? EP_DATA.agents.filter(function (a) { return a.keyId === keyId; }) : [];
+}
+function addTeamStep(agent, instruction) {
+  var n = $('teamsteps').children.length;
+  if (TEAMS && n >= TEAMS.maxSteps) return;
+  var row = el('div'); row.className = 'fieldrow'; row.style.marginBottom = '6px';
+  var sel = el('select');
+  teamKeyAgents().forEach(function (a) { var o = el('option', a.name); o.value = a.name; sel.appendChild(o); });
+  if (agent) sel.value = agent;
+  var ins = el('input'); ins.type = 'text'; ins.style.flex = '1'; ins.placeholder = 'instruction, using {{task}} and/or {{previous}}';
+  ins.value = instruction || (n === 0 ? '{{task}}' : 'Continue from this:\n{{previous}}');
+  var rm = el('button', 'remove'); rm.addEventListener('click', function () { row.remove(); });
+  row.appendChild(el('span', 'step ' + (n + 1))); row.appendChild(sel); row.appendChild(ins); row.appendChild(rm);
+  $('teamsteps').appendChild(row);
+}
+$('teamnew').addEventListener('click', function () {
+  $('teamform').hidden = false;
+  $('teamkey').replaceChildren();
+  (EP_DATA ? EP_DATA.keys : []).filter(function (k) { return k.usable; }).forEach(function (k) { var o = el('option', k.name); o.value = k.id; $('teamkey').appendChild(o); });
+  $('teamsteps').replaceChildren();
+  $('teamnote').textContent = '';
+  addTeamStep(); addTeamStep();
+});
+$('teamkey').addEventListener('change', function () { $('teamsteps').replaceChildren(); addTeamStep(); addTeamStep(); });
+$('teamaddstep').addEventListener('click', function () { addTeamStep(); });
+$('teamcancel').addEventListener('click', function () { $('teamform').hidden = true; });
+$('teamsave').addEventListener('click', function () {
+  var steps = Array.prototype.map.call($('teamsteps').children, function (row) { return { agent: row.querySelector('select').value, instruction: row.querySelector('input').value }; });
+  $('teamnote').className = 'passnote'; $('teamnote').textContent = 'creating…';
+  epPost('dashboard/teams', { keyId: $('teamkey').value, name: $('teamname').value.trim(), description: $('teamdesc').value.trim(), steps: steps }).then(function (j) {
+    $('teamform').hidden = true; $('teamname').value = ''; $('teamdesc').value = '';
+    TEAMS = { teams: j.teams, maxSteps: TEAMS ? TEAMS.maxSteps : 6 }; renderTeams();
+  }).catch(function (e) { $('teamnote').textContent = e.message; $('teamnote').className = 'passnote bad'; });
+});
+var TEMPLATES = [];
+function loadTemplates(list) {
+  var apply = function (l) {
+    TEMPLATES = l;
+    var body = $('tplrows');
+    body.replaceChildren();
+    l.forEach(function (t) {
+      var tr = el('tr');
+      var n = el('td', t.name); if (t.builtin) n.appendChild(el('span', ' built-in')).className = 'badge';
+      tr.appendChild(n);
+      tr.appendChild(el('td', t.description));
+      tr.appendChild(el('td', t.files.length));
+      var act = el('td');
+      if (!t.builtin) {
+        var d = el('button', 'delete');
+        d.addEventListener('click', function () { if (confirm('Delete the template "' + t.name + '"? Agents made from it are not affected.')) epPost('dashboard/templates/' + t.name, undefined, 'DELETE').then(function (j) { loadTemplates(j.templates); }); });
+        act.appendChild(d);
+      }
+      tr.appendChild(act);
+      body.appendChild(tr);
+    });
+    var keep = $('eptemplate').value;
+    $('eptemplate').replaceChildren();
+    var blank = el('option', 'blank agent'); blank.value = ''; $('eptemplate').appendChild(blank);
+    l.forEach(function (t) { var o = el('option', 'from template: ' + t.name); o.value = t.name; $('eptemplate').appendChild(o); });
+    $('eptemplate').value = keep;
+  };
+  if (Array.isArray(list)) return apply(list);
+  return fetch('dashboard/templates.json', { cache: 'no-store' }).then(readJson).then(function (d) { apply(d.templates); });
+}
+$('eptemplate').addEventListener('change', function () {
+  // A template brings its own instructions and limits; the blank-agent fields do not apply.
+  var on = Boolean($('eptemplate').value);
+  $('epinstr').disabled = on;
+  if (on) $('epinstr').placeholder = 'The template\u2019s instructions are used.';
+});
+$('epws').addEventListener('change', function () { $('epws').dataset.touched = '1'; });
+$('impgo').addEventListener('click', function () {
+  var f = $('impfile').files[0];
+  var note = $('impnote');
+  if (!f) { note.textContent = 'choose a file'; note.className = 'passnote bad'; return; }
+  note.className = 'passnote'; note.textContent = 'importing…';
+  f.text().then(function (text) {
+    var bundle; try { bundle = JSON.parse(text); } catch (e) { throw new Error('that file is not a Piper agent bundle (not JSON)'); }
+    return epPost('dashboard/agents/import', { keyId: $('impkey').value, bundle: bundle, name: $('impname').value.trim() || undefined });
+  }).then(function (j) {
+    EP_DATA = j; renderEndpoints(j); $('impfile').value = ''; $('impname').value = '';
+    note.textContent = 'imported' + (j.warnings && j.warnings.length ? ' (' + j.warnings.join('; ') + ')' : '');
+  }).catch(function (e) { note.textContent = e.message; note.className = 'passnote bad'; });
+});
 function epAct(a, action) {
   $('epnote').textContent = a.name + ': working…';
   return epPost('dashboard/agents/' + a.id + '/' + action, {}).then(function (j) { EP_DATA = j; renderEndpoints(j); $('epnote').textContent = a.name + ': done'; })
@@ -2716,6 +3293,8 @@ function openEndpointEditor(a) {
   $('epeditor').hidden = false;
   $('epedtitle').textContent = 'Edit ' + a.name + ' (' + a.key + ')';
   $('epedname').value = a.name;
+  $('epeddesc').value = a.description || '';
+  $('epeddeleg').checked = Boolean(a.canDelegate);
   $('epedmodel').value = a.model || '';
   epFill($('epedthink'), EP_THINK, 'thinking: default');
   $('epedthink').value = a.thinking || '';
@@ -2731,7 +3310,7 @@ function openEndpointEditor(a) {
 }
 $('epedsave').addEventListener('click', function () {
   if (!EP_EDIT) return;
-  var body = { name: $('epedname').value.trim(), model: $('epedmodel').value.trim() || null, thinking: $('epedthink').value || null, container: epReadEdit() };
+  var body = { description: $('epeddesc').value.trim(), canDelegate: $('epeddeleg').checked, name: $('epedname').value.trim(), model: $('epedmodel').value.trim() || null, thinking: $('epedthink').value || null, container: epReadEdit() };
   if (!$('epedinstr').disabled) body.instructions = $('epedinstr').value;
   $('epedsave').disabled = true; $('epednote').textContent = 'saving…';
   epPost('dashboard/agents/' + EP_EDIT, body).then(function (j) { EP_DATA = j; renderEndpoints(j); $('epednote').textContent = 'saved. New chats use the new instructions and model; running chats pick the instructions up when they next start.'; })
@@ -2745,15 +3324,20 @@ $('epcreate').addEventListener('click', function () {
   var note = $('epcreatenote');
   note.className = 'passnote'; note.textContent = 'creating… (builds its profile in a container; a few seconds)';
   $('epcreate').disabled = true;
-  epPost('dashboard/agents', {
+  var fromTemplate = $('eptemplate').value;
+  (fromTemplate ? epPost('dashboard/agents/from-template', {
+    keyId: $('epkey').value, name: $('epname').value.trim(), template: fromTemplate,
+    workspace: $('epws').dataset.touched ? $('epws').value : undefined,
+    model: $('epmodel').value.trim() || undefined, thinking: $('epthink').value || undefined
+  }) : epPost('dashboard/agents', {
     keyId: $('epkey').value, name: $('epname').value.trim(), workspace: $('epws').value,
     model: $('epmodel').value.trim() || null, thinking: $('epthink').value || null,
     instructions: $('epinstr').value, container: epReadCreate()
-  }).then(function (j) {
+  })).then(function (j) {
     EP_DATA = j; renderEndpoints(j);
     $('epname').value = ''; $('epinstr').value = ''; $('epmodel').value = '';
     var made = j.agents.filter(function (a) { return a.id === j.created; })[0];
-    note.textContent = made ? 'created: ' + epUrl(made) : 'created';
+    note.textContent = (made ? 'created: ' + epUrl(made) : 'created') + (j.warnings && j.warnings.length ? ' (' + j.warnings.join('; ') + ')' : '');
   }).catch(function (e) { note.textContent = e.message; note.className = 'passnote bad'; })
     .then(function () { $('epcreate').disabled = !$('epkey').options.length; });
 });
@@ -2941,7 +3525,9 @@ $('termbigger').addEventListener('click', function () { TERM.size = Math.min(28,
 /* Files: a browser for a scope's workspace or profile, with upload, folders, rename, delete and a text editor. */
 var FB = { scope: null, root: 'workspace', path: '', entries: [], ready: false, edit: null };
 function fbUrl(path, query) {
-  return 'dashboard/files/' + encodeURIComponent(FB.scope) + '/' + path.split('/').filter(Boolean).map(encodeURIComponent).join('/') + '?root=' + FB.root + (query ? '&' + query : '');
+  var tail = path.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+  if (FB.root === 'shared') return 'dashboard/bundlefiles/' + encodeURIComponent(FB.bundle || '') + '/' + tail + (query ? '?' + query : '');
+  return 'dashboard/files/' + encodeURIComponent(FB.scope) + '/' + tail + '?root=' + FB.root + (query ? '&' + query : '');
 }
 function fbSay(text, bad) { $('fbstatus').textContent = text; $('fbstatus').className = 'hint small' + (bad ? ' bad' : ''); }
 function fbApi(method, path, query, body, json) {
@@ -2967,7 +3553,7 @@ function startFiles() {
   }).catch(function (e) { fbSay('cannot load keys: ' + e.message, true); });
 }
 function fbList() {
-  if (!FB.scope) return;
+  if (FB.root === 'shared' ? !FB.bundle : !FB.scope) { FB.entries = []; fbRender(); fbSay(FB.root === 'shared' ? 'No bundles yet: create one with “new bundle”.' : ''); $('fbempty').hidden = true; return; }
   fbApi('GET', FB.path, 'as=list').then(function (d) {
     FB.entries = d.entries || [];
     $('fbempty').hidden = FB.entries.length > 0;
@@ -2979,7 +3565,7 @@ function fbRender() {
   var crumb = $('fbcrumb');
   crumb.replaceChildren();
   function link(label, path) { var a = el('a', label); a.addEventListener('click', function () { FB.path = path; fbList(); }); return a; }
-  crumb.appendChild(link(FB.root === 'profile' ? 'profile' : 'workspace', ''));
+  crumb.appendChild(link(FB.root === 'profile' ? 'profile' : FB.root === 'shared' ? 'bundle ' + (FB.bundle || '') : 'workspace', ''));
   var parts = FB.path.split('/').filter(Boolean);
   parts.forEach(function (p, i) { crumb.appendChild(document.createTextNode(' / ')); crumb.appendChild(link(p, parts.slice(0, i + 1).join('/'))); });
   var rows = $('fbrows');
@@ -3008,7 +3594,7 @@ function fbRender() {
       fbApi('POST', full, 'op=move', undefined, { to: to.replace(/^\/+/, '') }).then(function () { fbList(); }).catch(function (x) { fbSay(x.message, true); });
     });
     btn('delete', function () {
-      if (!confirm('Delete ' + full + (e.type === 'dir' ? ' and everything in it' : '') + '?' + (FB.root === 'profile' ? ' This changes what this key’s agents are given.' : ''))) return;
+      if (!confirm('Delete ' + full + (e.type === 'dir' ? ' and everything in it' : '') + '?' + (FB.root === 'profile' ? ' This changes what this key’s agents are given.' : FB.root === 'shared' ? ' Every key granted this bundle loses it.' : ''))) return;
       fbApi('DELETE', full).then(function () { if (FB.edit && FB.edit.path === full) fbCloseEditor(true); fbList(); }).catch(function (x) { fbSay(x.message, true); });
     });
     tr.appendChild(ac);
@@ -3016,7 +3602,42 @@ function fbRender() {
   });
 }
 $('fbscope').addEventListener('change', function () { FB.scope = $('fbscope').value; FB.path = ''; fbCloseEditor(true); fbList(); });
-function fbSetRoot(root) { FB.root = root; FB.path = ''; $('fbws').className = root === 'workspace' ? 'on' : ''; $('fbprof').className = root === 'profile' ? 'on' : ''; fbCloseEditor(true); fbList(); }
+function fbSetRoot(root) {
+  FB.root = root; FB.path = '';
+  $('fbws').className = root === 'workspace' ? 'on' : ''; $('fbprof').className = root === 'profile' ? 'on' : ''; $('fbshared').className = root === 'shared' ? 'on' : '';
+  var shared = root === 'shared';
+  $('fbscope').hidden = shared; $('fbbundle').hidden = !shared; $('fbnewbundle').hidden = !shared; $('fbdelbundle').hidden = !shared;
+  fbCloseEditor(true);
+  if (shared) fbLoadBundles(); else fbList();
+}
+function fbLoadBundles(select) {
+  return fetch('dashboard/bundles.json', { cache: 'no-store' }).then(readJson).then(function (d) {
+    var sel = $('fbbundle');
+    sel.replaceChildren();
+    d.bundles.forEach(function (b) {
+      var o = el('option', b.name + (b.editable ? '' : ' (a link: edit by hand)') + (b.usedBy.length ? ' - used by ' + b.usedBy.length : '')); o.value = b.name; o.disabled = !b.editable; sel.appendChild(o);
+    });
+    var pick = select || FB.bundle;
+    if (pick && d.bundles.some(function (b) { return b.name === pick && b.editable; })) sel.value = pick;
+    else { var first = d.bundles.filter(function (b) { return b.editable; })[0]; sel.value = first ? first.name : ''; }
+    FB.bundle = sel.value || null; FB.bundles = d.bundles;
+    fbList();
+  }).catch(function (e) { fbSay('cannot load bundles: ' + e.message, true); });
+}
+$('fbbundle').addEventListener('change', function () { FB.bundle = $('fbbundle').value; FB.path = ''; fbCloseEditor(true); fbList(); });
+$('fbnewbundle').addEventListener('click', function () {
+  var name = prompt('Name of the new bundle (letters, digits, dots, dashes, underscores). It gets skills/, extensions/ and prompts/ folders. Grant it to keys on the API Management page.');
+  if (!name) return;
+  epPost('dashboard/bundles', { name: name.trim() }).then(function () { fbLoadBundles(name.trim()); }).catch(function (e) { fbSay(e.message, true); });
+});
+$('fbdelbundle').addEventListener('click', function () {
+  if (!FB.bundle) return;
+  var b = (FB.bundles || []).filter(function (x) { return x.name === FB.bundle; })[0];
+  var used = b && b.usedBy.length ? ' It is granted to: ' + b.usedBy.join(', ') + '; their chats lose it.' : '';
+  if (!confirm('Delete the bundle "' + FB.bundle + '" and everything in it?' + used)) return;
+  epPost('dashboard/bundles/' + encodeURIComponent(FB.bundle) + (used ? '?force=1' : ''), undefined, 'DELETE').then(function () { FB.bundle = null; fbLoadBundles(); }).catch(function (e) { fbSay(e.message, true); });
+});
+$('fbshared').addEventListener('click', function () { fbSetRoot('shared'); });
 $('fbws').addEventListener('click', function () { fbSetRoot('workspace'); });
 $('fbprof').addEventListener('click', function () { fbSetRoot('profile'); });
 $('fbrefresh').addEventListener('click', fbList);
@@ -3533,6 +4154,7 @@ function route() {
   if (name === 'docs') startDocs(sub[1], sub[2]);
   if (name === 'audit') startAudit();
   if (name === 'endpoints') loadEndpoints();
+  if (name === 'jobs') loadJobs();
   if (name === 'containers') { startContainersPolling(); loadHostPi(); }
   if (name === 'models') ensureModels();
   if (name === 'spend') ensureSpend(true);
@@ -3674,6 +4296,105 @@ function inventoryBlock(inv) {
   return box;
 }
 
+
+/* ---- Pi packages and MCP servers of a profile ---- */
+var PKG = { scope: null, timer: null };
+function packagesSection(scope) {
+  var sec = el('div'); sec.className = 'detailsec';
+  sec.appendChild(el('h4', 'Packages and MCP servers'));
+  var warn = el('p', 'Packages and MCP servers run third-party code in this agent’s container, with the network its policy allows. Install only what you trust. Everything is done in a throwaway container with only this profile mounted, and needs a dashboard password.');
+  warn.className = 'hint'; sec.appendChild(warn);
+  var body = el('div'); sec.appendChild(body);
+  var job = el('pre'); job.style.cssText = 'white-space:pre-wrap;max-height:220px;overflow:auto;background:#0c0c0c;border:1px solid var(--border);border-radius:8px;padding:10px'; job.hidden = true;
+  var jobTitle = el('p'); jobTitle.className = 'hint'; jobTitle.hidden = true;
+  sec.appendChild(jobTitle); sec.appendChild(job);
+  var note = el('p'); note.className = 'hint small'; sec.appendChild(note);
+  var api = 'dashboard/packages/' + encodeURIComponent(scope);
+  function say(t, bad) { note.textContent = t; note.className = 'hint small' + (bad ? ' bad' : ''); }
+  function showJob(j) {
+    if (!j) return;
+    jobTitle.hidden = job.hidden = false;
+    jobTitle.textContent = j.title + ' — ' + j.state;
+    job.textContent = j.lines.join('\n');
+    job.scrollTop = job.scrollHeight;
+    if (j.state === 'running') { clearTimeout(PKG.timer); PKG.timer = setTimeout(poll, 1500); }
+    else { clearTimeout(PKG.timer); load(); }
+  }
+  function poll() { fetch('dashboard/packages/job.json', { cache: 'no-store' }).then(readJson).then(function (d) { showJob(d.job); }); }
+  function act(action, payload) {
+    say('working…');
+    return epPost(api + '/' + action, payload || {}).then(function (r) { say(''); if (r.job) showJob(r.job); else load(); }).catch(function (e) { say(e.message, true); });
+  }
+  function load() {
+    return fetch(api + '.json', { cache: 'no-store' }).then(readJson).then(function (d) {
+      body.replaceChildren();
+      if (!d.enabled) { body.appendChild(el('p', 'Switched off in Settings → Containers.')).className = 'hint'; return; }
+      if (!d.passwordSet) body.appendChild(el('p', 'Set a dashboard password (Settings → Access) to install or change anything here.')).className = 'hint bad';
+      if (d.network === 'none') body.appendChild(el('p', 'This scope’s network policy is “none”: packages cannot be downloaded and MCP servers over HTTP cannot be reached.')).className = 'hint bad';
+      // packages
+      var pt = el('table'); var ph = el('tr'); ['package', ''].forEach(function (h) { ph.appendChild(el('th', h)); }); pt.appendChild(el('thead')).appendChild(ph);
+      var pb = el('tbody'); pt.appendChild(pb);
+      d.packages.forEach(function (p) {
+        var tr = el('tr'); tr.appendChild(el('td', p));
+        var td = el('td'); var rm = el('button', 'remove'); rm.addEventListener('click', function () { if (confirm('Remove ' + p + '?')) act('remove', { source: p }); }); td.appendChild(rm); tr.appendChild(td); pb.appendChild(tr);
+      });
+      if (!d.packages.length) { var e0 = el('tr'); e0.appendChild(el('td', 'no packages installed')).colSpan = 2; pb.appendChild(e0); }
+      body.appendChild(pt);
+      var f = el('div'); f.className = 'fieldrow'; f.style.marginTop = '8px';
+      var src = el('input'); src.type = 'text'; src.placeholder = 'npm:name, git:host/owner/repo or https://host/owner/repo'; src.style.flex = '1';
+      var inst = el('button', 'install'); inst.addEventListener('click', function () { if (src.value.trim()) act('install', { source: src.value.trim() }); });
+      var upd = el('button', 'update all'); upd.addEventListener('click', function () { act('update'); });
+      f.appendChild(src); f.appendChild(inst); f.appendChild(upd); body.appendChild(f);
+      // MCP servers
+      body.appendChild(el('h4', 'MCP servers'));
+      var mt = el('table'); var mh = el('tr'); ['server', 'kind', 'what it runs', 'environment', 'on', ''].forEach(function (h) { mh.appendChild(el('th', h)); }); mt.appendChild(el('thead')).appendChild(mh);
+      var mb = el('tbody'); mt.appendChild(mb);
+      d.mcp.servers.forEach(function (s) {
+        var tr = el('tr'); tr.appendChild(el('td', s.name)); tr.appendChild(el('td', s.kind)); tr.appendChild(el('td', s.command || s.url || ''));
+        tr.appendChild(el('td', Object.keys(s.env).concat(Object.keys(s.headers)).map(function (k) { return k + '=' + (s.env[k] || s.headers[k]); }).join(', ')));
+        tr.appendChild(el('td', s.enabled ? 'yes' : 'no'));
+        var td = el('td');
+        var tog = el('button', s.enabled ? 'disable' : 'enable'); tog.addEventListener('click', function () { act('mcp-enable', { name: s.name, enabled: !s.enabled }); });
+        var rm = el('button', 'remove'); rm.addEventListener('click', function () { if (confirm('Remove the MCP server ' + s.name + '?')) act('mcp-remove', { name: s.name }); });
+        td.appendChild(tog); td.appendChild(document.createTextNode(' ')); td.appendChild(rm); tr.appendChild(td); mb.appendChild(tr);
+      });
+      if (!d.mcp.servers.length) { var e1 = el('tr'); e1.appendChild(el(d.mcp.note ? 'td' : 'td', d.mcp.note || 'no MCP servers')).colSpan = 6; mb.appendChild(e1); }
+      body.appendChild(mt);
+      var tools = el('div'); tools.className = 'fieldrow'; tools.style.marginTop = '8px';
+      var test = el('button', 'test connections'); test.title = 'pi mcp list: connects to every enabled server and shows its state, tools and errors'; test.addEventListener('click', function () { act('mcp-test'); });
+      tools.appendChild(test); body.appendChild(tools);
+      var form = el('div'); form.style.marginTop = '8px';
+      var kind = el('select'); [['stdio', 'a command (stdio)'], ['http', 'a URL (HTTP)']].forEach(function (o) { var op = el('option', o[1]); op.value = o[0]; kind.appendChild(op); });
+      var name = el('input'); name.type = 'text'; name.placeholder = 'name (letters, digits, _ -)';
+      var cmd = el('input'); cmd.type = 'text'; cmd.placeholder = 'command, e.g. npx'; 
+      var argbox = el('textarea'); argbox.rows = 3; argbox.placeholder = 'arguments, one per line'; argbox.style.cssText = 'width:100%;box-sizing:border-box;background:#141414;color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:12px;margin-top:6px';
+      var envbox = el('textarea'); envbox.rows = 2; envbox.placeholder = 'environment, one per line: NAME=${VARIABLE}   (references only: set the variable itself in the container settings)'; envbox.style.cssText = argbox.style.cssText;
+      var url = el('input'); url.type = 'text'; url.placeholder = 'https://example.com/mcp'; url.hidden = true;
+      var tok = el('input'); tok.type = 'text'; tok.placeholder = 'bearer token variable name, e.g. DOCS_TOKEN'; tok.hidden = true;
+      kind.addEventListener('change', function () { var h = kind.value === 'http'; cmd.hidden = h; argbox.hidden = h; envbox.hidden = h; url.hidden = !h; tok.hidden = !h; });
+      var add = el('button', 'add server');
+      add.addEventListener('click', function () {
+        var payload = { name: name.value.trim() };
+        if (kind.value === 'http') { payload.url = url.value.trim(); if (tok.value.trim()) payload.bearerTokenEnv = tok.value.trim(); }
+        else {
+          payload.command = cmd.value.trim();
+          payload.args = argbox.value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
+          payload.env = {};
+          envbox.value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean).forEach(function (line) { var i = line.indexOf('='); if (i > 0) payload.env[line.slice(0, i).trim()] = line.slice(i + 1).trim(); });
+        }
+        act('mcp-add', payload);
+      });
+      var row = el('div'); row.className = 'keyform';
+      [kind, name, cmd, url, tok].forEach(function (x) { row.appendChild(x); });
+      form.appendChild(row); form.appendChild(argbox); form.appendChild(envbox);
+      var addRow = el('div'); addRow.className = 'fieldrow'; addRow.style.marginTop = '6px'; addRow.appendChild(add); form.appendChild(addRow);
+      body.appendChild(form);
+      if (d.job) showJob(d.job.state === 'running' || jobTitle.hidden ? d.job : null);
+    }).catch(function (e) { body.replaceChildren(el('p', 'cannot load packages: ' + e.message)); });
+  }
+  load();
+  return sec;
+}
 function renderProfileDetail(d) {
   var box = $('profiledetail');
   box.hidden = false;
@@ -3921,6 +4642,7 @@ function renderProfileDetail(d) {
     live.appendChild(grid);
   }
   parts.push(live);
+  parts.push(packagesSection(d.scope));
   box.replaceChildren.apply(box, parts);
 }
 

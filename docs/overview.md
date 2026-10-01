@@ -18,6 +18,12 @@ reach, how much it may use, what it remembers, and keeping the model providers' 
 | **Bridge** | A Pi extension in every container and a socket server in the gateway: model calls go through it so credentials stay out | `piper-bridge.mjs`, `lib/runner.mjs` |
 | **Profile helper** | Reads and edits a profile or workspace from a throwaway container with one folder mounted | `piper-profile.mjs` |
 | **Agent servers** | One extra HTTP port per agent endpoint | `lib/agentservers.mjs` |
+| **Terminal** | A WebSocket (`lib/websocket.mjs`) to a shell in a running container, run under a small pty helper over `docker exec`; the only WebSocket the gateway serves | `lib/terminal.mjs`, `lib/terminalroutes.mjs` |
+| **Jobs** | Scheduled, webhook and API runs of an agent, as the owning key | `lib/jobs.mjs`, `lib/jobroutes.mjs` |
+| **Hand-offs and teams** | Agents calling agents over the chat's bridge socket; chains of agents on an endpoint of their own | `lib/delegate.mjs`, `lib/teams.mjs` |
+| **Templates** | Agent templates, clone, export and import (profile bundles, validated and written by the helper) | `lib/templates.mjs`, `templates/` |
+| **Packages and bundles** | Pi packages and MCP servers installed by a throwaway container; shared bundle editing | `lib/pipackages.mjs`, `lib/bundleroutes.mjs` |
+| **Live view** | A per-chat event log streamed to the dashboard, with interrupt and transcript | `lib/livesession.mjs`, `lib/liveroutes.mjs` |
 | **Dashboard** | A single page served at `/dashboard`, behind the dashboard password | `dashboard.html` |
 | **Database** | SQLite (`node:sqlite`): settings, keys, spend, chats, agents, audit | `gateway.db` |
 | **Helpers** | Backup and restore, watchdog, deploy and control scripts | `piper-backup.mjs`, `piper-watchdog.mjs`, `deploy.sh`, `piper.sh` |
