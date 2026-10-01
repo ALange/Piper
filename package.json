@@ -1,10 +1,19 @@
 {
 	"name": "piper",
-	"version": "0.1.0",
+	"version": "0.4.0",
 	"private": true,
 	"license": "Apache-2.0",
+	"author": {
+		"name": "Adam Lange",
+		"email": "piper@adamlange.pl"
+	},
+	"homepage": "https://github.com/ALange/Piper",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/ALange/Piper.git"
+	},
 	"type": "module",
-	"description": "OpenAI-compatible gateway backed by the Pi coding agent",
+	"description": "OpenAI-compatible gateway that runs the Pi coding agent, one container per chat",
 	"scripts": {
 		"start": "node server.mjs",
 		"test": "node test.mjs"
