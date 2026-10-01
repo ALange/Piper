@@ -32,12 +32,12 @@
   .navbadge.bad { background:var(--red); color:#0a0a0a; font-weight:700; }
   nav a.on .navbadge { background:#d8dde4; color:#0a0a0a; }
   .sectionhead .ctrl { margin-left:auto; }
-  .sectionhead .tabs { margin:0; flex:1 1 auto; }
-  .tabs { display:flex; flex-wrap:wrap; gap:2px; margin:0 0 14px; border-bottom:1px solid var(--border); }
-  .tabs a { padding:7px 14px; color:var(--muted); text-decoration:none; font-size:12px; border-bottom:2px solid transparent; margin-bottom:-1px; cursor:pointer; }
-  .tabs a:hover { color:var(--fg); }
-  .tabs a.on { color:var(--fg); border-bottom-color:var(--green); }
-  .view > [data-tab]:not(.tabshown) { display:none !important; }
+  .sectionhead .pagetabs { margin:0; flex:1 1 auto; }
+  .pagetabs { display:flex; flex-wrap:wrap; gap:2px; margin:0 0 14px; border-bottom:1px solid var(--border); }
+  .pagetabs a { padding:7px 14px; color:var(--muted); text-decoration:none; font-size:12px; border-bottom:2px solid transparent; margin-bottom:-1px; cursor:pointer; }
+  .pagetabs a:hover { color:var(--fg); }
+  .pagetabs a.on { color:var(--fg); border-bottom-color:var(--green); }
+  .view > section[data-tab]:not(.tabshown) { display:none !important; }
   nav a { display:flex; align-items:center; gap:9px; padding:8px 10px; margin:1px 0; border-radius:6px;
           color:var(--muted); text-decoration:none; font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
   nav a .ic { width:14px; text-align:center; opacity:.75; }
@@ -456,7 +456,7 @@
     <p class="sub" id="subtitle">Live Pi agents, their models, and when each one will be reaped</p>
 
     <div class="sectionhead">
-      <div class="tabs" id="tabbar" hidden></div>
+      <div class="pagetabs" id="tabbar" hidden></div>
       <div class="ctrl">
         <span>refresh</span>
         <select id="interval">
@@ -4188,7 +4188,7 @@ function route() {
     if (view) view.classList.toggle('on', k === pane);
   });
   // A split pane shows only the sections of this tab.
-  Array.prototype.forEach.call(document.querySelectorAll('#view-' + pane + ' > [data-tab]'), function (sec) {
+  Array.prototype.forEach.call(document.querySelectorAll('#view-' + pane + ' > section[data-tab]'), function (sec) {
     sec.classList.toggle('tabshown', sec.getAttribute('data-tab') === tab.sections);
   });
   Array.prototype.forEach.call(document.querySelectorAll('#nav a[href^="#"]'), function (a) {

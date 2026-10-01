@@ -6394,6 +6394,10 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.equal(at(linkHref("#Some Heading", { page: "p" }).href), "help/docs/p/some-heading");
 	assert.ok(!/href = '#docs|location\.hash = '#(profiles|terminal)/.test(html), "no code sets an old-style hash");
 	assert.ok(!/sectiontitle/.test(html), "the repeated section title is gone");
+	// The rule that hides other tabs' sections must only reach sections: the API keys page has its own data-tab blocks.
+	assert.match(html, /\.view > section\[data-tab\]:not\(\.tabshown\)/);
+	assert.ok(!/\.view > \[data-tab\]/.test(html), "the tab rule does not match every data-tab element");
+	assert.ok(html.includes('class="pagetabs" id="tabbar"'), "the page tab bar has a class of its own, apart from the existing .tabs bars");
 }
 
 console.log("nextTurn + images: ok");
