@@ -9,7 +9,7 @@ guarded by the dashboard password. An agent endpoint's own port serves a small s
 Authorization: Bearer <api key>
 ```
 
-- Keys are created on the dashboard (API Management) and shown once. `GATEWAY_API_KEY`, when set, is an operator key
+- Keys are created on the dashboard (API keys) and shown once. `GATEWAY_API_KEY`, when set, is an operator key
   that is never limited.
 - While **no** key and no settings key exist, `/v1/*` is open. Once any key exists (even a revoked one) a valid
   key is required, so revoking your last key locks the API rather than opening it.

@@ -34,6 +34,13 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   Settings: `JOBS_ENABLED`, `JOBS_MAX_PARALLEL`, `JOBS_MIN_INTERVAL_MS`, `JOBS_MAX_PER_KEY`, `JOBS_RESULT_DAYS`.
 
 ### Changed
+- **Dashboard navigation.** The 15-item sidebar is now 12 items in four groups (Monitor, Build, Infrastructure, Admin), and the
+  long pages are split into tabs: Agents (Agents, Teams, Templates & import, Create), Files & profiles (Files, Profiles &
+  packages), Containers (Containers, Terminal, Images, Pi on this host, Events & command) and Help (Documentation, About).
+  The old *Agents* page is **Live chats**, *Endpoints* is **Agents**, *API Management* is **API keys**; Terminal, Profiles,
+  Documentation and About moved into tabs, and the live-chat and container counts show as badges in the sidebar. Links
+  of earlier versions (`#endpoints`, `#terminal`, `#profiles`, `#docs`, `#about`) keep working; `#agents` now opens the
+  new Agents page rather than the live chats.
 - A chat request and a run without a client (`runAgentTurn`, the base for jobs, delegation and teams) now share one
   path for session limits, crashed-session replacement, spend cap and model allow-list.
 

@@ -26,6 +26,18 @@
   .brand b { display:block; font-size:13px; letter-spacing:.02em; }
   .brand span { display:block; color:var(--dim); font-size:10px; }
   nav { padding:8px; }
+  .navgroup { margin:12px 10px 3px; font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); }
+  .navgroup:first-child { margin-top:2px; }
+  .navbadge { margin-left:auto; min-width:16px; padding:0 5px; border-radius:9px; background:#2a3340; color:var(--fg); font-size:10px; text-align:center; letter-spacing:0; line-height:16px; }
+  .navbadge.bad { background:var(--red); color:#0a0a0a; font-weight:700; }
+  nav a.on .navbadge { background:#d8dde4; color:#0a0a0a; }
+  .sectionhead .ctrl { margin-left:auto; }
+  .sectionhead .tabs { margin:0; flex:1 1 auto; }
+  .tabs { display:flex; flex-wrap:wrap; gap:2px; margin:0 0 14px; border-bottom:1px solid var(--border); }
+  .tabs a { padding:7px 14px; color:var(--muted); text-decoration:none; font-size:12px; border-bottom:2px solid transparent; margin-bottom:-1px; cursor:pointer; }
+  .tabs a:hover { color:var(--fg); }
+  .tabs a.on { color:var(--fg); border-bottom-color:var(--green); }
+  .view > [data-tab]:not(.tabshown) { display:none !important; }
   nav a { display:flex; align-items:center; gap:9px; padding:8px 10px; margin:1px 0; border-radius:6px;
           color:var(--muted); text-decoration:none; font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
   nav a .ic { width:14px; text-align:center; opacity:.75; }
@@ -411,22 +423,23 @@
       <div class="glyph">&#9679;</div>
       <div><b>Piper</b><span>Pi agent proxy</span></div>
     </div>
-    <nav>
+    <nav id="nav">
+      <div class="navgroup">Monitor</div>
       <a class="on" href="#overview"><span class="ic">&#9638;</span>Overview</a>
-      <a href="#agents"><span class="ic">&#9683;</span>Agents</a>
-      <a href="#containers"><span class="ic">&#9635;</span>Containers</a>
-      <a href="#terminal"><span class="ic">&#9002;</span>Terminal</a>
-      <a href="#files"><span class="ic">&#9776;</span>Files</a>
-      <a href="#endpoints"><span class="ic">&#8644;</span>Endpoints</a>
-      <a href="#jobs"><span class="ic">&#9201;</span>Jobs</a>
-      <a href="#models"><span class="ic">&#9678;</span>Models</a>
+      <a href="#chats"><span class="ic">&#9683;</span>Live chats<span class="navbadge" id="nav-chats-badge" hidden></span></a>
       <a href="#spend"><span class="ic">&#36;</span>Spend</a>
-      <a href="#apikeys"><span class="ic">&#9636;</span>API Management</a>
-      <a href="#profiles"><span class="ic">&#9776;</span>Profiles</a>
       <a href="#audit"><span class="ic">&#9745;</span>Audit</a>
+      <div class="navgroup">Build</div>
+      <a href="#agents"><span class="ic">&#8644;</span>Agents</a>
+      <a href="#jobs"><span class="ic">&#9201;</span>Jobs</a>
+      <a href="#files"><span class="ic">&#9776;</span>Files &amp; profiles</a>
+      <div class="navgroup">Infrastructure</div>
+      <a href="#containers"><span class="ic">&#9635;</span>Containers<span class="navbadge bad" id="nav-containers-badge" hidden>!</span></a>
+      <a href="#models"><span class="ic">&#9678;</span>Models</a>
+      <div class="navgroup">Admin</div>
+      <a href="#apikeys"><span class="ic">&#9636;</span>API keys</a>
       <a href="#settings"><span class="ic">&#9881;</span>Settings</a>
-      <a href="#docs"><span class="ic">&#9776;</span>Documentation</a>
-      <a href="#about"><span class="ic">&#9432;</span>About</a>
+      <a href="#help"><span class="ic">&#9432;</span>Help</a>
     </nav>
     <div class="sidefoot">
       <div class="statusbox">
@@ -443,7 +456,7 @@
     <p class="sub" id="subtitle">Live Pi agents, their models, and when each one will be reaped</p>
 
     <div class="sectionhead">
-      <h2 id="sectiontitle">Overview</h2>
+      <div class="tabs" id="tabbar" hidden></div>
       <div class="ctrl">
         <span>refresh</span>
         <select id="interval">
@@ -539,7 +552,7 @@
     </div><!-- /view-agents -->
 
     <div class="view" id="view-containers">
-      <section class="panel">
+      <section data-tab="containers" class="panel">
         <div class="toolbar">
           <div>
             <h3>Containers</h3>
@@ -558,7 +571,7 @@
         </table>
         <p class="hint" id="ctempty" hidden>No containers yet: one is made when a chat first speaks.</p>
       </section>
-      <section class="panel" id="hostpipanel">
+      <section data-tab="pihost" class="panel" id="hostpipanel">
         <div class="toolbar">
           <div>
             <h3>Pi on this host</h3>
@@ -583,7 +596,7 @@
           </table>
         </div>
       </section>
-      <section class="panel">
+      <section data-tab="images" class="panel">
         <div class="toolbar">
           <div>
             <h3>Images</h3>
@@ -596,13 +609,13 @@
         <table><thead><tr><th>image</th><th>environment</th><th>Pi</th><th class="num">size</th><th>built</th><th>used by</th><th></th></tr></thead><tbody id="imgrows"></tbody></table>
         <pre id="imgjob" class="mdpreview" hidden></pre>
       </section>
-      <section class="panel">
+      <section data-tab="events" class="panel">
         <h3>Run a command</h3>
         <p class="hint" id="ctexecnote">Runs as root inside a running container. It is recorded below.</p>
         <div class="fieldrow"><select id="ctexectarget"></select><input type="text" id="ctexeccmd" placeholder="ls -la /workspace" autocomplete="off" style="flex:1"><button id="ctexecrun">run</button></div>
         <pre id="ctexecout" class="mdpreview" hidden></pre>
       </section>
-      <section class="panel">
+      <section data-tab="events" class="panel">
         <h3>What happened</h3>
         <p class="hint" style="margin:0 0 8px">Containers killed for memory or gone, and what was done here. Newest first.</p>
         <table><thead><tr><th>when</th><th>what</th><th>container</th><th>detail</th></tr></thead><tbody id="ctlog"></tbody></table>
@@ -807,7 +820,7 @@
     </div><!-- /view-jobs -->
 
     <div class="view" id="view-endpoints">
-      <section class="panel">
+      <section data-tab="agents" class="panel">
         <div class="toolbar">
           <div>
             <h3>Agent endpoints</h3>
@@ -823,7 +836,7 @@
         </table>
         <p class="hint" id="epempty" hidden>No agent endpoints yet. Create one below.</p>
       </section>
-      <section class="panel" id="teamsec">
+      <section data-tab="teams" class="panel" id="teamsec">
         <div class="toolbar">
           <div>
             <h3>Teams</h3>
@@ -839,7 +852,7 @@
           <div class="fieldrow"><button id="teamaddstep">add step</button><button id="teamsave">create team</button><button id="teamcancel">close</button><span class="passnote" id="teamnote"></span></div>
         </div>
       </section>
-      <section class="panel" id="epeditor" hidden>
+      <section data-tab="agents" class="panel" id="epeditor" hidden>
         <h3 id="epedtitle">Edit</h3>
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">name</label><input type="text" id="epedname"></div>
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">model</label><input type="text" id="epedmodel" placeholder="provider/model, blank = the default"><select id="epedthink"></select></div>
@@ -850,7 +863,7 @@
         <div class="fieldrow" style="margin-top:8px"><button id="epedsave">save</button><button id="epedcancel">close</button><span class="hint small" id="epednote"></span></div>
         <p class="hint small" id="epedcurl"></p>
       </section>
-      <section class="panel">
+      <section data-tab="templates" class="panel">
         <div class="toolbar">
           <div>
             <h3>Templates and import</h3>
@@ -867,7 +880,7 @@
         </div>
         <p class="hint small">A bundle can carry extensions, which are code that runs in the agent&rsquo;s container: import only files you trust. Needs a dashboard password. Environment, mounts, images and network are never part of a bundle.</p>
       </section>
-      <section class="panel">
+      <section data-tab="create" class="panel">
         <h3>Create an agent endpoint</h3>
         <p class="hint">For an existing key. The port is picked for you and kept. Instructions become the agent's AGENTS.md; you can also change its skills and extensions from chat with <code>/skills</code>, or the profile API.</p>
         <div class="keyform">
@@ -1338,8 +1351,11 @@ function render(d) {
   var msgs = [];
   if (ct && !ct.ok) msgs.push(['Chats cannot start. ', ct.problems.join(' \u2014 ')]);
   else if (ct && ct.warnings.length) msgs.push(['Check the containers. ', ct.warnings.join(' \u2014 ')]);
-  if (d.disk && d.disk.low) msgs.push(['Disk is nearly full. ', (d.disk.freeMb / 1024).toFixed(1) + ' GB free on ' + d.disk.path + ' (warning below ' + (d.disk.warnBelowMb / 1024).toFixed(1) + ' GB): chats cannot install or write once it is full. Free space, or prune images on the Containers page.']);
+  if (d.disk && d.disk.low) msgs.push(['Disk is nearly full. ', (d.disk.freeMb / 1024).toFixed(1) + ' GB free on ' + d.disk.path + ' (warning below ' + (d.disk.warnBelowMb / 1024).toFixed(1) + ' GB): chats cannot install or write once it is full. Free space, or prune images (Containers \u2192 Images).']);
   warn.hidden = msgs.length === 0;
+  // Trouble and activity show in the nav, so a page nobody has open still tells.
+  var cb = $('nav-containers-badge'); if (cb) cb.hidden = msgs.length === 0;
+  var lb = $('nav-chats-badge'); if (lb) { lb.hidden = !S.length; lb.textContent = String(S.length); }
   warn.replaceChildren.apply(warn, msgs.flatMap(function (m, i) { return (i ? [el('br')] : []).concat([el('b', m[0]), document.createTextNode(m[1])]); }));
 
   var tbody = $('rows');
@@ -1672,7 +1688,7 @@ function renderKeyTable() {
     // First, so it is visible without scrolling the table: what this key's agents get.
     var contents = el('button', 'contents');
     contents.title = 'skills, extensions and tools this key\u2019s agents get';
-    contents.addEventListener('click', function () { location.hash = '#profiles/key-' + k.id; });
+    contents.addEventListener('click', function () { location.hash = '#files/profiles/key-' + k.id; });
     actions.appendChild(contents);
     if (k.status === 'active') {
       var revoke = el('button', 'revoke');
@@ -2096,7 +2112,7 @@ var SETTING_TABS = [
   { id: 'containers', label: 'Containers', intro: 'Each chat’s agent runs in its own Docker container, with full rights inside it. These settings decide what a container can reach and how much of the machine it may use.' },
   { id: 'jobs', label: 'Jobs', intro: 'Jobs themselves are on the Jobs page. These limits keep unattended runs from costing more than you meant.' },
   { id: 'sessions', label: 'Sessions', intro: 'How long agents live and what they show while they work.' },
-  { id: 'limits', label: 'Usage limits', intro: 'Defaults for every API key. Each key can override them on the API Management page.' },
+  { id: 'limits', label: 'Usage limits', intro: 'Defaults for every API key. Each key can override them on the API keys page.' },
   { id: 'profiles', label: 'Profiles', intro: 'Each API key’s own skills, extensions and settings, and the shared bundles you hand out on top.' },
   { id: 'models', label: 'Models', intro: 'What happens when the model a chat uses fails.' },
   { id: 'audit', label: 'Audit', intro: 'What the audit log records and how long it keeps it. A category that is off is not stored at all. Changes to these settings are always recorded. The log itself is on the Audit page.' },
@@ -2139,7 +2155,7 @@ var LAYOUT = {
   TEAM_MAX_STEPS: { tab: 'sessions', section: 'Hand-offs and teams', label: 'Most steps in a team', unit: 'steps',
     summary: 'A team is a chain of agents on an endpoint of its own.' },
   PACKAGES_ENABLED: { tab: 'containers', section: 'Packages', label: 'Allow packages and MCP servers',
-    summary: 'Install Pi packages and MCP servers into a key\u2019s or agent\u2019s profile from the Profiles page. They run third-party code in the agent\u2019s container, so it needs a dashboard password. Off refuses all of it.' },
+    summary: 'Install Pi packages and MCP servers into a key\u2019s or agent\u2019s profile from Files & profiles \u2192 Profiles. They run third-party code in the agent\u2019s container, so it needs a dashboard password. Off refuses all of it.' },
   LIVE_VIEW_ENABLED: { tab: 'containers', section: 'Live view', label: 'Allow the live view',
     summary: 'Watch a running chat from the Agents page: what is said, thinking and tool calls, with interrupt and a transcript download. Needs a dashboard password; watches are audited, never the content. Off refuses all of it.' },
   JOBS_ENABLED: { tab: 'jobs', section: 'Jobs', label: 'Run jobs',
@@ -2153,7 +2169,7 @@ var LAYOUT = {
   JOBS_RESULT_DAYS: { tab: 'jobs', section: 'Jobs', label: 'Keep results for', unit: 'days',
     summary: 'Finished runs and their text are deleted after this long.' },
   TERMINAL_ENABLED: { tab: 'containers', section: 'Terminal', label: 'Allow terminals',
-    summary: 'An interactive root shell in a running container, from the Terminal page. Needs a dashboard password; every open and close is audited, never what is typed. Off refuses all of them.' },
+    summary: 'An interactive root shell in a running container, from Containers \u2192 Terminal. Needs a dashboard password; every open and close is audited, never what is typed. Off refuses all of them.' },
   TERMINAL_IDLE_MS: { tab: 'containers', section: 'Terminal', label: 'Close an idle terminal after',
     summary: 'No typing for this long closes the terminal. 0 never does.' },
   TERMINAL_MAX_SESSIONS: { tab: 'containers', section: 'Terminal', label: 'Most terminals at once', unit: 'terminals',
@@ -2197,7 +2213,7 @@ var LAYOUT = {
   PROFILE_ROOT: { tab: 'profiles', section: 'Profiles', label: 'Profiles folder',
     summary: 'Where each key’s profile is stored, mounted at /profile in its chats’ containers.' },
   SHARED_BUNDLES: { tab: 'profiles', section: 'Shared bundles', label: 'Bundles every key gets',
-    summary: 'Comma-separated bundle names, * for all, or empty for none. A key can have its own list on API Management.',
+    summary: 'Comma-separated bundle names, * for all, or empty for none. A key can have its own list on the API keys page.',
     placeholder: 'none' },
   SHARED_ROOT: { tab: 'profiles', section: 'Shared bundles', label: 'Bundles folder',
     summary: 'Each subfolder is a bundle with skills/, extensions/ and prompts/, mounted read-only for the keys that get it.' },
@@ -2213,7 +2229,7 @@ var LAYOUT = {
     when: { key: 'FALLBACK_MODE', values: ['cooldown'], note: 'Only used when staying on the fallback for a cooldown period.' } },
 
   GATEWAY_API_KEY: { tab: 'access', section: 'API and dashboard', label: 'Admin API key',
-    summary: 'A key that opens both the API and the dashboard. Leave empty and use API Management for per-person keys.' },
+    summary: 'A key that opens both the API and the dashboard. Leave empty and use the API keys page for per-person keys.' },
   DASHBOARD_SESSION_MS: { tab: 'access', section: 'API and dashboard', label: 'Stay signed in for',
     summary: 'How long a dashboard sign-in lasts. 0 lasts until the browser closes.' },
   AUDIT_AUTH: { tab: 'audit', section: 'What is recorded', label: 'Dashboard sign-ins',
@@ -2780,23 +2796,53 @@ $('settingdiscard').addEventListener('click', function () { renderSettings(); se
 $('settingsearch').addEventListener('input', applySettingFilter);
 
 /* Views. The nav drives a hash route, so a view is linkable and survives a reload. */
-var VIEWS = {
-  overview: { title:'Gateway Overview', subtitle:'Live Pi agents, their models, and when each one will be reaped', section:'Overview' },
-  agents:   { title:'Agents', subtitle:'Every live Pi agent, with its expiry and a kill control', section:'Agents' },
-  jobs:     { title:'Jobs', subtitle:'Prompts an agent runs on a schedule, by webhook or on request', section:'Jobs' },
-  endpoints: { title:'Endpoints', subtitle:'Named, permanent agents of an API key, each on its own OpenAI-compatible port', section:'Endpoints' },
-  docs:     { title:'Documentation', subtitle:'The administrator\u2019s handbook: architecture, deployment, operation, configuration, API and troubleshooting', section:'Documentation' },
-  about:    { title:'About', subtitle:'Piper, its version, release notes and author', section:'About' },
-  terminal: { title:'Terminal', subtitle:'An interactive root shell inside a running container', section:'Terminal' },
-  files:    { title:'Files', subtitle:'Browse, upload, edit and organise a key\u2019s or an agent\u2019s workspace and profile', section:'Files' },
-  audit:    { title:'Audit', subtitle:'What was done to the gateway and what happened to it, as chosen in Settings \u2192 Audit', section:'Audit' },
-  containers: { title:'Containers', subtitle:'Each chat\u2019s container: how it is doing, and stop, recreate, remove or run a command', section:'Containers' },
-  models:   { title:'Models', subtitle:'Every model this gateway can route to, grouped by provider', section:'Models' },
-  spend:    { title:'Spend', subtitle:'What agents have cost, per model and per day', section:'Spend' },
-  profiles: { title:'Profiles', subtitle:'Per-key skills, extensions and settings, and who can change them', section:'Profiles' },
-  apikeys:  { title:'API Management', subtitle:'Keys for the OpenAI endpoints, their expiry, and what each one has used', section:'API Management' },
-  settings: { title:'Settings', subtitle:'Gateway configuration, stored in SQLite and editable here', section:'Settings' }
+/* Pages and tabs. A nav item is a page; a page has one or more tabs; a tab shows one pane (a `view-<pane>` block) and,
+   for panes that are split, only the sections marked data-tab="<tab>". Panes are the original views, left as they were. */
+var PAGES = {
+  overview:   { title:'Gateway Overview', tabs:[{ id:'overview', pane:'overview', subtitle:'Live Pi agents, their models, and when each one will be reaped' }] },
+  chats:      { title:'Live chats', tabs:[{ id:'chats', pane:'agents', subtitle:'Every running chat, with its expiry: watch it live, or kill it' }] },
+  spend:      { title:'Spend', tabs:[{ id:'spend', pane:'spend', subtitle:'What agents have cost, per model, per day and per agent' }] },
+  audit:      { title:'Audit', tabs:[{ id:'audit', pane:'audit', subtitle:'What was done to the gateway and what happened to it, as chosen in Settings \u2192 Audit' }] },
+  agents:     { title:'Agents', tabs:[
+    { id:'agents', label:'Agents', pane:'endpoints', sections:'agents', subtitle:'Named, permanent agents of an API key, each on its own OpenAI-compatible port' },
+    { id:'teams', label:'Teams', pane:'endpoints', sections:'teams', subtitle:'Chains of agents behind an endpoint of their own' },
+    { id:'templates', label:'Templates & import', pane:'endpoints', sections:'templates', subtitle:'Ready-made profiles, and agents exported from this or another gateway' },
+    { id:'create', label:'Create', pane:'endpoints', sections:'create', subtitle:'A new agent endpoint for an API key' }] },
+  jobs:       { title:'Jobs', tabs:[{ id:'jobs', pane:'jobs', subtitle:'Prompts an agent runs on a schedule, by webhook or on request' }] },
+  files:      { title:'Files & profiles', tabs:[
+    { id:'files', label:'Files', pane:'files', subtitle:'Browse, upload, edit and organise a key\u2019s or an agent\u2019s workspace, profile and the shared bundles' },
+    { id:'profiles', label:'Profiles & packages', pane:'profiles', subtitle:'Per-key skills, extensions, packages and MCP servers, and who can change them' }] },
+  containers: { title:'Containers', tabs:[
+    { id:'containers', label:'Containers', pane:'containers', sections:'containers', subtitle:'Each chat\u2019s container: how it is doing, and stop, recreate, remove or update' },
+    { id:'terminal', label:'Terminal', pane:'terminal', subtitle:'An interactive root shell inside a running container' },
+    { id:'images', label:'Images', pane:'containers', sections:'images', subtitle:'The environments chats run in, and building them' },
+    { id:'pihost', label:'Pi on this host', pane:'containers', sections:'pihost', subtitle:'The Pi the gateway runs on, and updating it and its extensions' },
+    { id:'events', label:'Events & command', pane:'containers', sections:'events', subtitle:'Run a command in a container, and what happened to containers' }] },
+  models:     { title:'Models', tabs:[{ id:'models', pane:'models', subtitle:'Every model this gateway can route to, grouped by provider' }] },
+  apikeys:    { title:'API keys', tabs:[{ id:'apikeys', pane:'apikeys', subtitle:'Keys for the OpenAI endpoints, their expiry, and what each one has used' }] },
+  settings:   { title:'Settings', tabs:[{ id:'settings', pane:'settings', subtitle:'Gateway configuration, stored in SQLite and editable here' }] },
+  help:       { title:'Help', tabs:[
+    { id:'docs', label:'Documentation', pane:'docs', subtitle:'The administrator\u2019s handbook: architecture, deployment, operation, configuration, API and troubleshooting' },
+    { id:'about', label:'About', pane:'about', subtitle:'Piper, its version, release notes and author' }] }
 };
+var PANES = ['overview', 'agents', 'containers', 'terminal', 'files', 'endpoints', 'jobs', 'models', 'spend', 'apikeys', 'profiles', 'audit', 'settings', 'docs', 'about'];
+/* Old links keep working: bookmarks and the docs' own links used the flat view names. */
+var OLD_HASHES = { endpoints: 'agents', terminal: 'containers/terminal', profiles: 'files/profiles', docs: 'help/docs', about: 'help/about' };
+function resolveHash(hash) {
+  var parts = String(hash || '').replace(/^#\/?/, '').split('/');
+  if (!parts[0]) parts = ['overview'];
+  if (!PAGES[parts[0]] && OLD_HASHES[parts[0]]) parts = OLD_HASHES[parts[0]].split('/').concat(parts.slice(1));
+  var page = PAGES[parts[0]] ? parts[0] : 'overview';
+  var def = PAGES[page];
+  var tab = def.tabs[0];
+  var rest = parts.slice(1);
+  // Only a page with several tabs has a tab segment; after it, or after the page alone, comes the pane's own sub-route.
+  if (def.tabs.length > 1) {
+    var named = def.tabs.filter(function (t) { return t.id === parts[1]; })[0];
+    if (named) { tab = named; rest = parts.slice(2); }
+  }
+  return { page: page, tab: tab, rest: rest };
+}
 /* Images: the environments, what is built, and a build's output while it runs. */
 var IMG_TIMER = null;
 function loadImages() {
@@ -3156,7 +3202,7 @@ function renderEndpoints(d) {
   loadTemplates();
   loadTeams();
   $('epcreate').disabled = !$('epkey').options.length;
-  if (!$('epkey').options.length) $('epcreatenote').textContent = 'create an API key first (API Management)';
+  if (!$('epkey').options.length) $('epcreatenote').textContent = 'create an API key first (API keys)';
 }
 
 
@@ -3626,7 +3672,7 @@ function fbLoadBundles(select) {
 }
 $('fbbundle').addEventListener('change', function () { FB.bundle = $('fbbundle').value; FB.path = ''; fbCloseEditor(true); fbList(); });
 $('fbnewbundle').addEventListener('click', function () {
-  var name = prompt('Name of the new bundle (letters, digits, dots, dashes, underscores). It gets skills/, extensions/ and prompts/ folders. Grant it to keys on the API Management page.');
+  var name = prompt('Name of the new bundle (letters, digits, dots, dashes, underscores). It gets skills/, extensions/ and prompts/ folders. Grant it to keys on the API keys page.');
   if (!name) return;
   epPost('dashboard/bundles', { name: name.trim() }).then(function () { fbLoadBundles(name.trim()); }).catch(function (e) { fbSay(e.message, true); });
 });
@@ -3741,7 +3787,7 @@ function drawDocList(active) {
   box.replaceChildren();
   DOCS.pages.forEach(function (p) {
     var a = el('a', p.title);
-    a.href = '#docs/' + p.id;
+    a.href = '#help/docs/' + p.id;
     a.title = p.summary;
     if (p.id === active) a.className = 'on';
     box.appendChild(a);
@@ -3771,7 +3817,7 @@ function loadDocPage(id, anchor) {
     toc.replaceChildren();
     if (d.headings.length) toc.appendChild(el('h5', 'On this page'));
     d.headings.forEach(function (h) {
-      var a = el('a', h.text); a.href = '#docs/' + id + '/' + h.id; a.className = 'l' + h.level; toc.appendChild(a);
+      var a = el('a', h.text); a.href = '#help/docs/' + id + '/' + h.id; a.className = 'l' + h.level; toc.appendChild(a);
     });
     scrollToDoc(anchor);
   }).catch(function (e) { $('doccontent').textContent = 'cannot load this page: ' + e.message; });
@@ -3788,7 +3834,7 @@ $('docsearch').addEventListener('input', function () {
       box.appendChild(el('h1', d.hits.length ? d.hits.length + ' result' + (d.hits.length === 1 ? '' : 's') + ' for “' + q + '”' : 'Nothing found for “' + q + '”'));
       d.hits.forEach(function (h) {
         var div = el('div'); div.className = 'hit';
-        var a = el('a', h.title + ' › ' + h.heading); a.href = '#docs/' + h.page + (h.anchor ? '/' + h.anchor : '');
+        var a = el('a', h.title + ' › ' + h.heading); a.href = '#help/docs/' + h.page + (h.anchor ? '/' + h.anchor : '');
         a.addEventListener('click', function () { $('docsearch').value = ''; });
         div.appendChild(a); div.appendChild(el('small', h.snippet));
         box.appendChild(div);
@@ -3961,7 +4007,7 @@ $('audauto').addEventListener('change', function () {
   if ($('audauto').checked) AUD.timer = setInterval(function () { loadAudit(true); }, 5000);
 });
 
-/* Updates: one job at a time, started from the Containers, Endpoints and Profiles pages, shown in a panel
+/* Updates: one job at a time, started from Containers, Agents and Files & profiles, shown in a panel
    that stays until closed and is polled while it runs. */
 var UP_TIMER = null;
 function startUpdateJob(url, title, body) {
@@ -4071,7 +4117,7 @@ function renderContainers(d) {
       if (a[0] === 'stop' && c.state !== 'running') b.disabled = true;
       if (a[0] === 'update' && c.status === 'orphan') b.disabled = true;
       if (a[0] === 'terminal') { b.disabled = c.state !== 'running' || !d.execAllowed; b.title = d.execAllowed ? 'a root shell in this container' : d.execNote; }
-      b.addEventListener('click', function () { if (a[0] === 'terminal') location.hash = '#terminal/' + c.name; else if (a[0] === 'update') ctUpdate(c); else ctAct(c.name, a[1], a[0], c.persistent); });
+      b.addEventListener('click', function () { if (a[0] === 'terminal') location.hash = '#containers/terminal/' + c.name; else if (a[0] === 'update') ctUpdate(c); else ctAct(c.name, a[1], a[0], c.persistent); });
       actions.appendChild(b);
       actions.appendChild(document.createTextNode(' '));
     });
@@ -4125,45 +4171,57 @@ $('ctexecrun').addEventListener('click', function () {
 });
 
 function route() {
-  var name = (location.hash || '#overview').replace(/^#\/?/, '');
+  var at = resolveHash(location.hash);
+  var page = at.page, tab = at.tab, rest = at.rest, pane = tab.pane;
+  // An old link is rewritten to its new place without adding a history entry.
+  var want = '#' + [page].concat(PAGES[page].tabs.length > 1 ? [tab.id] : []).concat(rest).join('/');
+  if (location.hash && location.hash !== want && /^#\/?[a-z]/.test(location.hash) && !PAGES[location.hash.replace(/^#\/?/, '').split('/')[0]]) {
+    history.replaceState(null, '', want);
+  }
   // #settings/<tab> opens a settings tab directly.
-  var sub = name.split('/');
-  name = sub[0];
-  if (name === 'settings' && sub[1] && SETTING_TABS.some(function (t) { return t.id === sub[1]; })) {
-    activeSettingTab = sub[1];
+  if (pane === 'settings' && rest[0] && SETTING_TABS.some(function (t) { return t.id === rest[0]; })) {
+    activeSettingTab = rest[0];
     if (SETTINGS) applySettingFilter();
   }
-  if (!VIEWS[name]) name = 'overview';
-  Object.keys(VIEWS).forEach(function (k) {
+  PANES.forEach(function (k) {
     var view = $('view-' + k);
-    if (view) view.classList.toggle('on', k === name);
+    if (view) view.classList.toggle('on', k === pane);
   });
-  Array.prototype.forEach.call(document.querySelectorAll('nav a[href^="#"]'), function (a) {
-    a.classList.toggle('on', a.getAttribute('href') === '#' + name);
+  // A split pane shows only the sections of this tab.
+  Array.prototype.forEach.call(document.querySelectorAll('#view-' + pane + ' > [data-tab]'), function (sec) {
+    sec.classList.toggle('tabshown', sec.getAttribute('data-tab') === tab.sections);
   });
-  $('title').textContent = VIEWS[name].title;
-  $('subtitle').textContent = VIEWS[name].subtitle;
-  $('sectiontitle').textContent = VIEWS[name].section;
+  Array.prototype.forEach.call(document.querySelectorAll('#nav a[href^="#"]'), function (a) {
+    a.classList.toggle('on', a.getAttribute('href') === '#' + page);
+  });
+  var bar = $('tabbar');
+  bar.hidden = PAGES[page].tabs.length < 2;
+  bar.replaceChildren.apply(bar, PAGES[page].tabs.length < 2 ? [] : PAGES[page].tabs.map(function (t) {
+    var a = el('a', t.label); a.href = '#' + page + '/' + t.id; if (t.id === tab.id) a.className = 'on';
+    return a;
+  }));
+  $('title').textContent = PAGES[page].title;
+  $('subtitle').textContent = tab.subtitle;
   stopContainersPolling();
   stopAuditRefresh();
   stopSpeedRefresh();
-  if (name === 'terminal') startTerminalView(sub[1]);
-  if (name === 'files') startFiles();
-  if (name === 'overview') startSpeed();
-  if (name === 'about') loadAbout();
-  if (name === 'docs') startDocs(sub[1], sub[2]);
-  if (name === 'audit') startAudit();
-  if (name === 'endpoints') loadEndpoints();
-  if (name === 'jobs') loadJobs();
-  if (name === 'containers') { startContainersPolling(); loadHostPi(); }
-  if (name === 'models') ensureModels();
-  if (name === 'spend') ensureSpend(true);
-  if (name === 'apikeys') ensureApiKeys(true);
-  if (name === 'settings') ensureSettings();
-  if (name === 'profiles') {
+  if (pane === 'terminal') startTerminalView(rest[0]);
+  if (pane === 'files') startFiles();
+  if (pane === 'overview') startSpeed();
+  if (pane === 'about') loadAbout();
+  if (pane === 'docs') startDocs(rest[0], rest[1]);
+  if (pane === 'audit') startAudit();
+  if (pane === 'endpoints') loadEndpoints();
+  if (pane === 'jobs') loadJobs();
+  if (pane === 'containers') { startContainersPolling(); loadHostPi(); }
+  if (pane === 'models') ensureModels();
+  if (pane === 'spend') ensureSpend(true);
+  if (pane === 'apikeys') ensureApiKeys(true);
+  if (pane === 'settings') ensureSettings();
+  if (pane === 'profiles') {
     ensureProfiles();
-    // #profiles/<scope> opens that key's detail, which is how the API keys page links here.
-    if (sub[1]) openProfileDetail(sub[1], true); else closeProfileDetail(true);
+    // #files/profiles/<scope> opens that key's detail, which is how the API keys page links here.
+    if (rest[0]) openProfileDetail(rest[0], true); else closeProfileDetail(true);
   }
 }
 
@@ -4188,7 +4246,7 @@ function renderShared(sh) {
   var tbody = $('sharedrows');
   $('sharedhint').textContent = 'Folders under ' + sh.root + ', each laid out like a Pi package (skills/, extensions/, prompts/), ' +
     'mounted read-only for the keys that get them. Every key gets: ' + (sh.defaultBundles || 'none') +
-    ', unless it has its own list on API Management. Edits reach open chats on their next /reload.';
+    ', unless it has its own list on the API keys page. Edits reach open chats on their next /reload.';
   if (!sh.bundles.length) {
     var tr = el('tr');
     tr.appendChild(cell('no bundles yet - create ' + sh.root + '/base/skills/<skill>/SKILL.md, for example', 'empty')).colSpan = 5;
@@ -4412,7 +4470,7 @@ function renderProfileDetail(d) {
   var refresh = el('button', 'refresh');
   refresh.addEventListener('click', function () { openProfileDetail(d.scope, true); });
   var close = el('button', 'close');
-  close.addEventListener('click', function () { location.hash = '#profiles'; });
+  close.addEventListener('click', function () { location.hash = '#files/profiles'; });
   tools.appendChild(refresh); tools.appendChild(close);
   head.appendChild(tools);
   var parts = [head];
@@ -4647,7 +4705,7 @@ function renderProfileDetail(d) {
 }
 
 function openProfileDetail(scope, fromRoute) {
-  if (!fromRoute && location.hash !== '#profiles/' + scope) { location.hash = '#profiles/' + scope; return; }
+  if (!fromRoute && location.hash !== '#files/profiles/' + scope) { location.hash = '#files/profiles/' + scope; return; }
   DETAIL_SCOPE = scope;
   var box = $('profiledetail');
   box.hidden = false;

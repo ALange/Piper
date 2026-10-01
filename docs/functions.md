@@ -7,6 +7,21 @@ The dashboard is at `/dashboard`. With no dashboard password set it is open to w
 **set one first** (Settings → Access). Several actions (the command box, updating the host's Pi) are refused
 until a password exists.
 
+The sidebar groups the pages by what you are doing:
+
+| Group | Page | What it holds |
+|---|---|---|
+| **Monitor** | Overview, Live chats, Spend, Audit | How the gateway is doing, what is running now, what it cost, what happened |
+| **Build** | Agents, Jobs, Files & profiles | Named agents (with teams, templates, import), prompts that run on their own, and what agents are given: files, profiles, packages, MCP servers, bundles |
+| **Infrastructure** | Containers, Models | Containers (with a terminal, images, the host's Pi), and the models that can be used |
+| **Admin** | API keys, Settings, Help | Keys and their limits, configuration, this handbook |
+
+Pages with several parts have tabs along the top (Agents: Agents, Teams, Templates & import, Create; Files & profiles: Files,
+Profiles & packages; Containers: Containers, Terminal, Images, Pi on this host, Events & command; Help: Documentation,
+About). A link such as `#agents/teams` opens a tab directly, and the links of earlier versions (`#endpoints`,
+`#terminal`, `#profiles`, `#docs`, `#about`) still work. The old Agents page of live chats is now **Live chats**; the old
+Endpoints page is now **Agents**.
+
 ## Overview
 
 Live numbers at a glance: conversations, working and idle agents, free slots, one-off requests, requests, models,
@@ -25,7 +40,7 @@ own disks), two charts over the last hour, and the five heaviest containers. Cha
 dashboard is open, so they start empty after a restart. The top of every page shows a warning when chats cannot
 start (Docker, the image or the network policy) or the disk is nearly full.
 
-## Agents (live sessions)
+## Live chats
 
 Every live conversation: session fingerprint, model, the **Pi version in its container** (green when it matches
 the gateway's, red when behind), its average **generation speed** and **prompt processing speed** in tokens per
@@ -42,7 +57,18 @@ continues it); **transcript** downloads the conversation so far as Markdown (too
 Only a chat that is running can be watched, and what it shows is what happened since the chat was last started:
 the last 300 items, kept in memory. It needs a dashboard password, because it shows what people say to agents.
 
-## Endpoints (agent endpoints)
+## Spend
+
+What agents have cost, per model and per day, **per key and agent**, today and all time, tokens, cache reads and writes, and what is
+running now. Costs for bridged models are the gateway's own metering; for direct models they come from the
+container's event stream.
+
+## Audit
+
+What was done to the gateway and what happened to it, with filters, paging and CSV export. What is recorded is set
+in Settings → Audit. See [Security](security.md) for the categories.
+
+## Agents
 
 Named, permanent agents of an API key, each on its own port, for different roles on one key (an `architect`, a
 `coder`, a `researcher`).
@@ -55,31 +81,6 @@ Named, permanent agents of an API key, each on its own port, for different roles
 - **Rules.** The port accepts only the owning key and serves only the API. The agent always has one persistent
   container. Limits, spend and the model allow-list stay on the key. Deleting archives its profile and own
   workspace instead of deleting them.
-
-### Packages and MCP servers (Profiles)
-
-The detail view of a key's or an agent's profile has a **Packages and MCP servers** section.
-
-- **Packages.** The packages in the profile's settings; **install** (`npm:name[@version]`, `git:host/owner/repo[@ref]` or an
-  `https://` repository, nothing else: no local paths, no flags), **remove**, **update all**. They are Pi's own packages, so
-  skills, extensions and prompts they carry load in that agent's chats.
-- **MCP servers.** The servers in the profile's `mcp.json` with what each runs; **add** a command (stdio: one program, its
-  arguments, environment) or a URL (HTTP, with a bearer-token variable), **remove**, **enable/disable**, and **test
-  connections** (`pi mcp list`: state, tools and errors). **Secrets are never written to `mcp.json`**: an environment value
-  must be a `${NAME}` reference, and the variable itself goes in the key's or agent's extra environment (container settings).
-- Each action is Pi's own command (`pi install`, `pi mcp add`) run in a **throwaway container**: the scope's image and limits,
-  only that profile mounted, no other mount or key, a ten-minute limit, and a network only when needed (an install, a test)
-  and only if the scope's policy is not `none`. Output streams into the panel. The live chats of that scope reload after.
-- Packages and MCP servers **run third-party code**. Changes need a dashboard password; `PACKAGES_ENABLED` switches the
-  feature off.
-
-### Shared bundles (Files)
-
-**Files → Bundles** edits the shared bundles under `SHARED_ROOT`: **new bundle** (creates `skills/`, `extensions/` and
-`prompts/`), the same browser and text editor as for profiles, upload, rename, delete, and **delete bundle**. Granting a
-bundle to keys stays on API Management. After a change the live chats of every key and agent that gets the bundle reload.
-A bundle that is a link (you pointed it at another folder) is shown but not edited here. Changes need a dashboard
-password, because every granted key runs a bundle's extensions.
 
 ### Hand-offs between agents
 
@@ -104,7 +105,7 @@ the same conversation (send `X-Session-Id`). A failing step stops the run and is
 
 ### Templates, clone, export and import
 
-On the Endpoints page:
+On the Agents page (Templates & import tab, and the buttons on each agent's row):
 
 - **Templates.** Pick one when you create an agent and it starts with that profile: instructions, skills and settings
   (model, thinking level, workspace mode). Five ship with Piper (`architect`, `coder`, `researcher`, `reviewer` with a
@@ -146,6 +147,56 @@ shown once); a failed delivery is retried once and the outcome is written on the
 Settings (Settings → Jobs): `JOBS_ENABLED`, `JOBS_MAX_PARALLEL`, `JOBS_MIN_INTERVAL_MS`, `JOBS_MAX_PER_KEY`,
 `JOBS_RESULT_DAYS`.
 
+## Files & profiles
+
+Browse the **workspace** (what the agents see at `/workspace`) or the **profile** (skills, extensions, `AGENTS.md`,
+settings) of a key or an agent. Folders first, then files; click a folder to enter it. **upload** takes many files
+(or drop them on the table), with progress; per row: **download**, **rename** (also moves: give a new path),
+**delete**; **new folder** and **new file** in the current folder. Clicking a text file opens an **editor**: Ctrl+S
+saves, and if an agent changed the file after you opened it the save is refused as a conflict, with **reload from
+disk** and **overwrite anyway**. Binary and very large files (over 1 MB) are download-only.
+
+- A **locked** profile is read-only here, a profile over `PROFILE_MAX_BYTES` refuses saves, and a workspace over
+  `WORKSPACE_MAX_BYTES` is frozen for writes (delete still works, to make room). Uploads are limited by
+  `FILE_UPLOAD_MAX_BYTES`.
+- Everything runs in a throwaway container with only that folder mounted; **links an agent planted are never
+  followed**, in the browser or the downloads.
+- Changes are audited with the path (`files.*` rows), never the content. Editing a profile reloads that scope's live
+  chats, as the profile API does.
+
+### Profiles
+
+One row per key's profile (and per agent's): size, skills, extensions, workspace size, live chats, locked state.
+Open one to see everything its agents get: its own skills and extensions, what each granted bundle adds, what a
+running agent has loaded, the workspace with download, the container settings and **Update container**.
+**lock** freezes a profile (mounted read-only, refused by the profile API); **reset** archives it and starts over.
+Bundles are operator-owned folders of skills, extensions and prompts under `shared/`, granted per key.
+
+### Packages and MCP servers
+
+The detail view of a key's or an agent's profile (Files & profiles → Profiles) has a **Packages and MCP servers** section.
+
+- **Packages.** The packages in the profile's settings; **install** (`npm:name[@version]`, `git:host/owner/repo[@ref]` or an
+  `https://` repository, nothing else: no local paths, no flags), **remove**, **update all**. They are Pi's own packages, so
+  skills, extensions and prompts they carry load in that agent's chats.
+- **MCP servers.** The servers in the profile's `mcp.json` with what each runs; **add** a command (stdio: one program, its
+  arguments, environment) or a URL (HTTP, with a bearer-token variable), **remove**, **enable/disable**, and **test
+  connections** (`pi mcp list`: state, tools and errors). **Secrets are never written to `mcp.json`**: an environment value
+  must be a `${NAME}` reference, and the variable itself goes in the key's or agent's extra environment (container settings).
+- Each action is Pi's own command (`pi install`, `pi mcp add`) run in a **throwaway container**: the scope's image and limits,
+  only that profile mounted, no other mount or key, a ten-minute limit, and a network only when needed (an install, a test)
+  and only if the scope's policy is not `none`. Output streams into the panel. The live chats of that scope reload after.
+- Packages and MCP servers **run third-party code**. Changes need a dashboard password; `PACKAGES_ENABLED` switches the
+  feature off.
+
+### Shared bundles
+
+**Files → Bundles** (the third root of the file browser) edits the shared bundles under `SHARED_ROOT`: **new bundle** (creates `skills/`, `extensions/` and
+`prompts/`), the same browser and text editor as for profiles, upload, rename, delete, and **delete bundle**. Granting a
+bundle to keys stays on the API keys page. After a change the live chats of every key and agent that gets the bundle reload.
+A bundle that is a link (you pointed it at another folder) is shown but not edited here. Changes need a dashboard
+password, because every granted key runs a bundle's extensions.
+
 ## Containers
 
 Everything Docker-related.
@@ -170,10 +221,10 @@ Everything Docker-related.
 - **Health.** In Settings → Containers: whether Docker, the image and the network policy are in order, with a
   button to look again.
 
-## Terminal
+### Terminal
 
 An interactive **root shell inside a running container**, in its `/workspace`: pick a container (or press **terminal**
-on its row on the Containers page) and **connect**. It is a real terminal: colours, line editing, full-screen programs
+on its row on the Containers tab, or the Terminal tab) and **connect**. It is a real terminal: colours, line editing, full-screen programs
 such as `vi` and `top`, resizing with the window, Ctrl-C. Rules:
 
 - It needs a **dashboard password** (like the command box), only attaches to a container that is **already running**
@@ -185,53 +236,17 @@ such as `vi` and `top`, resizing with the window, Ctrl-C. Rules:
 - Every open and close is in the audit log (container, who, from where, how long, bytes typed and shown). **What you
   type and what is printed is never recorded.**
 
-## Files
-
-Browse the **workspace** (what the agents see at `/workspace`) or the **profile** (skills, extensions, `AGENTS.md`,
-settings) of a key or an agent. Folders first, then files; click a folder to enter it. **upload** takes many files
-(or drop them on the table), with progress; per row: **download**, **rename** (also moves: give a new path),
-**delete**; **new folder** and **new file** in the current folder. Clicking a text file opens an **editor**: Ctrl+S
-saves, and if an agent changed the file after you opened it the save is refused as a conflict, with **reload from
-disk** and **overwrite anyway**. Binary and very large files (over 1 MB) are download-only.
-
-- A **locked** profile is read-only here, a profile over `PROFILE_MAX_BYTES` refuses saves, and a workspace over
-  `WORKSPACE_MAX_BYTES` is frozen for writes (delete still works, to make room). Uploads are limited by
-  `FILE_UPLOAD_MAX_BYTES`.
-- Everything runs in a throwaway container with only that folder mounted; **links an agent planted are never
-  followed**, in the browser or the downloads.
-- Changes are audited with the path (`files.*` rows), never the content. Editing a profile reloads that scope's live
-  chats, as the profile API does.
-
 ## Models
 
 Every model the gateway can route to, grouped by provider, from the operator's Pi and from the container
 configuration. A **reload** button re-reads them.
 
-## Spend
-
-What agents have cost, per model and per day, **per key and agent**, today and all time, tokens, cache reads and writes, and what is
-running now. Costs for bridged models are the gateway's own metering; for direct models they come from the
-container's event stream.
-
-## API Management
+## API keys
 
 Create, revoke and delete API keys (a key is shown once, then only its hash is stored). Per key: expiry, session
-cap, daily spend cap, allowed models, shared bundles, usage. In each key's detail (on the Profiles page) a
+cap, daily spend cap, allowed models, shared bundles, usage. In each key's detail (on Files & profiles → Profiles) a
 **Container** section holds its overrides (memory, CPU, processes, network, image, mounts, environment) and the
 **persistent container** switch.
-
-## Profiles
-
-One row per key's profile (and per agent's): size, skills, extensions, workspace size, live chats, locked state.
-Open one to see everything its agents get: its own skills and extensions, what each granted bundle adds, what a
-running agent has loaded, the workspace with download, the container settings and **Update container**.
-**lock** freezes a profile (mounted read-only, refused by the profile API); **reset** archives it and starts over.
-Bundles are operator-owned folders of skills, extensions and prompts under `shared/`, granted per key.
-
-## Audit
-
-What was done to the gateway and what happened to it, with filters, paging and CSV export. What is recorded is set
-in Settings → Audit. See [Security](security.md) for the categories.
 
 ## Settings
 
@@ -241,9 +256,9 @@ config for containers, container health), **Sessions**, **Usage limits**, **Prof
 **Audit**, **Access** (dashboard password, settings key), **Server** (address, port, logging, Pi location) and
 **Other**. [Variables](variables.md) lists every one.
 
-## Documentation and About
+## Help
 
-This handbook, and the About page: version, author, this installation's facts and the changelog.
+This handbook, and the About tab: version, author, this installation's facts and the changelog.
 
 ## In a chat
 

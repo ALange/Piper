@@ -281,14 +281,14 @@ restarts and shows the logs of that unit rather than starting a second copy that
   `Secure`. Streaming responses must not be buffered. With nginx:
   `proxy_buffering off;` and `proxy_read_timeout 1h;`. For uploads to the workspace file API,
   also raise `client_max_body_size` to `FILE_UPLOAD_MAX_BYTES` (1 GiB by default) and set
-  `proxy_request_buffering off;`. **The dashboard's Terminal is a WebSocket**, so the proxy must pass upgrades:
+  `proxy_request_buffering off;`. **The dashboard's Terminal (Containers → Terminal) is a WebSocket**, so the proxy must pass upgrades:
   with nginx `proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";`
   (with `proxy_read_timeout 1h;` as above), and either keep the `Host` header or send `X-Forwarded-Host`: the gateway
   refuses a terminal whose `Origin` is not its own host. Caddy does this by default. **The live view is a Server-Sent Events stream** (`/dashboard/session/…/events`), so with nginx also `proxy_buffering off;` there (the gateway sends `X-Accel-Buffering: no`).
 - **Set a dashboard password** (Settings → Access), unless you did at first start. On the default
   network containers cannot reach the dashboard; on `open` they can, and an open dashboard can
   reconfigure everything.
-- **Create an API key per person or client** on API Management. While any key exists, `/v1/*`
+- **Create an API key per person or client** on the API keys page. While any key exists, `/v1/*`
   requires one.
 
 Point clients at `https://your-host/v1` with that key. For example, in Open WebUI add an OpenAI
@@ -316,7 +316,7 @@ connection with that URL and key; the model list comes from `/v1/models`.
     or a container engine socket.
 - **Skills, extensions and prompts for everyone** go in a shared bundle:
   `shared/base/{skills,extensions,prompts}`.
-  - Every key gets `base` by default. Grant other bundles per key on API Management.
+  - Every key gets `base` by default. Grant other bundles per key on the API keys page.
   - An extension that starts a program by an absolute host path needs that path shared or in the image.
 - **Network** is the internet only. Settings → Containers → *Network* switches it to none, or to
   open (also this machine and your LAN, which includes the dashboard: set a password first).
@@ -324,14 +324,14 @@ connection with that URL and key; the model list comes from `/v1/models`.
 After changing any of these, new chats pick it up; an existing chat's container is recreated on its
 next message when a mount, the image or a limit changed (what the agent installed in it is lost, its
 workspace, profile and session are not). For bundle contents, open chats pick it up on `/reload`.
-The dashboard's Profiles page shows what each key's agents actually get.
+The dashboard's Files & profiles → Profiles shows what each key's agents actually get.
 
 ## 9. Check the containers
 
 Create a key, then ask an agent to run a probe:
 
 ```bash
-KEY=piper_…   # from API Management
+KEY=piper_…   # from the API keys page
 curl -s http://127.0.0.1:8787/v1/chat/completions -H "authorization: Bearer $KEY" \
   -H 'content-type: application/json' -d '{"model":"pi","messages":[{"role":"user","content":
   "Run with bash and reply with only the raw output: id -un; pwd; ls /var/run/docker.sock /home/piper/piper/gateway.db 2>&1; curl -s -m 5 -o /dev/null -w \"%{http_code}\\n\" https://example.com; curl -s -m 4 -o /dev/null -w \"%{http_code}\\n\" http://192.168.1.1/"}]}' \
@@ -390,7 +390,7 @@ Anything else means the containers are not what this guide describes.
 
 ## Agent endpoints and the firewall
 
-Every agent created on the Endpoints page listens on a port of its own on `HOST` (the same address as the
+Every agent created on the Agents page listens on a port of its own on `HOST` (the same address as the
 gateway). Set `AGENT_PORT_RANGE` (Settings → Containers, e.g. `20000-29999`) before creating them, so the
 ports come from a range you can open in the firewall on purpose; leave `HOST` on `127.0.0.1` and put a
 TLS proxy in front if the gateway should not be reachable directly. An agent's port serves only the API

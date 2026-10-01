@@ -4564,8 +4564,8 @@ assert.equal(isReloadCommand(undefined), false);
 	// Links: http(s) and mailto as they are; anchors and known pages become dashboard links; the rest is plain text.
 	assert.equal(linkHref("https://a.b/c?d=1").external, true);
 	assert.equal(linkHref("mailto:x@y.z").href, "mailto:x@y.z");
-	assert.deepEqual(linkHref("#Some Heading", { page: "p" }), { href: "#docs/p/some-heading", external: false });
-	assert.equal(linkHref("README.md#Other Part", { targets: new Map([["README.md", "reference"]]) }).href, "#docs/reference/other-part");
+	assert.deepEqual(linkHref("#Some Heading", { page: "p" }), { href: "#help/docs/p/some-heading", external: false });
+	assert.equal(linkHref("README.md#Other Part", { targets: new Map([["README.md", "reference"]]) }).href, "#help/docs/reference/other-part");
 	for (const bad of ["javascript:alert(1)", "JaVaScRiPt:alert(1)", "data:text/html,<script>", "vbscript:x", "//evil.example/x", "unknown.md", "/etc/passwd", "file:///etc/passwd", " javascript:alert(1)"]) assert.equal(linkHref(bad, { page: "p" }), null, bad);
 	// Hostile input comes out escaped or dropped.
 	for (const hostile of ["<script>alert(1)</script>", "<img src=x onerror=alert(1)>", "[x](javascript:alert(1))", "![x](javascript:alert(1))", "**<svg onload=alert(1)>**", "`</code><script>alert(1)</script>`", "# <script>alert(1)</script>", "| <script> |\n|---|\n| <img onerror=alert(1)> |", "- <iframe src=x></iframe>", "> <script>alert(1)</script>", "```\n</pre><script>alert(1)</script>\n```", "[<script>alert(1)</script>](https://a.b)", "<!-- generated:settings --><script>"]) {
@@ -4596,11 +4596,11 @@ assert.equal(isReloadCommand(undefined), false);
 	// Every internal link and anchor resolves to a page and a heading that exist.
 	const anchorsOf = Object.fromEntries(ids.map((id) => [id, new Set([...rendered[id].html.matchAll(/<h[1-4] id="([^"]*)"/g)].map((m) => m[1]))]));
 	for (const id of ids) {
-		for (const m of rendered[id].html.matchAll(/href="#docs\/([^"\/]+)(?:\/([^"]*))?"/g)) {
+		for (const m of rendered[id].html.matchAll(/href="#help\/docs\/([^"\/]+)(?:\/([^"]*))?"/g)) {
 			assert.ok(anchorsOf[m[1]], `${id}: link to unknown page ${m[1]}`);
 			if (m[2]) assert.ok(anchorsOf[m[1]].has(m[2]), `${id}: link to missing heading ${m[1]}#${m[2]}`);
 		}
-		assert.ok(!/href="(?!#docs\/|https?:|mailto:)/.test(rendered[id].html), `${id}: every link is http(s), mailto or a dashboard link`);
+		assert.ok(!/href="(?!#help\/docs\/|https?:|mailto:)/.test(rendered[id].html), `${id}: every link is http(s), mailto or a dashboard link`);
 	}
 
 	// The generated tables come from the code: every setting, with its real default; no secret; no host path.
@@ -6332,6 +6332,68 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	await new Promise((r) => srv.close(r));
 	srv.closeAllConnections?.();
 	rmSync(join(root, "linked"), { force: true });
+}
+
+// Dashboard navigation: pages, tabs, and old links.
+{
+	const html = readFileSync(new URL("./dashboard.html", import.meta.url), "utf8");
+	const vm = await import("node:vm");
+	const start = html.indexOf("var PAGES = {");
+	const fn = html.indexOf("function resolveHash(");
+	const end = html.indexOf("\n}\n", fn) + 3;
+	assert.ok(start > 0 && fn > start && end > fn, "the page table is where the test expects it");
+	const ctx = vm.createContext({});
+	vm.runInContext(`${html.slice(start, end)}\nthis.PAGES = PAGES; this.PANES = PANES; this.resolveHash = resolveHash;`, ctx);
+	const { PAGES, PANES, resolveHash } = ctx;
+	const navHtml = html.slice(html.indexOf('<nav id="nav">'), html.indexOf("</nav>"));
+	const navPages = [...navHtml.matchAll(/<a[^>]*href="#([a-z]+)"/g)].map((m) => m[1]);
+	assert.deepEqual([...navPages].sort(), Object.keys(PAGES).sort(), "every nav item is a page and every page is in the nav");
+	assert.equal(new Set(navPages).size, navPages.length, "no page twice in the nav");
+	assert.equal(navPages.length, 12, "twelve items in the sidebar");
+	assert.deepEqual([...navHtml.matchAll(/class="navgroup">([^<]+)</g)].map((m) => m[1]), ["Monitor", "Build", "Infrastructure", "Admin"]);
+
+	// Every tab shows a pane that exists, and a split pane's sections match the markup.
+	const reached = new Set();
+	for (const [id, page] of Object.entries(PAGES)) {
+		assert.ok(page.title && page.tabs.length, id);
+		const tabIds = page.tabs.map((t) => t.id);
+		assert.equal(new Set(tabIds).size, tabIds.length, `${id}: tab ids are unique`);
+		for (const tab of page.tabs) {
+			assert.ok(PANES.includes(tab.pane), `${id}/${tab.id}: pane ${tab.pane} is a known pane`);
+			assert.ok(html.includes(`id="view-${tab.pane}"`), `${id}/${tab.id}: view-${tab.pane} exists`);
+			assert.ok(tab.subtitle, `${id}/${tab.id} has a subtitle`);
+			if (page.tabs.length > 1) assert.ok(tab.label, `${id}/${tab.id} has a label`);
+			reached.add(tab.pane);
+		}
+	}
+	assert.deepEqual([...reached].sort(), [...PANES].sort(), "every pane can be reached");
+	for (const pane of PANES) {
+		const block = html.slice(html.indexOf(`id="view-${pane}"`), html.indexOf("<!-- /view-", html.indexOf(`id="view-${pane}"`)) + 1);
+		const marked = new Set([...block.matchAll(/<section data-tab="([a-z]+)"/g)].map((m) => m[1]));
+		const wanted = new Set(Object.values(PAGES).flatMap((p) => p.tabs).filter((t) => t.pane === pane && t.sections).map((t) => t.sections));
+		assert.deepEqual([...marked].sort(), [...wanted].sort(), `${pane}: the sections marked data-tab are exactly the ones a tab asks for`);
+		const tabs = Object.values(PAGES).flatMap((p) => p.tabs).filter((t) => t.pane === pane);
+		if (marked.size) assert.ok(tabs.every((t) => t.sections), `${pane}: a split pane's every tab names its sections`);
+	}
+
+	// Links, new and old.
+	const at = (hash) => { const r = resolveHash(hash); return [r.page, r.tab.id, ...r.rest].join("/"); };
+	for (const [hash, want] of Object.entries({
+		"": "overview/overview", "#overview": "overview/overview", "#nonsense": "overview/overview", "#/chats": "chats/chats",
+		"#agents": "agents/agents", "#agents/teams": "agents/teams", "#agents/create": "agents/create", "#agents/teams/x": "agents/teams/x",
+		"#files": "files/files", "#files/profiles": "files/profiles", "#files/profiles/key-1--ab": "files/profiles/key-1--ab",
+		"#containers": "containers/containers", "#containers/terminal/piper-ab": "containers/terminal/piper-ab", "#containers/events": "containers/events",
+		"#settings": "settings/settings", "#settings/containers": "settings/settings/containers", "#apikeys": "apikeys/apikeys",
+		"#help": "help/docs", "#help/about": "help/about", "#help/docs/functions/agents": "help/docs/functions/agents",
+		// links of earlier versions
+		"#endpoints": "agents/agents", "#terminal": "containers/terminal", "#terminal/piper-ab": "containers/terminal/piper-ab",
+		"#profiles": "files/profiles", "#profiles/key-9": "files/profiles/key-9", "#docs": "help/docs", "#docs/overview/x": "help/docs/overview/x", "#about": "help/about",
+		"#agents/not-a-tab": "agents/agents/not-a-tab",
+	})) assert.equal(at(hash), want, JSON.stringify(hash));
+	// The docs renderer's links and the page's own docs links agree.
+	assert.equal(at(linkHref("#Some Heading", { page: "p" }).href), "help/docs/p/some-heading");
+	assert.ok(!/href = '#docs|location\.hash = '#(profiles|terminal)/.test(html), "no code sets an old-style hash");
+	assert.ok(!/sectiontitle/.test(html), "the repeated section title is gone");
 }
 
 console.log("nextTurn + images: ok");

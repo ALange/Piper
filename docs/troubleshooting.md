@@ -12,8 +12,8 @@ strip: between them they name most problems. The log is `journalctl -u piper` (s
 | Same, right after installing the service, with `spawn iptables ENOENT` in the log | The service's `PATH` lacks `/usr/sbin` | Units from `deploy.sh` include it; a hand-written unit needs `/usr/sbin` in `Environment=PATH=` |
 | Warning: the image has Pi X but the gateway runs Pi Y | Pi was updated after the image was built | Rebuild the image (Containers → Images, or `./piper.sh image`), then restart |
 | `the image "…" does not exist` for one key | The key's own image setting names an image that is gone | Build it (`./piper.sh image <env>`) or clear the key's image on the Profiles page |
-| A key's chats fail only for that key | Its container settings (mounts, network, image) are wrong or refused | Profiles → the key → Container; saving shows the exact refusal |
-| `429 session_limit_exceeded` / `spend_limit_exceeded` | The key's session cap with every session busy, or its daily cap | Raise it on API Management, or wait (the spend cap resets at local midnight) |
+| A key's chats fail only for that key | Its container settings (mounts, network, image) are wrong or refused | Files & profiles → Profiles → the key → Container; saving shows the exact refusal |
+| `429 session_limit_exceeded` / `spend_limit_exceeded` | The key's session cap with every session busy, or its daily cap | Raise it on the API keys page, or wait (the spend cap resets at local midnight) |
 
 ## Containers misbehave
 
@@ -45,7 +45,7 @@ strip: between them they name most problems. The log is `journalctl -u piper` (s
 | "a value must be a reference" | A secret was typed into an MCP server's environment | Use `${NAME}` and set the variable in the container settings |
 | The agent does not see the new package or server | The chat started before; reload happens for live chats, but a stopped one loads at its next start | `/reload`, or send the chat a message |
 | A bundle cannot be edited | It is a link, not a folder, or you need a password | Edit its target by hand; set a password |
-| "granted to …; remove it from them first" | Deleting a bundle a key still gets | Remove the grant on API Management, or delete anyway |
+| "granted to …; remove it from them first" | Deleting a bundle a key still gets | Remove the grant on the API keys page, or delete anyway |
 
 ## Hand-offs and teams
 
@@ -108,7 +108,7 @@ strip: between them they name most problems. The log is `journalctl -u piper` (s
 | Behind a proxy it never connects | The proxy does not pass WebSocket upgrades, or rewrites `Host` without `X-Forwarded-Host` | nginx: `proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade"; proxy_read_timeout 1h;` and pass `Host` or `X-Forwarded-Host` |
 | A background job vanished when the terminal closed | Jobs belong to the shell's session and end with it | Start it with `setsid` (or `nohup setsid cmd &`) |
 | File save says "conflict: the file changed" | An agent (or another tab) wrote it after you opened it | **reload from disk**, or **overwrite anyway** |
-| File writes say "frozen" or "locked" | The workspace is over `WORKSPACE_MAX_BYTES` (delete something), or the profile is locked (Profiles → unlock) | As said |
+| File writes say "frozen" or "locked" | The workspace is over `WORKSPACE_MAX_BYTES` (delete something), or the profile is locked (Files & profiles → Profiles → unlock) | As said |
 | A file in the browser shows as a link and cannot be opened | An agent made a symlink; links are never followed | Delete or replace it |
 
 ## Agent endpoints
