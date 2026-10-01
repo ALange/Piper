@@ -105,6 +105,8 @@
   td.num { text-align:right; font-variant-numeric:tabular-nums; }
   td.fp { color:#cfd3d7; }
   .busy { color:var(--amber); } .soon { color:var(--red); } .ok { color:var(--green); }
+  .pi-current { color:var(--green); } .pi-outdated { color:var(--red); font-weight:600; } .pi-ahead { color:var(--amber); } .pi-unknown { color:var(--dim); }
+  .pilegend { color:var(--dim); font-size:11px; margin:0 0 8px; }
   .why { color:var(--muted); }
   .why.one-shot { color:var(--purple); }
   button { background:#1b1b1b; color:var(--fg); border:1px solid var(--border); border-radius:6px;
@@ -237,7 +239,74 @@
   .badge.open, .badge.settings, .badge.deleted { color:var(--dim); border-color:#2a2a2a; }
   td.usagedetail { background:#0d0d0d; color:var(--muted); font-size:11px; }
   .livenote { color:var(--blue); font-size:10px; margin-left:7px; }
-  /* A disabled sandbox used to be invisible, which is exactly how it goes unnoticed. */
+  /* Whether chats can start is shown above every view, so a problem is not left for a settings page nobody visits. */
+  .cpstatus { display:grid; gap:6px; margin:6px 0 4px; }
+  .cprow { display:flex; gap:10px; align-items:baseline; font-size:12px; }
+  .cprow .dot { width:8px; height:8px; border-radius:50%; flex:none; background:var(--dim); position:relative; top:0; }
+  .cprow.good .dot { background:#3fb950; } .cprow.bad .dot { background:#f85149; } .cprow.warn .dot { background:#d29922; }
+  .cprow b { min-width:130px; font-weight:600; } .cprow span { color:var(--dim); overflow-wrap:anywhere; }
+  .cpeditor { display:grid; gap:10px; margin-top:8px; }
+  .cpeditor textarea { width:100%; min-height:260px; box-sizing:border-box; font:12px/1.45 ui-monospace,Menlo,Consolas,monospace; background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:6px; padding:10px; resize:vertical; }
+  .cpeditor .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .cpeditor .row input { min-width:0; flex:1 1 160px; }
+  .cpnote { font-size:12px; } .cpnote.bad { color:#f85149; } .cpnote.good { color:#3fb950; }
+  #uppanel { position:fixed; right:16px; bottom:16px; width:min(440px,calc(100vw - 32px)); max-height:55vh; overflow:auto; z-index:20;
+    background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:10px 12px; box-shadow:0 6px 24px rgba(0,0,0,.45); }
+  #uppanel h4 { margin:0 0 6px; font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:#cfd3d7; display:flex; justify-content:space-between; gap:8px; }
+  #uppanel .upitem { margin:6px 0; font-size:12px; }
+  #uppanel .upitem pre { margin:3px 0 0; max-height:150px; overflow:auto; font-size:11px; color:var(--dim); white-space:pre-wrap; word-break:break-word; }
+  .hero { display:flex; gap:18px; align-items:center; flex-wrap:wrap; }
+  .hero .mark { width:64px; height:64px; border:1px solid #3a3a3a; border-radius:16px; display:grid; place-items:center; color:var(--green); font-size:30px; background:#0d0d0d; }
+  .hero h2 { margin:0; font-size:26px; letter-spacing:.02em; }
+  .hero p { margin:2px 0 0; color:var(--muted); }
+  .badge2 { display:inline-block; border:1px solid #46617f; background:#2a3340; border-radius:999px; padding:1px 10px; font-size:11px; margin-left:8px; vertical-align:middle; }
+  .release { border-top:1px solid var(--border); padding:8px 0; }
+  .release > summary { cursor:pointer; font-size:13px; }
+  .release h4 { margin:10px 0 4px; font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:#cfd3d7; }
+  .release ul { margin:0 0 4px 18px; padding:0; color:var(--fg); }
+  .release li { margin:3px 0; }
+  .docs { display:grid; grid-template-columns:230px minmax(0,1fr); gap:14px; align-items:start; }
+  .docs aside { position:sticky; top:8px; max-height:calc(100vh - 24px); overflow:auto; }
+  .docs aside input { width:100%; background:#141414; color:var(--fg); border:1px solid var(--border); border-radius:6px; padding:6px 8px; font:inherit; margin-bottom:8px; }
+  .docs aside a { display:block; padding:5px 8px; border-radius:6px; color:var(--muted); text-decoration:none; font-size:12px; }
+  .docs aside a:hover { background:#151515; color:var(--fg); }
+  .docs aside a.on { background:#1c2129; color:var(--fg); border-left:2px solid #46617f; }
+  .docs aside .toc a { padding:2px 8px 2px 14px; font-size:11px; }
+  .docs aside .toc a.l3 { padding-left:26px; }
+  .docs aside h5 { margin:12px 0 4px; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--dim); }
+  .doc { line-height:1.65; font-size:13px; max-width:980px; }
+  .doc h1 { font-size:22px; margin:0 0 10px; }
+  .doc h2 { font-size:17px; margin:26px 0 8px; padding-bottom:4px; border-bottom:1px solid var(--border); }
+  .doc h3 { font-size:14px; margin:20px 0 6px; }
+  .doc h4 { font-size:13px; margin:16px 0 4px; color:#cfd3d7; }
+  .doc p, .doc ul, .doc ol, .doc blockquote { margin:8px 0; }
+  .doc code { background:#161616; border:1px solid #242424; border-radius:4px; padding:0 4px; font-size:12px; }
+  .doc .codebox { position:relative; margin:10px 0; }
+  .doc pre { background:#0c0c0c; border:1px solid var(--border); border-radius:8px; padding:10px 12px; overflow:auto; margin:0; }
+  .doc pre code { background:none; border:0; padding:0; }
+  .doc .copybtn { position:absolute; top:6px; right:6px; font-size:10px; opacity:.6; }
+  .doc .copybtn:hover { opacity:1; }
+  .doc .tablebox { overflow-x:auto; margin:10px 0; }
+  .doc table { border-collapse:collapse; width:100%; font-size:12px; }
+  .doc th, .doc td { border:1px solid var(--border); padding:5px 8px; text-align:left; vertical-align:top; }
+  .doc th { background:#121212; }
+  .doc blockquote { border-left:3px solid #46617f; padding:2px 12px; color:var(--muted); background:#0f1319; }
+  .doc a { color:#8fb4d8; }
+  .doc hr { border:0; border-top:1px solid var(--border); margin:18px 0; }
+  .speedgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(340px,1fr)); gap:14px; margin-bottom:14px; }
+  .speedcard h3 { text-transform:none; letter-spacing:0; font-size:13px; color:var(--fg); word-break:break-all; }
+  .speedcard h3 small { color:var(--dim); font-weight:400; }
+  .speedcard .nums { display:flex; gap:22px; margin:6px 0 4px; }
+  .speedcard .nums div { font-size:11px; color:var(--dim); }
+  .speedcard .nums b { display:block; font-size:20px; color:var(--fg); font-weight:600; }
+  .speedcard .nums small { font-weight:400; }
+  .speedcard .cap { color:var(--dim); font-size:10px; text-transform:uppercase; letter-spacing:.08em; margin:8px 0 2px; }
+  .hit { padding:8px 0; border-bottom:1px solid var(--border); }
+  .hit a { color:#8fb4d8; text-decoration:none; font-size:13px; }
+  .hit small { display:block; color:var(--dim); }
+  @media (max-width:900px) { .docs { grid-template-columns:1fr; } .docs aside { position:static; max-height:none; } }
+  .chip { background:#141414; color:var(--fg); border:1px solid var(--border); border-radius:999px; padding:2px 9px; font-size:11px; cursor:pointer; }
+  .chip.on { background:#2a3340; border-color:#46617f; }
   .warnstrip { background:#2a1414; border:1px solid #5a2626; color:#f3b6b6; border-radius:8px;
     padding:10px 13px; margin-bottom:18px; font-size:12px; line-height:1.5; }
   .warnstrip b { color:#ffd0d0; }
@@ -296,6 +365,9 @@
   .small { font-size:11px; }
   .dim { color:var(--dim); }
   .hint.bad { color:var(--red); }
+  a.filelink { font-size:11px; margin-left:6px; color:var(--blue); }
+  .uploadrow { margin-top:10px; }
+  .uploadrow input[type=file] { font-size:11px; color:var(--muted); max-width:320px; }
   pre.mdpreview { white-space:pre-wrap; font-size:11px; color:var(--muted); background:#0e0e0e; border:1px solid var(--border);
                   border-radius:6px; padding:8px 10px; max-height:260px; overflow:auto; }
 
@@ -315,11 +387,16 @@
     <nav>
       <a class="on" href="#overview"><span class="ic">&#9638;</span>Overview</a>
       <a href="#agents"><span class="ic">&#9683;</span>Agents</a>
+      <a href="#containers"><span class="ic">&#9635;</span>Containers</a>
+      <a href="#endpoints"><span class="ic">&#8644;</span>Endpoints</a>
       <a href="#models"><span class="ic">&#9678;</span>Models</a>
       <a href="#spend"><span class="ic">&#36;</span>Spend</a>
       <a href="#apikeys"><span class="ic">&#9636;</span>API Management</a>
       <a href="#profiles"><span class="ic">&#9776;</span>Profiles</a>
+      <a href="#audit"><span class="ic">&#9745;</span>Audit</a>
       <a href="#settings"><span class="ic">&#9881;</span>Settings</a>
+      <a href="#docs"><span class="ic">&#9776;</span>Documentation</a>
+      <a href="#about"><span class="ic">&#9432;</span>About</a>
     </nav>
     <div class="sidefoot">
       <div class="statusbox">
@@ -350,6 +427,26 @@
 
     <div class="view on" id="view-overview">
       <div class="cards" id="cards"></div>
+
+    <div class="sectionhead" style="margin-top:14px"><h2>Resources</h2><span class="hint" id="resnote"></span></div>
+    <div class="cards" id="rescards"></div>
+    <div class="grid3">
+      <section class="panel">
+        <h3>Host CPU</h3>
+        <p class="hint">Share of all cores busy, sampled while this page is open</p>
+        <div id="area-cpu"></div>
+      </section>
+      <section class="panel">
+        <h3>Host memory</h3>
+        <p class="hint">Share of memory in use (not counting cache)</p>
+        <div id="area-mem"></div>
+      </section>
+      <section class="panel">
+        <h3>Heaviest containers</h3>
+        <p class="hint">By memory, running now</p>
+        <table><tbody id="restop"></tbody></table>
+      </section>
+    </div>
 
     <div class="grid2">
       <section class="panel">
@@ -382,6 +479,14 @@
       </section>
     </div>
 
+    <div class="sectionhead" style="margin-top:14px"><h2>Model speed</h2>
+      <div class="ctrl"><span class="hint" id="spnote"></span>
+        <select id="sprange"><option value="1h">last hour</option><option value="6h">last 6 hours</option><option value="24h">last 24 hours</option><option value="7d">last 7 days</option></select>
+      </div>
+    </div>
+    <div id="spgrid" class="speedgrid"></div>
+    <p class="hint" id="spempty" hidden>Nothing measured in this range yet. Speed is timed on each model call an agent makes: <b>prompt</b> speed needs a prompt of at least 64 tokens and <b>generation</b> speed an answer of at least 8, and a provider that does not stream cannot be timed. Nothing but model names, token counts and times is kept.</p>
+
     </div><!-- /view-overview -->
 
     <div class="view" id="view-agents">
@@ -395,13 +500,205 @@
         </div>
         <table>
           <thead><tr>
-            <th>session</th><th>model</th><th class="num">age</th><th class="num">last used</th>
+            <th>session</th><th>model</th><th title="the Pi version in the agent\u2019s container, against the one the gateway runs">Pi</th><th class="num" title="average token generation speed of this session, tokens per second">gen tok/s</th><th class="num" title="average prompt processing speed of this session, tokens per second">prompt tok/s</th><th class="num">age</th><th class="num">last used</th>
             <th class="num">expires in</th><th>on</th><th class="num">reqs</th><th class="num">cost</th><th>state</th><th></th>
           </tr></thead>
           <tbody id="rows"></tbody>
         </table>
       </section>
     </div><!-- /view-agents -->
+
+    <div class="view" id="view-containers">
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Containers</h3>
+            <p class="hint" style="margin:0" id="ctnote">Every chat's container. <b>stop</b> ends the running Pi and stops the container (the chat resumes on its next message, with what was installed). <b>recreate</b> also removes the container, so the next message builds a clean one and the conversation continues. <b>remove</b> ends the chat and removes the container; its workspace stays. <b>update</b> rebuilds it with today’s settings <i>keeping what is installed</i>, sets Pi to the gateway’s version and updates its extensions (a newly built image is only taken by <b>recreate</b>).</p>
+          </div>
+          <div><button id="ctupdateall" title="rebuild every container keeping what is installed, set Pi to the gateway’s version, update extensions">update all</button> <button id="ctrefresh">refresh</button></div>
+        </div>
+        <p class="hint" id="ctdisk"></p>
+        <p class="pilegend" id="ctpilegend"></p>
+        <table>
+          <thead><tr>
+            <th>container</th><th>key</th><th>chat</th><th>state</th><th title="the Pi version inside the container, against the one the gateway runs">Pi</th><th class="num">up</th><th class="num">cpu</th>
+            <th class="num">memory</th><th class="num" title="what the container wrote to its own filesystem">disk</th><th>network</th><th class="num">reqs</th><th class="num">last used</th><th></th>
+          </tr></thead>
+          <tbody id="ctrows"></tbody>
+        </table>
+        <p class="hint" id="ctempty" hidden>No containers yet: one is made when a chat first speaks.</p>
+      </section>
+      <section class="panel" id="hostpipanel">
+        <div class="toolbar">
+          <div>
+            <h3>Pi on this host</h3>
+            <p class="hint" style="margin:0" id="hpnote">The Pi the gateway itself runs on, and its extensions. Not a chat&rsquo;s or a container&rsquo;s.</p>
+          </div>
+          <button id="hpcheck" title="ask the npm registry for the newest version">check for updates</button>
+        </div>
+        <table>
+          <tbody id="hprows"></tbody>
+        </table>
+        <div class="fieldrow" style="margin-top:8px">
+          <label class="ctrl" style="display:inline-flex"><input type="checkbox" id="hpself" checked> Pi</label>
+          <label class="ctrl" style="display:inline-flex"><input type="checkbox" id="hpext" checked> extensions</label>
+          <button id="hpupdate">update</button>
+        </div>
+        <p class="hint small" id="hpwarn"></p>
+        <div id="hpext-box" hidden>
+          <h3 style="margin:12px 0 6px" id="hpext-title">Extensions</h3>
+          <table>
+            <thead><tr><th>package</th><th>type</th><th>scope</th><th>note</th></tr></thead>
+            <tbody id="hpext-rows"></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Images</h3>
+            <p class="hint" style="margin:0" id="imgnote">The environments chats run in. <b>Build</b> makes one from its Dockerfile (docker/Dockerfile is <b>full</b>; add more under docker/environments/&lt;name&gt;). A rebuilt image applies to a chat's container the next time it is recreated, and an image is only removed when nothing uses it.</p>
+          </div>
+          <button id="imgprune" title="remove the untagged images a rebuild leaves behind">prune old images</button>
+        </div>
+        <table><thead><tr><th>environment</th><th>image</th><th>Pi</th><th class="num">containers behind</th><th></th></tr></thead><tbody id="imgenvs"></tbody></table>
+        <h4 style="margin:14px 0 4px;font-size:11px;letter-spacing:.06em;color:var(--dim)">ON THIS MACHINE</h4>
+        <table><thead><tr><th>image</th><th>environment</th><th>Pi</th><th class="num">size</th><th>built</th><th>used by</th><th></th></tr></thead><tbody id="imgrows"></tbody></table>
+        <pre id="imgjob" class="mdpreview" hidden></pre>
+      </section>
+      <section class="panel">
+        <h3>Run a command</h3>
+        <p class="hint" id="ctexecnote">Runs as root inside a running container. It is recorded below.</p>
+        <div class="fieldrow"><select id="ctexectarget"></select><input type="text" id="ctexeccmd" placeholder="ls -la /workspace" autocomplete="off" style="flex:1"><button id="ctexecrun">run</button></div>
+        <pre id="ctexecout" class="mdpreview" hidden></pre>
+      </section>
+      <section class="panel">
+        <h3>What happened</h3>
+        <p class="hint" style="margin:0 0 8px">Containers killed for memory or gone, and what was done here. Newest first.</p>
+        <table><thead><tr><th>when</th><th>what</th><th>container</th><th>detail</th></tr></thead><tbody id="ctlog"></tbody></table>
+      </section>
+    </div><!-- /view-containers -->
+
+    <div class="view" id="view-docs">
+      <div class="docs">
+        <aside class="panel">
+          <input id="docsearch" type="search" placeholder="search the handbook">
+          <div id="docpages"></div>
+          <div id="doctoc" class="toc"></div>
+        </aside>
+        <section class="panel">
+          <div id="doccontent" class="doc"><p class="hint">Loading…</p></div>
+        </section>
+      </div>
+    </div><!-- /view-docs -->
+
+    <div class="view" id="view-about">
+      <section class="panel">
+        <div class="hero">
+          <div class="mark">&#9835;</div>
+          <div>
+            <h2>Piper <span class="badge2" id="abver">…</span></h2>
+            <p id="abdesc">An OpenAI-compatible gateway that runs the Pi coding agent, one container per chat.</p>
+          </div>
+        </div>
+      </section>
+      <div class="grid2" style="margin-top:14px">
+        <section class="panel">
+          <h3>What it is</h3>
+          <p>Piper puts the <b>Pi</b> coding agent behind the OpenAI API. Point any OpenAI client at it and every conversation gets its own agent, running inside its own Docker container with full rights there and nothing of the host that you did not give it.</p>
+          <ul>
+            <li><b>Isolated by design.</b> One container per chat, a network policy that keeps the host and the LAN out, and provider credentials that never enter a container.</li>
+            <li><b>Per-key everything.</b> Each API key has its own skills, extensions, settings, workspace, limits and spend; a key can be given a container that lasts.</li>
+            <li><b>Agent endpoints.</b> Named, permanent agents (an architect, a coder, a researcher) each on an OpenAI-compatible port of its own.</li>
+            <li><b>Run it properly.</b> Container control, updates, backups, alerts, a watchdog, an audit log and resource charts, all in this dashboard.</li>
+          </ul>
+        </section>
+        <section class="panel">
+          <h3>Author</h3>
+          <dl class="limits" id="abauthor"></dl>
+          <h3 style="margin-top:14px">This installation</h3>
+          <dl class="limits" id="abinstall"></dl>
+        </section>
+      </div>
+      <section class="panel">
+        <h3>Changelog</h3>
+        <p class="hint" id="abchange">Loading…</p>
+        <div id="abreleases"></div>
+      </section>
+    </div><!-- /view-about -->
+
+    <div class="view" id="view-audit">
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Audit log</h3>
+            <p class="hint" style="margin:0" id="audnote">Loading…</p>
+          </div>
+          <div>
+            <label class="ctrl" style="display:inline-flex"><input type="checkbox" id="audauto"> auto-refresh</label>
+            <button id="audrefresh">refresh</button>
+            <button id="audcsv">export CSV</button>
+          </div>
+        </div>
+        <div class="keyform" style="margin-bottom:8px">
+          <span id="audchips"></span>
+          <input id="audq" placeholder="search action, target, detail, actor">
+          <input id="audsince" type="date" title="from">
+          <input id="auduntil" type="date" title="to">
+        </div>
+        <table>
+          <thead><tr><th>time</th><th>category</th><th>action</th><th>actor</th><th>target</th><th>detail</th></tr></thead>
+          <tbody id="audrows"></tbody>
+        </table>
+        <p class="hint" id="audempty" hidden>Nothing matches. Categories that are off are not recorded: turn them on under Settings &rarr; Audit.</p>
+        <div class="fieldrow" style="margin-top:8px"><button id="audmore" hidden>load more</button></div>
+      </section>
+    </div><!-- /view-audit -->
+
+    <div class="view" id="view-endpoints">
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Agent endpoints</h3>
+            <p class="hint" style="margin:0" id="epnote">A named, permanent Pi agent of an API key with a port of its own: point any OpenAI client at its URL with the key it belongs to. Each has its own instructions, skills, model and container (kept between chats), so one key can front an architect, a coder and a researcher. Spend, session and model limits stay on the key.</p>
+          </div>
+          <button id="eprefresh">refresh</button>
+        </div>
+        <table>
+          <thead><tr>
+            <th>agent</th><th>key</th><th>endpoint</th><th>state</th><th>workspace</th><th>model</th><th class="num">chats</th><th></th>
+          </tr></thead>
+          <tbody id="eprows"></tbody>
+        </table>
+        <p class="hint" id="epempty" hidden>No agent endpoints yet. Create one below.</p>
+      </section>
+      <section class="panel" id="epeditor" hidden>
+        <h3 id="epedtitle">Edit</h3>
+        <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">name</label><input type="text" id="epedname"></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">model</label><input type="text" id="epedmodel" placeholder="provider/model, blank = the default"><select id="epedthink"></select></div>
+        <div style="margin-bottom:8px"><label class="hint" for="epedinstr">instructions (the agent's AGENTS.md: who it is and how it works)</label><textarea id="epedinstr" rows="9" style="width:100%;box-sizing:border-box;background:#141414;color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:12px"></textarea></div>
+        <div id="epedctr"></div>
+        <div class="fieldrow" style="margin-top:8px"><button id="epedsave">save</button><button id="epedcancel">close</button><span class="hint small" id="epednote"></span></div>
+        <p class="hint small" id="epedcurl"></p>
+      </section>
+      <section class="panel">
+        <h3>Create an agent endpoint</h3>
+        <p class="hint">For an existing key. The port is picked for you and kept. Instructions become the agent's AGENTS.md; you can also change its skills and extensions from chat with <code>/skills</code>, or the profile API.</p>
+        <div class="keyform">
+          <select id="epkey"></select>
+          <input id="epname" placeholder="name, e.g. architect">
+          <select id="epws" title="own: a separate /workspace for this agent. shared: the key's existing workspace, so the agents of the key see the same files.">
+            <option value="own">own workspace</option>
+            <option value="shared">shared with the key</option>
+          </select>
+          <input id="epmodel" placeholder="model (optional)">
+          <select id="epthink"></select>
+        </div>
+        <div style="margin:8px 0"><textarea id="epinstr" rows="5" placeholder="Instructions, e.g. You are the architect: design systems and review plans; never write code yourself." style="width:100%;box-sizing:border-box;background:#141414;color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:12px"></textarea></div>
+        <details><summary class="hint">container limits (optional; blank follows the key, then the defaults)</summary><div id="epctr" style="margin-top:8px"></div></details>
+        <div class="fieldrow" style="margin-top:10px"><button id="epcreate">create endpoint</button><span class="passnote" id="epcreatenote"></span></div>
+      </section>
+    </div><!-- /view-endpoints -->
 
     <div class="view" id="view-models">
       <div class="cards" id="modelcards"></div>
@@ -413,7 +710,7 @@
           </div>
           <div class="ctrl">
             <input id="modelfilter" type="search" placeholder="filter models&hellip;" autocomplete="off">
-            <button id="modelrefresh">refresh</button>
+            <button id="modelrefresh" title="re-read your Pi models.json, logins and settings now (also happens automatically when they change)">reload catalogue</button>
           </div>
         </div>
         <div class="tabs" id="modeltabs"></div>
@@ -468,6 +765,7 @@
                 <option value="date">on a date&hellip;</option>
               </select>
               <input id="newdate" type="date" hidden>
+              <label class="ctrl" title="One container for this key, shared by all its chats and kept between them: what the agent installs (packages, Tor, tools) and sets up stays after a chat ends or the gateway restarts. Skills, settings and files already persist per key."><input id="newpersistent" type="checkbox"> persistent container</label>
               <button id="createkey">create key</button>
             </div>
             <div class="passnote" id="keynote"></div>
@@ -537,15 +835,15 @@
         <div class="toolbar">
           <div>
             <h3>Profiles</h3>
-            <p class="hint" style="margin:0">Each API key's own Pi profile — its skills, extensions and settings, mounted into its sandboxes.
-              Names and sizes only: the gateway never opens a profile's files outside a sandbox. <b>Lock</b> makes a profile
+            <p class="hint" style="margin:0">Each API key's own Pi profile — its skills, extensions and settings, mounted into its containers.
+              Names and sizes only: the gateway never opens a profile's files itself, only through a throwaway container that has just that folder. <b>Lock</b> makes a profile
               read-only and closes that key's live agents so the lock applies at once; <b>reset</b> archives it and starts it over
               from the template.</p>
           </div>
         </div>
         <table>
           <thead><tr>
-            <th>key</th><th class="num">size</th><th>skills</th><th>extensions</th><th class="num" title="the key's /workspace/shared, the same in every chat">shared folder</th><th class="num">live</th><th>state</th><th></th>
+            <th>key</th><th class="num">size</th><th>skills</th><th>extensions</th><th class="num" title="the key's /workspace, the same in every chat">workspace</th><th class="num">live</th><th>state</th><th></th>
           </tr></thead>
           <tbody id="profilerows"></tbody>
         </table>
@@ -579,6 +877,11 @@
       </section>
     </div><!-- /view-settings -->
   </main>
+
+  <div id="uppanel" hidden>
+    <h4><span id="uptitle">Update</span><button id="upclose" title="hide">&times;</button></h4>
+    <div id="upbody"></div>
+  </div>
 </div>
 
 <script>
@@ -634,6 +937,34 @@ function tally(rows, keyOf) {
     .sort(function (a, b) { return b.value - a.value || a.label.localeCompare(b.label); });
 }
 
+/* Speed in tokens per second: 1 decimal under 100, none above; a dash until there is a measurement. */
+function tps(v) { return v == null ? '–' : v >= 100 ? Math.round(v).toLocaleString() : v.toFixed(1); }
+/* One agent's average (generation or prompt) with the last call and the calls behind it as a tooltip. */
+function speedCell(speed, kind) {
+  var v = speed && speed[kind];
+  var td = cell(tps(v), 'num' + (v == null ? ' pi-unknown' : ''));
+  if (!speed) { td.title = 'no measurement yet'; return td; }
+  var n = kind === 'gen' ? speed.genCalls : speed.promptCalls;
+  var last = speed.last && speed.last[kind];
+  var per = Object.keys(speed.byModel || {}).map(function (m) { return m + ': ' + tps(speed.byModel[m][kind]) + ' (' + speed.byModel[m].calls + ' call' + (speed.byModel[m].calls === 1 ? '' : 's') + ')'; });
+  td.title = (v == null ? 'no measurement yet: ' + (kind === 'prompt' ? 'prompts under 64 tokens are too short to time' : 'answers under 8 tokens are too short to time') : 'average over ' + n + ' call' + (n === 1 ? '' : 's') + (last != null ? '; last call ' + tps(last) : '')) + (per.length > 1 ? '\n' + per.join('\n') : '');
+  return td;
+}
+
+/* The Pi version of a container or an agent, coloured against the gateway's own. */
+function piCell(version, status, source, host) {
+  status = version ? status || 'unknown' : 'unknown';
+  var td = cell(version || '\u2026', 'mono pi-' + status);
+  var tip = {
+    current: 'the same as the gateway (' + host + ')',
+    outdated: 'older than the gateway (' + host + '): update the container to install the gateway\u2019s version',
+    ahead: 'newer than the gateway (' + host + '): the gateway and this Pi may not speak the same protocol',
+    unknown: version ? 'cannot compare' : 'being read\u2026'
+  }[status];
+  td.title = tip + (source === 'image' ? ' \u2014 read from the image, not the container' : '');
+  return td;
+}
+
 function cardEl(label, value, sub, top, cls) {
   var c = el('div'); c.className = 'card';
   var t = el('div', top || '\u00a0'); t.className = 'cardtop ' + (cls || ''); c.appendChild(t);
@@ -683,7 +1014,9 @@ function donutEl(items) {
   return wrap;
 }
 
-function areaEl(hist) {
+function areaEl(hist, key, fmt) {
+  key = key || 'count';
+  fmt = fmt || function (v) { return String(v); };
   var box = el('div');
   if (!hist || hist.length < 2) {
     var none = el('div', 'collecting samples\u2026'); none.className = 'empty';
@@ -691,10 +1024,10 @@ function areaEl(hist) {
     return box;
   }
   var W = 600, H = 200, pad = 10, base = H - 20;
-  var peak = Math.max(1, Math.max.apply(null, hist.map(function (p) { return p.count; })));
+  var peak = Math.max(key === 'count' ? 1 : 0.0001, Math.max.apply(null, hist.map(function (p) { return p[key]; })));
   var x = function (i) { return pad + (i / (hist.length - 1)) * (W - pad * 2); };
   var y = function (v) { return base - (v / peak) * (base - 16); };
-  var line = hist.map(function (p, i) { return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p.count).toFixed(1); }).join(' ');
+  var line = hist.map(function (p, i) { return (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(p[key]).toFixed(1); }).join(' ');
   var fill = line + ' L' + x(hist.length - 1).toFixed(1) + ' ' + base + ' L' + x(0).toFixed(1) + ' ' + base + ' Z';
 
   var svg = svgEl('svg', { class: 'area', viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'none' });
@@ -710,8 +1043,8 @@ function areaEl(hist) {
 
   var axis = el('div'); axis.className = 'axis';
   axis.appendChild(el('span', hist.length + ' samples'));
-  axis.appendChild(el('span', 'peak ' + peak));
-  axis.appendChild(el('span', 'now ' + hist[hist.length - 1].count));
+  axis.appendChild(el('span', 'peak ' + fmt(peak)));
+  axis.appendChild(el('span', 'now ' + fmt(hist[hist.length - 1][key])));
   box.appendChild(axis);
   return box;
 }
@@ -779,6 +1112,7 @@ function render(d) {
   );
 
   $('area').replaceChildren(areaEl(hist));
+  renderResources(d.resources);
   $('donut-expiry').replaceChildren(donutEl(tally(S, function (s) { return s.expiresBecause || 'unknown'; })));
   $('donut-model').replaceChildren(donutEl(tally(S, modelKey)));
   $('donut-provider').replaceChildren(donutEl(tally(S, function (s) { return s.provider || '(none)'; })));
@@ -790,23 +1124,22 @@ function render(d) {
   status.className = '';
   // Nothing to sign out of while the dashboard is open, so the control stays out of the way.
   $('signout').hidden = !d.passwordSet;
-  // An unsandboxed session can read this gateway's database, so the state is not left to a settings
-  // page nobody visits.
-  var jail = $('jailwarn');
-  jail.hidden = d.jail !== false && !d.runnerNote;
-  if (d.jail === false) {
-    jail.replaceChildren(el('b', 'The session sandbox is disabled. '), document.createTextNode(d.jailNote || ''));
-  } else if (d.runnerNote) {
-    jail.replaceChildren(el('b', 'Sessions share this process. '), document.createTextNode(d.runnerNote));
-  } else if (d.limitsNote) {
-    jail.hidden = false;
-    jail.replaceChildren(el('b', 'Sandboxes are not resource-limited. '), document.createTextNode(d.limitsNote));
-  }
+  // Whether chats can start at all: Docker, the image, the network policy. A page nobody visits is no
+  // place to find out, so a problem is shown here, above every view.
+  var warn = $('jailwarn');
+  var ct = d.containers;
+  if (ct) LAST_CONTAINERS = ct;
+  var msgs = [];
+  if (ct && !ct.ok) msgs.push(['Chats cannot start. ', ct.problems.join(' \u2014 ')]);
+  else if (ct && ct.warnings.length) msgs.push(['Check the containers. ', ct.warnings.join(' \u2014 ')]);
+  if (d.disk && d.disk.low) msgs.push(['Disk is nearly full. ', (d.disk.freeMb / 1024).toFixed(1) + ' GB free on ' + d.disk.path + ' (warning below ' + (d.disk.warnBelowMb / 1024).toFixed(1) + ' GB): chats cannot install or write once it is full. Free space, or prune images on the Containers page.']);
+  warn.hidden = msgs.length === 0;
+  warn.replaceChildren.apply(warn, msgs.flatMap(function (m, i) { return (i ? [el('br')] : []).concat([el('b', m[0]), document.createTextNode(m[1])]); }));
 
   var tbody = $('rows');
   if (!S.length) {
     var tr = el('tr');
-    tr.appendChild(cell('no live agents', 'empty')).colSpan = 10;
+    tr.appendChild(cell('no live agents', 'empty')).colSpan = 13;
     tbody.replaceChildren(tr);
   } else {
     // Conversations first, then the one-off generations, each by whichever expires soonest.
@@ -825,10 +1158,14 @@ function render(d) {
       }
       tr.appendChild(fp);
       tr.appendChild(cell(modelKey(s)));
+      tr.appendChild(piCell(s.piVersion, s.piStatus, null, d.hostPiVersion));
+      tr.appendChild(speedCell(s.speed, 'gen'));
+      tr.appendChild(speedCell(s.speed, 'prompt'));
       tr.appendChild(cell(dur(s.ageMs), 'num'));
       tr.appendChild(cell(dur(s.idleMs) + ' ago', 'num'));
       tr.appendChild(cell(dur(s.expiresInMs), 'num ' + (s.expiresInMs < 300000 ? 'soon' : 'ok')));
-      tr.appendChild(cell(s.expiresBecause, 'why ' + s.expiresBecause));
+      // What the clock does at that time: a running chat is stopped (and resumes), a one-off request ends.
+      tr.appendChild(cell(s.expiresBecause + (s.expiresAction ? ' \u2192 ' + s.expiresAction : ''), 'why ' + s.expiresBecause));
       tr.appendChild(cell(s.requests || 0, 'num'));
       // The token count rides along as a tooltip rather than an eleventh column.
       var costCell = cell(money(s.cost), 'num');
@@ -1239,11 +1576,12 @@ $('createkey').addEventListener('click', function () {
   fetch('dashboard/api-keys', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ name: name, expiresAt: expiresAt })
+    body: JSON.stringify({ name: name, expiresAt: expiresAt, container: $('newpersistent').checked ? { persistent: true } : undefined })
   })
     .then(readJson)
     .then(function (d) {
       button.disabled = false;
+      $('newpersistent').checked = false;
       KEYS = d;
       CREATED_KEY = d.key;
       $('newname').value = '';
@@ -1434,7 +1772,13 @@ function fillModelList() {
   }));
 }
 $('modelfilter').addEventListener('input', renderModels);
-$('modelrefresh').addEventListener('click', function () { ensureModels(true); });
+$('modelrefresh').addEventListener('click', function () {
+  $('modelhint').textContent = 'reloading\u2026';
+  fetch('dashboard/models/reload', { method: 'POST' })
+    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function (d) { MODELS = d; renderModels(); fillModelList(); })
+    .catch(function (e) { $('modelhint').textContent = 'cannot reload: ' + e.message; });
+});
 
 /* ---- settings view ----
    The server owns what a setting is (type, bounds, default, full help). This page owns how it is
@@ -1446,88 +1790,85 @@ var SETTING_INPUTS = {};
 var SETTING_FIELDS = {};
 
 var SETTING_TABS = [
-  { id: 'sandbox', label: 'Sandbox', intro: 'Where each chat’s agent runs, what it can reach, and how much of the machine it may use.' },
-  { id: 'sessions', label: 'Sessions', intro: 'How long agents live, and what happens to their working files afterwards.' },
+  { id: 'containers', label: 'Containers', intro: 'Each chat’s agent runs in its own Docker container, with full rights inside it. These settings decide what a container can reach and how much of the machine it may use.' },
+  { id: 'sessions', label: 'Sessions', intro: 'How long agents live and what they show while they work.' },
   { id: 'limits', label: 'Usage limits', intro: 'Defaults for every API key. Each key can override them on the API Management page.' },
   { id: 'profiles', label: 'Profiles', intro: 'Each API key’s own skills, extensions and settings, and the shared bundles you hand out on top.' },
   { id: 'models', label: 'Models', intro: 'What happens when the model a chat uses fails.' },
+  { id: 'audit', label: 'Audit', intro: 'What the audit log records and how long it keeps it. A category that is off is not stored at all. Changes to these settings are always recorded. The log itself is on the Audit page.' },
   { id: 'access', label: 'Access', intro: 'Who may use the API and the dashboard, and what the gateway will fetch for them.' },
   { id: 'server', label: 'Server', intro: 'Listening address, request limits, logging and Pi itself. Most of these need a restart.' },
   { id: 'other', label: 'Other', intro: 'Settings this page does not have a place for yet.' }
 ];
 
-var RUNNER_IS = function (values, text) { return { key: 'RUNNER', values: values, note: text }; };
-var SANDBOXED = RUNNER_IS(['bwrap', 'docker', 'podman'], 'Only used by the sandboxed runners (bubblewrap, Docker, Podman).');
-var INPROCESS = RUNNER_IS(['inprocess'], 'Only used when the runner is In-process.');
-
 var LAYOUT = {
-  RUNNER: { tab: 'sandbox', section: 'Runtime', label: 'Runner',
-    summary: 'Where each chat’s Pi agent runs. Sandboxed runners give every chat its own isolated process with no credentials.',
-    options: { bwrap: 'Bubblewrap sandbox (recommended)', docker: 'Docker container', podman: 'Podman container', inprocess: 'In-process — trusted single user only' } },
-  CONTAINER_IMAGE: { tab: 'sandbox', section: 'Runtime', label: 'Container image',
-    summary: 'Image the Docker and Podman runners start. Build it from Dockerfile.sandbox.',
-    when: RUNNER_IS(['docker', 'podman'], 'Only used when the runner is Docker or Podman.') },
-
-  SANDBOX_NETWORK: { tab: 'sandbox', section: 'Isolation', label: 'Network access',
-    summary: 'Whether agents can reach the network. Model calls work either way, through the gateway.',
-    options: { off: 'Off — no network (recommended)', on: 'On — same network as this host' } },
-  SANDBOX_ALLOW: { tab: 'sandbox', section: 'Isolation', label: 'Extra readable paths',
-    summary: 'Folders or files to make visible (read-only) inside every sandbox, colon-separated, e.g. /opt/toolchain. Nothing outside the workspace, profile and system software is visible otherwise.', placeholder: '/path/one:/path/two' },
-  SANDBOX_ENV: { tab: 'sandbox', section: 'Isolation', label: 'Extra environment variables',
-    summary: 'NAME=value pairs, space-separated, set inside every sandbox for tools that need them, e.g. RUSTUP_HOME=/root/.rustup.', placeholder: 'NAME=value NAME2=value' },
-  WORKSPACE_JAIL: { tab: 'sandbox', section: 'Isolation', label: 'Confine in-process sessions',
-    summary: 'Keep in-process agents inside their workspace. Turning this off removes all protection.', when: INPROCESS },
-  GATEWAY_EXTENSIONS: { tab: 'sandbox', section: 'Isolation', label: 'Load extensions in-process',
-    summary: 'Run Pi extensions inside the gateway process. Sandboxed runners always load each key’s own extensions safely.', when: INPROCESS },
-
-  SANDBOX_LIMITS: { tab: 'sandbox', section: 'Resources per chat', label: 'Enforce limits with',
-    summary: 'How the limits below are applied to bubblewrap sandboxes. Containers use their own engine’s limits.',
-    options: { auto: 'systemd when available (recommended)', systemd: 'systemd, or refuse to start chats', off: 'Nothing — unlimited' },
-    when: RUNNER_IS(['bwrap'], 'Only used by the bubblewrap runner; containers are limited by their engine.') },
-  SANDBOX_MEMORY_MB: { tab: 'sandbox', section: 'Resources per chat', label: 'Memory', unit: 'MB',
-    summary: 'Memory one chat may use, everything it runs included. 0 means unlimited.', when: SANDBOXED },
-  SANDBOX_PIDS: { tab: 'sandbox', section: 'Resources per chat', label: 'Processes', unit: 'processes',
-    summary: 'Processes and threads one chat may run at once. 0 means unlimited.', when: SANDBOXED },
-  SANDBOX_CPUS: { tab: 'sandbox', section: 'Resources per chat', label: 'CPU', unit: 'cores',
-    summary: 'CPU cores one chat may use; fractions such as 0.5 work. 0 means unlimited.', when: SANDBOXED },
+  CONTAINER_IMAGE: { tab: 'containers', section: 'Container', label: 'Image',
+    summary: 'The image every chat’s container starts from. Build it with ./piper.sh image. Changing it recreates a chat’s container on its next start.' },
+  CONTAINER_NETWORK: { tab: 'containers', section: 'Container', label: 'Network',
+    summary: 'What a container can reach. Model calls work whatever you pick.',
+    options: { internet: 'Internet only (recommended) — not this machine, your LAN or other containers', none: 'None — no network at all', open: 'Open — also this machine and your LAN (set a dashboard password)' } },
+  CONTAINER_ALLOW: { tab: 'containers', section: 'Container', label: 'Extra private endpoints',
+    summary: 'host or host:port, space-separated, that containers may reach even on “Internet only”, e.g. 192.168.1.50:4000. Your DNS servers and the container models’ endpoints are allowed automatically.',
+    placeholder: 'none', when: { key: 'CONTAINER_NETWORK', values: ['internet'], note: 'Only used when the network is “Internet only”.' } },
+  CONTAINER_MOUNTS: { tab: 'containers', section: 'Container', label: 'Host folders to share',
+    summary: 'Folders made visible, read-only, inside every container: host or host:container, space-separated, e.g. /opt/tools. For tools that are not in the image.', placeholder: 'none' },
+  CONTAINER_ENV: { tab: 'containers', section: 'Container', label: 'Extra environment variables',
+    summary: 'NAME=value pairs, space-separated, set for Pi in every container, e.g. RUSTUP_HOME=/usr/local/rustup.', placeholder: 'NAME=value NAME2=value2' },
+  CONTAINER_MEMORY_MB: { tab: 'containers', section: 'Resources per chat', label: 'Memory', unit: 'MB',
+    summary: 'Memory one chat’s container may use, everything in it included, with no swap. 0 means unlimited.' },
+  CONTAINER_PIDS: { tab: 'containers', section: 'Resources per chat', label: 'Processes', unit: 'processes',
+    summary: 'Processes and threads one container may run at once. 0 means unlimited.' },
+  CONTAINER_CPUS: { tab: 'containers', section: 'Resources per chat', label: 'CPU', unit: 'cores',
+    summary: 'CPU cores one container may use; fractions such as 0.5 work. 0 means unlimited.' },
+  DISK_FREE_WARN_MB: { tab: 'containers', section: 'Disk and alerts', label: 'Warn when disk space is under', unit: 'MB',
+    summary: 'On the disk Docker keeps its data on: a red banner and an alert. 0 turns it off.' },
+  CONTAINER_DISK_MB: { tab: 'containers', section: 'Disk and alerts', label: 'Warn when a container has written over', unit: 'MB',
+    summary: 'What one chat\u2019s container wrote to its own filesystem (what the agent installed and downloaded). A warning only; recreate the container on the Containers page. 0 turns it off.' },
+  ALERT_WEBHOOK_URL: { tab: 'containers', section: 'Disk and alerts', label: 'Alert webhook', placeholder: 'https://hooks.slack.com/services/\u2026',
+    summary: 'Gets a JSON POST when Docker is unreachable, the firewall rules are missing, the disk is low, a container is killed for memory, or the gateway stops answering. Slack and Discord webhooks work as they are.' },
+  AGENT_PORT_RANGE: { tab: 'containers', section: 'Agent endpoints', label: 'Agent port range', placeholder: '20000-29999',
+    summary: 'Where an agent endpoint\u2019s port is picked (FROM-TO), so a firewall can allow just that range. Blank: any free port. A port is chosen once, when the agent is created, and kept.' },
+  WORKSPACE_ROOT: { tab: 'containers', section: 'Files', label: 'Workspaces folder',
+    summary: 'Each API key gets one workspace here, mounted at /workspace in all of its chats.' },
+  WORKSPACE_MAX_BYTES: { tab: 'containers', section: 'Files', label: 'Workspace size limit per key', unit: 'bytes', bytes: true,
+    summary: 'Past it, new chats get the workspace read-only until it is trimmed. 0 means unlimited.' },
+  ARCHIVE_TTL_MS: { tab: 'containers', section: 'Files', label: 'Delete archives after',
+    summary: 'Reset profiles and workspaces from before the move to containers, older than this, are deleted. 0 keeps them forever.' },
+  CONTAINER_PI_DIR: { tab: 'containers', section: 'Files', label: 'Container Pi config folder',
+    summary: 'Holds the models.json and settings.json containers’ Pi uses (edited below). Separate from your own ~/.pi/agent.' },
 
   MAX_SESSIONS: { tab: 'sessions', section: 'Agents', label: 'Maximum live agents', unit: 'agents',
     summary: 'Across all keys. Past it, the least recently used agent is closed.' },
-  SESSION_IDLE_MS: { tab: 'sessions', section: 'Agents', label: 'Close after idle for',
-    summary: 'An agent with no requests for this long is closed.' },
-  SESSION_MAX_LIFETIME_MS: { tab: 'sessions', section: 'Agents', label: 'Maximum lifetime',
-    summary: 'An agent is closed this long after it started, however busy it is.' },
-  ONE_SHOT_TTL_MS: { tab: 'sessions', section: 'Agents', label: 'Close one-off requests after',
-    summary: 'Single requests (titles, summaries) are closed this soon. 0 turns this off.' },
-  WORKSPACE_ROOT: { tab: 'sessions', section: 'Workspaces', label: 'Workspace folder',
-    summary: 'Every chat gets its own folder under here. Needed by the sandboxed runners.' },
-  WORKSPACE_ON_EXPIRY: { tab: 'sessions', section: 'Workspaces', label: 'When a chat ends',
-    summary: 'What happens to its workspace. Empty workspaces are always removed.',
-    options: { archive: 'Archive it', 'delete': 'Delete it', keep: 'Keep it in place' } },
-  WORKSPACE_ARCHIVE_TTL_MS: { tab: 'sessions', section: 'Workspaces', label: 'Delete archives after',
-    summary: 'Archived workspaces and reset profiles older than this are deleted. 0 keeps them forever.',
-    when: { key: 'WORKSPACE_ON_EXPIRY', values: ['archive'], note: 'Only matters when chats are archived.' } },
+  SESSION_IDLE_MS: { tab: 'sessions', section: 'Agents', label: 'Stop after idle for',
+    summary: 'A running chat with no requests for this long is stopped: its container stops (freeing memory) but is kept, and the next message resumes it.' },
+  SESSION_MAX_LIFETIME_MS: { tab: 'sessions', section: 'Agents', label: 'Restart after running for',
+    summary: 'The longest one Pi process runs before it is stopped, however busy. The chat is not ended: it resumes on its next message.' },
+  CHAT_KEEP_MS: { tab: 'sessions', section: 'Agents', label: 'Keep a stopped chat for',
+    summary: 'After its last message, a stopped chat’s container and session are kept this long, then the chat ends and the container is removed. 0 keeps them for ever.' },
+  ONE_SHOT_TTL_MS: { tab: 'sessions', section: 'Agents', label: 'End one-off requests after',
+    summary: 'Single requests (titles, summaries) are ended this soon, container removed. 0 turns this off.' },
+  STREAM_TOOL_ACTIVITY: { tab: 'sessions', section: 'Replies', label: 'Show tool output in the stream',
+    summary: 'List each tool the agent runs, with its command or file, in the reply\u2019s reasoning (Open WebUI shows it under "Thinking"). Off by default.' },
 
   KEY_MAX_SESSIONS: { tab: 'limits', section: 'Per key', label: 'Chats at once', unit: 'chats',
     summary: 'Live chats one key may hold. A new chat closes that key’s oldest idle one. 0 means unlimited.' },
+  KEY_ALLOWED_MODELS: { tab: 'limits', section: 'Per key', label: 'Allowed models',
+    summary: 'provider/model patterns, comma-separated, * for anything (local-openai/*). Empty allows every model. Set per key in its Profiles detail view.',
+    placeholder: 'every model' },
   KEY_DAILY_SPEND_USD: { tab: 'limits', section: 'Per key', label: 'Daily spend cap', unit: 'USD / day',
     summary: 'Model calls are refused once a key has spent this much today. 0 means unlimited.' },
 
   PROFILE_MAX_BYTES: { tab: 'profiles', section: 'Profiles', label: 'Size limit per key', unit: 'bytes', bytes: true,
-    summary: 'Past it, uploads are refused and the profile becomes read-only until trimmed. 0 means unlimited.', when: SANDBOXED },
+    summary: 'Past it, uploads are refused and the profile becomes read-only until trimmed. 0 means unlimited.' },
   PROFILE_TEMPLATE: { tab: 'profiles', section: 'Profiles', label: 'Starting template',
-    summary: 'A folder copied into every new profile, e.g. a shared set of skills. Empty starts with just your default model.', placeholder: '/path/to/template', when: SANDBOXED },
+    summary: 'A folder copied into every new profile, e.g. a shared set of skills. Empty starts with just your default model.', placeholder: '/path/to/template' },
   PROFILE_ROOT: { tab: 'profiles', section: 'Profiles', label: 'Profiles folder',
-    summary: 'Where each key’s profile is stored.', when: SANDBOXED },
-  KEY_FILES_ROOT: { tab: 'profiles', section: 'Shared folder', label: 'Shared folders location',
-    summary: 'Each key gets a folder here, mounted read-write at /workspace/shared in all of its chats.', when: SANDBOXED },
-  KEY_FILES_MAX_BYTES: { tab: 'profiles', section: 'Shared folder', label: 'Size limit per key', unit: 'bytes', bytes: true,
-    summary: 'Past it, the folder is frozen for new chats until trimmed. 0 means unlimited.', when: SANDBOXED },
+    summary: 'Where each key’s profile is stored, mounted at /profile in its chats’ containers.' },
   SHARED_BUNDLES: { tab: 'profiles', section: 'Shared bundles', label: 'Bundles every key gets',
     summary: 'Comma-separated bundle names, * for all, or empty for none. A key can have its own list on API Management.',
-    placeholder: 'none', when: SANDBOXED },
+    placeholder: 'none' },
   SHARED_ROOT: { tab: 'profiles', section: 'Shared bundles', label: 'Bundles folder',
-    summary: 'Each subfolder is a bundle with skills/, extensions/ and prompts/, mounted read-only for the keys that get it.', when: SANDBOXED },
+    summary: 'Each subfolder is a bundle with skills/, extensions/ and prompts/, mounted read-only for the keys that get it.' },
 
   FALLBACK_MODEL: { tab: 'models', section: 'Fallback', label: 'Fallback model',
     summary: 'Model to switch to when the current one runs out of credit or stops responding. Empty turns fallback off.' },
@@ -1543,6 +1884,24 @@ var LAYOUT = {
     summary: 'A key that opens both the API and the dashboard. Leave empty and use API Management for per-person keys.' },
   DASHBOARD_SESSION_MS: { tab: 'access', section: 'API and dashboard', label: 'Stay signed in for',
     summary: 'How long a dashboard sign-in lasts. 0 lasts until the browser closes.' },
+  AUDIT_AUTH: { tab: 'audit', section: 'What is recorded', label: 'Dashboard sign-ins',
+    summary: 'Logins and failures, sign-outs, the password being set or removed, with the address.' },
+  AUDIT_SETTINGS: { tab: 'audit', section: 'What is recorded', label: 'Settings changes',
+    summary: 'Which setting changed, old to new. Secrets, the alert webhook and environment variables only say they changed.' },
+  AUDIT_KEYS: { tab: 'audit', section: 'What is recorded', label: 'API keys and profiles',
+    summary: 'Key create, revoke, delete and changes; profile locks and resets; sessions killed here; model reloads.' },
+  AUDIT_OPERATIONS: { tab: 'audit', section: 'What is recorded', label: 'Operations',
+    summary: 'Containers, images, agent endpoints, updates, commands run in a container, and the host Pi update.' },
+  AUDIT_RUNTIME: { tab: 'audit', section: 'What is recorded', label: 'Runtime events',
+    summary: 'Containers killed or dead, Docker up or down, limits hit, model fallbacks, sweeps that removed something, alerts sent.' },
+  AUDIT_REQUESTS: { tab: 'audit', section: 'Busy categories (off by default)', label: 'Every chat request',
+    summary: 'One line per chat request: who, session fingerprint, model, status, time. Never the messages. Can be a lot.' },
+  AUDIT_AUTH_FAILURES: { tab: 'audit', section: 'Busy categories (off by default)', label: 'Failed API authentication',
+    summary: 'Requests refused for a bad or missing key: one line per address per minute, with a count.' },
+  AUDIT_RETENTION_DAYS: { tab: 'audit', section: 'How long it is kept', label: 'Keep for', unit: 'days',
+    summary: 'Older rows are deleted. 0 keeps them for ever.' },
+  AUDIT_MAX_ROWS: { tab: 'audit', section: 'How long it is kept', label: 'Keep at most', unit: 'rows',
+    summary: 'The oldest rows go first once there are more than this. 0 means no limit.' },
   ALLOW_IMAGE_URLS: { tab: 'access', section: 'Images', label: 'Fetch image URLs',
     summary: 'Let clients send images as links for the gateway to download. Off accepts embedded images only.' },
 
@@ -1554,12 +1913,12 @@ var LAYOUT = {
   MAX_IMAGE_BYTES: { tab: 'server', section: 'Requests', label: 'Largest fetched image', unit: 'bytes', bytes: true,
     summary: 'Images downloaded from a URL may not be bigger than this.',
     when: { key: 'ALLOW_IMAGE_URLS', checked: true, note: 'Only used when image URLs are fetched (Access tab).' } },
+  SPEED_HISTORY_DAYS: { tab: 'server', section: 'Logging', label: 'Keep model speed history for', unit: 'days',
+    summary: 'The Overview\u2019s model speed charts (prompt processing and generation, tokens per second, per model). Only model names, token counts and times are stored. 0 keeps no history; the figures per running agent still work.' },
   ACCESS_LOG: { tab: 'server', section: 'Logging', label: 'Access log',
     summary: 'Write one line per request to the gateway’s standard error.' },
   PI_AGENT_PACKAGE: { tab: 'server', section: 'Pi', label: 'Pi package location',
-    summary: 'Only needed when the Pi package cannot be found automatically.', placeholder: 'found automatically' },
-  PI_CWD: { tab: 'server', section: 'Pi', label: 'Working folder without workspaces',
-    summary: 'Used only when the workspace folder is empty. Empty means where the gateway was started.', placeholder: 'the gateway’s working folder' }
+    summary: 'Only needed when the Pi package cannot be found automatically.', placeholder: 'found automatically' }
 };
 
 function layoutFor(s) {
@@ -1730,7 +2089,7 @@ function refreshSettingState() {
   if (dirty) settingNote('', '');
 }
 
-var activeSettingTab = 'sandbox';
+var activeSettingTab = 'containers';
 
 function showSettingTab(id) {
   activeSettingTab = id;
@@ -1777,17 +2136,15 @@ function renderSettings() {
   list.forEach(function (s) { byKey[s.key] = s; });
   var restart = list.filter(function (x) { return x.restart; }).length;
   var edited = list.filter(function (x) { return x.source === 'ui'; }).length;
-  var RUNNER_SHORT = { bwrap: 'bubblewrap', docker: 'docker', podman: 'podman', inprocess: 'in-process' };
-  var runner = byKey.RUNNER ? (RUNNER_SHORT[byKey.RUNNER.value] || byKey.RUNNER.value) : '-';
-  var net = byKey.SANDBOX_NETWORK ? (byKey.SANDBOX_NETWORK.value === 'on' ? 'on' : 'off') : '-';
+  var net = byKey.CONTAINER_NETWORK ? byKey.CONTAINER_NETWORK.value : '-';
   $('settingcards').replaceChildren(
-    cardEl('runner', runner, '', 'where agents run', runner === 'in-process' ? 'warn' : ''),
-    cardEl('network', net, '', 'inside sandboxes', net === 'on' ? 'warn' : ''),
+    cardEl('containers', 'docker', '', 'one per chat'),
+    cardEl('network', net, '', 'for containers', net === 'open' ? 'warn' : ''),
     cardEl('changed', edited, '', 'from the defaults'),
     cardEl('restart', restart, '', 'need a restart to change')
   );
   $('settinghint').textContent = 'Saved in ' + SETTINGS.dbPath + '. Changes apply straight away unless marked restart; ' +
-    'sandbox changes apply to new chats.';
+    'container changes apply to a chat\u2019s next start.';
 
   // tab -> section -> settings, in LAYOUT order, then anything unmapped in server order.
   var order = Object.keys(LAYOUT);
@@ -1804,7 +2161,7 @@ function renderSettings() {
     t.bySection[L.section].push(s);
   });
 
-  var tabs = SETTING_TABS.filter(function (t) { return tree[t.id] || t.id === 'access'; });
+  var tabs = SETTING_TABS.filter(function (t) { return tree[t.id] || t.id === 'access' || t.id === 'containers'; });
   if (!tabs.some(function (t) { return t.id === activeSettingTab; })) activeSettingTab = tabs[0].id;
   var bar = $('settingtabs');
   bar.replaceChildren.apply(bar, tabs.map(function (t) {
@@ -1829,11 +2186,18 @@ function renderSettings() {
     var sections = node.sections.slice();
     // The dashboard password has no spec entry; it gets its own section on the Access tab.
     if (t.id === 'access') sections.splice(1, 0, 'Dashboard password');
+    // The panels that are not settings: whether containers can run, and the Pi config inside them.
+    if (t.id === 'containers') sections.unshift('Container health'), sections.splice(sections.indexOf('Files'), 0, 'Pi config for containers');
     sections.forEach(function (name) {
       var sec = el('section'); sec.className = 'section';
       sec.appendChild(el('h4', name));
       if (name === 'Dashboard password') sec.appendChild(passwordPanel());
-      else node.bySection[name].forEach(function (s) { sec.appendChild(settingField(s)); });
+      else if (name === 'Container health') sec.appendChild(containerHealthPanel());
+      else if (name === 'Pi config for containers') sec.appendChild(containerPiPanel());
+      else {
+        node.bySection[name].forEach(function (s) { sec.appendChild(settingField(s)); });
+        if (name === 'Disk and alerts') sec.appendChild(alertTestPanel());
+      }
       panel.appendChild(sec);
     });
     return panel;
@@ -1902,6 +2266,104 @@ function saveSettings() {
 
 /* The password is not a setting, so it has no field in the spec: it is never edited as a text box
    and only its hash is stored. This is appended to the Access Control panel. */
+/* A button that sends a test alert to the saved webhook, so a typo is found now and not during an outage. */
+function alertTestPanel() {
+  var box = el('div'); box.className = 'fieldrow';
+  var btn = el('button', 'send a test alert');
+  var note = el('span'); note.className = 'hint small';
+  btn.addEventListener('click', function () {
+    btn.disabled = true; note.className = 'hint small'; note.textContent = 'sending\u2026';
+    fetch('dashboard/alerts/test', { method: 'POST' }).then(readJson).then(function (r) {
+      note.textContent = r.sent ? 'sent: check the channel' : 'not sent: ' + r.reason;
+      note.className = 'hint small' + (r.sent ? '' : ' bad');
+    }).catch(function (e) { note.textContent = e.message; note.className = 'hint small bad'; })
+      .then(function () { btn.disabled = false; });
+  });
+  box.appendChild(btn); box.appendChild(note);
+  var hint = el('p', 'Sends to the saved value: save the webhook first.'); hint.className = 'hint small';
+  var wrap = el('div'); wrap.appendChild(box); wrap.appendChild(hint);
+  return wrap;
+}
+
+/* Container health: whether chats can start, from /dashboard.json's `containers`, with a button to look again. */
+function containerHealthPanel() {
+  var box = el('div'); box.className = 'passblock';
+  var list = el('div'); list.className = 'cpstatus';
+  var note = el('div'); note.className = 'cpnote';
+  function row(cls, name, text) {
+    var r = el('div'); r.className = 'cprow ' + cls;
+    r.appendChild(el('i')).className = 'dot';
+    r.appendChild(el('b', name));
+    r.appendChild(el('span', text));
+    list.appendChild(r);
+  }
+  function draw(c) {
+    list.replaceChildren();
+    if (!c) { row('', 'containers', 'not loaded yet'); return; }
+    row(c.engine ? 'good' : 'bad', 'Docker', c.engine ? 'version ' + c.engine.version : (c.problems[0] || 'not available'));
+    row(c.image ? (c.warnings.length ? 'warn' : 'good') : 'bad', 'Image',
+      c.image ? 'Pi ' + (c.image.piVersion || '?') + (c.hostPiVersion ? ' (this gateway runs Pi ' + c.hostPiVersion + ')' : '') : 'not built — run ./piper.sh image');
+    row(c.network.ok ? 'good' : 'bad', 'Network', c.network.mode);
+    var fw = c.firewall;
+    row(fw.ok ? 'good' : 'bad', 'Firewall', fw.mode !== 'internet' ? 'no rules needed for “' + fw.mode + '”'
+      : fw.ok ? 'in place; containers may reach ' + (fw.allowed.length ? fw.allowed.map(function (a) { return a.endpoint + ' (' + a.why + ')'; }).join(', ') : 'the internet only') : 'not enforced');
+    c.problems.slice(c.engine ? 0 : 1).forEach(function (t) { row('bad', 'Problem', t); });
+    c.warnings.forEach(function (t) { row('warn', 'Warning', t); });
+  }
+  draw(LAST_CONTAINERS);
+  var again = el('button', 'check again');
+  again.addEventListener('click', function () {
+    again.disabled = true; note.className = 'cpnote'; note.textContent = 'checking…';
+    fetch('dashboard/containers/recheck', { method: 'POST' }).then(readJson).then(function (c) {
+      LAST_CONTAINERS = c; draw(c); note.textContent = '';
+    }).catch(function (e) { note.className = 'cpnote bad'; note.textContent = e.message; })
+      .then(function () { again.disabled = false; });
+  });
+  box.appendChild(list); box.appendChild(again); box.appendChild(note);
+  return box;
+}
+var LAST_CONTAINERS = null;
+
+/* The Pi configuration containers use: models.json (the models their Pi calls directly, keys shown
+   as ***) and the default model. Saved on its own, not with the settings above. */
+function containerPiPanel() {
+  var box = el('div'); box.className = 'passblock';
+  box.appendChild(el('p', 'Pi in each container is a stock install. The models below are called by Pi directly, so the containers hold their keys and the firewall lets their endpoints through; every other model still goes through the gateway. Edited separately from your own ~/.pi/agent.')).className = 'hint';
+  var ed = el('div'); ed.className = 'cpeditor';
+  var ta = el('textarea'); ta.spellcheck = false; ta.value = 'loading…'; ta.disabled = true;
+  var row = el('div'); row.className = 'row';
+  var inputs = {};
+  [['defaultProvider', 'default provider'], ['defaultModel', 'default model'], ['defaultThinkingLevel', 'thinking level']].forEach(function (f) {
+    var i = el('input'); i.placeholder = f[1]; i.title = f[1]; i.autocomplete = 'off'; inputs[f[0]] = i; row.appendChild(i);
+  });
+  var save = el('button', 'save container Pi config'); save.disabled = true;
+  var note = el('span'); note.className = 'cpnote';
+  var foot = el('div'); foot.className = 'row'; foot.appendChild(save); foot.appendChild(note);
+  ed.appendChild(ta); ed.appendChild(row); ed.appendChild(foot); box.appendChild(ed);
+  var loaded = null;
+  function fill(v) {
+    loaded = v; ta.value = v.models; ta.disabled = false; save.disabled = false;
+    ['defaultProvider', 'defaultModel', 'defaultThinkingLevel'].forEach(function (k) { inputs[k].value = v.defaults[k] || ''; });
+  }
+  fetch('dashboard/container-pi', { cache: 'no-store' }).then(readJson).then(fill)
+    .catch(function (e) { ta.value = e.message; });
+  save.addEventListener('click', function () {
+    save.disabled = true; note.className = 'cpnote'; note.textContent = 'saving…';
+    var defaults = {};
+    Object.keys(inputs).forEach(function (k) { defaults[k] = inputs[k].value.trim(); });
+    fetch('dashboard/container-pi', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ models: ta.value, defaults: defaults }) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok) { note.className = 'cpnote bad'; note.textContent = res.j.error ? res.j.error.message : 'could not save'; return; }
+        fill(res.j); note.className = 'cpnote good';
+        note.textContent = 'saved — new chats use it; open chats after /reload. Endpoints: ' + (res.j.endpoints.map(function (e) { return e.host + (e.port ? ':' + e.port : ''); }).join(', ') || 'none');
+      })
+      .catch(function (e) { note.className = 'cpnote bad'; note.textContent = e.message; })
+      .then(function () { save.disabled = false; });
+  });
+  return box;
+}
+
 function passwordPanel() {
   var on = Boolean(SETTINGS && SETTINGS.passwordSet);
   var box = el('div'); box.className = 'passblock';
@@ -1989,12 +2451,733 @@ $('settingsearch').addEventListener('input', applySettingFilter);
 var VIEWS = {
   overview: { title:'Gateway Overview', subtitle:'Live Pi agents, their models, and when each one will be reaped', section:'Overview' },
   agents:   { title:'Agents', subtitle:'Every live Pi agent, with its expiry and a kill control', section:'Agents' },
+  endpoints: { title:'Endpoints', subtitle:'Named, permanent agents of an API key, each on its own OpenAI-compatible port', section:'Endpoints' },
+  docs:     { title:'Documentation', subtitle:'The administrator\u2019s handbook: architecture, deployment, operation, configuration, API and troubleshooting', section:'Documentation' },
+  about:    { title:'About', subtitle:'Piper, its version, release notes and author', section:'About' },
+  audit:    { title:'Audit', subtitle:'What was done to the gateway and what happened to it, as chosen in Settings \u2192 Audit', section:'Audit' },
+  containers: { title:'Containers', subtitle:'Each chat\u2019s container: how it is doing, and stop, recreate, remove or run a command', section:'Containers' },
   models:   { title:'Models', subtitle:'Every model this gateway can route to, grouped by provider', section:'Models' },
   spend:    { title:'Spend', subtitle:'What agents have cost, per model and per day', section:'Spend' },
   profiles: { title:'Profiles', subtitle:'Per-key skills, extensions and settings, and who can change them', section:'Profiles' },
   apikeys:  { title:'API Management', subtitle:'Keys for the OpenAI endpoints, their expiry, and what each one has used', section:'API Management' },
   settings: { title:'Settings', subtitle:'Gateway configuration, stored in SQLite and editable here', section:'Settings' }
 };
+/* Images: the environments, what is built, and a build's output while it runs. */
+var IMG_TIMER = null;
+function loadImages() {
+  return fetch('dashboard/images.json', { cache: 'no-store' }).then(readJson).then(renderImages)
+    .catch(function (e) { $('imgnote').textContent = 'cannot load images: ' + e.message; });
+}
+function imgPost(path, body, done) {
+  return fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) })
+    .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); return j; }); })
+    .then(function (j) { if (j.message) $('imgnote').textContent = j.message; return loadImages(); })
+    .catch(function (e) { $('imgnote').textContent = e.message; });
+}
+function renderImages(d) {
+  var job = d.job;
+  var running = job && job.state === 'running';
+  var envs = $('imgenvs');
+  envs.replaceChildren();
+  d.environments.forEach(function (e) {
+    var tr = el('tr');
+    tr.appendChild(cell(e.name));
+    tr.appendChild(cell(e.tag, 'mono'));
+    tr.appendChild(cell(e.built ? 'Pi ' + (e.piVersion || '?') + (e.stale ? ' — gateway runs ' + d.hostPiVersion : '') : 'not built', e.stale || !e.built ? 'soon' : ''));
+    tr.appendChild(cell(e.containersToRecreate || 0, 'num'));
+    var td = el('td');
+    var b = el('button', e.built ? 'rebuild' : 'build');
+    b.disabled = running;
+    b.addEventListener('click', function () {
+      if (e.built && e.containersToRecreate && !confirm(e.containersToRecreate + ' container(s) use the current ' + e.tag + '; they get the new one when next recreated (what was installed in them is lost then). Rebuild?')) return;
+      imgPost('dashboard/images/build', { env: e.name });
+      $('imgnote').textContent = 'building ' + e.tag + '…';
+    });
+    td.appendChild(b); tr.appendChild(td);
+    envs.appendChild(tr);
+  });
+  var rows = $('imgrows');
+  rows.replaceChildren();
+  d.images.forEach(function (i) {
+    var tr = el('tr');
+    tr.appendChild(cell(i.name || '(untagged) ' + i.id.replace('sha256:', '').slice(0, 12), i.untagged ? 'mono soon' : 'mono'));
+    tr.appendChild(cell(i.env || '-'));
+    tr.appendChild(cell(i.piVersion ? 'Pi ' + i.piVersion : '-', i.stale ? 'soon' : ''));
+    tr.appendChild(cell(i.sizeMb == null ? '-' : (i.sizeMb / 1024).toFixed(2) + ' GB', 'num'));
+    tr.appendChild(cell(i.created));
+    var used = [];
+    if (i.isDefault) used.push('default');
+    if (i.containers) used.push(i.containers + ' container(s)');
+    if (i.keys.length) used.push(i.keys.join(', '));
+    tr.appendChild(cell(used.join(' · ') || 'nothing'));
+    var td = el('td');
+    var b = el('button', 'remove');
+    b.disabled = i.isDefault || i.containers > 0 || i.keys.length > 0;
+    b.title = b.disabled ? 'in use' : 'remove this image';
+    b.addEventListener('click', function () { if (confirm('Remove ' + (i.name || i.id) + '?')) imgPost('dashboard/images/remove', { image: i.name || i.id }); });
+    td.appendChild(b); tr.appendChild(td);
+    rows.appendChild(tr);
+  });
+  var out = $('imgjob');
+  out.hidden = !job;
+  if (job) {
+    out.textContent = job.tag + ': ' + job.state + (job.state === 'failed' ? ' (exit ' + job.code + ')' : '') + '\n' + job.lines.slice(-25).join('\n');
+    out.scrollTop = out.scrollHeight;
+  }
+  // Poll faster while a build runs, so its output is followed.
+  if (IMG_TIMER) { clearInterval(IMG_TIMER); IMG_TIMER = null; }
+  if ($('view-containers').classList.contains('on')) IMG_TIMER = setInterval(loadImages, running ? 2000 : 8000);
+}
+$('imgprune').addEventListener('click', function () { imgPost('dashboard/images/prune', {}); });
+
+
+/* Endpoints: named, permanent agents of a key, each on its own port. */
+var EP_DATA = null;
+var EP_EDIT = null;
+var EP_FIELDS = [['memoryMb', 'memory (MB)'], ['cpus', 'cpu cores'], ['pids', 'processes'], ['network', 'network'], ['image', 'image'], ['mounts', 'extra mounts'], ['env', 'extra env']];
+var EP_THINK = ['', 'off', 'minimal', 'low', 'medium', 'high', 'xhigh'];
+function epFill(select, list, label) {
+  select.replaceChildren();
+  list.forEach(function (v) { var o = el('option', v === '' ? label : v); o.value = v; select.appendChild(o); });
+}
+/* The container fields, as inputs in `box`; returns a function that reads them as the API expects. */
+function epContainerInputs(box, own) {
+  box.replaceChildren();
+  var inputs = {};
+  EP_FIELDS.forEach(function (f) {
+    var row = el('div'); row.className = 'fieldrow'; row.style.marginBottom = '6px';
+    var lab = el('label', f[1]); lab.style.minWidth = '110px';
+    var inp;
+    if (f[0] === 'network') {
+      inp = el('select');
+      [['', 'follow the key'], ['internet', 'internet only'], ['none', 'none'], ['open', 'open (this machine and your LAN)']].forEach(function (o) { var opt = el('option', o[1]); opt.value = o[0]; inp.appendChild(opt); });
+      inp.value = own && own.network != null ? own.network : '';
+    } else {
+      inp = el('input'); inp.type = 'text';
+      inp.value = own && own[f[0]] != null ? String(own[f[0]]) : '';
+    }
+    inputs[f[0]] = inp;
+    row.appendChild(lab); row.appendChild(inp); box.appendChild(row);
+  });
+  return function () {
+    var out = {};
+    Object.keys(inputs).forEach(function (k) { var v = inputs[k].value.trim(); out[k] = v === '' ? null : v; });
+    return out;
+  };
+}
+function epUrl(a) { return location.protocol + '//' + location.hostname + ':' + a.port + '/v1'; }
+function epPost(url, body, method) {
+  return fetch(url, { method: method || 'POST', headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) })
+    .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); return j; }); });
+}
+function loadEndpoints() {
+  return fetch('dashboard/agents.json', { cache: 'no-store' }).then(readJson).then(function (d) { EP_DATA = d; renderEndpoints(d); })
+    .catch(function (e) { $('epnote').textContent = 'cannot load endpoints: ' + e.message; });
+}
+function renderEndpoints(d) {
+  var tbody = $('eprows');
+  tbody.replaceChildren();
+  $('epempty').hidden = d.agents.length > 0;
+  d.agents.forEach(function (a) {
+    var tr = el('tr');
+    tr.appendChild(cell(a.name, 'mono'));
+    tr.appendChild(cell(a.key));
+    var urlCell = el('td'); urlCell.className = 'mono';
+    if (a.port && a.status === 'listening') {
+      urlCell.appendChild(el('span', epUrl(a)));
+      var copy = el('button', 'copy'); copy.style.marginLeft = '6px';
+      copy.addEventListener('click', function () { navigator.clipboard.writeText(epUrl(a)).then(function () { copy.textContent = 'copied'; setTimeout(function () { copy.textContent = 'copy'; }, 1200); }, function () { copy.textContent = 'press Ctrl+C'; }); });
+      urlCell.appendChild(copy);
+    } else urlCell.appendChild(el('span', a.status === 'disabled' ? '-' : 'not listening'));
+    tr.appendChild(urlCell);
+    var st = cell(a.status, 'why ' + (a.status === 'listening' ? 'idle' : a.status === 'port-lost' ? 'one-shot' : ''));
+    if (a.status === 'port-lost') st.title = 'enabled but could not open a port: see the gateway log, or choose a new port';
+    tr.appendChild(st);
+    tr.appendChild(cell(a.workspace === 'shared' ? 'shared with key' : 'own'));
+    tr.appendChild(cell(a.model || 'default'));
+    tr.appendChild(cell(a.chats, 'num'));
+    var actions = el('td');
+    function btn(label, fn, title) {
+      var b = el('button', label); if (title) b.title = title;
+      b.addEventListener('click', fn); actions.appendChild(b); actions.appendChild(document.createTextNode(' '));
+    }
+    btn('edit', function () { openEndpointEditor(a); });
+    btn(a.enabled ? 'disable' : 'enable', function () { epAct(a, a.enabled ? 'disable' : 'enable'); }, a.enabled ? 'close its port and stop its chats; its container and files stay' : 'open its port again');
+    btn('new port', function () { if (confirm('Give ' + a.name + ' a new port? Clients must switch to the new address.')) epAct(a, 'new-port'); });
+    btn('reset', function () { if (confirm('Reset ' + a.name + '’s container? Everything installed in it is deleted; its instructions, skills and files stay.')) epAct(a, 'reset'); }, 'remove the container and what is installed in it');
+    btn('update', function () { if (confirm('Update ' + a.name + '’s container? Its chats stop and resume afterwards; what is installed is kept; Pi is set to the gateway’s version and its extensions are updated.')) startUpdateJob('dashboard/agents/' + a.id + '/update', 'Update ' + a.name); }, 'rebuild its container keeping what is installed, update Pi and extensions');
+    btn('delete', function () { if (confirm('Delete ' + a.name + '? Its port closes and its container is removed; its profile and own workspace are archived.')) epDelete(a); });
+    tr.appendChild(actions);
+    tbody.appendChild(tr);
+  });
+  // The create form: usable keys only, and the range the ports come from.
+  var keep = $('epkey').value;
+  $('epkey').replaceChildren();
+  d.keys.filter(function (k) { return k.usable; }).forEach(function (k) { var o = el('option', k.name); o.value = k.id; $('epkey').appendChild(o); });
+  if (keep) $('epkey').value = keep;
+  $('epcreate').disabled = !$('epkey').options.length;
+  if (!$('epkey').options.length) $('epcreatenote').textContent = 'create an API key first (API Management)';
+}
+function epAct(a, action) {
+  $('epnote').textContent = a.name + ': working…';
+  return epPost('dashboard/agents/' + a.id + '/' + action, {}).then(function (j) { EP_DATA = j; renderEndpoints(j); $('epnote').textContent = a.name + ': done'; })
+    .catch(function (e) { $('epnote').textContent = a.name + ': ' + e.message; });
+}
+function epDelete(a) {
+  $('epnote').textContent = a.name + ': deleting…';
+  return epPost('dashboard/agents/' + a.id, undefined, 'DELETE').then(function (j) { EP_DATA = j; if (EP_EDIT === a.id) $('epeditor').hidden = true; renderEndpoints(j); $('epnote').textContent = a.name + ': deleted'; })
+    .catch(function (e) { $('epnote').textContent = a.name + ': ' + e.message; });
+}
+var epReadEdit = null;
+function openEndpointEditor(a) {
+  EP_EDIT = a.id;
+  $('epeditor').hidden = false;
+  $('epedtitle').textContent = 'Edit ' + a.name + ' (' + a.key + ')';
+  $('epedname').value = a.name;
+  $('epedmodel').value = a.model || '';
+  epFill($('epedthink'), EP_THINK, 'thinking: default');
+  $('epedthink').value = a.thinking || '';
+  $('epedinstr').value = 'loading…';
+  $('epedinstr').disabled = true;
+  $('epednote').textContent = '';
+  epReadEdit = epContainerInputs($('epedctr'), a.container);
+  $('epedctr').insertBefore(el('p', 'Container limits: blank follows the key, then the defaults. A changed value rebuilds the container and keeps what is installed in it.'), $('epedctr').firstChild).className = 'hint small';
+  $('epedcurl').textContent = a.port ? 'curl ' + epUrl(a) + '/chat/completions -H "Authorization: Bearer <the key ' + a.key + '>" -H "Content-Type: application/json" -d \'{"messages":[{"role":"user","content":"hello"}]}\'' : '';
+  fetch('dashboard/agents/' + a.id + '/instructions', { cache: 'no-store' }).then(readJson).then(function (j) { $('epedinstr').value = j.text || ''; $('epedinstr').disabled = false; })
+    .catch(function (e) { $('epedinstr').value = ''; $('epedinstr').disabled = true; $('epednote').textContent = 'cannot read the instructions: ' + e.message; });
+  $('epeditor').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+$('epedsave').addEventListener('click', function () {
+  if (!EP_EDIT) return;
+  var body = { name: $('epedname').value.trim(), model: $('epedmodel').value.trim() || null, thinking: $('epedthink').value || null, container: epReadEdit() };
+  if (!$('epedinstr').disabled) body.instructions = $('epedinstr').value;
+  $('epedsave').disabled = true; $('epednote').textContent = 'saving…';
+  epPost('dashboard/agents/' + EP_EDIT, body).then(function (j) { EP_DATA = j; renderEndpoints(j); $('epednote').textContent = 'saved. New chats use the new instructions and model; running chats pick the instructions up when they next start.'; })
+    .catch(function (e) { $('epednote').textContent = e.message; $('epednote').className = 'hint small bad'; })
+    .then(function () { $('epedsave').disabled = false; });
+});
+$('epedcancel').addEventListener('click', function () { $('epeditor').hidden = true; EP_EDIT = null; });
+var epReadCreate = epContainerInputs($('epctr'), null);
+epFill($('epthink'), EP_THINK, 'thinking: default');
+$('epcreate').addEventListener('click', function () {
+  var note = $('epcreatenote');
+  note.className = 'passnote'; note.textContent = 'creating… (builds its profile in a container; a few seconds)';
+  $('epcreate').disabled = true;
+  epPost('dashboard/agents', {
+    keyId: $('epkey').value, name: $('epname').value.trim(), workspace: $('epws').value,
+    model: $('epmodel').value.trim() || null, thinking: $('epthink').value || null,
+    instructions: $('epinstr').value, container: epReadCreate()
+  }).then(function (j) {
+    EP_DATA = j; renderEndpoints(j);
+    $('epname').value = ''; $('epinstr').value = ''; $('epmodel').value = '';
+    var made = j.agents.filter(function (a) { return a.id === j.created; })[0];
+    note.textContent = made ? 'created: ' + epUrl(made) : 'created';
+  }).catch(function (e) { note.textContent = e.message; note.className = 'passnote bad'; })
+    .then(function () { $('epcreate').disabled = !$('epkey').options.length; });
+});
+$('eprefresh').addEventListener('click', loadEndpoints);
+
+
+
+
+
+/* Model speed on the Overview: per model, prompt processing and generation in tokens per second over a range. */
+var SPEED = { timer: null, range: '1h' };
+function stopSpeedRefresh() { if (SPEED.timer) { clearInterval(SPEED.timer); SPEED.timer = null; } }
+function startSpeed() { loadSpeed(); SPEED.timer = setInterval(loadSpeed, 15000); }
+function loadSpeed() {
+  return fetch('dashboard/speed.json?range=' + encodeURIComponent($('sprange').value), { cache: 'no-store' }).then(readJson).then(renderSpeed)
+    .catch(function (e) { $('spnote').textContent = 'cannot load: ' + e.message; });
+}
+/* A time series with gaps where nothing was measured: points are dots, runs of adjacent buckets are lines. */
+function seriesEl(points, key, since, until, bucketMs, color) {
+  var W = 320, H = 70, pad = 4;
+  var vals = points.filter(function (p) { return p[key] != null; });
+  var box = el('div');
+  if (!vals.length) { var none = el('div', 'no measurement in this range'); none.className = 'empty'; none.style.fontSize = '11px'; box.appendChild(none); return box; }
+  var peak = Math.max.apply(null, vals.map(function (p) { return p[key]; })) * 1.1 || 1;
+  var x = function (t) { return pad + ((t - since) / Math.max(1, until - since)) * (W - pad * 2); };
+  var y = function (v) { return H - pad - (v / peak) * (H - pad * 2); };
+  var svg = svgEl('svg', { viewBox: '0 0 ' + W + ' ' + H, preserveAspectRatio: 'none', class: 'area' });
+  svg.appendChild(svgEl('line', { x1: pad, y1: H - pad, x2: W - pad, y2: H - pad, stroke: '#2a2a2a', 'stroke-width': 1 }));
+  var d = '';
+  var prev = null;
+  vals.forEach(function (p) {
+    var gap = prev === null || p.t - prev > bucketMs * 1.5;
+    d += (gap ? 'M' : 'L') + x(p.t).toFixed(1) + ' ' + y(p[key]).toFixed(1) + ' ';
+    prev = p.t;
+  });
+  svg.appendChild(svgEl('path', { d: d, fill: 'none', stroke: color, 'stroke-width': 1.6 }));
+  vals.forEach(function (p) {
+    var c = svgEl('circle', { cx: x(p.t).toFixed(1), cy: y(p[key]).toFixed(1), r: 2.4, fill: color });
+    var t = svgEl('title'); t.textContent = new Date(p.t).toLocaleString() + ': ' + tps(p[key]) + ' tok/s over ' + p.calls + ' call' + (p.calls === 1 ? '' : 's');
+    c.appendChild(t); svg.appendChild(c);
+  });
+  box.appendChild(svg);
+  var axis = el('div'); axis.className = 'axis';
+  axis.appendChild(el('span', 'low ' + tps(Math.min.apply(null, vals.map(function (p) { return p[key]; })))));
+  axis.appendChild(el('span', 'high ' + tps(Math.max.apply(null, vals.map(function (p) { return p[key]; })))));
+  axis.appendChild(el('span', 'latest ' + tps(vals[vals.length - 1][key])));
+  box.appendChild(axis);
+  return box;
+}
+function renderSpeed(d) {
+  var grid = $('spgrid');
+  grid.replaceChildren();
+  var models = d.models || [];
+  $('spempty').hidden = models.length > 0;
+  $('spnote').textContent = models.length ? models.length + ' model' + (models.length === 1 ? '' : 's') + ' · updated ' + new Date().toLocaleTimeString() : '';
+  models.forEach(function (m) {
+    var card = el('section'); card.className = 'panel speedcard';
+    var title = el('h3', m.provider ? m.model.slice(m.provider.length + 1) : m.model);
+    if (m.provider) { var sm = el('small', '  ' + m.provider); title.appendChild(sm); }
+    title.title = m.model;
+    card.appendChild(title);
+    var nums = el('div'); nums.className = 'nums';
+    function num(label, v) { var dv = el('div'); var b = el('b', tps(v)); b.appendChild(el('small', ' tok/s')); dv.appendChild(b); dv.appendChild(document.createTextNode(label)); return dv; }
+    nums.appendChild(num('generation', m.gen));
+    nums.appendChild(num('prompt processing', m.prompt));
+    var calls = el('div'); var cb = el('b', m.calls.toLocaleString()); calls.appendChild(cb); calls.appendChild(document.createTextNode('call' + (m.calls === 1 ? '' : 's'))); nums.appendChild(calls);
+    card.appendChild(nums);
+    card.appendChild(el('div', 'generation speed')).className = 'cap';
+    card.appendChild(seriesEl(m.points, 'gen', d.since, d.until, d.bucketMs, '#9fd6a8'));
+    card.appendChild(el('div', 'prompt processing speed')).className = 'cap';
+    card.appendChild(seriesEl(m.points, 'prompt', d.since, d.until, d.bucketMs, '#8fb4d8'));
+    grid.appendChild(card);
+  });
+}
+$('sprange').addEventListener('change', function () { loadSpeed(); });
+
+/* Resources: the machine, the gateway process and the containers, from /dashboard.json's `resources`. */
+function pct(v) { return v == null ? '–' : v.toFixed(v < 10 ? 1 : 0) + '%'; }
+function gb(n) { return (n / 1073741824).toFixed(n >= 10737418240 ? 0 : 1) + ' GB'; }
+function renderResources(r) {
+  if (!r) { $('rescards').replaceChildren(); $('restop').replaceChildren(); $('resnote').textContent = 'not available'; return; }
+  var h = r.host, g = r.gateway, c = r.containers, dk = r.disk || {};
+  $('resnote').textContent = 'sampled ' + new Date(r.at).toLocaleTimeString() + (c ? '' : ' · container figures need Docker');
+  var memPct = h.memTotal ? (100 * h.memUsed) / h.memTotal : 0;
+  var cards = [
+    cardEl('host cpu', pct(h.cpuPercent), '', h.cores + ' cores · load ' + h.load.map(function (l) { return l.toFixed(2); }).join(' '), h.cpuPercent != null && h.cpuPercent > 85 ? 'warn' : ''),
+    cardEl('host memory', gb(h.memUsed), ' of ' + gb(h.memTotal), Math.round(memPct) + '% used', memPct > 90 ? 'warn' : ''),
+    cardEl('disk free', dk.freeMb == null ? '–' : (dk.freeMb / 1024).toFixed(1) + ' GB', dk.totalMb ? ' of ' + (dk.totalMb / 1024).toFixed(0) + ' GB' : '', dk.path ? 'where Docker keeps its data' : 'not measured yet', dk.low ? 'warn' : ''),
+    cardEl('gateway', Math.round(g.rss / 1048576) + ' MB', '', 'cpu ' + pct(g.cpuPercent) + ' · up ' + dur(g.uptimeSec * 1000)),
+    cardEl('containers', c ? c.running : '–', c ? ' of ' + c.total : '', c ? (c.pids + ' processes') : 'Docker unreachable'),
+    cardEl('containers cpu', c ? pct(c.cpu) : '–', '', c ? '100% is one core of ' + h.cores : ''),
+    cardEl('containers memory', c ? bytes(c.memUsed) : '–', c && c.memLimit ? ' of ' + bytes(c.memLimit) + ' limits' : '', c ? 'written to their disks: ' + bytes(c.writtenBytes) : '')
+  ];
+  $('rescards').replaceChildren.apply($('rescards'), cards);
+  var hist = r.history || [];
+  $('area-cpu').replaceChildren(areaEl(hist, 'cpu', function (v) { return v.toFixed(0) + '%'; }));
+  $('area-mem').replaceChildren(areaEl(hist, 'mem', function (v) { return v.toFixed(0) + '%'; }));
+  var top = $('restop');
+  top.replaceChildren();
+  if (!c || !c.top.length) { var tr0 = el('tr'); tr0.appendChild(cell(c ? 'no container is running' : 'Docker unreachable', 'empty')); top.appendChild(tr0); return; }
+  c.top.forEach(function (t) {
+    var tr = el('tr');
+    var name = cell(t.label); name.title = t.name; tr.appendChild(name);
+    tr.appendChild(cell(pct(t.cpu), 'num'));
+    tr.appendChild(cell(bytes(t.memUsed) + (t.memLimit && t.memLimit < 1e15 ? ' / ' + bytes(t.memLimit) : ''), 'num'));
+    top.appendChild(tr);
+  });
+}
+
+
+
+/* Documentation: pages rendered by the server (escaped, fixed tags), a page list, a contents list and search. */
+var DOCS = { pages: null, current: null, timer: null };
+function startDocs(pageId, anchor) {
+  var go = function () {
+    var id = pageId && DOCS.pages.some(function (p) { return p.id === pageId; }) ? pageId : DOCS.pages[0].id;
+    drawDocList(id);
+    if (DOCS.current === id && $('doccontent').dataset.page === id) { scrollToDoc(anchor); return; }
+    loadDocPage(id, anchor);
+  };
+  if (DOCS.pages) return go();
+  return fetch('dashboard/docs.json', { cache: 'no-store' }).then(readJson).then(function (d) { DOCS.pages = d.pages; go(); })
+    .catch(function (e) { $('doccontent').textContent = 'cannot load the handbook: ' + e.message; });
+}
+function drawDocList(active) {
+  var box = $('docpages');
+  box.replaceChildren();
+  DOCS.pages.forEach(function (p) {
+    var a = el('a', p.title);
+    a.href = '#docs/' + p.id;
+    a.title = p.summary;
+    if (p.id === active) a.className = 'on';
+    box.appendChild(a);
+  });
+}
+function scrollToDoc(anchor) {
+  if (!anchor) { window.scrollTo({ top: 0 }); return; }
+  var t = document.getElementById(anchor);
+  if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function loadDocPage(id, anchor) {
+  return fetch('dashboard/docs/' + encodeURIComponent(id) + '.json', { cache: 'no-store' }).then(readJson).then(function (d) {
+    DOCS.current = id;
+    var box = $('doccontent');
+    box.dataset.page = id;
+    // The server's renderer escapes everything it does not recognise and emits a fixed set of tags.
+    box.innerHTML = d.html;
+    Array.prototype.forEach.call(box.querySelectorAll('.codebox'), function (cb) {
+      var b = el('button', 'copy'); b.className = 'copybtn';
+      b.addEventListener('click', function () {
+        var text = cb.querySelector('pre').textContent;
+        (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () { b.textContent = 'copied'; setTimeout(function () { b.textContent = 'copy'; }, 1200); }, function () { b.textContent = 'select and copy'; });
+      });
+      cb.appendChild(b);
+    });
+    var toc = $('doctoc');
+    toc.replaceChildren();
+    if (d.headings.length) toc.appendChild(el('h5', 'On this page'));
+    d.headings.forEach(function (h) {
+      var a = el('a', h.text); a.href = '#docs/' + id + '/' + h.id; a.className = 'l' + h.level; toc.appendChild(a);
+    });
+    scrollToDoc(anchor);
+  }).catch(function (e) { $('doccontent').textContent = 'cannot load this page: ' + e.message; });
+}
+$('docsearch').addEventListener('input', function () {
+  clearTimeout(DOCS.timer);
+  var q = $('docsearch').value.trim();
+  if (q.length < 2) { if (DOCS.current) { $('doccontent').dataset.page = ''; loadDocPage(DOCS.current); } return; }
+  DOCS.timer = setTimeout(function () {
+    fetch('dashboard/docs/search.json?q=' + encodeURIComponent(q), { cache: 'no-store' }).then(readJson).then(function (d) {
+      var box = $('doccontent');
+      box.dataset.page = '';
+      box.replaceChildren();
+      box.appendChild(el('h1', d.hits.length ? d.hits.length + ' result' + (d.hits.length === 1 ? '' : 's') + ' for “' + q + '”' : 'Nothing found for “' + q + '”'));
+      d.hits.forEach(function (h) {
+        var div = el('div'); div.className = 'hit';
+        var a = el('a', h.title + ' › ' + h.heading); a.href = '#docs/' + h.page + (h.anchor ? '/' + h.anchor : '');
+        a.addEventListener('click', function () { $('docsearch').value = ''; });
+        div.appendChild(a); div.appendChild(el('small', h.snippet));
+        box.appendChild(div);
+      });
+    });
+  }, 250);
+});
+
+/* About: version, author and release notes, from /dashboard/about.json. */
+function loadAbout() {
+  return fetch('dashboard/about.json', { cache: 'no-store' }).then(readJson).then(renderAbout)
+    .catch(function (e) { $('abchange').textContent = 'cannot load: ' + e.message; });
+}
+function dlRows(dl, rows) {
+  dl.replaceChildren();
+  rows.forEach(function (r) {
+    var d = el('div'); d.appendChild(el('dt', r[0]));
+    var dd = el('dd');
+    if (r[2]) { var a = el('a', r[1]); a.href = r[2]; a.target = '_blank'; a.rel = 'noopener'; a.style.color = 'inherit'; dd.appendChild(a); } else dd.textContent = r[1];
+    d.appendChild(dd); dl.appendChild(d);
+  });
+}
+function renderAbout(a) {
+  $('abver').textContent = a.version ? 'v' + a.version : 'unknown version';
+  if (a.description) $('abdesc').textContent = a.description;
+  var auth = a.author || {};
+  dlRows($('abauthor'), [
+    ['author', auth.name || '–'],
+    ['contact', auth.email || '–', auth.email ? 'mailto:' + auth.email : null],
+    ['source', a.homepage || a.repository || '–', a.homepage || a.repository || null],
+    ['licence', a.license || '–']
+  ]);
+  var i = a.installation || {};
+  dlRows($('abinstall'), [
+    ['piper', a.version || '–'],
+    ['pi (running)', i.piRunning || '–'],
+    ['pi (installed)', (i.piInstalled || '–') + (i.piRunning && i.piInstalled && i.piRunning !== i.piInstalled ? '  — restart to run it' : '')],
+    ['node', i.node || '–'],
+    ['docker', i.docker || 'not reached'],
+    ['platform', i.platform || '–'],
+    ['running for', dur((i.uptimeSec || 0) * 1000) + ' (since ' + new Date(i.startedAt).toLocaleString() + ')'],
+    ['database', i.databaseBytes == null ? '–' : bytes(i.databaseBytes)]
+  ]);
+  var box = $('abreleases');
+  box.replaceChildren();
+  var log = a.changelog || [];
+  $('abchange').textContent = log.length ? log.length + ' release' + (log.length === 1 ? '' : 's') + '. Newest first.' : 'No release notes were found.';
+  log.forEach(function (r, n) {
+    var d = el('details'); d.className = 'release'; if (n === 0) d.open = true;
+    d.appendChild(el('summary', 'v' + r.version + (r.date ? '  ·  ' + r.date : '') + (n === 0 ? '  ·  current' : '')));
+    r.sections.forEach(function (s) {
+      d.appendChild(el('h4', s.title));
+      var ul = el('ul');
+      s.items.forEach(function (t) { ul.appendChild(el('li', t)); });
+      d.appendChild(ul);
+    });
+    box.appendChild(d);
+  });
+}
+
+/* Pi on this host: what the gateway runs, what is installed, what is newest, and updating it. */
+function loadHostPi(check) {
+  return fetch('dashboard/hostpi.json' + (check ? '?check=1' : ''), { cache: 'no-store' }).then(readJson).then(renderHostPi)
+    .catch(function (e) { $('hpnote').textContent = 'cannot read the host Pi: ' + e.message; });
+}
+function renderHostPi(d) {
+  var rows = $('hprows');
+  rows.replaceChildren();
+  function row(k, v, cls) { var tr = el('tr'); tr.appendChild(cell(k)); tr.appendChild(cell(v, cls)); rows.appendChild(tr); }
+  row('running (what the gateway speaks)', d.running || 'unknown', 'mono');
+  row('installed on disk', (d.onDisk || 'unknown') + (d.restartNeeded ? '  — differs: restart the gateway to run it' : ''), 'mono');
+  row('newest release', d.latest ? d.latest + (d.updateAvailable ? '  — newer than installed' : '  — installed is current') : 'unknown (press check for updates)', 'mono');
+  row('location', d.packageDir || 'unknown', 'mono');
+  $('hpwarn').className = 'hint small' + (d.manageable ? '' : ' bad');
+  $('hpwarn').textContent = d.manageable ? (d.restartNeeded ? 'Pi on disk is ahead of what the gateway runs. Until the gateway is restarted, images and containers follow the running version; after restarting, rebuild the image and update the containers.' : '') : 'Cannot be updated from here: ' + d.reason;
+  $('hpupdate').disabled = !d.manageable || !d.updateAllowed;
+  $('hpupdate').title = d.updateAllowed ? '' : d.updateNote;
+  if (d.manageable && !d.updateAllowed) { $('hpwarn').className = 'hint small bad'; $('hpwarn').textContent = d.updateNote; }
+  var exts = (d.extensions || []).slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
+  $('hpext-box').hidden = !exts.length;
+  $('hpext-title').textContent = 'Extensions installed on this host (' + exts.length + ')';
+  var erows = $('hpext-rows');
+  erows.replaceChildren();
+  exts.forEach(function (x) {
+    var tr = el('tr');
+    tr.appendChild(cell(x.name, 'mono'));
+    tr.appendChild(cell(x.type));
+    tr.appendChild(cell(x.scope));
+    var note = cell((x.filtered ? 'filtered' : '') + (x.filtered && x.pinned ? ', ' : '') + (x.pinned ? 'pinned ' + x.pinned : ''));
+    if (x.filtered) note.title = 'only some of its resources are loaded';
+    tr.appendChild(note);
+    erows.appendChild(tr);
+  });
+  if (d.job && d.job.state === 'running') { renderUpdateJob(d.job, 'Update'); pollUpdates('Update'); }
+}
+$('hpcheck').addEventListener('click', function () { $('hpnote').textContent = 'asking the registry…'; loadHostPi(true).then(function () { $('hpnote').textContent = 'The Pi the gateway itself runs on, and its extensions. Not a chat’s or a container’s.'; }); });
+$('hpupdate').addEventListener('click', function () {
+  var self = $('hpself').checked, ext = $('hpext').checked;
+  if (!self && !ext) { $('hpnote').textContent = 'choose Pi, extensions, or both'; return; }
+  if (!confirm('Update ' + (self && ext ? 'Pi and its extensions' : self ? 'Pi' : 'the extensions') + ' on this host? This runs pi update' + (ext ? ' and pi update --extensions' : '') + ' as the gateway’s user and installs software from the registry. The gateway keeps running the old Pi until you restart it.')) return;
+  startUpdateJob('dashboard/hostpi/update', 'Update Pi on this host', { self: self, extensions: ext });
+});
+
+/* Audit: what was recorded, filtered, in pages, with the categories from Settings -> Audit. */
+var AUD = { cats: {}, rows: [], next: null, timer: null, stats: null };
+function audParams(extra) {
+  var p = new URLSearchParams();
+  var cats = Object.keys(AUD.cats).filter(function (c) { return AUD.cats[c]; });
+  if (cats.length) p.set('category', cats.join(','));
+  if ($('audq').value.trim()) p.set('q', $('audq').value.trim());
+  if ($('audsince').value) p.set('since', String(new Date($('audsince').value + 'T00:00:00').getTime()));
+  if ($('auduntil').value) p.set('until', String(new Date($('auduntil').value + 'T23:59:59').getTime()));
+  Object.keys(extra || {}).forEach(function (k) { p.set(k, extra[k]); });
+  return p;
+}
+function startAudit() { loadAudit(true); if ($('audauto').checked) AUD.timer = setInterval(function () { loadAudit(true); }, 5000); }
+function stopAuditRefresh() { if (AUD.timer) { clearInterval(AUD.timer); AUD.timer = null; } }
+function loadAudit(reset) {
+  var extra = { limit: 100 };
+  if (!reset && AUD.next) extra.before = AUD.next;
+  return fetch('dashboard/audit.json?' + audParams(extra).toString(), { cache: 'no-store' }).then(readJson).then(function (d) {
+    AUD.rows = reset ? d.rows : AUD.rows.concat(d.rows);
+    AUD.next = d.more ? d.next : null;
+    AUD.stats = d.stats;
+    renderAudit(d);
+  }).catch(function (e) { $('audnote').textContent = 'cannot load the audit log: ' + e.message; });
+}
+function renderAudit(d) {
+  var st = d.stats;
+  $('audnote').textContent = st.rows + ' row' + (st.rows === 1 ? '' : 's') + (st.oldest ? ', since ' + new Date(st.oldest).toLocaleString() : '') +
+    '. Kept ' + (st.retentionDays ? st.retentionDays + ' days' : 'for ever') + (st.maxRows ? ', at most ' + st.maxRows + ' rows' : '') + '. What is recorded is set under Settings → Audit.';
+  var chips = $('audchips');
+  chips.replaceChildren();
+  st.categories.forEach(function (c) {
+    var b = el('button', c.label + (c.count ? ' ' + c.count : ''));
+    b.className = 'chip' + (AUD.cats[c.id] ? ' on' : '');
+    b.style.opacity = c.enabled ? '1' : '.55';
+    b.title = c.enabled ? 'show only this category (click again to clear)' : 'not recorded: turn it on under Settings → Audit';
+    b.addEventListener('click', function () { AUD.cats[c.id] = !AUD.cats[c.id]; loadAudit(true); });
+    chips.appendChild(b); chips.appendChild(document.createTextNode(' '));
+  });
+  var body = $('audrows');
+  body.replaceChildren();
+  AUD.rows.forEach(function (r) {
+    var tr = el('tr');
+    tr.appendChild(cell(new Date(r.ts).toLocaleString(), 'num'));
+    tr.appendChild(cell(r.category));
+    tr.appendChild(cell(r.action, 'mono'));
+    var who = cell((r.actor || 'system') + (r.ip ? ' · ' + r.ip : ''));
+    tr.appendChild(who);
+    tr.appendChild(cell(r.target));
+    tr.appendChild(cell(r.detail));
+    body.appendChild(tr);
+  });
+  $('audempty').hidden = AUD.rows.length > 0;
+  $('audmore').hidden = !AUD.next;
+}
+$('audrefresh').addEventListener('click', function () { loadAudit(true); });
+$('audmore').addEventListener('click', function () { loadAudit(false); });
+$('audcsv').addEventListener('click', function () { window.open('dashboard/audit.csv?' + audParams({}).toString(), '_blank'); });
+['audq', 'audsince', 'auduntil'].forEach(function (id) { $(id).addEventListener('change', function () { loadAudit(true); }); });
+$('audq').addEventListener('keydown', function (e) { if (e.key === 'Enter') loadAudit(true); });
+$('audauto').addEventListener('change', function () {
+  stopAuditRefresh();
+  if ($('audauto').checked) AUD.timer = setInterval(function () { loadAudit(true); }, 5000);
+});
+
+/* Updates: one job at a time, started from the Containers, Endpoints and Profiles pages, shown in a panel
+   that stays until closed and is polled while it runs. */
+var UP_TIMER = null;
+function startUpdateJob(url, title, body) {
+  $('uptitle').textContent = title + ' — starting…';
+  $('upbody').replaceChildren();
+  $('uppanel').hidden = false;
+  return fetch(url, body === undefined ? { method: 'POST' } : { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+    .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); return j; }); })
+    .then(function (j) { renderUpdateJob(j.job, title); pollUpdates(title); })
+    .catch(function (e) { $('uptitle').textContent = title + ' — failed'; $('upbody').replaceChildren(el('div', e.message)); });
+}
+function pollUpdates(title) {
+  if (UP_TIMER) { clearTimeout(UP_TIMER); UP_TIMER = null; }
+  return fetch('dashboard/updates.json', { cache: 'no-store' }).then(readJson).then(function (d) {
+    if (!d.job) return;
+    renderUpdateJob(d.job, title);
+    if (d.job.state === 'running') UP_TIMER = setTimeout(function () { pollUpdates(title); }, 1500);
+    else if ($('view-containers').classList.contains('on')) { loadContainers(); loadHostPi(); }
+  }).catch(function () { /* the next poll tries again */ });
+}
+function renderUpdateJob(job, title) {
+  if (!job) return;
+  $('uppanel').hidden = false;
+  $('uptitle').textContent = (title || 'Update') + ' — ' + job.state;
+  var body = $('upbody');
+  body.replaceChildren();
+  job.items.forEach(function (i) {
+    var row = el('div'); row.className = 'upitem';
+    var head = el('div', i.label + ': ' + i.state);
+    head.style.color = i.state === 'failed' ? '#f3b6b6' : i.state === 'done' ? '#9fd6a8' : i.state === 'skipped' ? '#d6c79f' : '';
+    row.appendChild(head);
+    if (i.lines.length) { var pre = el('pre', i.lines.slice(-14).join('\n')); row.appendChild(pre); pre.scrollTop = pre.scrollHeight; }
+    body.appendChild(row);
+  });
+}
+$('upclose').addEventListener('click', function () { $('uppanel').hidden = true; });
+function ctUpdate(c) {
+  if (!confirm('Update ' + c.name.replace(/^piper-/, '') + '? Chats in it stop and resume on their next message. It is rebuilt with today’s settings keeping what is installed; Pi is set to the gateway’s version and its extensions are updated.' + (c.persistent ? '' : ' (A newly built image is only taken by recreate.)'))) return;
+  startUpdateJob('dashboard/containers/' + c.name + '/update', 'Update ' + c.name.replace(/^piper-/, ''));
+}
+$('ctupdateall').addEventListener('click', function () {
+  if (!confirm('Update every container? Each one’s chats stop and resume on their next message, one container at a time; containers with a request running are skipped. Installed software is kept; Pi is set to the gateway’s version and extensions are updated.')) return;
+  startUpdateJob('dashboard/containers/update-all', 'Update all');
+});
+// A job that was running when the page opened shows up again.
+fetch('dashboard/updates.json', { cache: 'no-store' }).then(readJson).then(function (d) { if (d.job && d.job.state === 'running') { renderUpdateJob(d.job, 'Update'); pollUpdates('Update'); } }).catch(function () {});
+
+/* Containers: one row per container, polled every few seconds while the page is open. */
+var CT_TIMER = null;
+var CT_DATA = null;
+function stopContainersPolling() {
+  if (CT_TIMER) { clearInterval(CT_TIMER); CT_TIMER = null; }
+  if (IMG_TIMER) { clearInterval(IMG_TIMER); IMG_TIMER = null; }
+}
+function startContainersPolling() { loadContainers(); loadImages(); CT_TIMER = setInterval(loadContainers, 5000); }
+function loadContainers() {
+  return fetch('dashboard/containers.json', { cache: 'no-store' }).then(readJson).then(function (d) { CT_DATA = d; renderContainers(d); })
+    .catch(function (e) { $('ctnote').textContent = 'cannot load containers: ' + e.message; });
+}
+function ctAct(name, action, label, persistent) {
+  var warn = persistent && action !== 'stop' ? ' This is the key’s persistent container: everything installed in it is deleted, and the next chat starts from the clean image.' : '';
+  if (action !== 'stop' && !confirm(label + ' ' + name + '?' + warn)) return;
+  fetch('dashboard/containers/' + name + '/' + action, { method: 'POST' })
+    .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); return j; }); })
+    .then(function (j) { $('ctnote').textContent = name + ': ' + j.message; return loadContainers(); })
+    .catch(function (e) { $('ctnote').textContent = name + ': ' + e.message; });
+}
+function renderContainers(d) {
+  var rows = d.containers || [];
+  var disk = d.disk || {};
+  var dn = $('ctdisk');
+  dn.textContent = disk.freeMb == null ? 'Disk: not measured yet.' :
+    'Disk (' + disk.path + '): ' + (disk.freeMb / 1024).toFixed(1) + ' GB free of ' + (disk.totalMb / 1024).toFixed(1) + ' GB' +
+    (disk.low ? ' — below the ' + (disk.warnBelowMb / 1024).toFixed(1) + ' GB warning' : '') +
+    (disk.containerLimitMb ? '; warning per container at ' + disk.containerLimitMb + ' MB' : '') + '.';
+  dn.className = 'hint' + (disk.low ? ' bad' : '');
+  var tbody = $('ctrows');
+  tbody.replaceChildren();
+  $('ctpilegend').textContent = 'Pi: the gateway runs ' + (d.hostPiVersion || 'an unknown version') + '. Green is the same, red is older (use update), amber is newer than the gateway\u2019s, grey is being read.';
+  $('ctempty').hidden = rows.length > 0;
+  rows.forEach(function (c) {
+    var tr = el('tr');
+    var nameCell = cell(c.name.replace(/^piper-/, ''), 'mono');
+    nameCell.title = c.name + '\nimage ' + c.image + (c.imageStale ? ' (rebuilt since: recreate to use the new one)' : '');
+    if (c.imageStale) nameCell.appendChild(el('span', ' ⚑'));
+    if (c.update) nameCell.title += '\nlast update ' + new Date(c.update.at).toLocaleString() + (c.update.piFrom && c.update.piTo ? ', Pi ' + c.update.piFrom + ' → ' + c.update.piTo : '') + (c.update.failed && c.update.failed.length ? ' (failed: ' + c.update.failed.join(', ') + ')' : '');
+    if (c.persistent) { nameCell.appendChild(el('span', ' ★')); nameCell.title += '\npersistent: this key’s one container, shared by its chats; what is installed in it stays'; }
+    tr.appendChild(nameCell);
+    tr.appendChild(cell(c.key));
+    tr.appendChild(cell(c.persistent ? c.chats + ' chat' + (c.chats === 1 ? '' : 's') : c.fingerprint || '-', 'mono'));
+    var st = cell(c.status + (c.inflight ? ' · working' : '') + ' / ' + c.state, 'why ' + (c.status === 'orphan' ? 'one-shot' : c.status === 'live' ? 'idle' : ''));
+    if (c.status === 'kept') st.title = 'persistent: stays (and keeps running) between chats';
+    tr.appendChild(st);
+    tr.appendChild(piCell(c.piVersion, c.piStatus, c.piSource, d.hostPiVersion));
+    tr.appendChild(cell(c.state === 'running' ? dur(c.uptimeMs) : '-', 'num'));
+    tr.appendChild(cell(c.cpu == null ? '-' : c.cpu.toFixed(1) + '%', 'num'));
+    tr.appendChild(cell(c.memUsedMb == null ? '-' : c.memUsedMb + ' / ' + (c.memoryLimitMb || '∞') + ' MB', 'num'));
+    var diskCell = cell(c.diskMb == null ? '-' : c.diskMb + ' MB', 'num');
+    if (disk.containerLimitMb && c.diskMb > disk.containerLimitMb) diskCell.className += ' soon';
+    tr.appendChild(diskCell);
+    tr.appendChild(cell(c.network || '-'));
+    tr.appendChild(cell(c.requests || 0, 'num'));
+    tr.appendChild(cell(c.lastUsedAt ? dur(Date.now() - c.lastUsedAt) + ' ago' : '-', 'num'));
+    var actions = el('td');
+    [['stop', 'stop'], ['update', 'update'], ['recreate', 'recreate'], ['remove', 'remove']].forEach(function (a) {
+      var b = el('button', a[0]);
+      if (a[0] === 'stop' && c.state !== 'running') b.disabled = true;
+      if (a[0] === 'update' && c.status === 'orphan') b.disabled = true;
+      b.addEventListener('click', function () { if (a[0] === 'update') ctUpdate(c); else ctAct(c.name, a[1], a[0], c.persistent); });
+      actions.appendChild(b);
+      actions.appendChild(document.createTextNode(' '));
+    });
+    tr.appendChild(actions);
+    tbody.appendChild(tr);
+  });
+  // The command box: only running containers, and only with a dashboard password.
+  var target = $('ctexectarget');
+  var keep = target.value;
+  target.replaceChildren();
+  rows.filter(function (c) { return c.state === 'running'; }).forEach(function (c) {
+    var o = el('option', c.name.replace(/^piper-/, '') + ' · ' + c.key);
+    o.value = c.name;
+    target.appendChild(o);
+  });
+  if (keep) target.value = keep;
+  var ok = d.execAllowed && target.options.length > 0;
+  target.disabled = $('ctexeccmd').disabled = $('ctexecrun').disabled = !ok;
+  $('ctexecnote').textContent = d.execAllowed
+    ? (target.options.length ? 'Runs as root inside a running container, with a 30 s limit and 64 KB of output. It is recorded below.' : 'No container is running: send a chat a message first.')
+    : d.execNote;
+  $('ctexecnote').className = 'hint' + (d.execAllowed ? '' : ' bad');
+  // What happened: kills and deaths, then what was done here.
+  var log = $('ctlog');
+  log.replaceChildren();
+  var items = [];
+  (d.events || []).forEach(function (e) { items.push({ ts: e.ts, what: e.kind === 'oom' ? 'killed: memory' : 'died', target: e.container, detail: e.message }); });
+  (d.audit || []).forEach(function (a) { items.push({ ts: a.ts, what: a.action, target: a.target, detail: a.detail }); });
+  items.sort(function (a, b) { return b.ts - a.ts; }).slice(0, 40).forEach(function (i) {
+    var tr = el('tr');
+    tr.appendChild(cell(new Date(i.ts).toLocaleString()));
+    tr.appendChild(cell(i.what));
+    tr.appendChild(cell(String(i.target).replace(/^piper-/, ''), 'mono'));
+    tr.appendChild(cell(i.detail));
+    log.appendChild(tr);
+  });
+  if (!items.length) { var tr0 = el('tr'); tr0.appendChild(cell('nothing yet', 'empty')).colSpan = 4; log.appendChild(tr0); }
+}
+$('ctrefresh').addEventListener('click', loadContainers);
+$('ctexecrun').addEventListener('click', function () {
+  var name = $('ctexectarget').value, command = $('ctexeccmd').value.trim();
+  if (!name || !command) return;
+  var out = $('ctexecout');
+  out.hidden = false; out.textContent = 'running…';
+  $('ctexecrun').disabled = true;
+  fetch('dashboard/containers/' + name + '/exec', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ command: command, timeoutMs: 30000 }) })
+    .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); return j; }); })
+    .then(function (j) { out.textContent = '$ ' + command + '\n' + j.stdout + (j.stderr ? '\n[stderr]\n' + j.stderr : '') + '\n[exit ' + j.code + ']'; })
+    .catch(function (e) { out.textContent = e.message; })
+    .then(function () { $('ctexecrun').disabled = false; return loadContainers(); });
+});
+
 function route() {
   var name = (location.hash || '#overview').replace(/^#\/?/, '');
   // #settings/<tab> opens a settings tab directly.
@@ -2015,6 +3198,15 @@ function route() {
   $('title').textContent = VIEWS[name].title;
   $('subtitle').textContent = VIEWS[name].subtitle;
   $('sectiontitle').textContent = VIEWS[name].section;
+  stopContainersPolling();
+  stopAuditRefresh();
+  stopSpeedRefresh();
+  if (name === 'overview') startSpeed();
+  if (name === 'about') loadAbout();
+  if (name === 'docs') startDocs(sub[1], sub[2]);
+  if (name === 'audit') startAudit();
+  if (name === 'endpoints') loadEndpoints();
+  if (name === 'containers') { startContainersPolling(); loadHostPi(); }
   if (name === 'models') ensureModels();
   if (name === 'spend') ensureSpend(true);
   if (name === 'apikeys') ensureApiKeys(true);
@@ -2067,9 +3259,7 @@ function renderShared(sh) {
 function renderProfiles(d) {
   if (d.shared) renderShared(d.shared);
   var tbody = $('profilerows');
-  $('profilehint').textContent = d.runner === 'inprocess'
-    ? 'RUNNER is inprocess, so no session uses these profiles until a sandboxed runner is chosen.'
-    : (d.maxBytes ? 'Quota per profile: ' + bytes(d.maxBytes) + '. A profile over it is mounted read-only until trimmed.' : 'No profile quota is set.');
+  $('profilehint').textContent = d.maxBytes ? 'Quota per profile: ' + bytes(d.maxBytes) + '. A profile over it is mounted read-only until trimmed.' : 'No profile quota is set.';
   if (!d.profiles.length) {
     var tr = el('tr');
     tr.appendChild(cell('no profiles yet - one is created the first time a key starts a chat', 'empty')).colSpan = 8;
@@ -2199,9 +3389,120 @@ function renderProfileDetail(d) {
   }
   parts.push(own);
 
-  // The key's shared folder: files every chat of this key sees at /workspace/shared.
+  // Which models this key may use: its own list, or blank to follow the gateway default.
+  if (d.models && !d.models.admin && d.models.keyId) {
+    var msec = el('div'); msec.className = 'detailsec';
+    msec.appendChild(el('h4', 'Allowed models'));
+    var mrow = el('div'); mrow.className = 'fieldrow';
+    var minput = el('input');
+    minput.type = 'text';
+    minput.value = d.models.own == null ? '' : d.models.own;
+    minput.placeholder = d.models.effective ? 'default: ' + d.models.effective : 'default: every model';
+    var msave = el('button', 'save');
+    var mnote = el('span'); mnote.className = 'hint small';
+    msave.addEventListener('click', function () {
+      msave.disabled = true;
+      fetch('dashboard/api-keys/' + d.models.keyId, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ allowedModels: minput.value.trim() === '' ? null : minput.value }) })
+        .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); return j; }); })
+        .then(function () { mnote.textContent = 'saved \u2014 applies to new chats'; mnote.className = 'hint small'; msave.disabled = false; })
+        .catch(function (e) { mnote.textContent = e.message; mnote.className = 'hint small bad'; msave.disabled = false; });
+    });
+    mrow.appendChild(minput); mrow.appendChild(msave); mrow.appendChild(mnote);
+    msec.appendChild(mrow);
+    var mh = el('p', 'provider/model patterns, comma-separated, * for anything. Blank follows the default' +
+      (d.models.effective ? ' (' + d.models.effective + ')' : ' (every model)') + '.');
+    mh.className = 'hint small'; msec.appendChild(mh);
+    parts.push(msec);
+  }
+
+  // This key's container: its own memory, CPU, network, image, mounts and environment, or blank to follow the defaults.
+  if (d.container && !d.container.admin && d.container.keyId) {
+    var csec = el('div'); csec.className = 'detailsec';
+    csec.appendChild(el('h4', 'Container — this key’s chats'));
+    var own = d.container.own || {};
+    var eff = d.container.effective;
+    var cin = {};
+    function cfield(key, label, placeholder, type) {
+      var row = el('div'); row.className = 'fieldrow';
+      var lab = el('label', label); lab.style.minWidth = '110px';
+      var inp = type === 'network' ? el('select') : el('input');
+      if (type === 'network') {
+        [['', 'default (' + eff.network + ')'], ['internet', 'internet only'], ['none', 'none'], ['open', 'open (this machine and your LAN)']].forEach(function (o) {
+          var opt = el('option', o[1]); opt.value = o[0]; inp.appendChild(opt);
+        });
+        inp.value = own.network == null ? '' : own.network;
+      } else {
+        inp.type = 'text';
+        inp.value = own[key] == null ? '' : String(own[key]);
+        inp.placeholder = placeholder;
+      }
+      cin[key] = inp;
+      row.appendChild(lab); row.appendChild(inp);
+      csec.appendChild(row);
+    }
+    var prow = el('div'); prow.className = 'fieldrow';
+    var plab = el('label', 'persistent'); plab.style.minWidth = '110px';
+    var pbox = el('input'); pbox.type = 'checkbox'; pbox.checked = own.persistent === true;
+    var ptext = el('span', ' one container for this key, shared by its chats and kept between them: packages and tools the agent installs (Tor, compilers, anything apt can give it) stay, and so do processes it leaves running');
+    ptext.className = 'hint small';
+    prow.appendChild(plab); prow.appendChild(pbox); prow.appendChild(ptext);
+    csec.appendChild(prow);
+    cfield('memoryMb', 'memory (MB)', 'default: ' + (eff.memoryMb || 'unlimited'), '');
+    cfield('cpus', 'cpu cores', 'default: ' + (eff.cpus || 'unlimited'), '');
+    cfield('pids', 'processes', 'default: ' + (eff.pids || 'unlimited'), '');
+    cfield('network', 'network', '', 'network');
+    cfield('image', 'image', 'default: ' + eff.image, '');
+    // Suggest the images that exist, so a name is picked rather than typed.
+    var imgList = el('datalist'); imgList.id = 'keyimages';
+    cin.image.setAttribute('list', 'keyimages');
+    csec.appendChild(imgList);
+    fetch('dashboard/images.json', { cache: 'no-store' }).then(readJson).then(function (im) {
+      im.images.filter(function (i) { return i.name; }).forEach(function (i) { var o = el('option'); o.value = i.name; imgList.appendChild(o); });
+    }).catch(function () { /* the field still takes a typed name */ });
+    cfield('mounts', 'extra mounts', 'host or host:container, read-only, space-separated', '');
+    cfield('env', 'extra env', 'NAME=value NAME2=value2', '');
+    var crow = el('div'); crow.className = 'fieldrow';
+    var csave = el('button', 'save container settings');
+    var cnote = el('span'); cnote.className = 'hint small';
+    csave.addEventListener('click', function () {
+      csave.disabled = true; cnote.className = 'hint small'; cnote.textContent = 'saving…';
+      var body = {};
+      Object.keys(cin).forEach(function (k) { body[k] = cin[k].value.trim() === '' ? null : cin[k].value.trim(); });
+      body.persistent = pbox.checked ? true : null;
+      if (own.persistent === true && !pbox.checked && !confirm('Turning persistence off deletes this key’s container and everything installed in it. Continue?')) { csave.disabled = false; cnote.textContent = ''; return; }
+      fetch('dashboard/api-keys/' + d.container.keyId, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ container: body }) })
+        .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); return j; }); })
+        .then(function (j) { own.persistent = pbox.checked || undefined; cnote.textContent = 'saved — ' + (j.stopped ? j.stopped + ' running chat(s) stopped; each ' : 'each chat ') + (pbox.checked ? 'continues in the key’s container on its next message (a changed limit or mount rebuilds it, keeping what is installed)' : 'continues in a fresh container on its next message (what an agent installed in the old one is lost; its workspace, profile and conversation are not)'); csave.disabled = false; })
+        .catch(function (e) { cnote.textContent = e.message; cnote.className = 'hint small bad'; csave.disabled = false; });
+    });
+    crow.appendChild(csave); crow.appendChild(cnote); csec.appendChild(crow);
+    var chint = el('p', 'Blank follows the default. “none” also cuts off the models set up under Settings → Containers → Pi config for containers (Pi calls those directly); models served by the gateway still work. Extra mounts and env add to the defaults' +
+      (eff.mounts.length ? ' (mounts now: ' + eff.mounts.join(', ') + ')' : '') +
+      (eff.envNames.length ? ' (env now: ' + eff.envNames.join(', ') + ')' : '') + '. 0 means unlimited.');
+    chint.className = 'hint small'; csec.appendChild(chint);
+    parts.push(csec);
+  }
+
+  // Update this profile's container(s): rebuild keeping what is installed, Pi to the gateway's version, extensions.
+  if (d.scope) {
+    var usec = el('div'); usec.className = 'detailsec';
+    usec.appendChild(el('h4', 'Container update'));
+    var urow = el('div'); urow.className = 'fieldrow';
+    var ubtn = el('button', 'update container');
+    ubtn.addEventListener('click', function () {
+      if (!confirm('Rebuild this profile\u2019s container(s)? Their chats stop and resume afterwards; what is installed is kept; Pi is set to the gateway\u2019s version and the extensions are updated.')) return;
+      startUpdateJob('dashboard/profiles/' + encodeURIComponent(d.scope) + '/update-container', 'Update ' + (d.key || d.scope));
+    });
+    urow.appendChild(ubtn); usec.appendChild(urow);
+    var uhint = el('p', 'Rebuilds the container with today\u2019s settings (limits, mounts, bundles, DNS files) keeping what the agent installed, sets Pi to the version the gateway runs, and runs pi update --extensions. A newly built image is only picked up by Recreate on the Containers page.');
+    uhint.className = 'hint small'; usec.appendChild(uhint);
+    parts.push(usec);
+  }
+
+  // The key's workspace: files every chat of this key sees at /workspace.
   var fsec = el('div'); fsec.className = 'detailsec';
-  fsec.appendChild(el('h4', 'Shared folder \u2014 /workspace/shared in every chat on this key'));
+  fsec.appendChild(el('h4', 'Workspace \u2014 /workspace in every chat on this key'));
   var f = d.files || { created: false };
   if (!f.created) {
     var pf = el('p', 'Not created yet: it appears with this key\u2019s first chat.'); pf.className = 'hint'; fsec.appendChild(pf);
@@ -2210,10 +3511,45 @@ function renderProfileDetail(d) {
       (f.maxBytes ? ' of ' + bytes(f.maxBytes) : '') + (f.writable === false ? '  \u00b7  frozen: ' + f.readOnlyReason : ''));
     fh.className = 'hint' + (f.writable === false ? ' bad' : '');
     fsec.appendChild(fh);
+    // Files download through the gateway (which reads them in a throwaway container); folders are listed
+    // by name only here.
+    var fileUrl = function (name) { return 'dashboard/files/' + encodeURIComponent(d.scope) + '/' + name.split('/').map(encodeURIComponent).join('/'); };
     fsec.appendChild(itemList(f.entries.map(function (e) {
-      return { name: e.name + (e.type === 'dir' ? '/' : e.type === 'link' ? ' \u2192' : ''), description: bytes(e.bytes) };
-    }), 20));
+      return { name: e.name + (e.type === 'dir' ? '/' : e.type === 'link' ? ' \u2192' : ''), description: bytes(e.bytes), entry: e };
+    }), 20, function (r, it) {
+      if (it.entry.type !== 'file') return;
+      var a = el('a', 'download'); a.href = fileUrl(it.entry.name); a.className = 'filelink';
+      var del = el('button', 'delete'); del.className = 'linkish';
+      del.addEventListener('click', function () {
+        if (!confirm('Delete ' + it.entry.name + ' from this key\u2019s workspace?')) return;
+        fetch(fileUrl(it.entry.name), { method: 'DELETE' }).then(function () { openProfileDetail(d.scope, true); });
+      });
+      r.appendChild(a); r.appendChild(del);
+    }));
     if (f.more) { var pm = el('p', '+' + f.more + ' more entries'); pm.className = 'hint small'; fsec.appendChild(pm); }
+  }
+  if (f.created) {
+    // Upload straight into the folder, where every chat on this key can use it.
+    var up = el('div'); up.className = 'fieldrow uploadrow';
+    var picker = el('input'); picker.type = 'file'; picker.multiple = true;
+    var send = el('button', 'upload');
+    var unote = el('span'); unote.className = 'hint small';
+    send.addEventListener('click', function () {
+      var files = Array.prototype.slice.call(picker.files || []);
+      if (!files.length) { unote.textContent = 'choose a file first'; return; }
+      send.disabled = true;
+      var next = function (i) {
+        if (i >= files.length) { unote.textContent = 'uploaded ' + files.length + ' file' + (files.length === 1 ? '' : 's'); send.disabled = false; openProfileDetail(d.scope, true); return; }
+        unote.textContent = 'uploading ' + files[i].name + '\u2026';
+        fetch('dashboard/files/' + encodeURIComponent(d.scope) + '/' + encodeURIComponent(files[i].name), { method: 'PUT', body: files[i] })
+          .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); }); })
+          .then(function () { next(i + 1); })
+          .catch(function (e) { unote.textContent = files[i].name + ': ' + e.message; unote.className = 'hint small bad'; send.disabled = false; });
+      };
+      next(0);
+    });
+    up.appendChild(picker); up.appendChild(send); up.appendChild(unote);
+    fsec.appendChild(up);
   }
   parts.push(fsec);
 

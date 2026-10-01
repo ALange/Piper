@@ -1,19 +1,22 @@
 /**
- * Piper bridge: loaded into every sandboxed Pi process with `-e`.
+ * Piper bridge: loaded into the Pi process in every chat's container with `-e`.
  *
- * The sandbox holds no provider credentials and, by default, has no network. This extension is
- * the one way out: it registers the gateway's model catalogue as providers whose streamSimple
+ * Pi here is a stock install. For the models the gateway holds credentials for, the container has
+ * none: this extension registers the gateway's model catalogue as providers whose streamSimple
  * forwards each model call over a Unix socket to the gateway, which runs it with the real
- * credentials and streams the events back. The socket is bind-mounted into this sandbox alone,
- * so reaching it is the authentication.
+ * credentials and streams the events back. The socket is mounted into this container alone, so
+ * reaching it is the authentication. Models the operator configured for containers are not in that
+ * catalogue: Pi calls them itself, from its own models.json.
  *
  * It also registers:
- *   - `pi_set_model`, so the model can switch itself on the user's request, as it could in-process;
+ *   - `pi_set_model`, so the model can switch itself on the user's request, so the agent can change its own model;
  *   - `/piper-reload`, so the gateway's `/reload` can re-read skills, extensions and settings.
  *
  * Plain JavaScript on purpose: nothing here needs compiling, and the gateway has no build step.
  */
+import { readFileSync } from "node:fs";
 import http from "node:http";
+import { join } from "node:path";
 import { createAssistantMessageEventStream, parseStreamingJson } from "@earendil-works/pi-ai";
 
 const SOCKET = process.env.PIPER_BRIDGE_SOCKET;
@@ -183,15 +186,53 @@ export default async function piperBridge(pi) {
 		},
 	});
 
-	// The key's shared folder: tell the agent it exists and what it is for, or it will treat it like
-	// any other folder in its per-chat workspace and never think to keep anything there.
-	const sharedDir = process.env.PIPER_SHARED_DIR;
-	if (sharedDir) {
+	// A new chat starts on the operator's current default model, unless the key's profile names its
+	// own. The gateway sets PIPER_DEFAULT_MODEL only for new chats; a resumed one keeps its model.
+	const defaultModel = process.env.PIPER_DEFAULT_MODEL;
+	if (defaultModel) {
+		pi.on("session_start", async (event, ctx) => {
+			if (event.reason !== "startup") return;
+			let own = {};
+			try {
+				own = JSON.parse(readFileSync(join(process.env.PI_CODING_AGENT_DIR ?? "", "settings.json"), "utf8"));
+			} catch {
+				/* no settings of its own */
+			}
+			if (!own.defaultModel) {
+				// Model ids can contain slashes (Qwen/Qwen3-…), so only the first one splits off the provider.
+				const slash = defaultModel.indexOf("/");
+				const model = ctx.modelRegistry.find(defaultModel.slice(0, slash), defaultModel.slice(slash + 1));
+				if (model) await pi.setModel(model);
+			}
+			const thinking = process.env.PIPER_DEFAULT_THINKING;
+			if (thinking && !own.defaultThinkingLevel) pi.setThinkingLevel(thinking);
+		});
+	}
+
+	// The key's workspace: tell the agent what it is, or it will treat it like scratch space. It outlives
+	// every chat and every other chat of the key works in it too.
+	const workspaceDir = process.env.PIPER_WORKSPACE_DIR;
+	if (workspaceDir) {
 		pi.on("before_agent_start", (event) => {
 			const guidelines = (event.systemPromptOptions.promptGuidelines ??= []);
 			const note =
-				`${sharedDir} persists across every chat on this API key, and other chats of the same key can read and change it. ` +
-				`Save anything that should outlive this chat there; the rest of the working directory is discarded when the chat ends.`;
+				`${workspaceDir} is this API key's workspace: it persists, and every other chat of the same key works in it too and can read and change it. ` +
+				`Keep this chat's own scratch files in a subfolder so they do not overwrite another chat's. ` +
+				`Everything outside it (installed packages, the home directory) belongs to this chat's container alone.`;
+			if (!guidelines.includes(note)) guidelines.push(note);
+		});
+	}
+
+	// Extensions' own settings (the ones they would keep under ~/.pi) go to PI_CONFIG_DIR, which the
+	// gateway points into the key's profile. Said explicitly, or an agent told "use Brave with key X"
+	// writes ~/.pi/..., which lives in this chat's container only.
+	const configDir = process.env.PI_CONFIG_DIR;
+	if (configDir) {
+		pi.on("before_agent_start", (event) => {
+			const guidelines = (event.systemPromptOptions.promptGuidelines ??= []);
+			const note =
+				`Extensions that keep settings under ~/.pi read them from $PI_CONFIG_DIR (${configDir}) instead, e.g. ${configDir}/byte-pi-web/config.json. ` +
+				`Settings written there persist across every chat on this API key; ~/.pi itself lives in this chat's container only.`;
 			if (!guidelines.includes(note)) guidelines.push(note);
 		});
 	}

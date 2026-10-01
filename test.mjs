@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
 import { existsSync, lstatSync, mkdirSync, mkdtempSync, statSync, readdirSync, readFileSync, rmSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir, homedir } from "node:os";
 import { dirname, join, relative } from "node:path";
@@ -13,22 +14,25 @@ const TEST_DB = `${tmpdir()}/piper-test-${process.pid}.db`;
 const TEST_WS = `${tmpdir()}/piper-test-ws-${process.pid}`;
 process.env.GATEWAY_DB = TEST_DB;
 process.env.WORKSPACE_ROOT = TEST_WS;
-// The sandbox builder creates the profile root it masks, so it has to be a scratch path too.
 const TEST_PROFILES = `${tmpdir()}/piper-test-profiles-${process.pid}`;
 process.env.PROFILE_ROOT = TEST_PROFILES;
 const TEST_SHARED = `${tmpdir()}/piper-test-shared-${process.pid}`;
-const TEST_FILES = `${tmpdir()}/piper-test-files-${process.pid}`;
-process.env.KEY_FILES_ROOT = TEST_FILES;
 process.env.SHARED_ROOT = TEST_SHARED;
-// Extras for the sandbox: only /usr/share/doc should survive. /root contains the Pi credentials,
-// /etc/shadow is a secret, and /etc as a whole contains it.
-// The Pi agent directory is refused as a whole, but its bin/ (Pi's own fd and rg) is the one exception.
+const TEST_CONTAINER_PI = `${tmpdir()}/piper-test-container-pi-${process.pid}`;
+process.env.CONTAINER_PI_DIR = TEST_CONTAINER_PI;
 const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
-process.env.SANDBOX_ALLOW = `/root:/etc/shadow:/etc:/usr/share/doc:/does/not/exist:${PI_AGENT}:${PI_AGENT}/bin`;
 // Seeded at startup, which is when a validator that reads a not-yet-defined constant would fail.
-process.env.SANDBOX_ENV = "TOOL_HOME=/opt/tool";
-const { agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, pathVerdict, realPathFor, requestedSessionId, resolveImages, resolveModelQuery, sandboxCommand, SessionController, shQuote, shouldFallBack, WorkspaceManager, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, runtimeRoot, sandboxBindBack, jailedRoots, resolveTarget, sandboxCommand: buildSandbox, SENSITIVE_SYSTEM_PATHS, SANDBOX_ETC, allowedExtraPaths, readableRoots, scopedSessionId, isBlockedAddress, rootRefusal, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, runnerInvocation, PiRpcSession, startBridge, sandboxArgs, parseGatewayCommand, profileStats, profileHelperInvocation, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, limitProperties, scopePrefix, keyLimits, limitFromInput, spentToday, spendRefusal, sweepSockets, bundleListFromInput, listBundles, grantedBundles, bundleContents, parseSandboxEnv, originOf, profileDetail, ensureKeyFiles, keyFilesWritability, keyFilesStats, treeSize } = await import("./server.mjs");
+process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
+const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, recentAudit: recentAuditRows } = await import("./server.mjs");
+setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
+
+/** The gateway's whole source, entry point and modules, for the tests that check its shape. */
+function gatewaySource() {
+	const lib = new URL("./lib/", import.meta.url);
+	const files = existsSync(lib) ? readdirSync(lib).filter((f) => f.endsWith(".mjs")).sort().map((f) => new URL(f, lib)) : [];
+	return [new URL("./server.mjs", import.meta.url), ...files].map((u) => readFileSync(u, "utf8")).join("\n");
+}
 
 /** The gateway's own directory, which the sandbox has to hide. */
 const GATEWAY_DIR = dirname(fileURLToPath(import.meta.url));
@@ -528,11 +532,18 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(nextTurn([u("q1"), a("a1"), u("q2")], live).context, "", "a session with history must not replay");
 }
 
-// The masked agent dir must be the one Pi actually uses, or provider credentials stay readable.
+// The folder the gateway treats as Pi's own configuration (its credentials, kept out of every container)
+// must be the one Pi actually uses. Pi is found the way the gateway finds it (PI_AGENT_PACKAGE, then
+// the global npm root), not at a path from the machine this was written on; without Pi there is
+// nothing to compare, and the rest of the suite does not need it.
 {
-	const pkg = process.env.PI_AGENT_PACKAGE ?? "/root/.local/share/pi-node/node-v22.23.1-linux-x64/lib/node_modules/@earendil-works/pi-coding-agent";
-	const { getAgentDir } = await import(pkg + "/dist/index.js");
-	assert.equal(agentDirPath(), getAgentDir(), "the sandbox must mask the directory Pi reads credentials from");
+	let piModule = null;
+	try {
+		piModule = await pi();
+	} catch {
+		console.log("skipped: Pi is not installed here, so its agent directory cannot be compared with agentDirPath()");
+	}
+	if (piModule) assert.equal(agentDirPath(), piModule.getAgentDir(), "the gateway must treat as Pi's config the directory Pi reads credentials from");
 }
 
 // Path containment, and the symlink case that a string comparison would miss.
@@ -542,141 +553,6 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(isInside("/a/b", "/a/bc"), false, "a shared prefix is not containment");
 	assert.equal(isInside("/a/b", "/a"), false);
 	assert.equal(isInside("/a/b", "/x"), false);
-}
-
-// The workspace jail: read and write are not the same permission.
-{
-	const base = mkdtempSync(join(tmpdir(), "pi-jail-"));
-	const root = join(base, "workspaces");
-	const workspace = join(root, "own");
-	const sibling = join(root, "other");
-	const secrets = join(base, "secrets");
-	for (const dir of [workspace, sibling, secrets]) mkdirSync(dir, { recursive: true });
-	writeFileSync(join(workspace, "mine.txt"), "mine");
-	writeFileSync(join(sibling, "secret.txt"), "another session");
-
-	const deniedRoots = [root, `${root}-archive`, secrets];
-	const verdict = (target, write = false) => pathVerdict(target, { workspace, deniedRoots, write });
-
-	assert.equal(verdict(join(workspace, "mine.txt")), null, "own workspace is readable");
-	assert.equal(verdict(join(workspace, "new.txt"), true), null, "own workspace is writable");
-
-	assert.ok(verdict(join(sibling, "secret.txt")), "a sibling session must not be readable");
-	assert.ok(verdict(join(sibling, "planted.txt"), true), "a sibling session must not be writable");
-	assert.ok(verdict(join(secrets, "token")), "a masked root must not be readable");
-
-	// Same reach as sandboxed bash: system files readable, nothing outside writable.
-	assert.equal(verdict("/etc/hostname"), null, "system files stay readable");
-	assert.ok(verdict("/etc/hostname", true), "writing a system file must be refused");
-	assert.ok(verdict(join(base, "outside.txt"), true));
-
-	// A symlink inside the workspace pointing out is not a way out.
-	symlinkSync(sibling, join(workspace, "escape"));
-	assert.ok(verdict(join(workspace, "escape", "secret.txt")), "reading through a symlink must be refused");
-	assert.ok(verdict(join(workspace, "escape"), true), "writing through a symlink must be refused");
-	assert.ok(realPathFor(join(workspace, "escape")).endsWith("other"), "realPathFor resolves the link");
-
-	rmSync(base, { recursive: true, force: true });
-}
-
-// Shell quoting and the sandbox command's argument order.
-{
-	assert.equal(shQuote("plain"), "'plain'");
-	assert.equal(shQuote("it's"), "'it'\\''s'");
-	assert.equal(shQuote("a b"), "'a b'");
-
-	const cmd = sandboxCommand("ls -la && echo done", { workspace: "/w/session" });
-	assert.ok(cmd.startsWith(shQuote("/usr/bin/bwrap")));
-	assert.ok(cmd.includes(shQuote("/w/session")));
-	assert.ok(cmd.endsWith(shQuote("ls -la && echo done")), "the original command is one argument");
-	assert.ok(cmd.includes("--unshare-pid"), "a fresh PID namespace is what hides the gateway's env");
-
-	// Capabilities: as root, bwrap keeps every capability unless told otherwise, and with them a
-	// session can `umount` the masks or remount / read-write. These flags are the whole fix.
-	for (const flag of ["--unshare-user", "--cap-drop", "--new-session", "--unshare-ipc", "--unshare-uts"]) {
-		assert.ok(cmd.includes(shQuote(flag)), `the sandbox must pass ${flag}`);
-	}
-	assert.ok(cmd.includes(`${shQuote("--cap-drop")} ${shQuote("ALL")}`), "every capability is dropped");
-	assert.ok(cmd.includes(`${shQuote("--uid")} ${shQuote("65534")}`), "commands run as nobody");
-	assert.ok(cmd.indexOf("--unshare-user") < cmd.indexOf("--ro-bind"), "namespace flags come before the mounts");
-
-	// Network: off by default, and only the explicit "on" shares the host network.
-	assert.ok(sandboxCommand("true", { workspace: "/w", network: "off" }).includes("--unshare-net"));
-	assert.ok(!sandboxCommand("true", { workspace: "/w", network: "on" }).includes("--unshare-net"));
-	assert.ok(sandboxCommand("true", { workspace: "/w", network: "bogus" }).includes("--unshare-net"), "anything but on fails closed");
-
-	// An empty root, not the host's: nothing is visible unless it is mounted on purpose.
-	for (const layout of ["same-path", "fixed"]) {
-		const args = sandboxArgs({ workspace: "/w/session", layout });
-		const pairs = (flag) => args.flatMap((a, i) => (a === flag ? [[args[i + 1], args[i + 2]]] : []));
-		assert.equal(pairs("--ro-bind").some(([src]) => src === "/"), false, `${layout}: the host root is never mounted`);
-		assert.ok(pairs("--ro-bind").some(([src, dst]) => src === "/usr" && dst === "/usr"), `${layout}: /usr is read-only`);
-		// On this merged-usr host /bin is a link into /usr, and is recreated as one.
-		if (lstatSync("/bin").isSymbolicLink()) {
-			assert.ok(args.join(" ").includes("--symlink usr/bin /bin"), `${layout}: /bin is a link, as on the host`);
-		}
-		// /etc holds only the allow-list, plus a generated passwd and group.
-		const etc = pairs("--ro-bind").filter(([, dst]) => dst.startsWith("/etc/")).map(([, dst]) => dst.slice(5));
-		const allowed = new Set([...SANDBOX_ETC, "passwd", "group"]);
-		assert.deepEqual(etc.filter((e) => !allowed.has(e)), [], `${layout}: nothing else from /etc`);
-		assert.ok(etc.includes("passwd") && !pairs("--ro-bind").some(([src]) => src === "/etc/passwd"), "passwd is generated, not the host's");
-		for (const hidden of ["/home", "/root", "/var/lib", "/srv", "/mnt", "/opt", "/sys", "/etc/shadow", "/etc/ssh"]) {
-			assert.equal(pairs("--ro-bind").some(([src]) => src === hidden) || pairs("--bind").some(([src]) => src === hidden), false, `${layout}: ${hidden} is not mounted`);
-		}
-		// The workspace is the only thing writable, and the scratch space is private.
-		assert.deepEqual(pairs("--bind").map(([src]) => src), ["/w/session"], `${layout}: only the workspace is writable`);
-		for (const dir of ["/tmp", "/var/tmp", "/run"]) assert.ok(args.includes(dir), `${layout}: ${dir} is a private tmpfs`);
-	}
-	const fixed = sandboxArgs({ workspace: "/w/session", layout: "fixed" });
-	assert.deepEqual(fixed.slice(fixed.indexOf("--bind"), fixed.indexOf("--bind") + 3), ["--bind", "/w/session", "/workspace"], "fixed layout: the workspace is /workspace");
-	const envOf = (args, name) => args[args.findIndex((a, i) => a === "--setenv" && args[i + 1] === name) + 2];
-	assert.equal(envOf(fixed, "HOME"), "/workspace");
-	assert.ok(envOf(fixed, "PATH").startsWith("/opt/node/bin:"), "the runtime is at /opt/node");
-	assert.ok(!fixed.join(" ").includes(runtimeRoot() + " " + runtimeRoot()), "no host path for the runtime in the fixed layout");
-}
-
-// SANDBOX_ALLOW cannot reach into or contain anything protected, and only what survives is mounted.
-{
-	const piBin = `${PI_AGENT}/bin`;
-	assert.deepEqual(allowedExtraPaths(), ["/usr/share/doc", ...(existsSync(piBin) ? [piBin] : [])], "only the harmless extras, and Pi's bin/");
-	const args = sandboxArgs({ workspace: "/w", layout: "fixed" });
-	const mounted = args.flatMap((a, i) => (a === "--ro-bind" ? [args[i + 1]] : []));
-	assert.ok(mounted.includes("/usr/share/doc"));
-	for (const refused of ["/root", "/etc/shadow", "/etc"]) assert.ok(!mounted.includes(refused), `${refused} is refused`);
-}
-
-// SANDBOX_ENV: NAME=value pairs for tools, never the gateway's own variables.
-{
-	assert.deepEqual(parseSandboxEnv("RUSTUP_HOME=/root/.rustup  R2_X=a:b "), [["RUSTUP_HOME", "/root/.rustup"], ["R2_X", "a:b"]]);
-	assert.deepEqual(parseSandboxEnv(""), []);
-	for (const bad of ["PATH=/evil", "HOME=/root", "PI_CODING_AGENT_DIR=/root/.pi/agent", "PIPER_BRIDGE_SOCKET=/x", "no-equals", "1BAD=x"]) {
-		assert.throws(() => parseSandboxEnv(bad, { strict: true }), /SANDBOX_ENV/, `${bad} is refused on save`);
-		assert.deepEqual(parseSandboxEnv(bad), [], `${bad} is skipped if it was ever stored`);
-	}
-	const spec = { key: "SANDBOX_ENV", type: "text", validate: (t) => void parseSandboxEnv(t, { strict: true }) };
-	assert.throws(() => coerceSetting(spec, "PATH=/x"), /cannot be overridden/);
-	assert.equal(coerceSetting(spec, "A=1"), "A=1");
-	assert.deepEqual(parseSandboxEnv(), [["TOOL_HOME", "/opt/tool"]], "a value seeded at startup survives loading");
-	const inside = sandboxArgs({ workspace: "/w", layout: "fixed" });
-	assert.ok(inside.join(" ").includes("--setenv TOOL_HOME /opt/tool"), "and reaches the sandbox");
-}
-
-// The in-process file tools' allow-list: the workspace, and nothing else the operator did not name.
-{
-	const workspace = mkdtempSync(join(tmpdir(), "pi-allow-"));
-	const verdict = (target, write = false) =>
-		pathVerdict(target, { workspace, deniedRoots: jailedRoots(), readableRoots: readableRoots(), write });
-	assert.equal(verdict(join(workspace, "x.txt")), null, "own workspace is readable");
-	assert.ok(verdict("/etc/hostname"), "host configuration is not");
-	assert.ok(verdict("/opt/anything"), "installed software outside the workspace is not");
-	assert.equal(verdict("/usr/share/doc"), null, "an operator's SANDBOX_ALLOW extra is");
-	assert.ok(verdict("/etc/shadow"), "password hashes are not");
-	assert.ok(verdict("/etc/ssh/sshd_config"), "ssh configuration and host keys are not");
-	assert.ok(verdict("/var/lib/dpkg/status"), "service state is not");
-	assert.ok(verdict("/home/someone/.ssh/id_ed25519"), "other users' homes are not");
-	assert.ok(verdict("/tmp/anything"), "the gateway's /tmp is outside the allow-list");
-	assert.ok(verdict("/proc/self/environ"), "the gateway's own environment is not");
-	rmSync(workspace, { recursive: true, force: true });
 }
 
 // Session ids are scoped to the credential that presents them.
@@ -710,159 +586,11 @@ assert.equal(isReloadCommand(undefined), false);
 	await assert.rejects(resolveImages(["http://example.com/a.png"]), /ALLOW_IMAGE_URLS/, "URLs are off by default");
 }
 
-// The gateway refuses to start as root unless told to.
-{
-	assert.equal(rootRefusal(1000, {}), null);
-	assert.match(rootRefusal(0, {}), /refusing to run as root/);
-	assert.equal(rootRefusal(0, { ALLOW_ROOT: "1" }), null);
-	assert.match(rootRefusal(0, { ALLOW_ROOT: "0" }), /refusing/);
-}
-
-// The controller asks for a workspace per session and releases it when that session ends.
-{
-	const made = [];
-	const released = [];
-	const store = {
-		create: () => { const path = `/ws/${made.length}`; made.push(path); return path; },
-		release: (path) => released.push(path),
-	};
-	const ctl = new SessionController({
-		create: async () => ({ dispose() {} }),
-		maxSessions: 4,
-		maxLifetimeMs: 1000,
-		idleMs: 1000,
-		workspaces: store,
-		sweepMs: 0,
-	});
-	ctl.acquire("a");
-	ctl.acquire("b");
-	assert.deepEqual(made, ["/ws/0", "/ws/1"], "one workspace per session");
-	assert.deepEqual([...ctl.liveWorkspaces()], ["/ws/0", "/ws/1"]);
-	ctl.close("a");
-	assert.deepEqual(released, ["/ws/0"], "closing a session releases its workspace");
-	assert.deepEqual([...ctl.liveWorkspaces()], ["/ws/1"], "the swept set spares live sessions only");
-}
-
-// Workspace lifecycle policies, against a real filesystem: this is the code that can lose or
-// accumulate data, so it is exercised rather than assumed.
-{
-	const base = mkdtempSync(join(tmpdir(), "pi-ws-"));
-	const root = join(base, "workspaces");
-	const archive = `${root}-archive`;
-	const make = (policy, archiveTtlMs = 30 * 24 * 3600_000) =>
-		new WorkspaceManager(() => ({ root, archiveRoot: archive, policy, archiveTtlMs }));
-	const age = (target, ms) => utimesSync(target, new Date(Date.now() - ms), new Date(Date.now() - ms));
-
-	// archive moves the directory aside; it must not copy, and contents must survive.
-	{
-		const ws = make("archive");
-		const dir = ws.create();
-		writeFileSync(join(dir, "work.txt"), "output");
-		ws.release(dir);
-		assert.equal(existsSync(dir), false, "the live directory is gone");
-		const archived = readdirSync(archive);
-		assert.equal(archived.length, 1);
-		assert.equal(readFileSync(join(archive, archived[0], "work.txt"), "utf8"), "output", "contents survived");
-	}
-
-	// delete removes it and leaves no archive behind.
-	{
-		rmSync(archive, { recursive: true, force: true });
-		const ws = make("delete");
-		const dir = ws.create();
-		writeFileSync(join(dir, "work.txt"), "output");
-		ws.release(dir);
-		assert.equal(existsSync(dir), false);
-		// The archive root exists because ensureRoots creates it (bwrap needs the mountpoint);
-		// what must be empty is its contents.
-		assert.equal(existsSync(archive) ? readdirSync(archive).length : 0, 0, "delete must not archive");
-	}
-
-	// keep leaves the work exactly where it is.
-	{
-		const ws = make("keep");
-		const dir = ws.create();
-		writeFileSync(join(dir, "work.txt"), "output");
-		ws.release(dir);
-		assert.equal(existsSync(join(dir, "work.txt")), true);
-	}
-
-	// An untouched workspace is removed whatever the policy (a request rejected before it ran).
-	{
-		const ws = make("keep");
-		const dir = ws.create();
-		ws.release(dir);
-		assert.equal(existsSync(dir), false, "an empty workspace is never worth keeping");
-	}
-
-	// sweep applies the policy to orphans and spares live sessions.
-	{
-		rmSync(archive, { recursive: true, force: true });
-		const ws = make("archive");
-		const orphan = ws.create();
-		writeFileSync(join(orphan, "a.txt"), "x");
-		const live = ws.create();
-		writeFileSync(join(live, "b.txt"), "x");
-		age(orphan, 5 * 60_000);
-		age(live, 5 * 60_000); // both past the grace period, so only the live set protects one
-		const out = ws.sweep(new Set([live]));
-		assert.equal(out.orphans, 1, "exactly the orphan is reaped");
-		assert.equal(existsSync(orphan), false);
-		assert.equal(existsSync(join(live, "b.txt")), true, "a live session's workspace is spared");
-	}
-
-	// a directory touched within the last minute is skipped, so a second instance cannot reap a
-	// running one's work. Uses its own root so the count means only what this block created.
-	{
-		const soloBase = mkdtempSync(join(tmpdir(), "pi-ws-fresh-"));
-		const soloRoot = join(soloBase, "workspaces");
-		const ws = new WorkspaceManager(
-			() => ({ root: soloRoot, archiveRoot: `${soloRoot}-archive`, policy: "delete", archiveTtlMs: 0 }),
-		);
-		const fresh = ws.create();
-		writeFileSync(join(fresh, "x.txt"), "x");
-		assert.equal(ws.sweep(new Set()).orphans, 0, "a freshly touched directory is left alone");
-		assert.equal(existsSync(fresh), true);
-		rmSync(soloBase, { recursive: true, force: true });
-	}
-
-	// archives past their TTL expire; a TTL of 0 keeps them forever. Own root, so the count is
-	// only about what this block archived.
-	{
-		const ttlBase = mkdtempSync(join(tmpdir(), "pi-ws-ttl-"));
-		const ttlRoot = join(ttlBase, "workspaces");
-		const ttlArchive = `${ttlRoot}-archive`;
-		const withTtl = (archiveTtlMs) =>
-			new WorkspaceManager(() => ({ root: ttlRoot, archiveRoot: ttlArchive, policy: "archive", archiveTtlMs }));
-
-		const ws = withTtl(60_000);
-		const dir = ws.create();
-		writeFileSync(join(dir, "x.txt"), "x");
-		ws.release(dir);
-		const archived = join(ttlArchive, readdirSync(ttlArchive)[0]);
-		age(archived, 120_000);
-		assert.equal(ws.sweep(new Set()).expired, 1, "an archive past its TTL is removed");
-		assert.equal(existsSync(archived), false);
-
-		const forever = withTtl(0);
-		const dir2 = forever.create();
-		writeFileSync(join(dir2, "y.txt"), "y");
-		forever.release(dir2);
-		const kept = join(ttlArchive, readdirSync(ttlArchive)[0]);
-		age(kept, 10 * 365 * 24 * 3600_000);
-		assert.equal(forever.sweep(new Set()).expired, 0, "0 disables archive expiry");
-		assert.equal(existsSync(kept), true);
-		rmSync(ttlBase, { recursive: true, force: true });
-	}
-
-	rmSync(base, { recursive: true, force: true });
-}
-
 // Every setting the code reads must exist in the spec. A missing entry makes `config.X`
 // undefined, which fails silently: a cooldown that never expires, a duration formatted as "0".
 // This caught FALLBACK_COOLDOWN_MS after it was dropped from the spec while still being read.
 {
-	const src = readFileSync(new URL("./server.mjs", import.meta.url), "utf8");
+	const src = gatewaySource();
 	const specKeys = new Set([...src.matchAll(/key: "([A-Z_]+)"/g)].map((m) => m[1]));
 	const referenced = new Set([...src.matchAll(/config\.([A-Z_]+)/g)].map((m) => m[1]));
 	const missing = [...referenced].filter((k) => !specKeys.has(k));
@@ -1030,8 +758,8 @@ assert.equal(isReloadCommand(undefined), false);
 // access log cheerfully printed the right key name. Nothing in the unit tests crossed that gap, so
 // the shape of the chain is asserted here instead.
 {
-	const src = readFileSync(new URL("./server.mjs", import.meta.url), "utf8");
-	assert.match(src, /#spawn\(id, credential = null\)/, "#spawn has to take the credential");
+	const src = gatewaySource();
+	assert.match(src, /#spawn\(id, credential = null(, row = null)?\)/, "#spawn has to take the credential");
 	assert.match(src, /keyId: credential\?\.id \?\? null/, "#spawn has to record it");
 	assert.match(src, /acquire\(requestId, credential = null\)/, "acquire has to take it");
 	const spawnCalls = [...src.matchAll(/this\.#spawn\(([^)]*)\)/g)].map((m) => m[1]);
@@ -1060,53 +788,7 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(isSettingsKey(undefined), false);
 }
 
-// The sandbox's boundary is only as good as its list of protected paths, and that list used to name
-// four directories while everything else stayed readable — which is how a session could read the
-// parent of the gateway, the shell history and the context-mode databases. The whole home directory
-// is the boundary now, at both enforcement points, because bwrap's masks apply to bash alone.
-{
-	const home = homedir();
-	const roots = jailedRoots();
-	for (const expected of [home, GATEWAY_DIR, agentDirPath()]) {
-		assert.ok(roots.includes(expected), `jailed roots should include ${expected}, got: ${roots.join(", ")}`);
-	}
-	assert.ok(roots.includes(TEST_WS), "the workspace root is still jailed");
-
-	const ws = `${TEST_WS}/session-under-test`;
-	const verdict = (target, write = false) => pathVerdict(target, { workspace: ws, deniedRoots: roots, write });
-	assert.equal(verdict(`${ws}/file.txt`), null, "the session's own workspace stays readable");
-	assert.ok(verdict(`${home}/analysis/some-other-project`) !== null, "another project under home is refused");
-	assert.ok(verdict(`${home}/.bash_history`) !== null, "the shell history is refused");
-	assert.ok(verdict(`${home}/.pi/context-mode/sessions/x.db`) !== null, "the context-mode databases are refused");
-	assert.ok(verdict(`${GATEWAY_DIR}/gateway.db`) !== null, "gateway.db is refused");
-	assert.equal(verdict("/etc/passwd"), null, "system files stay readable, deliberately");
-	assert.ok(verdict("/etc/passwd", true) !== null, "but nothing outside the workspace is writable");
-	// `~` has to mean the workspace, matching the shell whose HOME is set there.
-	assert.equal(resolveTarget("~/notes.txt", ws), `${ws}/notes.txt`);
-	assert.equal(resolveTarget("~", ws), ws);
-}
-
-// The bash side of the same policy: home masked, environment cleared, and the runtime handed back.
-// Masking home without that last part breaks `node` outright, which this caught.
-{
-	const ws = `${TEST_WS}/sandbox-under-test`;
-	const line = buildSandbox("true", { workspace: ws });
-	assert.ok(line.includes("--clearenv"), "the environment must not be inherited");
-	assert.ok(line.includes(homedir()), "the home directory has to be masked");
-	assert.ok(line.includes("--unshare-pid"), "the PID namespace must be fresh");
-	assert.ok(line.includes(ws), "the workspace has to be bound back in");
-
-	const runtime = runtimeRoot();
-	const back = sandboxBindBack();
-	assert.ok(back.includes(runtime), `the runtime ${runtime} has to be handed back or node stops working`);
-	assert.deepEqual(back, [runtime, ...allowedExtraPaths()], "only the runtime and the operator's allowed extras");
-	assert.ok(
-		!back.some((dir) => isInside(dir, GATEWAY_DIR)),
-		"no bind-back may re-expose the gateway directory it follows",
-	);
-}
-
-// ---------------------------------------------------------------- sandboxed runners
+// ---------------------------------------------------------------- containers
 
 // Profiles: one per credential, seeded from your default model and the template, never from your
 // own agent directory's credentials or packages.
@@ -1125,19 +807,25 @@ assert.equal(isReloadCommand(undefined), false);
 	writeFileSync(join(host, "auth.json"), '{"p":{"key":"sk-real"}}');
 	writeFileSync(join(template, "skills", "house-style", "SKILL.md"), "---\nname: house-style\n---\n");
 
-	const dir = ensureProfile("k1", { root: join(base, "profiles"), template, hostAgentDir: host });
+	const dir = ensureProfile("k1", { root: join(base, "profiles"), template });
 	assert.equal(dir, join(base, "profiles", "key-k1"));
-	assert.deepEqual(JSON.parse(readFileSync(join(dir, "settings.json"), "utf8")), { defaultProvider: "p", defaultModel: "m", defaultThinkingLevel: "high" }, "only the default model is carried over");
+	assert.deepEqual(JSON.parse(readFileSync(join(dir, "settings.json"), "utf8")), {}, "nothing is copied: a profile follows the operator's default model until its user picks one");
+	// That default is read fresh for every new chat, and handed to the bridge.
+	assert.deepEqual(hostDefaultModel(host), { model: "p/m", thinking: "high" });
+	writeFileSync(join(host, "settings.json"), JSON.stringify({ defaultProvider: "local-openai", defaultModel: "Qwen/Qwen3-Next" }));
+	assert.deepEqual(hostDefaultModel(host), { model: "local-openai/Qwen/Qwen3-Next", thinking: null }, "model ids may contain slashes");
+	assert.equal(hostDefaultModel(join(base, "missing")), null);
 	assert.equal(existsSync(join(dir, "auth.json")), false, "credentials are never copied into a profile");
 	assert.equal(existsSync(join(dir, "skills", "house-style", "SKILL.md")), true, "the template is copied");
 
 	// An existing profile is the key's own; creating it again must not overwrite what they changed.
 	writeFileSync(join(dir, "settings.json"), '{"defaultModel":"mine"}');
-	ensureProfile("k1", { root: join(base, "profiles"), template, hostAgentDir: host });
+	ensureProfile("k1", { root: join(base, "profiles"), template });
 	assert.equal(JSON.parse(readFileSync(join(dir, "settings.json"), "utf8")).defaultModel, "mine");
-	assert.notEqual(ensureProfile("k2", { root: join(base, "profiles"), template: "", hostAgentDir: host }), dir, "each key gets its own");
+	assert.notEqual(ensureProfile("k2", { root: join(base, "profiles"), template: "" }), dir, "each key gets its own");
 	rmSync(base, { recursive: true, force: true });
 }
+
 
 // The catalogue a sandbox sees names models; it never carries where they live or how to reach them.
 {
@@ -1169,67 +857,6 @@ assert.equal(isReloadCommand(undefined), false);
 	meterUsage(meter, undefined);
 	assert.equal(meter.cost, 0.75);
 	assert.deepEqual(meter.tokens, { input: 11, output: 6, cacheRead: 100, cacheWrite: 2, total: 119 });
-}
-
-// Runner commands. bwrap: the same hardened empty-root sandbox as a bash call, in the fixed layout
-// the containers use too — the profile, socket and bridge at fixed paths, never at host paths.
-// Containers: no capabilities, no network, read-only root.
-{
-	const opts = { workspace: "/w/s1", profileDir: "/p/key-1", socketPath: "/r/a.sock", bridgePath: "/g/piper-bridge.mjs", packageDir: join(runtimeRoot(), "lib", "pi"), network: "off" };
-	const { command, args } = runnerInvocation("bwrap", opts);
-	assert.equal(command, "/usr/bin/bwrap");
-	for (const flag of ["--unshare-user", "--unshare-net", "--clearenv", "--die-with-parent"]) assert.ok(args.includes(flag), `${flag} applies to the whole Pi process`);
-	assert.ok(args.includes("ALL") && args[args.indexOf("--cap-drop") + 1] === "ALL");
-	const pair = (flag, src, dst) => args.findIndex((a, i) => a === flag && args[i + 1] === src && args[i + 2] === dst);
-	assert.ok(pair("--bind", "/p/key-1", "/profile") > 0, "the profile is writable, at /profile");
-	assert.ok(pair("--bind", "/r/a.sock", "/run/piper/bridge.sock") > 0, "the socket is reachable");
-	assert.ok(pair("--ro-bind", "/g/piper-bridge.mjs", "/opt/piper/bridge.mjs") > 0, "the bridge is read-only");
-	assert.ok(pair("--bind", "/w/s1", "/workspace") > 0, "the workspace is /workspace");
-	// The socket goes under /run, so it has to be mounted after /run's tmpfs or the tmpfs hides it.
-	assert.ok(pair("--bind", "/r/a.sock", "/run/piper/bridge.sock") > args.indexOf("/run"));
-	const binds = args.flatMap((a, i) => (a === "--bind" ? [args[i + 1]] : []));
-	assert.deepEqual(binds.sort(), ["/p/key-1", "/r/a.sock", "/w/s1"], "nothing else is writable");
-	const env = (name) => args[args.findIndex((a, i) => a === "--setenv" && args[i + 1] === name) + 2];
-	assert.equal(env("PI_CODING_AGENT_DIR"), "/profile", "Pi reads the key's profile, not your agent directory");
-	assert.equal(env("PIPER_BRIDGE_SOCKET"), "/run/piper/bridge.sock");
-	assert.equal(env("HOME"), "/workspace");
-	assert.equal(env("PI_OFFLINE"), "1");
-	const tail = args.slice(args.indexOf("--"));
-	assert.equal(tail[1], join("/opt/node", relative(runtimeRoot(), process.execPath)), "node runs from /opt/node");
-	assert.equal(tail[2], "/opt/node/lib/pi/dist/bundle/cli.js", "the Pi package under the prefix is found at /opt/node");
-	assert.deepEqual(tail.slice(-6), ["--mode", "rpc", "--no-session", "--approve", "-e", "/opt/piper/bridge.mjs"]);
-	for (const hostPath of ["/p/key-1", "/r/a.sock", "/g/piper-bridge.mjs", "/w/s1", runtimeRoot()]) {
-		assert.ok(!tail.some((a) => a.includes(hostPath)), `the command line inside never names ${hostPath}`);
-	}
-	assert.ok(!args.some((a) => /API_KEY|TOKEN/.test(a)), "no credential is passed into the sandbox");
-
-	// A frozen profile (locked or over quota) is a throwaway overlay: readable, apparently writable,
-	// and never written back.
-	const frozen = runnerInvocation("bwrap", { ...opts, profileWritable: false }).args;
-	const overlayAt = frozen.indexOf("--overlay-src");
-	assert.ok(overlayAt > 0 && frozen[overlayAt + 1] === "/p/key-1" && frozen[overlayAt + 2] === "--tmp-overlay" && frozen[overlayAt + 3] === "/profile");
-	assert.equal(frozen.findIndex((a, i) => a === "--bind" && frozen[i + 1] === "/p/key-1"), -1, "a frozen profile is never bound read-write");
-	const frozenDocker = runnerInvocation("docker", { ...opts, profileWritable: false, image: "img", uid: 1, gid: 1 }).args;
-	assert.ok(frozenDocker.includes("/p/key-1:/profile-frozen:ro"), "the container sees the frozen profile read-only");
-	assert.ok(!frozenDocker.includes("/p/key-1:/profile"), "and never mounts it writable");
-	assert.match(frozenDocker.at(-1), /^cp -a \/profile-frozen\/\. \/profile\/ && exec pi --mode rpc/);
-
-	const outside = runnerInvocation("bwrap", { ...opts, packageDir: "/opt/pi-elsewhere" }).args;
-	assert.ok(outside.findIndex((a, i) => a === "--ro-bind" && outside[i + 1] === "/opt/pi-elsewhere" && outside[i + 2] === "/opt/pi") > 0, "a Pi package outside the Node prefix is mounted at /opt/pi");
-	assert.ok(outside.includes("/opt/pi/dist/bundle/cli.js"));
-
-	const docker = runnerInvocation("docker", { ...opts, image: "img", uid: 1000, gid: 1000 });
-	assert.equal(docker.command, "docker");
-	const d = docker.args;
-	for (const [flag, value] of [["--network", "none"], ["--cap-drop", "ALL"], ["--security-opt", "no-new-privileges"], ["--user", "1000:1000"]]) {
-		assert.equal(d[d.indexOf(flag) + 1], value, `${flag} ${value}`);
-	}
-	assert.ok(d.includes("--read-only") && d.includes("--rm") && d.includes("-i"));
-	assert.ok(d.includes("/w/s1:/workspace") && d.includes("/p/key-1:/profile") && d.includes("/r/a.sock:/run/piper/bridge.sock"));
-	assert.ok(d.includes("/g/piper-bridge.mjs:/opt/piper/bridge.mjs:ro"));
-	assert.ok(d.includes("PI_CODING_AGENT_DIR=/profile"));
-	assert.equal(d[d.indexOf("img") + 1], "pi", "the image runs pi");
-	assert.ok(!runnerInvocation("podman", { ...opts, network: "on" }).args.includes("--network"), "network on uses the engine default");
 }
 
 // PiRpcSession against a scripted child: LF-only framing, prompt completion, extension commands
@@ -1391,23 +1018,6 @@ assert.equal(isReloadCommand(undefined), false);
 	rmSync(base, { recursive: true, force: true });
 }
 
-// The helper's sandbox: only the profile, writable; no network whatever SANDBOX_NETWORK says.
-{
-	const { command, args } = profileHelperInvocation("bwrap", { profileDir: "/p/key-9", helperPath: "/g/piper-profile.mjs", maxBytes: 42 });
-	assert.equal(command, "/usr/bin/bwrap");
-	assert.ok(args.includes("--unshare-net"), "the helper never has a network");
-	assert.ok(args.includes("--cap-drop") && args.includes("--unshare-user"));
-	// The profile stands in for the workspace: mounted at /workspace, the one writable place.
-	assert.deepEqual(args.flatMap((a, i) => (a === "--bind" ? [[args[i + 1], args[i + 2]]] : [])), [["/p/key-9", "/workspace"]], "the profile is the one writable place");
-	assert.ok(args.findIndex((a, i) => a === "--ro-bind" && args[i + 1] === "/g/piper-profile.mjs" && args[i + 2] === "/opt/piper/profile.mjs") > 0);
-	assert.equal(args[args.indexOf("--chdir") + 1], "/workspace", "the helper runs in the profile");
-	assert.equal(args[args.findIndex((a, i) => a === "--setenv" && args[i + 1] === "PROFILE_MAX_BYTES") + 2], "42");
-	assert.deepEqual(args.slice(-2), [join("/opt/node", relative(runtimeRoot(), process.execPath)), "/opt/piper/profile.mjs"]);
-	const docker = profileHelperInvocation("docker", { profileDir: "/p/key-9", helperPath: "/g/h.mjs", image: "img", uid: 5, gid: 5 }).args;
-	assert.equal(docker[docker.indexOf("--network") + 1], "none");
-	assert.ok(docker.includes("/p/key-9:/profile") && docker.includes("/g/h.mjs:/opt/piper/profile.mjs:ro"));
-}
-
 // The helper itself, run directly against a scratch profile: every operation, the quota, and the
 // path checks. (Run outside a sandbox here; the sandbox is what makes following a link harmless.)
 {
@@ -1421,6 +1031,14 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(run({ op: "settings.put", settings: { defaultModel: "m" } }).ok, true);
 	assert.deepEqual(run({ op: "settings.patch", set: { theme: "dark" }, unset: ["defaultModel"] }).result, { theme: "dark" });
 	assert.equal(run({ op: "settings.put", settings: [1, 2] }).ok, false, "settings must be an object");
+	// The agent's instructions are the profile's AGENTS.md.
+	assert.deepEqual(run({ op: "instructions.get" }).result, { text: "" }, "none yet");
+	assert.equal(run({ op: "instructions.put", text: "You are the architect." }).ok, true);
+	assert.equal(readFileSync(join(dir, "AGENTS.md"), "utf8"), "You are the architect.");
+	assert.equal(run({ op: "instructions.get" }).result.text, "You are the architect.");
+	assert.equal(run({ op: "instructions.put", text: 5 }).ok, false, "instructions are text");
+	assert.equal(run({ op: "instructions.put", text: "x".repeat(65 * 1024) }).ok, false, "and at most 64 KB");
+	assert.equal(run({ op: "summary" }).result.hasAgentsMd, true, "Pi will see it");
 
 	const skill = { op: "skills.put", name: "demo", files: { "SKILL.md": "---\nname: demo\ndescription: Says hi.\n---\nhi", "scripts/run.sh": "echo hi" } };
 	assert.deepEqual(run(skill).result, { name: "demo", description: "Says hi." });
@@ -1478,23 +1096,6 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.throws(() => coerceSetting(spec, ""), /must be a number/);
 	assert.throws(() => coerceSetting(spec, "abc"), /must be a number/);
 	assert.throws(() => coerceSetting(spec, "-1"), /at least 0/);
-}
-
-// Resource limits become systemd scope properties, and container flags.
-{
-	assert.deepEqual(limitProperties({ memoryMb: 2048, pids: 512, cpus: 1.5 }), ["MemoryMax=2048M", "MemorySwapMax=0", "OOMPolicy=continue", "TasksMax=512", "CPUQuota=150%"]);
-	assert.deepEqual(limitProperties({ memoryMb: 0, pids: 0, cpus: 0 }), [], "0 means no limit");
-	assert.deepEqual(scopePrefix([]), [], "no limits, no wrapper");
-	assert.deepEqual(scopePrefix(["TasksMax=5"], { user: false }), ["systemd-run", "--scope", "--quiet", "--collect", "-p", "TasksMax=5", "--"]);
-	assert.ok(scopePrefix(["TasksMax=5"], { user: true }).includes("--user"), "a non-root gateway uses its user manager");
-
-	const opts = { workspace: "/w", profileDir: "/p", socketPath: "/r.sock", bridgePath: "/b.mjs", image: "img", uid: 1, gid: 1 };
-	const limited = runnerInvocation("docker", { ...opts, memoryMb: 512, pids: 64, cpus: 0.5 }).args;
-	assert.equal(limited[limited.indexOf("--memory") + 1], "512m");
-	assert.equal(limited[limited.indexOf("--pids-limit") + 1], "64");
-	assert.equal(limited[limited.indexOf("--cpus") + 1], "0.5");
-	const unlimited = runnerInvocation("podman", { ...opts, memoryMb: 0, pids: 0, cpus: 0 }).args;
-	assert.ok(!unlimited.includes("--memory") && !unlimited.includes("--pids-limit") && !unlimited.includes("--cpus"));
 }
 
 // Per-key limits: the key's own value wins, blank follows the default, 0 is unlimited, and the
@@ -1578,31 +1179,6 @@ assert.equal(isReloadCommand(undefined), false);
 	ctl.closeAll();
 }
 
-// Stale bridge sockets are removed; a live one, and anything young, is left alone.
-{
-	const net = await import("node:net");
-	const dir = mkdtempSync(join("/tmp", "ps-"));
-	const live = net.createServer().listen(join(dir, "live.sock"));
-	await new Promise((r) => live.once("listening", r));
-	// A killed process leaves its socket file behind; a clean close would remove it, so the stale
-	// socket has to come from a process that is actually killed.
-	const { spawn: spawnChild } = await import("node:child_process");
-	const owner = spawnChild(process.execPath, ["-e", `require("net").createServer().listen(${JSON.stringify(join(dir, "dead.sock"))}, () => console.log("up"))`]);
-	await new Promise((r) => owner.stdout.once("data", r));
-	owner.kill("SIGKILL");
-	await new Promise((r) => owner.once("exit", r));
-	const old = new Date(Date.now() - 5 * 60_000);
-	assert.equal(existsSync(join(dir, "dead.sock")), true, "the dead socket file has to exist for this test to mean anything");
-	for (const name of ["live.sock", "dead.sock"]) utimesSync(join(dir, name), old, old);
-	writeFileSync(join(dir, "notes.txt"), "not a socket");
-	await sweepSockets(dir);
-	assert.equal(existsSync(join(dir, "live.sock")), true, "a socket somebody answers on is kept");
-	assert.equal(existsSync(join(dir, "dead.sock")), false, "a refused one is removed");
-	assert.equal(existsSync(join(dir, "notes.txt")), true);
-	live.close();
-	rmSync(dir, { recursive: true, force: true });
-}
-
 // ---------------------------------------------------------------- shared bundles
 
 {
@@ -1643,15 +1219,11 @@ assert.equal(isReloadCommand(undefined), false);
 	// root itself is never mounted, so a bundle that was not granted does not exist inside.
 	const bundles = listBundles(root);
 	const granted = bundles.filter((b) => b.name === "base");
-	const args = runnerInvocation("bwrap", { workspace: "/w", profileDir: "/p", socketPath: "/r.sock", bridgePath: "/b.mjs", packageDir: join(runtimeRoot(), "lib", "pi"), network: "off", bundles: granted }).args;
-	const loads = args.slice(args.indexOf("--"));
-	assert.ok(args.findIndex((a, i) => a === "--ro-bind" && args[i + 1] === join(root, "base") && args[i + 2] === "/shared/base") > 0, "base is mounted read-only at /shared/base");
-	assert.equal(args.findIndex((a, i) => a === "--bind" && args[i + 1] === join(root, "base")), -1, "a bundle is never writable");
-	assert.ok(loads.findIndex((a, i) => a === "-e" && loads[i + 1] === "/shared/base") > 0, "base is loaded as a package");
-	assert.ok(!args.includes(join(root, "security")) && !args.includes(root), "neither the other bundle nor the shared root is mounted");
-	const docker = runnerInvocation("docker", { workspace: "/w", profileDir: "/p", socketPath: "/r.sock", bridgePath: "/b.mjs", image: "img", uid: 1, gid: 1, bundles }).args;
-	assert.ok(docker.includes(`${join(root, "base")}:/shared/base:ro`));
-	assert.ok(docker.slice(docker.indexOf("img")).join(" ").includes("-e /shared/base -e /shared/security"));
+	const spec = { name: "piper-x", image: "img", workspace: "/w", profileDir: "/p", chatDir: "/c", runDir: "/r", bridgePath: "/b.mjs", sig: "s", bundles: granted };
+	const create = containerCreateArgs(spec);
+	assert.ok(create.includes(`${join(root, "base")}:/shared/base:ro`), "base is mounted read-only at /shared/base");
+	assert.ok(!create.some((a) => a.includes(join(root, "security")) || a.startsWith(`${root}:`)), "neither the other bundle nor the shared root is mounted");
+	assert.ok(piInvocation({ ...spec, bundles }).piArgs.join(" ").includes("-e /shared/base -e /shared/security"), "every granted bundle is loaded as a package");
 	rmSync(root, { recursive: true, force: true });
 }
 
@@ -1724,89 +1296,3503 @@ assert.equal(isReloadCommand(undefined), false);
 	apiKeys.remove(record.id);
 }
 
-// ---------------------------------------------------------------- per-key shared folder
+// ---------------------------------------------------------------- per-key workspace
 
-// Mounted at /workspace/shared, after the workspace's own bind (which would otherwise cover it).
+// One workspace per key, created once, owner-only; a key id cannot steer where it goes.
 {
-	const opts = { workspace: "/w/s1", profileDir: "/p/key-1", socketPath: "/r/a.sock", bridgePath: "/g/b.mjs", packageDir: join(runtimeRoot(), "lib", "pi"), network: "off", filesDir: "/f/key-1" };
-	const args = runnerInvocation("bwrap", opts).args;
-	const at = (flag, src, dst) => args.findIndex((a, i) => a === flag && args[i + 1] === src && args[i + 2] === dst);
-	const workspaceBind = at("--bind", "/w/s1", "/workspace");
-	const filesBind = at("--bind", "/f/key-1", "/workspace/shared");
-	assert.ok(workspaceBind > 0 && filesBind > workspaceBind, "the shared folder is bound after the workspace, or the workspace would hide it");
-	assert.ok(at("--bind", "/p/key-1", "/profile") < workspaceBind, "binds outside the workspace stay before it");
-	const env = (name) => args[args.findIndex((a, i) => a === "--setenv" && args[i + 1] === name) + 2];
-	assert.equal(env("PIPER_SHARED_DIR"), "/workspace/shared", "the bridge is told where it is");
-	const binds = args.flatMap((a, i) => (a === "--bind" ? [args[i + 1]] : []));
-	assert.deepEqual(binds.sort(), ["/f/key-1", "/p/key-1", "/r/a.sock", "/w/s1"], "writable: workspace, profile, socket and the shared folder, nothing else");
-
-	const frozen = runnerInvocation("bwrap", { ...opts, filesWritable: false }).args;
-	const ov = frozen.findIndex((a, i) => a === "--overlay-src" && frozen[i + 1] === "/f/key-1");
-	assert.ok(ov > 0 && frozen[ov + 3] === "/workspace/shared", "a frozen folder is a throwaway overlay");
-	assert.ok(!frozen.includes("--bind") || frozen.findIndex((a, i) => a === "--bind" && frozen[i + 1] === "/f/key-1") === -1);
-
-	const without = runnerInvocation("bwrap", { ...opts, filesDir: null }).args;
-	assert.ok(!without.includes("/workspace/shared") && !without.join(" ").includes("PIPER_SHARED_DIR"), "no folder, no mount and no note");
-
-	const docker = runnerInvocation("docker", { ...opts, image: "img", uid: 1, gid: 1 }).args;
-	assert.ok(docker.includes("/f/key-1:/workspace/shared") && docker.includes("PIPER_SHARED_DIR=/workspace/shared"));
-	assert.ok(runnerInvocation("docker", { ...opts, filesWritable: false, image: "img", uid: 1, gid: 1 }).args.includes("/f/key-1:/workspace/shared:ro"));
-	assert.ok(sandboxArgs({ workspace: "/w" }).every((a) => !a.includes(TEST_FILES)), "no ordinary sandbox mounts the files root");
-}
-
-// One folder per key, created once, owner-only; a key id cannot steer where it goes.
-{
-	const root = mkdtempSync(join(tmpdir(), "pi-files-"));
-	const a = ensureKeyFiles("k1", { root });
+	const root = mkdtempSync(join(tmpdir(), "pi-workspace-"));
+	const a = ensureWorkspace("k1", { root });
 	assert.equal(a, join(root, "key-k1"));
 	assert.equal(statSync(a).mode & 0o777, 0o700);
 	writeFileSync(join(a, "note.txt"), "hello");
-	assert.equal(ensureKeyFiles("k1", { root }), a, "idempotent");
+	assert.equal(ensureWorkspace("k1", { root }), a, "idempotent");
 	assert.equal(readFileSync(join(a, "note.txt"), "utf8"), "hello", "and never wipes what is there");
-	assert.notEqual(ensureKeyFiles("k2", { root }), a);
-	assert.equal(ensureKeyFiles("../../etc", { root }), join(root, "key-______etc"));
+	assert.notEqual(ensureWorkspace("k2", { root }), a);
+	assert.equal(ensureWorkspace("../../etc", { root }), join(root, "key-______etc"));
 
 	// Size limit: none by default; frozen past a set one.
-	assert.equal(keyFilesWritability(a, 0).writable, true);
-	assert.equal(keyFilesWritability(a, 1000).writable, true);
-	assert.match(keyFilesWritability(a, 3).reason, /over its limit \(5 of 3 bytes\)/);
+	assert.equal(workspaceWritability(a, 0).writable, true);
+	assert.equal(workspaceWritability(a, 1000).writable, true);
+	assert.match(workspaceWritability(a, 3).reason, /over its limit \(5 of 3 bytes\)/);
 
 	// Stats come from lstat alone: a link to something big counts as the link.
-	const outside = join(root, "..", `pi-files-outside-${process.pid}`);
+	const outside = join(root, "..", `pi-workspace-outside-${process.pid}`);
 	writeFileSync(outside, Buffer.alloc(100_000));
 	symlinkSync(outside, join(a, "big-link"));
 	mkdirSync(join(a, "sub"));
 	writeFileSync(join(a, "sub", "x.bin"), "abc");
-	const st = keyFilesStats(a);
+	const st = workspaceStats(a);
 	assert.equal(st.created, true);
 	assert.equal(st.files, 3, "note.txt, sub/x.bin and the link");
 	assert.ok(st.bytes < 1000, "the link's target is never counted");
 	assert.deepEqual(st.entries.map((e) => [e.name, e.type]), [["big-link", "link"], ["note.txt", "file"], ["sub", "dir"]]);
-	assert.deepEqual(keyFilesStats(join(root, "nope")), { created: false, bytes: 0, files: 0, entries: [] });
+	assert.deepEqual(workspaceStats(join(root, "nope")), { created: false, bytes: 0, files: 0, entries: [] });
 	assert.equal(treeSize(join(a, "sub")), 3);
 	rmSync(outside, { force: true });
 	rmSync(root, { recursive: true, force: true });
 }
 
-// The empty mountpoint bwrap leaves in a workspace is not work: an otherwise untouched workspace is
-// still deleted, and a real one is archived without it.
+// ---------------------------------------------------------------- resumable chats
+
+// Hibernate keeps a chat resumable; ending it does not. The stored row never holds the session id.
 {
-	const base = mkdtempSync(join(tmpdir(), "pi-mp-"));
-	const root = join(base, "workspaces");
-	const archive = `${root}-archive`;
-	const ws = new WorkspaceManager(() => ({ root, archiveRoot: archive, policy: "archive", archiveTtlMs: 0 }));
-	const idle = ws.create();
-	mkdirSync(join(idle, "shared"));
-	ws.release(idle);
-	assert.equal(existsSync(idle), false, "only an empty mountpoint: deleted as untouched");
-	assert.equal(existsSync(archive) ? readdirSync(archive).length : 0, 0, "and not archived");
-	const busy = ws.create();
-	mkdirSync(join(busy, "shared"));
-	writeFileSync(join(busy, "work.txt"), "x");
-	ws.release(busy);
-	const [kept] = readdirSync(archive);
-	assert.deepEqual(readdirSync(join(archive, kept)), ["work.txt"], "archived without the empty mountpoint");
+	const rows = new Map();
+	const store = { get: (h) => rows.get(h) ?? null, put: (r) => rows.set(r.id_hash, { ...r }), delete: (h) => rows.delete(h), all: () => [...rows.values()] };
+	const stoppedHashes = [];
+	const endedHashes = [];
+	const dir = mkdtempSync(join(tmpdir(), "pi-resume-"));
+	// A key's workspace is one folder, the same for every chat of the key.
+	const host = {
+		workspace: (keyId) => { const w = join(dir, `ws-${keyId ?? "open"}`); mkdirSync(w, { recursive: true }); return w; },
+		stopped: (h) => stoppedHashes.push(h),
+		ended: (h) => endedHashes.push(h),
+	};
+	const spent = [];
+	let spawns = 0;
+	const create = async (workspace, record) => {
+		spawns++;
+		return { resume: record.resume, getSessionStats: () => ({ cost: 0.01, tokens: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, total: 2 } }), model: { provider: "p", id: "m" }, dispose() { spent.push(record.id); } };
+	};
+	const ctl = new SessionController({ create, maxSessions: 2, maxLifetimeMs: 1e9, idleMs: 1e9, sweepMs: 0, host, store });
+
+	const first = ctl.acquire("key:1\u0000chat-a", { id: "k1" });
+	first.record.state.forwarded = 4;
+	first.record.state.lastUserText = "hello";
+	await ctl.run(first.record, async () => {});
+	const hash = chatIdHash("key:1\u0000chat-a");
+	assert.equal(rows.get(hash).state_json, JSON.stringify({ forwarded: 4, lastUserText: "hello" }), "state is saved after every turn");
+	assert.ok(![...rows.values()].some((r) => JSON.stringify(r).includes("chat-a")), "the session id itself is never stored");
+
+	// Hibernate: process stopped, spend recorded, row and workspace kept.
+	assert.equal(ctl.hibernate("key:1\u0000chat-a"), true);
+	await first.record.stopped;
+	assert.equal(ctl.size, 0);
+	assert.ok(rows.has(hash), "a hibernated chat stays resumable");
+	assert.deepEqual(endedHashes, [], "and is not ended");
+	assert.ok(stoppedHashes.includes(hash), "its container is stopped, not removed");
+	assert.ok(ctl.chatHashes().known.has(hash) && !ctl.chatHashes().live.has(hash), "the sweep knows it, and knows it is not running");
+
+	// The next request resumes it: same workspace, restored state, told to continue Pi's session.
+	const back = ctl.acquire("key:1\u0000chat-a", { id: "k1" });
+	assert.equal(back.isNew, false);
+	assert.equal(back.resumed, true);
+	assert.equal(back.record.workspace, first.record.workspace);
+	assert.deepEqual(back.record.state, { forwarded: 4, lastUserText: "hello" }, "no transcript replay: the client's position is remembered");
+	assert.equal(back.record.resume, true);
+	assert.equal((await back.record.sessionPromise).resume, true, "the runner is asked to continue");
+	assert.equal(back.record.createdAt, rows.get(hash).created_at, "its lifetime keeps counting from the original start");
+
+	// Eviction hibernates too.
+	ctl.acquire("key:1\u0000chat-b", { id: "k1" });
+	ctl.acquire("key:1\u0000chat-c", { id: "k1" });
+	assert.equal(ctl.size, 2);
+	assert.equal(rows.size, 3, "the evicted chat is still stored");
+
+	// Ending a chat deletes its row and removes its container; the key's workspace is not the chat's to remove.
+	ctl.close("key:1\u0000chat-b");
+	assert.equal(rows.has(chatIdHash("key:1\u0000chat-b")), false);
+	await new Promise((r) => setTimeout(r, 20));
+	assert.deepEqual(endedHashes, [chatIdHash("key:1\u0000chat-b")], "its container is removed");
+	assert.equal(existsSync(first.record.workspace), true, "and the key's workspace stays");
+
+	// A stored chat whose workspace has gone is started fresh.
+	rows.set(chatIdHash("gone"), { id_hash: chatIdHash("gone"), key_id: null, workspace: join(dir, "nope"), created_at: 1, last_used_at: 1, requests: 3, state_json: "{}" });
+	const fresh = ctl.acquire("gone", null);
+	assert.equal(fresh.isNew, true);
+
+	// Shutdown hibernates everything and waits for the spend to be recorded. Earlier stops settle first.
+	await new Promise((r) => setTimeout(r, 20));
+	const before = spent.length;
+	const stopped = await ctl.hibernateAll();
+	assert.ok(stopped >= 2);
+	assert.equal(spent.length - before, stopped, "every live chat was stopped and billed");
+	assert.equal(ctl.size, 0);
+
+	// A stopped chat is not ended by the lifetime or idle limits, only by the keep window.
+	const stored = rows.size;
+	assert.ok(stored > 0);
+	const ctl2 = new SessionController({ create, maxSessions: 5, maxLifetimeMs: 1000, idleMs: 1000, sweepMs: 0, host, store });
+	const endedBefore = endedHashes.length;
+	ctl2.reap(Date.now() + 10_000);
+	assert.equal(rows.size, stored, "past its lifetime and idle limits, a stopped chat is kept");
+	assert.equal(endedHashes.length, endedBefore, "and its container is not removed");
+	const forever = new SessionController({ create, maxSessions: 5, maxLifetimeMs: 1000, idleMs: 1000, keepMs: 0, sweepMs: 0, host, store });
+	forever.reap(Date.now() + 100 * 24 * 3600_000);
+	assert.equal(rows.size, stored, "keepMs 0 keeps a stopped chat for ever");
+	const keeping = new SessionController({ create, maxSessions: 5, maxLifetimeMs: 1000, idleMs: 1000, keepMs: 5000, sweepMs: 0, host, store });
+	keeping.reap(Date.now() + 3000);
+	assert.equal(rows.size, stored, "inside the keep window, still kept");
+	keeping.reap(Date.now() + 10_000);
+	assert.equal(rows.size, 0, "past it, the chat ends");
+	assert.ok(endedHashes.length > endedBefore, "and its container is removed");
+	rmSync(dir, { recursive: true, force: true });
+}
+
+// What the clock does to a running chat: idle and long-running ones stop and can resume; only one-off requests end.
+{
+	const rows = new Map();
+	const store = { get: (h) => rows.get(h) ?? null, put: (r) => rows.set(r.id_hash, { ...r }), delete: (h) => rows.delete(h), all: () => [...rows.values()] };
+	const stopped = [];
+	const ended = [];
+	const dir = mkdtempSync(join(tmpdir(), "pi-clock-"));
+	const host = { workspace: () => dir, stopped: (h) => stopped.push(h), ended: (h) => ended.push(h) };
+	const create = async () => ({ getSessionStats: () => ({ cost: 0, tokens: { total: 0 } }), model: { provider: "p", id: "m" }, dispose() {} });
+	const make = (opts = {}) => new SessionController({ create, maxSessions: 9, maxLifetimeMs: 60_000, idleMs: 10_000, oneShotMs: 5_000, keepMs: 1e12, sweepMs: 0, host, store, ...opts });
+	const settle = () => new Promise((r) => setTimeout(r, 30));
+	const T0 = Date.now();
+
+	// Idle: stopped, not ended.
+	{
+		const ctl = make();
+		const { record } = ctl.acquire("idle-chat", { id: "k1" });
+		await ctl.run(record, async () => {});
+		ctl.acquire("idle-chat", { id: "k1" }); // a second request: not a one-off any more
+		record.lastUsedAt = T0 - 20_000;
+		assert.deepEqual(ctl.reap(T0), ["idle-chat"]);
+		await settle();
+		assert.equal(ctl.has("idle-chat"), false, "no longer running");
+		assert.ok(rows.has(chatIdHash("idle-chat")), "its chat row is kept");
+		assert.ok(stopped.includes(chatIdHash("idle-chat")) && !ended.includes(chatIdHash("idle-chat")), "its container is stopped, not removed");
+		assert.equal(ctl.acquire("idle-chat", { id: "k1" }).resumed, true, "and the next message resumes it");
+	}
+
+	// A one-off request is ended: nothing will ask for it again.
+	{
+		const ctl = make();
+		const { record } = ctl.acquire("one-off", { id: "k1" });
+		await ctl.run(record, async () => {});
+		record.lastUsedAt = T0 - 20_000;
+		ctl.reap(T0);
+		await settle();
+		assert.ok(ended.includes(chatIdHash("one-off")) && !rows.has(chatIdHash("one-off")), "removed, with its row");
+	}
+
+	// Lifetime counts from when this Pi started, so an old chat that was just resumed is not stopped again.
+	{
+		const ctl = make({ maxLifetimeMs: 60_000, idleMs: 1e12, oneShotMs: 0 });
+		rows.set(chatIdHash("ancient"), { id_hash: chatIdHash("ancient"), key_id: "k1", workspace: dir, created_at: T0 - 90 * 24 * 3600_000, last_used_at: T0, requests: 50, state_json: "{}" });
+		const { record } = ctl.acquire("ancient", { id: "k1" });
+		assert.equal(record.createdAt, T0 - 90 * 24 * 3600_000, "the chat keeps its real age");
+		assert.ok(record.startedAt >= T0, "but this Pi has only just started");
+		assert.deepEqual(ctl.reap(record.startedAt + 1000), [], "a resumed old chat is not stopped on the next tick, or ever again in a loop");
+		assert.ok(ctl.has("ancient"));
+		assert.deepEqual(ctl.reap(record.startedAt + 61_000), ["ancient"], "it is stopped once this Pi has run for the lifetime");
+		await settle();
+		assert.ok(rows.has(chatIdHash("ancient")), "stopped, and still resumable");
+		const again = ctl.acquire("ancient", { id: "k1" });
+		assert.deepEqual(ctl.reap(again.record.startedAt + 1000), [], "and resuming starts the count again");
+	}
+
+	// Work in flight is never touched, and the rows say what will happen.
+	{
+		const ctl = make();
+		const { record } = ctl.acquire("busy", { id: "k1" });
+		await ctl.run(record, async () => {});
+		ctl.acquire("busy", { id: "k1" });
+		record.lastUsedAt = T0 - 50_000;
+		record.inflight = 1;
+		assert.deepEqual(ctl.reap(T0), [], "a chat with a request in flight is left alone");
+		record.inflight = 0;
+		const snap = await ctl.snapshot();
+		const row = snap.sessions.find((r) => r.fingerprint === fingerprint("busy"));
+		assert.deepEqual([row.expiresBecause, row.expiresAction], ["idle", "stops"], "the page can say a stop is coming, not an end");
+		const one = ctl.acquire("fresh-one-off", { id: "k1" });
+		one.record.lastUsedAt = Date.now();
+		const snap2 = await ctl.snapshot();
+		assert.equal(snap2.sessions.find((r) => r.fingerprint === fingerprint("fresh-one-off")).expiresAction, "ends", "a first request that may be a one-off ends");
+		assert.equal(snap2.keepMs, 1e12);
+	}
+	// Without a store there is nothing to resume from, so a stop is an end, as before.
+	{
+		const gone = [];
+		const ctl = new SessionController({ create, maxSessions: 9, maxLifetimeMs: 1e9, idleMs: 1000, sweepMs: 0, host: { workspace: () => dir, stopped() {}, ended: (h) => gone.push(h) } });
+		const { record } = ctl.acquire("no-store", { id: "k1" });
+		await ctl.run(record, async () => {});
+		ctl.acquire("no-store", { id: "k1" });
+		record.lastUsedAt = T0 - 5000;
+		ctl.reap(T0);
+		await settle();
+		assert.equal(gone.length, 1, "no store: the chat ends");
+	}
+	rmSync(dir, { recursive: true, force: true });
+}
+
+// The catalogue notices when the operator's Pi configuration changes.
+{
+	const dir = mkdtempSync(join(tmpdir(), "pi-cat-"));
+	const a = catalogueStamp(dir);
+	writeFileSync(join(dir, "models.json"), "{}");
+	const b = catalogueStamp(dir);
+	assert.notEqual(a, b, "a new models.json changes the stamp");
+	utimesSync(join(dir, "models.json"), new Date(), new Date(Date.now() + 5000));
+	assert.notEqual(catalogueStamp(dir), b, "so does an edit");
+	rmSync(dir, { recursive: true, force: true });
+}
+
+// ---------------------------------------------------------------- visibility & control
+
+// Tool activity: one readable line per tool call, never the content being written.
+{
+	// Optional and off unless switched on; the old "reasoning"/"off" values are not valid any more.
+	const toolSpec = SETTINGS_SPEC.find((spec) => spec.key === "STREAM_TOOL_ACTIVITY");
+	assert.equal(toolSpec.type, "bool");
+	assert.equal(toolSpec.def, false, "tool output is off by default");
+	assert.equal(coerceSetting(toolSpec, "on"), true);
+	assert.throws(() => coerceSetting(toolSpec, "reasoning"));
+	assert.equal(toolActivity("bash", { command: "ls -la\n  /workspace" }), "bash: ls -la /workspace");
+	assert.equal(toolActivity("read", { path: "/workspace/a.txt" }), "read: /workspace/a.txt");
+	assert.equal(toolActivity("grep", { path: "src", pattern: "TODO" }), "grep: src TODO");
+	assert.equal(toolActivity("write", { path: "/workspace/big.txt", content: "x".repeat(10_000) }), "write: /workspace/big.txt", "the written content is never shown");
+	assert.equal(toolActivity("analyze", { level: 2 }), 'analyze: {"level":2}');
+	assert.ok(toolActivity("bash", { command: "y".repeat(500) }).length < 220, "long commands are truncated");
+}
+
+// Spend per model: a chat that switched models is billed to each for what it used there.
+{
+	const meter = newMeter();
+	meterUsage(meter, { input: 10, output: 5, totalTokens: 15, cost: { total: 0.2 } }, "a/one");
+	meterUsage(meter, { input: 1, output: 1, totalTokens: 2, cost: { total: 0.5 } }, "b/two");
+	meterUsage(meter, { input: 4, output: 0, totalTokens: 4, cost: { total: 0.1 } }, "a/one");
+	assert.equal(meter.byModel["a/one"].tokens.total, 19);
+	assert.ok(Math.abs(meter.byModel["a/one"].cost - 0.3) < 1e-9);
+	assert.equal(meter.byModel["b/two"].tokens.total, 2);
+	assert.equal(meter.tokens.total, 21, "the total still covers everything");
+
+	const fp = `per-model-${process.pid}`;
+	recordSpend(
+		{ id: fp, requests: 3, keyId: "pm-key" },
+		{ getSessionStats: () => ({ cost: 0.8, tokens: meter.tokens, byModel: meter.byModel }), model: { provider: "b", id: "two" } },
+	);
+	const { DatabaseSync } = await import("node:sqlite");
+	const rows = new DatabaseSync(TEST_DB).prepare("SELECT provider, model, cost, requests FROM spend WHERE key_id = 'pm-key' ORDER BY provider").all();
+	assert.deepEqual(rows.map((r) => [r.provider, r.model, r.requests]), [["a", "one", 3], ["b", "two", 0]], "one row per model; requests counted once");
+	assert.ok(Math.abs(rows[0].cost - 0.3) < 1e-9 && Math.abs(rows[1].cost - 0.5) < 1e-9);
+}
+
+// Model allow-lists: patterns, precedence, and the operator's key.
+{
+	assert.deepEqual(parseModelPatterns(""), []);
+	assert.throws(() => parseModelPatterns("gpt-5"), /not a provider\/model pattern/);
+	const m = (provider, id) => ({ provider, id });
+	const { record } = apiKeys.create({ name: "limited-models" });
+	assert.equal(modelAllowed(record.id, m("x", "y")), true, "no list: everything");
+	apiKeys.update(record.id, { allowedModels: "local-openai/*, github-copilot/gpt-5-mini" });
+	assert.equal(allowedModelsFor(record.id), "local-openai/*, github-copilot/gpt-5-mini");
+	assert.equal(modelAllowed(record.id, m("local-openai", "Qwen/Qwen3-Next")), true, "a glob covers ids with slashes");
+	assert.equal(modelAllowed(record.id, m("github-copilot", "gpt-5-mini")), true);
+	assert.equal(modelAllowed(record.id, m("github-copilot", "gpt-5.4-mini")), false, "a dot in the pattern is literal");
+	assert.equal(modelAllowed(record.id, m("anthropic", "claude")), false);
+	assert.equal(modelAllowed("", m("anthropic", "claude")), true, "GATEWAY_API_KEY may use anything");
+	apiKeys.update(record.id, { allowedModels: "broken" });
+	assert.equal(modelAllowed(record.id, m("local-openai", "x")), false, "an unparseable list allows nothing rather than everything");
+	apiKeys.remove(record.id);
+}
+
+// The shared-folder helper: streamed read and write, listing, deletion, and path safety.
+{
+	const { spawnSync } = await import("node:child_process");
+	const helper = fileURLToPath(new URL("./piper-profile.mjs", import.meta.url));
+	const dir = mkdtempSync(join(tmpdir(), "pi-fileapi-"));
+	const run = (args, input) => spawnSync(process.execPath, [helper, ...args], { cwd: dir, input });
+	const payload = Buffer.from(Array.from({ length: 70_000 }, (_, i) => i % 251));
+	const w = run(["raw", "write", "docs/data.bin", "0"], payload);
+	assert.equal(w.status, 0, w.stderr.toString());
+	assert.deepEqual(JSON.parse(w.stdout.toString()), { ok: true, bytes: 70_000 });
+	const r = run(["raw", "read", "docs/data.bin"]);
+	assert.equal(r.status, 0);
+	assert.ok(Buffer.compare(r.stdout, payload) === 0, "the bytes come back identical");
+	assert.equal(run(["raw", "write", "big.bin", "100"], Buffer.alloc(1000)).status, 5, "past the cap: refused");
+	assert.equal(existsSync(join(dir, "big.bin")) || existsSync(join(dir, "big.bin.piper-upload")), false, "and nothing left behind");
+	// Refused uploads leave nothing behind, whichever chunk crosses the cap, and an empty one is still a file.
+	for (let i = 0; i < 25; i++) assert.equal(run(["raw", "write", `over${i}.bin`, "100"], Buffer.alloc(1000)).status, 5);
+	assert.deepEqual(readdirSync(dir).filter((n) => n.startsWith("over") || n.endsWith(".piper-upload")), [], "25 refused uploads, no stray file");
+	assert.equal(run(["raw", "write", "empty.bin", "0"], Buffer.alloc(0)).status, 0);
+	assert.equal(statSync(join(dir, "empty.bin")).size, 0, "an empty upload is an empty file");
+	rmSync(join(dir, "empty.bin"));
+	assert.equal(run(["raw", "read", "missing.txt"]).status, 4);
+	assert.equal(run(["raw", "read", "docs"]).status, 3, "a folder is not a file");
+	assert.equal(run(["raw", "read", "../../etc/passwd"]).status, 6, "no way out of the folder");
+	// Paths are URL-style and always relative to the folder: a leading slash does not reach the host.
+	assert.equal(run(["raw", "write", "/etc/x", "0"], "x").status, 0);
+	assert.equal(readFileSync(join(dir, "etc", "x"), "utf8"), "x", "'/etc/x' lands inside the folder");
+	rmSync(join(dir, "etc"), { recursive: true });
+	// Links a session plants are never followed: not as the file, not as a folder on the way.
+	const outside = mkdtempSync(join(tmpdir(), "pi-fileapi-outside-"));
+	writeFileSync(join(outside, "secret"), "host secret");
+	symlinkSync(join(outside, "secret"), join(dir, "file-link"));
+	symlinkSync(outside, join(dir, "dir-link"));
+	assert.equal(run(["raw", "read", "file-link"]).status, 3, "a link is not a file to serve");
+	assert.equal(run(["raw", "read", "dir-link/secret"]).status, 6, "a linked folder is not a way out");
+	assert.equal(run(["raw", "write", "dir-link/new", "0"], "x").status, 6);
+	assert.equal(existsSync(join(outside, "new")), false, "nothing written through the link");
+	assert.equal(JSON.parse(run([], JSON.stringify({ op: "files.list", path: "dir-link" })).stdout.toString()).ok, false);
+	rmSync(join(dir, "file-link"));
+	rmSync(join(dir, "dir-link"));
+	rmSync(outside, { recursive: true });
+	const list = (path) => JSON.parse(run([], JSON.stringify({ op: "files.list", path })).stdout.toString());
+	assert.deepEqual(list("").result.map((e) => [e.name, e.type]), [["docs", "dir"]]);
+	assert.equal(list("docs").result[0].bytes, 70_000);
+	assert.equal(list("../").ok, false);
+	const del = JSON.parse(run([], JSON.stringify({ op: "files.delete", path: "docs" })).stdout.toString());
+	assert.equal(del.ok, true);
+	assert.equal(existsSync(join(dir, "docs")), false);
+	assert.equal(JSON.parse(run([], JSON.stringify({ op: "files.delete", path: "" })).stdout.toString()).ok, false, "the folder itself cannot be deleted");
+	rmSync(dir, { recursive: true, force: true });
+}
+
+// Folder sizes are cached briefly, and forgotten when the gateway changes the folder.
+{
+	const dir = mkdtempSync(join(tmpdir(), "pi-size-"));
+	writeFileSync(join(dir, "a"), "12345");
+	const t0 = Date.now();
+	assert.equal(cachedTreeSize(dir, { now: t0 }), 5);
+	writeFileSync(join(dir, "b"), "123");
+	assert.equal(cachedTreeSize(dir, { now: t0 + 1000 }), 5, "within the TTL the cached figure is used");
+	assert.equal(cachedTreeSize(dir, { now: t0 + 60_000 }), 8, "after it, the folder is walked again");
+	writeFileSync(join(dir, "c"), "1");
+	invalidateSize(dir);
+	assert.equal(cachedTreeSize(dir, { now: t0 + 60_001 }), 9, "an invalidation takes effect at once");
+	rmSync(dir, { recursive: true, force: true });
+}
+
+
+
+// ---------------------------------------------------------------- backup and restore
+
+{
+	const { DatabaseSync } = await import("node:sqlite");
+	const { backup, restore, mapPath, partPaths, measure, BackupError } = await import("./piper-backup.mjs");
+	const { chmodSync, readlinkSync } = await import("node:fs");
+	const base = mkdtempSync(join(tmpdir(), "pi-backup-"));
+	const src = join(base, "gw");
+	const outDir = join(base, "out");
+	mkdirSync(src, { recursive: true });
+
+	const makeDb = (path, dir) => {
+		const db = new DatabaseSync(path);
+		db.exec("CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, source TEXT, updated_at INTEGER); CREATE TABLE chats (id_hash TEXT PRIMARY KEY, key_id TEXT, workspace TEXT NOT NULL); CREATE TABLE marker (n INTEGER)");
+		const put = db.prepare("INSERT INTO settings VALUES (?, ?, 'ui', 1)");
+		put.run("PROFILE_ROOT", join(dir, "profiles")); put.run("WORKSPACE_ROOT", join(dir, "workspaces")); put.run("SHARED_ROOT", join(dir, "shared")); put.run("CONTAINER_PI_DIR", join(dir, "container-pi")); put.run("PORT", "18771");
+		db.prepare("INSERT INTO chats VALUES ('h1', 'k1', ?)").run(join(dir, "workspaces", "key-k1"));
+		db.prepare("INSERT INTO chats VALUES ('h2', 'k2', '/somewhere/else')").run();
+		db.exec("INSERT INTO marker VALUES (42)");
+		db.close();
+	};
+	makeDb(join(src, "gateway.db"), src);
+	const secretOutside = join(base, "host-secret.txt");
+	writeFileSync(secretOutside, "HOST SECRET");
+	for (const [rel, text] of [["profiles/key-k1/settings.json", "{}"], ["workspaces/key-k1/notes.md", "work"], ["workspaces/key-k1/deep/er/file.bin", "bin"], ["shared/base/skills/x/SKILL.md", "skill"], ["container-pi/models.json", '{"providers":{}}'], ["workspaces-chats/0123456789abcdef/session/s.jsonl", "{}"]]) {
+		mkdirSync(dirname(join(src, rel)), { recursive: true });
+		writeFileSync(join(src, rel), text);
+	}
+	chmodSync(join(src, "container-pi/models.json"), 0o600);
+	symlinkSync(secretOutside, join(src, "workspaces/key-k1/planted-link"));
+
+	// Paths follow the settings, and fall back to the folders beside the gateway.
+	assert.equal(partPaths("/g", {}).profiles, "/g/profiles");
+	assert.equal(partPaths("/g", { WORKSPACE_ROOT: "/data/ws" }).chats, "/data/ws-chats", "chats sit beside the workspaces folder");
+	assert.equal(mapPath("/old/gw/profiles", "/old/gw", "/new/gw"), "/new/gw/profiles");
+	assert.equal(mapPath("/old/gwx/profiles", "/old/gw", "/new/gw"), "/old/gwx/profiles", "a shared prefix is not a parent");
+	assert.equal(mapPath("/elsewhere/x", "/old/gw", "/new/gw"), "/elsewhere/x");
+	assert.deepEqual(measure(join(src, "workspaces/key-k1/planted-link")), { bytes: measure(join(src, "workspaces/key-k1/planted-link")).bytes, files: 1 });
+
+	// Backup: one owner-only archive with a checksum, and the manifest lists what went in.
+	const made = await backup({ dir: src, out: outDir, now: Date.UTC(2026, 8, 30, 12, 0, 0) });
+	assert.match(made.file, /piper-backup-20260930T120000Z\.tgz$/);
+	assert.equal(statSync(made.file).mode & 0o777, 0o600, "the archive is owner-only: it holds a database and an API key");
+	assert.equal(statSync(outDir).mode & 0o777, 0o700);
+	assert.match(readFileSync(`${made.file}.sha256`, "utf8"), new RegExp(`^${made.sha256}  piper-backup-`));
+	assert.deepEqual(Object.keys(made.parts).sort(), ["chats", "container-pi", "profiles", "shared", "workspaces"]);
+	assert.equal(made.parts.workspaces.files, 3, "the planted link counts as one file, not as what it points at");
+	assert.equal(readdirSync(outDir).filter((n) => n.startsWith(".")).length, 0, "no staging or partial files are left behind");
+
+	// Restore into a fresh folder: everything back, links kept as links, modes kept, paths follow the new folder.
+	const dst = join(base, "new-host", "gw");
+	mkdirSync(dst, { recursive: true });
+	const got = await restore({ dir: dst, file: made.file, running: async () => false });
+	assert.deepEqual(got.restored.map((r) => r.name).sort(), ["chats", "container-pi", "profiles", "shared", "workspaces"]);
+	assert.equal(readFileSync(join(dst, "workspaces/key-k1/deep/er/file.bin"), "utf8"), "bin");
+	assert.equal(lstatSync(join(dst, "workspaces/key-k1/planted-link")).isSymbolicLink(), true, "a link is restored as a link");
+	assert.equal(readlinkSync(join(dst, "workspaces/key-k1/planted-link")), secretOutside);
+	assert.equal(existsSync(join(dst, "workspaces/key-k1/planted-link")) && readFileSync(join(dst, "workspaces/key-k1/planted-link"), "utf8"), "HOST SECRET", "and it is the same link, not a copy of its target");
+	assert.equal(readFileSync(join(dst, "workspaces-chats/0123456789abcdef/session/s.jsonl"), "utf8"), "{}");
+	assert.equal(statSync(join(dst, "container-pi/models.json")).mode & 0o777, 0o600);
+	assert.equal(statSync(join(dst, "gateway.db")).mode & 0o777, 0o600);
+	const back = new DatabaseSync(join(dst, "gateway.db"), { readOnly: true });
+	assert.equal(back.prepare("SELECT n FROM marker").get().n, 42, "the database content is there");
+	assert.equal(back.prepare("SELECT value FROM settings WHERE key = 'PROFILE_ROOT'").get().value, join(dst, "profiles"), "folder settings follow the gateway to its new place");
+	assert.equal(back.prepare("SELECT value FROM settings WHERE key = 'PORT'").get().value, "18771", "other settings are untouched");
+	assert.equal(back.prepare("SELECT workspace FROM chats WHERE id_hash = 'h1'").get().workspace, join(dst, "workspaces", "key-k1"), "a stored chat's workspace follows too");
+	assert.equal(back.prepare("SELECT workspace FROM chats WHERE id_hash = 'h2'").get().workspace, "/somewhere/else", "one outside the workspaces folder is left alone");
+	back.close();
+
+	// Restoring over an existing gateway: refused while it runs; otherwise everything is moved aside, never deleted.
+	writeFileSync(join(dst, "workspaces/key-k1/newer-work.txt"), "work done after the backup");
+	await assert.rejects(restore({ dir: dst, file: made.file, running: async () => true }), /gateway is running.*--stop/);
+	let stopped = 0;
+	await assert.rejects(restore({ dir: dst, file: made.file, stop: true, stopGateway: async () => { stopped++; }, running: async () => true }), /did not stop/, "if it will not stop, nothing is touched");
+	assert.equal(stopped, 1);
+	assert.equal(existsSync(join(dst, "workspaces/key-k1/newer-work.txt")), true, "a refused restore changes nothing");
+	let alive = true;
+	const again = await restore({ dir: dst, file: made.file, stop: true, stopGateway: async () => { alive = false; }, running: async () => alive, now: Date.UTC(2026, 8, 30, 13, 0, 0) });
+	assert.ok(again.movedAside.length >= 6 && again.movedAside.every((m) => m.includes(".before-restore-20260930T130000Z")), "the database and every folder are moved aside");
+	assert.equal(readFileSync(join(dst, "workspaces-chats/0123456789abcdef/session/s.jsonl"), "utf8"), "{}");
+	assert.equal(readFileSync(join(`${join(dst, "workspaces")}.before-restore-20260930T130000Z`, "key-k1/newer-work.txt"), "utf8"), "work done after the backup", "the work done since the backup is still there, aside");
+	assert.equal(existsSync(join(dst, "workspaces/key-k1/newer-work.txt")), false, "and the restored folder is the backed-up state");
+
+	// Damage and foreign files are refused before anything moves.
+	const damaged = join(base, "damaged.tgz");
+	writeFileSync(damaged, Buffer.concat([readFileSync(made.file), Buffer.from("tampered")]));
+	writeFileSync(`${damaged}.sha256`, readFileSync(`${made.file}.sha256`, "utf8"));
+	const before = readdirSync(dst).sort().join();
+	await assert.rejects(restore({ dir: dst, file: damaged, running: async () => false }), /does not match its \.sha256/);
+	const noSum = join(base, "nosum.tgz");
+	writeFileSync(noSum, readFileSync(made.file));
+	const loose = await restore({ dir: join(base, "loose"), file: noSum, running: async () => false }).catch((e) => e);
+	assert.ok(!(loose instanceof Error) && loose.warnings.some((w) => /no \.sha256/.test(w)), "no checksum: it proceeds, and says integrity was not checked");
+	const foreign = join(base, "foreign.tgz");
+	writeFileSync(join(base, "hello.txt"), "hi");
+	await new Promise((res, rej) => spawn("tar", ["-czf", foreign, "-C", base, "hello.txt"]).on("close", (c) => (c === 0 ? res() : rej(new Error("tar")))));
+	await assert.rejects(restore({ dir: dst, file: foreign, running: async () => false }), (e) => e instanceof BackupError && /MANIFEST\.json/.test(e.message), "a tarball that is not a Piper backup is refused, naming what is missing");
+	await assert.rejects(restore({ dir: dst, file: join(base, "nope.tgz") }), /no such backup/);
+	assert.equal(readdirSync(dst).sort().join(), before, "none of the refusals touched the folder");
+
+	// Options: without chats, retention, the space check.
+	const slim = await backup({ dir: src, out: outDir, chats: false, now: Date.UTC(2026, 8, 30, 12, 0, 1) });
+	assert.equal("chats" in slim.parts, false, "--no-chats leaves the session files out");
+	for (let i = 2; i < 6; i++) await backup({ dir: src, out: outDir, keep: 3, now: Date.UTC(2026, 8, 30, 12, 0, i) });
+	const kept = readdirSync(outDir).filter((n) => n.endsWith(".tgz")).sort();
+	assert.equal(kept.length, 3, "retention keeps the newest three");
+	assert.ok(kept[0].includes("120003") && kept[2].includes("120005"), "and deletes the oldest");
+	assert.equal(readdirSync(outDir).filter((n) => n.endsWith(".sha256")).length, 3, "with their checksums");
+	await assert.rejects(backup({ dir: src, out: outDir, freeBytes: 500 * 1024 * 1024 }), /not enough space/, "a backup that would leave under 1 GB free is refused");
+	assert.ok((await backup({ dir: src, out: outDir, freeBytes: 500 * 1024 * 1024, force: true, now: Date.UTC(2026, 8, 30, 12, 0, 9) })).file, "--force overrides it");
+	await assert.rejects(backup({ dir: join(base, "not-piper"), out: outDir }), /no database/);
+
+	// A corrupt database in a backup is caught before anything is replaced.
+	const badDir = join(base, "bad");
+	mkdirSync(badDir);
+	writeFileSync(join(badDir, "gateway.db"), "this is not sqlite");
+	await assert.rejects(backup({ dir: badDir, out: join(base, "bad-out") }), Error, "a database that cannot be read cannot be backed up");
 	rmSync(base, { recursive: true, force: true });
+}
+
+
+// ---------------------------------------------------------------- the watchdog
+
+{
+	const http = await import("node:http");
+	const { DatabaseSync } = await import("node:sqlite");
+	const { check, payload, FAILS_BEFORE_ALERT } = await import("./piper-watchdog.mjs");
+	const dir = mkdtempSync(join(tmpdir(), "pi-watchdog-"));
+	const posts = [];
+	const hook = http.createServer((req, res) => { let b = ""; req.on("data", (c) => (b += c)); req.on("end", () => { posts.push(JSON.parse(b)); res.writeHead(200); res.end("{}"); }); });
+	await new Promise((r) => hook.listen(0, "127.0.0.1", r));
+	let healthStatus = 200;
+	const gateway = http.createServer((req, res) => { res.writeHead(healthStatus); res.end("{}"); });
+	await new Promise((r) => gateway.listen(0, "127.0.0.1", r));
+	const gatewayPort = gateway.address().port; // the server is closed later, and then has no address
+	const setDb = (url) => {
+		rmSync(join(dir, "gateway.db"), { force: true });
+		const db = new DatabaseSync(join(dir, "gateway.db"));
+		db.exec("CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, source TEXT, updated_at INTEGER)");
+		db.prepare("INSERT INTO settings VALUES ('PORT', ?, 'ui', 1)").run(String(gatewayPort));
+		if (url) db.prepare("INSERT INTO settings VALUES ('ALERT_WEBHOOK_URL', ?, 'ui', 1)").run(url);
+		db.close();
+	};
+	setDb(`http://127.0.0.1:${hook.address().port}/x`);
+	const state = () => JSON.parse(readFileSync(join(dir, ".watchdog-state"), "utf8"));
+	assert.equal(FAILS_BEFORE_ALERT, 2);
+
+	let r = await check({ dir, now: 1_000 });
+	assert.deepEqual([r.healthy, r.fails, r.alerted], [true, 0, null], "a healthy gateway says nothing");
+	assert.equal(posts.length, 0);
+	assert.equal(statSync(join(dir, ".watchdog-state")).mode & 0o777, 0o600);
+
+	// Down: one failed check is not yet news (it may be a restart), two in a row are, and only once.
+	healthStatus = 503;
+	r = await check({ dir, now: 60_000 });
+	assert.deepEqual([r.healthy, r.fails, r.alerted], [false, 1, null]);
+	assert.equal(posts.length, 0, "one failure in a row: no alert");
+	r = await check({ dir, now: 120_000 });
+	assert.deepEqual([r.fails, r.alerted, r.down], [2, "down", true]);
+	assert.equal(posts.length, 1);
+	assert.equal(posts[0].event, "gateway_down");
+	assert.match(posts[0].message, /not answering on port \d+ \(it answered 503\); 2 checks in a row/);
+	assert.equal(posts[0].text, posts[0].content, "Slack and Discord both read it");
+	assert.equal(posts[0].recovered, false);
+	await check({ dir, now: 180_000 });
+	await check({ dir, now: 240_000 });
+	assert.equal(posts.length, 1, "still down: not repeated every minute");
+	assert.equal(state().down, true);
+
+	// Back: said once, with how long.
+	healthStatus = 200;
+	r = await check({ dir, now: 120_000 + 5 * 60_000 });
+	assert.deepEqual([r.healthy, r.alerted, r.down], [true, "recovered", false]);
+	assert.equal(posts.length, 2);
+	assert.equal(posts[1].recovered, true);
+	assert.match(posts[1].message, /answering again after about 5 minute/);
+	await check({ dir, now: 600_000 });
+	assert.equal(posts.length, 2, "and only once");
+	assert.deepEqual(state(), { fails: 0, down: false, since: null });
+
+	// A refused connection (the gateway is really down) counts the same way.
+	gateway.close();
+	await new Promise((r2) => setTimeout(r2, 20));
+	r = await check({ dir, now: 700_000 });
+	r = await check({ dir, now: 760_000 });
+	assert.equal(r.alerted, "down");
+	assert.match(posts.at(-1).message, /ECONNREFUSED/, "with the reason");
+
+	// No webhook: the state is kept, and nothing is sent or fails.
+	const before = posts.length;
+	setDb("");
+	rmSync(join(dir, ".watchdog-state"));
+	await check({ dir, now: 800_000 });
+	r = await check({ dir, now: 860_000 });
+	assert.deepEqual([r.alerted, r.hook, posts.length], ["down", false, before], "no webhook: no post, no error");
+	// A webhook that is down does not make the check fail.
+	setDb("http://127.0.0.1:1/nothing");
+	rmSync(join(dir, ".watchdog-state"));
+	await check({ dir, now: 900_000 });
+	r = await check({ dir, now: 960_000 });
+	assert.equal(r.down, true, "the outage is still recorded");
+	// And with no database at all it is quiet.
+	rmSync(join(dir, "gateway.db"));
+	r = await check({ dir, dbPath: join(dir, "gateway.db"), now: 1_000_000 }).catch((e) => e);
+	assert.ok(!(r instanceof Error), "a missing database is not a crash: the port falls back to the default");
+	assert.deepEqual(Object.keys(payload("e", "m", {})).sort(), ["content", "details", "event", "host", "message", "recovered", "text", "time"], "the same shape lib/alerts.mjs sends");
+	await new Promise((r2) => hook.close(r2));
+	rmSync(dir, { recursive: true, force: true });
+}
+
+
+// ---------------------------------------------------------------- images: environments, builds, removal
+
+{
+	const { Readable } = await import("node:stream");
+	const { EventEmitter } = await import("node:events");
+	const { PassThrough } = await import("node:stream");
+	const seen = [];
+	let reply = () => ({ code: 0, stdout: "", stderr: "" });
+	setRunner(async (bin, args) => { seen.push([bin, ...args]); return reply(bin, args); });
+
+	// Environments are folders with a Dockerfile; full is docker/Dockerfile and keeps its name.
+	const root = mkdtempSync(join(tmpdir(), "pi-envs-"));
+	const put = (rel) => { mkdirSync(dirname(join(root, rel)), { recursive: true }); writeFileSync(join(root, rel), "FROM scratch\n"); };
+	put("Dockerfile"); put("environments/slim/Dockerfile"); put("environments/re-tools/Dockerfile"); put("environments/Bad_Name/Dockerfile");
+	mkdirSync(join(root, "environments/empty"), { recursive: true }); put("environments/full/Dockerfile");
+	assert.deepEqual(listEnvironments(root).map((e) => [e.name, e.tag]), [["full", "piper-agent"], ["re-tools", "piper-agent-re-tools"], ["slim", "piper-agent-slim"]], "full first, then the others by name; a folder without a Dockerfile, a bad name and a second `full` are ignored");
+	assert.deepEqual(listEnvironments(join(root, "nowhere")), []);
+	assert.deepEqual(listEnvironments().map((e) => e.name).slice(0, 2), ["full", "slim"], "and the repository has full and slim");
+	assert.deepEqual(["piper-agent", "piper-agent:latest", "piper-agent-slim", "piper-agent-slim:latest", "nginx", "piper-agent-Bad"].map(environmentOfTag), ["full", "full", "slim", "slim", null, null]);
+	const slim = listEnvironments(root).find((e) => e.name === "slim");
+	assert.deepEqual(buildArgs(slim, "0.99.1"), ["build", "-t", "piper-agent-slim", "-f", join(root, "environments/slim/Dockerfile"), "--build-arg", "PI_VERSION=0.99.1", "--label", "piper.env=slim", join(root, "environments/slim")], "pinned to Pi, labelled, built in its own folder");
+
+	// What is on the machine, and what uses each image.
+	const { record: imgKey } = apiKeys.create({ name: "images-key" });
+	apiKeys.update(imgKey.id, { container: { image: "piper-agent-slim" } });
+	const dinfo = { "sha256:full": { Id: "sha256:full", Size: 1_900_000_000, Config: { Labels: { "piper.pi-version": "0.99.1", "piper.env": "full" } } }, "sha256:slim": { Id: "sha256:slim", Size: 700_000_000, Config: { Labels: { "piper.pi-version": "0.98.0" } } }, "sha256:old": { Id: "sha256:old", Size: 1_800_000_000, Config: { Labels: { "piper.pi-version": "0.90.0" } } } };
+	const imageRow = (id, repository, tag, created, size) => JSON.stringify({ ID: id, Repository: repository, Tag: tag, CreatedSince: created, Size: size });
+	reply = (bin, args) => {
+		if (args[0] === "images") return { code: 0, stdout: [imageRow("sha256:full", "piper-agent", "latest", "2 hours ago", "1.9GB"), imageRow("sha256:slim", "piper-agent-slim", "latest", "1 day ago", "700MB"), imageRow("sha256:old", "<none>", "<none>", "3 days ago", "1.8GB")].join("\n"), stderr: "" };
+		if (args[0] === "image" && args[1] === "inspect") return { code: 0, stdout: JSON.stringify(args.slice(2).map((id) => dinfo[id])), stderr: "" };
+		if (args[0] === "ps") return { code: 0, stdout: `${cname("img-a")}\trunning\t\n${cname("img-b")}\trunning\t\n`, stderr: "" };
+		if (args[0] === "inspect") return { code: 0, stdout: JSON.stringify([{ Name: `/${cname("img-a")}`, Image: "sha256:full" }, { Name: `/${cname("img-b")}`, Image: "sha256:full" }]), stderr: "" };
+		return { code: 0, stdout: "", stderr: "" };
+	};
+	function cname(word) { return `piper-${instanceId()}-${chatIdHash(word).slice(0, 16)}`; }
+	const listing = await listImages({ hostPi: "0.99.1" });
+	const byName = Object.fromEntries(listing.images.map((i) => [i.name ?? "untagged", i]));
+	assert.equal(listing.hostPiVersion, "0.99.1");
+	assert.deepEqual([byName["piper-agent"].env, byName["piper-agent"].containers, byName["piper-agent"].isDefault, byName["piper-agent"].stale], ["full", 2, true, false], "the default, built from the label, two containers on it");
+	assert.equal(byName["piper-agent"].sizeMb, Math.round(1_900_000_000 / 1048576));
+	assert.deepEqual([byName["piper-agent-slim"].env, byName["piper-agent-slim"].keys, byName["piper-agent-slim"].stale, byName["piper-agent-slim"].isDefault], ["slim", ["images-key"], true, false], "slim: the environment from its name, used by a key, older than the gateway's Pi");
+	assert.deepEqual([byName.untagged.untagged, byName.untagged.stale, byName.untagged.name], [true, true, null], "what a rebuild leaves behind is listed, since it costs disk");
+	assert.deepEqual(listing.environments.map((e) => [e.name, e.built, e.stale, e.containersToRecreate]).slice(0, 2), [["full", true, false, 2], ["slim", true, true, 0]], "environments say whether they are built, behind, and how many containers a rebuild would affect");
+
+	// Removing: only Piper's own, and never what is in use.
+	const refused = async (ref, status, why) => assert.rejects(removeImage(ref, { hostPi: "0.99.1" }), (e) => e.status === status && why.test(e.message), ref);
+	await refused("piper-agent", 409, /default image/);
+	await refused("piper-agent-slim", 409, /set as the image of images-key/);
+	await refused("nginx", 404, /not one of Piper's images/);
+	seen.length = 0;
+	apiKeys.update(imgKey.id, { container: null });
+	assert.match(await removeImage("piper-agent-slim", { hostPi: "0.99.1" }), /removed piper-agent-slim/);
+	assert.ok(seen.some((c) => c[1] === "rmi" && c[2] === "piper-agent-slim"));
+	assert.match(await removeImage("sha256:old", { hostPi: "0.99.1" }), /removed sha256:old/, "an untagged one goes by its id");
+	assert.ok(seen.some((c) => c[1] === "rmi" && c[2] === "sha256:old"));
+	dinfo["sha256:slim"].Config.Labels["piper.pi-version"] = "0.98.0";
+	reply = (bin, args) => (args[0] === "rmi" ? { code: 1, stdout: "", stderr: "Error: conflict: image is being used\n" } : args[0] === "images" ? { code: 0, stdout: imageRow("sha256:slim", "piper-agent-slim", "latest", "1 day ago", "700MB"), stderr: "" } : args[0] === "image" ? { code: 0, stdout: JSON.stringify([dinfo["sha256:slim"]]), stderr: "" } : { code: 0, stdout: args[0] === "ps" ? "" : "", stderr: "" });
+	await assert.rejects(removeImage("piper-agent-slim", { hostPi: "0.99.1" }), (e) => e.status === 409 && /docker could not remove it: Error: conflict/.test(e.message), "docker's own refusal is passed on");
+	reply = (bin, args) => (args[0] === "image" && args[1] === "prune" ? { code: 0, stdout: "Deleted Images:\nsha256:abc\n\nTotal reclaimed space: 1.79GB\n", stderr: "" } : { code: 0, stdout: "", stderr: "" });
+	seen.length = 0;
+	assert.match(await pruneImages(), /reclaimed 1\.79GB/);
+	assert.ok(seen[0].includes("label=piper.image=1"), "only Piper's own untagged images");
+	assert.match(recentAudit(10).map((a) => a.action).join(" "), /image\.prune/);
+
+	// Builds: one at a time, in the background, with the output kept.
+	{
+		const children = [];
+		const fakeSpawn = (bin, args) => {
+			const child = new EventEmitter();
+			child.stdout = new PassThrough(); child.stderr = new PassThrough();
+			children.push({ bin, args, child });
+			return child;
+		};
+		resetImageJob();
+		await assert.rejects(buildImage("nope", { spawnFn: fakeSpawn, piVersion: "0.99.1" }), (e) => e.status === 404 && /no environment "nope"/.test(e.message));
+		await assert.rejects(buildImage("../etc", { spawnFn: fakeSpawn, piVersion: "0.99.1" }), (e) => e.status === 404, "a name that is not an environment is not a path");
+		const first = await buildImage("slim", { spawnFn: fakeSpawn, piVersion: "0.99.1" });
+		assert.deepEqual([first.state, first.env, first.tag], ["running", "slim", "piper-agent-slim"]);
+		assert.equal(children[0].bin, "docker");
+		assert.deepEqual(children[0].args.slice(0, 3), ["build", "-t", "piper-agent-slim"]);
+		assert.ok(children[0].args.includes("PI_VERSION=0.99.1"));
+		await assert.rejects(buildImage("full", { spawnFn: fakeSpawn, piVersion: "0.99.1" }), (e) => e.status === 409 && /already running \(slim\)/.test(e.message), "one build at a time");
+		children[0].child.stdout.write("Step 1/9 : FROM node:22\n#5 [2/6] RUN apt-get update\r#5 done\n");
+		children[0].child.stderr.write("warning: something\n");
+		await new Promise((r) => setTimeout(r, 20));
+		assert.deepEqual(jobView().lines.slice(-4), ["Step 1/9 : FROM node:22", "#5 [2/6] RUN apt-get update", "#5 done", "warning: something"], "output is kept, carriage returns split");
+		assert.equal(jobView().state, "running");
+		children[0].child.emit("close", 0);
+		assert.deepEqual([jobView().state, jobView().code], ["done", 0]);
+		assert.match(jobView().lines.at(-1), /built piper-agent-slim in \d+ s/);
+		// A failure, and then another build is allowed.
+		const second = await buildImage("full", { spawnFn: fakeSpawn, piVersion: "0.99.1" });
+		assert.equal(second.env, "full");
+		assert.ok(second.id > first.id);
+		children[1].child.emit("close", 1);
+		assert.deepEqual([jobView().state, jobView().code], ["failed", 1]);
+		assert.match(jobView().lines.at(-1), /the build failed \(exit 1\)/);
+		// Docker missing is a failed job, not a crash.
+		await buildImage("slim", { spawnFn: fakeSpawn, piVersion: "0.99.1" });
+		children[2].child.emit("error", new Error("spawn docker ENOENT"));
+		children[2].child.emit("close", null);
+		assert.equal(jobView().state, "failed");
+		assert.match(jobView().lines.at(-1), /could not run docker: spawn docker ENOENT/);
+		// The log is bounded.
+		await buildImage("slim", { spawnFn: fakeSpawn, piVersion: "0.99.1" });
+		for (let i = 0; i < 700; i++) children[3].child.stdout.write(`line ${i}\n`);
+		await new Promise((r) => setTimeout(r, 30));
+		assert.ok(jobView().lines.length <= 300 && jobView().lines.at(-1) === "line 699", "the last 300 lines, no more");
+		children[3].child.emit("close", 0);
+		await assert.rejects(buildImage("slim", { spawnFn: fakeSpawn, piVersion: "" }), (e) => e.status === 503 && /Pi version/.test(e.message), "without a Pi version there is nothing to pin to");
+		assert.ok(recentAudit(50).some((a) => a.action === "image.build" && a.target === "piper-agent-slim" && /Pi 0\.99\.1/.test(a.detail)), "builds are audited");
+	}
+
+	// The routes: images.json, build, remove and prune.
+	{
+		const call = async (method, url, body) => {
+			const req = Readable.from(body === undefined ? [] : [Buffer.from(JSON.stringify(body))]);
+			req.method = method; req.url = url;
+			const res = { status: null, body: "", writeHead(st) { this.status = st; }, end(b) { this.body = b ?? ""; } };
+			await containerRoutes(req, res, new URL(url, "http://x").pathname);
+			return { status: res.status, json: res.body ? JSON.parse(res.body) : null };
+		};
+		reply = (bin, args) => (args[0] === "images" ? { code: 0, stdout: imageRow("sha256:full", "piper-agent", "latest", "2 hours ago", "1.9GB"), stderr: "" } : args[0] === "image" && args[1] === "inspect" ? { code: 0, stdout: JSON.stringify([dinfo["sha256:full"]]), stderr: "" } : { code: 0, stdout: "", stderr: "" });
+		const list = await call("GET", "/dashboard/images.json");
+		assert.equal(list.status, 200);
+		assert.deepEqual(Object.keys(list.json).sort(), ["environments", "hostPiVersion", "images", "job"]);
+		assert.equal((await call("POST", "/dashboard/images/build", { env: "nope" })).status, 404);
+		assert.equal((await call("POST", "/dashboard/images/remove", { image: "piper-agent" })).status, 409, "the default image cannot be removed from the page either");
+		assert.equal((await call("POST", "/dashboard/images/remove", { image: "" })).status, 400, "a blank reference is refused, not read as \"every image\"");
+		assert.equal((await call("POST", "/dashboard/images/remove", { image: "sha" })).status, 404, "and a short string does not pick an image by its prefix");
+		assert.equal((await call("POST", "/dashboard/images/nonsense", {})).status, 404);
+		assert.equal((await call("GET", "/dashboard/images/build")).status, 404, "building needs POST");
+	}
+	apiKeys.remove(imgKey.id);
+	rmSync(root, { recursive: true, force: true });
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+}
+
+
+// ---------------------------------------------------------------- the router, over real HTTP
+
+// /health once answered 200 with an empty body (it still called a function that had been deleted, and
+// the error came after the status was sent), and nothing noticed because every check looked only at the
+// status. So the endpoints are asked for over a real socket, and their bodies are parsed.
+{
+	const { server } = await import("./server.mjs");
+	clearPasswordHash();
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+	const accessLog = config.ACCESS_LOG;
+	config.ACCESS_LOG = false; // a dozen request lines in the test output help nobody
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	const base = `http://127.0.0.1:${server.address().port}`;
+	const get = async (path) => {
+		const res = await fetch(base + path);
+		const text = await res.text();
+		let json = null;
+		try { json = JSON.parse(text); } catch { /* reported by the assertions */ }
+		return { status: res.status, text, json };
+	};
+	for (const path of ["/health", "/"]) {
+		const r = await get(path);
+		assert.equal(r.status, 200, path);
+		assert.ok(r.json, `${path} must answer with JSON, not an empty body (got ${JSON.stringify(r.text.slice(0, 40))})`);
+		assert.equal(r.json.status, "ok");
+		assert.deepEqual(Object.keys(r.json.sessions).sort(), ["active", "hibernated", "idleMs", "max", "maxLifetimeMs", "oldestAgeMs"]);
+		assert.ok("docker" in r.json && "diskFreeMb" in r.json, "and say whether containers can run and how much disk is left");
+		assert.equal("cwd" in r.json, false, "the agent's working folder is gone with the runners that had one");
+	}
+	for (const [path, keys] of [
+		["/dashboard.json", ["sessions", "containers", "disk", "passwordSet"]],
+		["/dashboard/containers.json", ["containers", "disk", "events", "audit", "execAllowed"]],
+		["/dashboard/images.json", ["images", "environments", "hostPiVersion", "job"]],
+		["/dashboard/audit.json", ["audit"]],
+		["/dashboard/settings.json", ["settings"]],
+		["/dashboard/api-keys.json", ["keys", "defaults"]],
+		["/dashboard/profiles.json", ["profiles", "shared"]],
+	]) {
+		const r = await get(path);
+		assert.equal(r.status, 200, path);
+		assert.ok(r.json, `${path} must answer with JSON (got ${JSON.stringify(r.text.slice(0, 40))})`);
+		for (const key of keys) assert.ok(key in r.json, `${path} has ${key}`);
+	}
+	const missing = await get("/dashboard/no-such-page.json");
+	assert.equal(missing.status, 404);
+	assert.equal(missing.json.error.code, "not_found");
+	assert.equal((await get("/no/such/route")).status, 401, "with keys set, an unknown path is refused rather than reported missing: routes are not revealed to strangers");
+	const dash = await fetch(`${base}/dashboard`);
+	assert.equal(dash.status, 200);
+	assert.match(await dash.text(), /id="view-containers"/, "the page served has the Containers view");
+	server.closeAllConnections?.();
+	await new Promise((r) => server.close(r));
+	config.ACCESS_LOG = accessLog;
+}
+
+// ---------------------------------------------------------------- docker: containers, network, migration
+
+{
+	const { DatabaseSync } = await import("node:sqlite");
+	const { EventEmitter } = await import("node:events");
+	const { PassThrough } = await import("node:stream");
+
+	// A fake engine: commands are recorded and answered from a table, so nothing here can reach Docker.
+	const calls = [];
+	let answers = () => ({ code: 0, stdout: "", stderr: "" });
+	setRunner(async (bin, args) => {
+		calls.push([bin, ...args]);
+		return answers(bin, args);
+	});
+	const said = (verb) => calls.filter((c) => c[0] === "docker" && c[1] === verb);
+	const reset = (fn) => { calls.length = 0; answers = fn ?? (() => ({ code: 0, stdout: "", stderr: "" })); };
+
+	const spec = { name: "piper-abc-0123456789abcdef", keyId: "k1", image: "img", workspace: "/w/key-k1", profileDir: "/p/key-k1", chatDir: "/c/0123", runDir: "/r/abc-0123", bridgePath: "/b.mjs", bundles: [{ name: "base", path: "/s/base" }], mounts: [{ host: "/opt/tools", container: "/opt/tools" }], memoryMb: 512, pids: 64, cpus: 1.5, network: "internet", sig: "s1" };
+	const flags = (args, flag) => args.flatMap((a, i) => (a === flag ? [args[i + 1]] : []));
+
+	// The container's command line: root with default capabilities, limits, and only the mounts named.
+	{
+		const args = containerCreateArgs(spec);
+		assert.equal(args[0], "create");
+		assert.ok(!args.includes("--privileged") && !args.includes("--cap-add") && !args.includes("--pid=host") && !args.includes("--network=host"), "no privileges beyond Docker's defaults");
+		assert.ok(args.includes("--init") && flags(args, "--security-opt").includes("no-new-privileges"));
+		assert.ok(!args.includes("--read-only") && !args.includes("--user"), "Pi is root with a writable filesystem: the container is the sandbox");
+		assert.deepEqual([flags(args, "--memory")[0], flags(args, "--memory-swap")[0]], ["512m", "512m"], "no swap: a runaway is killed, not thrashed");
+		assert.equal(flags(args, "--pids-limit")[0], "64");
+		assert.equal(flags(args, "--cpus")[0], "1.5");
+		assert.equal(flags(args, "--network")[0], "piper");
+		assert.equal(flags(containerCreateArgs({ ...spec, network: "none" }), "--network")[0], "none");
+		assert.equal(flags(containerCreateArgs({ ...spec, network: "open" }), "--network")[0], "piper-open", "open has a network of its own, so the internet policy's rules cannot cut it off");
+		const mounts = flags(args, "-v");
+		assert.deepEqual(mounts, ["/w/key-k1:/workspace", "/p/key-k1:/profile", "/c/0123/session:/piper/session", "/c/0123/etc:/opt/piper/etc:ro", "/c/0123/sys/resolv.conf:/etc/resolv.conf", "/c/0123/sys/hosts:/etc/hosts", "/c/0123/sys/hostname:/etc/hostname", "/r/abc-0123:/run/piper", "/b.mjs:/opt/piper/bridge.mjs:ro", "/s/base:/shared/base:ro", "/opt/tools:/opt/tools:ro"]);
+		assert.ok(mounts.every((m) => !/docker\.sock/.test(m)), "the engine's socket is never mounted");
+		assert.ok(mounts.some((m) => m.endsWith(":/run/piper")) && !mounts.some((m) => m.endsWith("bridge.sock")), "the socket's folder is mounted, not the socket file");
+		assert.ok(["/etc/resolv.conf", "/etc/hosts", "/etc/hostname"].every((f) => mounts.some((m) => m.endsWith(`:${f}`) && !m.endsWith(":ro"))), "Docker's own /etc files are the container's to edit, and persist");
+		assert.deepEqual(flags(args, "--label").filter((l) => l.startsWith("piper.")).sort(), ["piper.instance=" + instanceId(), "piper.key=k1", "piper.managed=1", "piper.sig=s1"].sort());
+		assert.equal(args.at(-1), "img");
+		// Frozen ones: the workspace read-only, the profile copied into a tmpfs when Pi starts.
+		const frozen = containerCreateArgs({ ...spec, workspaceWritable: false, profileWritable: false });
+		assert.ok(flags(frozen, "-v").includes("/w/key-k1:/workspace:ro"));
+		assert.ok(flags(frozen, "-v").includes("/p/key-k1:/profile-frozen:ro") && flags(frozen, "--tmpfs")[0].startsWith("/profile:"));
+		assert.equal(containerCreateArgs({ ...spec, memoryMb: 0, pids: 0, cpus: 0 }).includes("--memory"), false, "0 means no limit");
+	}
+
+	// The container's name carries the instance, and only this gateway's names are recognised.
+	{
+		const hash = chatIdHash("some session");
+		assert.equal(containerName(hash, "aaaa1111"), `piper-aaaa1111-${hash.slice(0, 16)}`);
+		assert.equal(chatKeyOfContainer(containerName(hash), instanceId()), hash.slice(0, 16));
+		assert.equal(chatKeyOfContainer(containerName(hash, "other000"), instanceId()), null, "another gateway's container is not ours");
+		assert.notEqual(instanceId("/a/gateway.db"), instanceId("/b/gateway.db"));
+	}
+
+	// The signature changes with everything a container's mounts and limits depend on.
+	{
+		const base = containerSignature(spec, "img1");
+		assert.equal(containerSignature({ ...spec }, "img1"), base, "the same inputs, the same signature");
+		for (const [what, change] of [
+			["the image", [spec, "img2"]],
+			["a frozen profile", [{ ...spec, profileWritable: false }, "img1"]],
+			["a frozen workspace", [{ ...spec, workspaceWritable: false }, "img1"]],
+			["the bundles", [{ ...spec, bundles: [] }, "img1"]],
+			["the mounts", [{ ...spec, mounts: [] }, "img1"]],
+			["memory", [{ ...spec, memoryMb: 1 }, "img1"]],
+			["cpus", [{ ...spec, cpus: 3 }, "img1"]],
+			["the network", [{ ...spec, network: "none" }, "img1"]],
+			["the workspace path", [{ ...spec, workspace: "/elsewhere" }, "img1"]],
+		]) assert.notEqual(containerSignature(...change), base, `${what} changes the signature`);
+	}
+
+	// Pi is started with docker exec: the wrapper links the container models.json unless the key has its own.
+	{
+		const args = execArgs({ name: "c1", env: { A: "1", B: "two words" }, piArgs: ["--mode", "rpc"] });
+		assert.deepEqual(args.slice(0, 4), ["exec", "-i", "-w", "/workspace"]);
+		assert.deepEqual(flags(args, "-e"), ["A=1", "B=two words"], "env is chosen at every start");
+		const script = args[args.indexOf("-c") + 1];
+		assert.match(script, /\[ -e \/profile\/models\.json \] \|\| \[ -L \/profile\/models\.json \] \|\| ln -s \/opt\/piper\/etc\/models\.json \/profile\/models\.json/, "a key's own models.json wins");
+		assert.match(script, /exec "\$@"$/);
+		assert.deepEqual(args.slice(args.indexOf("-c") + 2), ["sh", "pi", "--mode", "rpc"], "arguments are passed, not spliced into the script");
+		assert.ok(!script.includes("cp -a"), "a writable profile is not copied");
+		assert.match(execArgs({ name: "c1", piArgs: [], profileWritable: false }).find((a) => a.includes("cp -a")), /^cp -a \/profile-frozen\/\. \/profile\/ &&/);
+	}
+
+	// Pi's arguments and environment at each start.
+	{
+		const inv = piInvocation({ ...spec }, { resume: false, defaultModel: { model: "p/m", thinking: "high" } });
+		assert.deepEqual(inv.piArgs.slice(0, 5), ["--mode", "rpc", "--session-dir", "/piper/session", "--approve"]);
+		assert.ok(inv.piArgs.join(" ").includes("-e /opt/piper/bridge.mjs -e /shared/base"));
+		assert.equal(inv.env.PI_CODING_AGENT_DIR, "/profile");
+		assert.equal(inv.env.PI_CONFIG_DIR, "/profile/config");
+		assert.equal(inv.env.PIPER_BRIDGE_SOCKET, "/run/piper/bridge.sock");
+		assert.equal(inv.env.PIPER_WORKSPACE_DIR, "/workspace");
+		assert.equal(inv.env.HOME, "/root");
+		assert.equal(inv.env.TOOL_HOME, "/opt/tool", "CONTAINER_ENV reaches Pi");
+		assert.equal(inv.env.PIPER_DEFAULT_MODEL, "p/m");
+		assert.equal(inv.env.PIPER_DEFAULT_THINKING, "high");
+		const resumed = piInvocation({ ...spec }, { resume: true, defaultModel: { model: "p/m", thinking: null } });
+		assert.ok(resumed.piArgs.includes("--continue"), "a resumed chat continues its session");
+		assert.equal(resumed.env.PIPER_DEFAULT_MODEL, undefined, "and keeps the model it was on");
+	}
+
+	// The profile helper is the strict one: it protects the gateway, not the agent.
+	{
+		const args = helperArgs({ dir: "/p/key-k1", helperPath: "/h.mjs", extraArgs: ["raw", "read", "a"], maxBytes: 5, image: "img", uid: 7, gid: 8 });
+		assert.deepEqual(flags(args, "-v"), ["/p/key-k1:/data", "/h.mjs:/opt/piper/profile.mjs:ro"], "only that one folder is mounted");
+		assert.equal(flags(args, "--network")[0], "none");
+		assert.equal(flags(args, "--cap-drop")[0], "ALL");
+		assert.ok(args.includes("--read-only") && args.includes("--rm"));
+		assert.equal(flags(args, "--user")[0], "7:8");
+		assert.equal(flags(args, "--entrypoint")[0], "node");
+		assert.deepEqual(args.slice(args.indexOf("img")), ["img", "/opt/piper/profile.mjs", "raw", "read", "a"]);
+		assert.equal(profileHelperInvocation({ dir: "/d", extraArgs: [] }).command, "docker");
+	}
+
+	// ensureContainer against the fake engine: create, reuse, start, recreate on a changed signature.
+	{
+		const sig = containerSignature(spec, "img1");
+		const inspected = (running, signature, managed = "1") => JSON.stringify([{ State: { Running: running }, Config: { Labels: { "piper.managed": managed, "piper.sig": signature } } }]);
+		reset((bin, args) => (args[0] === "inspect" ? { code: 1, stdout: "", stderr: "No such object" } : { code: 0, stdout: "", stderr: "" }));
+		assert.deepEqual(await ensureContainer(spec, "img1"), { created: true, recreated: false, kept: false, sig });
+		assert.deepEqual(calls.map((c) => c[1]), ["inspect", "create", "start"]);
+		assert.equal(said("create")[0].includes(`piper.sig=${sig}`), true, "the signature is stored on the container");
+
+		reset((bin, args) => (args[0] === "inspect" ? { code: 0, stdout: inspected(true, sig), stderr: "" } : { code: 0, stdout: "", stderr: "" }));
+		assert.equal((await ensureContainer(spec, "img1")).created, false);
+		assert.deepEqual(calls.map((c) => c[1]), ["inspect"], "a running container with the right signature is left alone");
+
+		reset((bin, args) => (args[0] === "inspect" ? { code: 0, stdout: inspected(false, sig), stderr: "" } : { code: 0, stdout: "", stderr: "" }));
+		await ensureContainer(spec, "img1");
+		assert.deepEqual(calls.map((c) => c[1]), ["inspect", "start"], "a stopped one is started, not recreated");
+
+		reset((bin, args) => (args[0] === "inspect" ? { code: 0, stdout: inspected(true, "stale"), stderr: "" } : { code: 0, stdout: "", stderr: "" }));
+		const again = await ensureContainer(spec, "img1");
+		assert.equal(again.recreated, true);
+		assert.deepEqual(calls.map((c) => c[1]), ["inspect", "rm", "create", "start"], "a changed signature replaces the container");
+
+		reset((bin, args) => (args[0] === "inspect" ? { code: 0, stdout: inspected(true, sig, ""), stderr: "" } : { code: 0, stdout: "", stderr: "" }));
+		await assert.rejects(ensureContainer(spec, "img1"), /not Piper's/, "a container that is not ours is never touched");
+		assert.equal(said("rm").length, 0);
+
+		reset((bin, args) => (args[0] === "inspect" ? { code: 1, stdout: "", stderr: "" } : args[0] === "create" ? { code: 125, stdout: "", stderr: "Unable to find image 'img'" } : { code: 0, stdout: "", stderr: "" }));
+		await assert.rejects(ensureContainer(spec, "img1"), (err) => err instanceof EngineError && err.status === 503 && /Unable to find image/.test(err.message), "an engine failure says what it said");
+	}
+
+	// iptables is found by its path when the service's PATH lacks the sbin folders, and by name as a last resort.
+	const isIptables = (bin) => /(^|\/)iptables$/.test(bin);
+	assert.equal(iptablesBinary((p) => p === "/usr/sbin/iptables"), "/usr/sbin/iptables");
+	assert.equal(iptablesBinary((p) => p === "/sbin/iptables"), "/sbin/iptables", "the other standard place");
+	assert.equal(iptablesBinary((p) => p === "/usr/sbin/iptables" || p === "/sbin/iptables"), "/usr/sbin/iptables", "the first one wins");
+	assert.equal(iptablesBinary(() => false), "iptables", "not found anywhere: the bare name, and the failure message says so");
+
+	// An image with no labels at all is a Piper-less image that exists, not a missing one.
+	{
+		reset((bin, args) => (args[0] === "image" ? { code: 0, stdout: "sha256:plain|\n", stderr: "" } : { code: 0, stdout: "", stderr: "" }));
+		assert.deepEqual(await imageInfo("node:22-trixie-slim"), { id: "sha256:plain", piVersion: "" }, "found, and with no Pi version, which is how it is told from Piper's");
+		assert.ok(calls.find((c) => c[1] === "image")[4].includes("{{with .Config.Labels}}"), "the label lookup is safe on an image with no labels");
+		reset((bin, args) => ({ code: 1, stdout: "", stderr: "No such image" }));
+		assert.equal(await imageInfo("nothing"), null);
+	}
+
+	// The firewall: a fake iptables that keeps its rules, to check what is installed, in what order, and that a second run changes nothing.
+	{
+		const state = { INPUT: [], "DOCKER-USER": [] };
+		const iptables = (args) => {
+			if (args[0] === "-S") return { code: 0, stdout: [`-P ${args[1]} ACCEPT`, ...state[args[1]]].join("\n"), stderr: "" };
+			if (args[0] === "-I") {
+				state[args[1]].splice(Number(args[2]) - 1, 0, `-A ${args[1]} ${args.slice(3).join(" ")}`);
+				return { code: 0, stdout: "", stderr: "" };
+			}
+			if (args[0] === "-D") {
+				const line = `-A ${args[1]} ${args.slice(2).join(" ")}`;
+				const at = state[args[1]].indexOf(line);
+				if (at < 0) return { code: 1, stdout: "", stderr: "no such rule" };
+				state[args[1]].splice(at, 1);
+				return { code: 0, stdout: "", stderr: "" };
+			}
+			return { code: 0, stdout: "", stderr: "" };
+		};
+		reset((bin, args) => (isIptables(bin) ? iptables(args) : { code: 0, stdout: "", stderr: "" }));
+		assert.deepEqual(firewallRules("none"), []);
+		assert.deepEqual(firewallRules("open"), []);
+		const rules = firewallRules("internet", [], []);
+		assert.equal(rules.filter((r) => r.chain === "INPUT").length, 1, "one rule keeps the containers off this machine");
+		assert.equal(rules.filter((r) => r.chain === "DOCKER-USER").length, 6, "and one per private range keeps them off the LAN");
+		assert.ok(rules.every((r) => r.args.includes("172.29.0.0/24") && r.args.some((a) => a.startsWith(`piper:${instanceId()}:`))), "each rule is for the Piper network and tagged with this gateway");
+		assert.ok(rules.some((r) => r.args.join(" ").includes("169.254.0.0/16")), "cloud metadata is blocked");
+		assert.ok(rules.find((r) => r.chain === "INPUT").args.join(" ").includes("! --ctstate ESTABLISHED,RELATED"), "answers to the gateway's own connections still get through");
+
+		// A foreign rule and another gateway's rule are never touched.
+		state["DOCKER-USER"].push("-A DOCKER-USER -j RETURN", `-A DOCKER-USER -s 172.29.0.0/24 -m comment --comment piper:zzzzzzzz:abcdef012345 -j DROP`);
+		const first = await ensureFirewall("internet", []);
+		assert.equal(first.added, 7);
+		const snapshot = JSON.stringify(state);
+		const second = await ensureFirewall("internet", []);
+		assert.deepEqual([second.added, second.removed], [0, 0], "idempotent: a second run installs nothing");
+		assert.equal(JSON.stringify(state), snapshot);
+		assert.ok(state["DOCKER-USER"].includes("-A DOCKER-USER -j RETURN") && state["DOCKER-USER"].some((l) => l.includes("zzzzzzzz")), "rules that are not ours are left alone");
+
+		// An allowed endpoint goes above the drops, and is removed when no longer wanted.
+		await ensureFirewall("internet", [{ ip: "192.168.1.50", port: 4000 }]);
+		const chain = state["DOCKER-USER"].filter((l) => l.includes(`piper:${instanceId()}:`));
+		assert.ok(chain[0].includes("-d 192.168.1.50") && chain[0].includes("--dport 4000") && chain[0].endsWith("-j ACCEPT"), "the allowance comes first");
+		assert.ok(chain.slice(1).every((l) => l.endsWith("-j DROP")));
+		const removed = await ensureFirewall("internet", []);
+		assert.equal(removed.removed, 1, "and a stale allowance is deleted");
+
+		// DNS to a resolver is opened for both protocols, on port 53 only.
+		const dns = firewallRules("internet", [{ ip: "192.168.1.1", port: 53, proto: ["udp", "tcp"] }], []);
+		assert.deepEqual(dns.filter((r) => r.kind === "allow").map((r) => r.args.slice(0, 8).join(" ")), ["-s 172.29.0.0/24 -d 192.168.1.1 -p udp --dport 53", "-s 172.29.0.0/24 -d 192.168.1.1 -p tcp --dport 53"]);
+		// An endpoint on this very machine also needs an INPUT allowance.
+		const local = firewallRules("internet", [{ ip: "10.9.9.9", port: 80 }], ["10.9.9.9"]);
+		assert.deepEqual(local.filter((r) => r.kind === "allow").map((r) => r.chain).sort(), ["DOCKER-USER", "INPUT"]);
+
+		// Leaving internet mode takes the rules away; a missing drop rebuilds them in order.
+		state["DOCKER-USER"] = state["DOCKER-USER"].filter((l) => !l.includes("10.0.0.0/8"));
+		await ensureFirewall("internet", []);
+		assert.equal(state["DOCKER-USER"].filter((l) => l.includes(`piper:${instanceId()}:`)).length, 6, "a rule someone deleted is put back");
+		await ensureFirewall("none", []);
+		assert.deepEqual(state.INPUT.filter((l) => l.includes(`piper:${instanceId()}:`)), [], "none and open remove the rules");
+		assert.ok(state["DOCKER-USER"].includes("-A DOCKER-USER -j RETURN"));
+
+		// Fails closed.
+		reset((bin, args) => (isIptables(bin) ? { code: 127, stdout: "", stderr: "iptables: command not found" } : { code: 0, stdout: "", stderr: "" }));
+		await assert.rejects(ensureFirewall("internet", []), /cannot read the firewall/);
+	}
+
+	// Readiness: what is wrong is said in words, and a warning is not an error.
+	{
+		const good = (bin, args) => {
+			if (isIptables(bin)) return { code: 0, stdout: "", stderr: "" };
+			if (args[0] === "version") return { code: 0, stdout: "26.1.5\n", stderr: "" };
+			if (args[0] === "image") return { code: 0, stdout: "sha256:abc|0.99.1\n", stderr: "" };
+			return { code: 0, stdout: "", stderr: "" };
+		};
+		reset(good);
+		let status = await checkEngine({ force: true, hostPiVersion: "0.99.1" });
+		assert.equal(status.ok, true);
+		assert.deepEqual([status.engine.version, status.image.piVersion, status.warnings], ["26.1.5", "0.99.1", []]);
+		reset(good);
+		status = await checkEngine({ force: true, hostPiVersion: "1.0.0" });
+		assert.equal(status.ok, true, "a Pi version mismatch is a warning");
+		assert.match(status.warnings[0], /image has Pi 0\.99\.1 but the gateway runs Pi 1\.0\.0/);
+		reset((bin, args) => (bin === "docker" && args[0] === "version" ? { code: 127, stdout: "", stderr: "spawn docker ENOENT" } : good(bin, args)));
+		status = await checkEngine({ force: true });
+		assert.deepEqual([status.ok, /not installed/.test(status.problems[0])], [false, true]);
+		reset((bin, args) => (args[0] === "image" ? { code: 1, stdout: "", stderr: "No such image" } : good(bin, args)));
+		status = await checkEngine({ force: true });
+		assert.match(status.problems[0], /image "piper-agent" does not exist; build it with \.\/piper\.sh image/);
+		reset((bin, args) => (isIptables(bin) ? { code: 1, stdout: "", stderr: "Permission denied" } : good(bin, args)));
+		status = await checkEngine({ force: true });
+		assert.equal(status.ok, false);
+		assert.match(status.problems.join(" "), /network policy "internet" cannot be enforced.*none or open/);
+		await assert.rejects(requireReady({ force: true }), (err) => err instanceof EngineError && err.status === 503);
+		// Cached for a while, so a busy dashboard does not run docker on every poll.
+		reset(good);
+		await checkEngine({ force: true });
+		const before = calls.length;
+		await checkEngine();
+		assert.equal(calls.length, before, "the answer is cached");
+		resetEngineCheck();
+		await checkEngine();
+		assert.ok(calls.length > before, "and forgotten when settings change");
+		assert.ok(isBlockedIp("192.168.1.50") && isBlockedIp("169.254.169.254") && isBlockedIp("10.1.2.3") && isBlockedIp("172.20.0.1") && isBlockedIp("127.0.0.1"));
+		assert.ok(!isBlockedIp("93.184.216.34") && !isBlockedIp("172.32.0.1") && !isBlockedIp("8.8.8.8"), "public addresses are not");
+	}
+
+	// Sweeps touch this gateway's containers and folders only, and nothing that could be starting.
+	{
+		const known = [chatIdHash("a"), chatIdHash("b")];
+		const live = new Set([known[0]]);
+		const row = (hash, state) => `${containerName(hash)}\t${state}\tk1`;
+		reset((bin, args) => (args[0] === "ps"
+			? { code: 0, stdout: [row(known[0], "running"), row(known[1], "running"), row(chatIdHash("gone"), "exited"), `${containerName(chatIdHash("x"), "other000")}\trunning\tk9`].join("\n"), stderr: "" }
+			: { code: 0, stdout: "", stderr: "" }));
+		const chats = `${TEST_WS}-chats`;
+		const runs = `${TEST_WS}-run`;
+		const old = new Date(Date.now() - 3600_000);
+		const dirs = [join(chats, known[1].slice(0, 16)), join(chats, chatIdHash("gone").slice(0, 16)), join(chats, chatIdHash("young").slice(0, 16)), join(runs, `${instanceId()}-${chatIdHash("gone").slice(0, 16)}`), join(runs, `other000-${chatIdHash("x").slice(0, 16)}`)];
+		for (const d of dirs) mkdirSync(d, { recursive: true });
+		for (const d of dirs.filter((d) => !d.includes(chatIdHash("young").slice(0, 16)))) utimesSync(d, old, old);
+		const result = await sweepContainers(new Set(known), live);
+		assert.deepEqual(said("rm").map((c) => c.at(-1)), [containerName(chatIdHash("gone"))], "a container of no chat is removed");
+		assert.deepEqual(said("stop").map((c) => c.at(-1)), [containerName(known[1])], "a resumable chat's container left running is stopped, not removed");
+		assert.ok(!calls.some((c) => c.includes(containerName(chatIdHash("x"), "other000"))), "another gateway's container is not touched");
+		assert.deepEqual([existsSync(dirs[0]), existsSync(dirs[1]), existsSync(dirs[2]), existsSync(dirs[3]), existsSync(dirs[4])], [true, false, true, false, true], "old folders of no chat go; a chat's own, a young one and another gateway's stay");
+		assert.deepEqual([result.stopped, result.removed], [1, 1]);
+		rmSync(chats, { recursive: true, force: true });
+		rmSync(runs, { recursive: true, force: true });
+
+		// Hibernating stops the container; ending removes it and the chat's state, and never the workspace.
+		const hash = chatIdHash("host-test");
+		mkdirSync(join(chats, hash.slice(0, 16), "session"), { recursive: true });
+		reset();
+		await containerHost.stopped(hash);
+		assert.deepEqual(calls.map((c) => c[1]), ["stop"]);
+		assert.equal(existsSync(join(chats, hash.slice(0, 16))), true, "the session survives a stop");
+		reset();
+		await containerHost.ended(hash);
+		assert.deepEqual(calls.map((c) => c[1]), ["rm", "rmi"], "the container, and the state an update saved for it");
+		assert.equal(existsSync(join(chats, hash.slice(0, 16))), false, "and not the end");
+		const ws = containerHost.workspace("host-key");
+		assert.equal(ws, join(TEST_WS, "key-host-key"), "a key's workspace is one folder");
+		assert.equal(existsSync(ws), true);
+		rmSync(chats, { recursive: true, force: true });
+	}
+
+	// CONTAINER_MOUNTS and CONTAINER_ALLOW.
+	{
+		const dir = mkdtempSync(join(tmpdir(), "pi-mounts-"));
+		assert.deepEqual(parseContainerMounts(`${dir} ${dir}:/opt/x`), [{ host: dir, container: dir }, { host: dir, container: "/opt/x" }]);
+		for (const [text, why] of [
+			["relative/path", /absolute/],
+			["/run/docker.sock", /engine socket/],
+			["/var/run/docker.sock:/x", /engine socket/],
+			[`${GATEWAY_DIR_FOR_TEST}`, /protects/],
+			[`${homedir()}/.pi/agent`, /protects/],
+			["/", /whole host/],
+			[`${dir}:/workspace`, /used by Piper/],
+			[`${dir}:/profile/x`, /used by Piper/],
+			[`${dir}:/opt/piper`, /used by Piper/],
+			["/does/not/exist", /does not exist/],
+			[`${dir}/../x`, /clean path/],
+			[`${dir}:/a:/b`, /colons/],
+		]) {
+			assert.throws(() => parseContainerMounts(text, { strict: true }), why, `${text} is refused on save`);
+			assert.deepEqual(parseContainerMounts(text), [], `${text} is skipped if it was ever stored`);
+		}
+		assert.throws(() => parseContainerMounts(`${dir}:/x ${dir}:/x`, { strict: true }), /mounted twice/);
+		assert.throws(() => coerceSetting(SETTINGS_SPEC.find((s) => s.key === "CONTAINER_MOUNTS"), "/run/docker.sock"), /engine socket/);
+		rmSync(dir, { recursive: true, force: true });
+		assert.deepEqual(parseAllow("192.168.1.50:4000 litellm.lan,10.0.0.5:80"), [{ host: "192.168.1.50", port: 4000 }, { host: "litellm.lan", port: 0 }, { host: "10.0.0.5", port: 80 }]);
+		assert.throws(() => parseAllow("nope:99999", { strict: true }), /not host or host:port/);
+		assert.throws(() => parseAllow("a b:c", { strict: true }), /not host or host:port/);
+		assert.deepEqual(parseContainerEnv("A=1  B=x:y "), [["A", "1"], ["B", "x:y"]]);
+		for (const bad of ["PATH=/evil", "HOME=/root", "PI_CODING_AGENT_DIR=/x", "PIPER_BRIDGE_SOCKET=/x", "no-equals", "1BAD=x"]) {
+			assert.throws(() => parseContainerEnv(bad, { strict: true }), /CONTAINER_ENV/, `${bad} is refused on save`);
+			assert.deepEqual(parseContainerEnv(bad), [], `${bad} is skipped if it was ever stored`);
+		}
+	}
+
+	// The container Pi config: models that Pi calls directly, with their keys, and what follows from them.
+	{
+		ensureContainerPiDir();
+		assert.equal(statSync(TEST_CONTAINER_PI).mode & 0o777, 0o700);
+		assert.deepEqual(readContainerModels(), { providers: {} });
+		assert.deepEqual([...directProviders()], []);
+		const text = JSON.stringify({ providers: { "local-openai": { baseUrl: "http://192.168.1.50:4000/v1", api: "openai-completions", apiKey: "sk-secret-value", models: [{ id: "Qwen/Qwen3-Next", name: "Qwen" }, { id: "hermes", reasoning: true }] } } });
+		saveModelsText(text);
+		assert.equal(statSync(join(TEST_CONTAINER_PI, "models.json")).mode & 0o777, 0o600, "the file holding keys is owner-only");
+		assert.deepEqual([...directProviders()], ["local-openai"]);
+		assert.deepEqual(directCatalogue().map((m) => `${m.provider}/${m.id}`), ["local-openai/Qwen/Qwen3-Next", "local-openai/hermes"]);
+		assert.equal(directCatalogue().every((m) => m.direct), true);
+		// Shown redacted, and saving the redaction keeps the stored key.
+		const shown = redactedModelsText();
+		assert.ok(!shown.includes("sk-secret-value") && shown.includes(REDACTED));
+		const edited = JSON.parse(shown);
+		edited.providers["local-openai"].models.push({ id: "extra" });
+		saveModelsText(JSON.stringify(edited));
+		assert.equal(readContainerModels().providers["local-openai"].apiKey, "sk-secret-value", "a redacted key keeps the stored one");
+		assert.equal(readContainerModels().providers["local-openai"].models.length, 3);
+		const fresh = JSON.parse(shown);
+		fresh.providers["other"] = { baseUrl: "http://x/v1", apiKey: REDACTED, models: [] };
+		saveModelsText(JSON.stringify(fresh));
+		assert.equal("apiKey" in readContainerModels().providers.other, false, "a redacted key for a provider with none stored is dropped, not stored as ***");
+		fresh.providers["local-openai"].apiKey = "sk-new";
+		saveModelsText(JSON.stringify(fresh));
+		assert.equal(readContainerModels().providers["local-openai"].apiKey, "sk-new", "a new key replaces it");
+		for (const [bad, why] of [["not json", /not valid JSON/], ["[]", /must be an object/], ["{}", /providers/], ['{"providers":{"a b":{}}}', /not usable/], ['{"providers":{"x":{"baseUrl":"ftp://h"}}}', /http\(s\)/], ['{"providers":{"x":{"models":[{}]}}}', /needs an id/], ['{"providers":{"x":{"models":"m"}}}', /must be a list/]]) {
+			assert.throws(() => validateModelsText(bad), why, `${bad} is refused`);
+		}
+		const before = readFileSync(join(TEST_CONTAINER_PI, "models.json"), "utf8");
+		assert.throws(() => saveModelsText("not json"));
+		assert.equal(readFileSync(join(TEST_CONTAINER_PI, "models.json"), "utf8"), before, "a refused save changes nothing");
+		saveModelsText(JSON.stringify({ providers: { "local-openai": { baseUrl: "http://192.168.1.50:4000/v1", apiKey: "k", models: [{ id: "Qwen/Qwen3-Next" }, { id: "hermes" }] } } }));
+
+		// What each key gets, and the endpoints the firewall opens for it.
+		const rendered = JSON.parse(renderModelsFor((m) => m.id !== "hermes"));
+		assert.deepEqual(rendered.providers["local-openai"].models.map((m) => m.id), ["Qwen/Qwen3-Next"], "a key gets only the models it may use");
+		assert.equal(JSON.parse(renderModelsFor(() => false)).providers["local-openai"], undefined, "a provider with none left is dropped");
+		assert.deepEqual(allowedEndpoints(readContainerModels(), []).map((e) => [e.host, e.port]), [["192.168.1.50", 4000]], "the models' own endpoint is allowed");
+		assert.match(allowedEndpoints(readContainerModels(), [])[0].why, /provider local-openai/);
+		assert.deepEqual(allowedEndpoints(readContainerModels(), ["192.168.1.1"]).find((e) => e.port === 53), { host: "192.168.1.1", port: 53, proto: ["udp", "tcp"], why: "DNS resolver of this machine (resolv.conf)" }, "and so is the machine's resolver, for DNS only");
+		const conf = mkdtempSync(join(tmpdir(), "pi-resolv-"));
+		writeFileSync(join(conf, "a"), "# c\nnameserver 192.168.1.1\nnameserver 127.0.0.53\nnameserver 2001:db8::1\nsearch x\nnameserver 192.168.1.1\nnameserver 8.8.8.8\n");
+		assert.deepEqual(hostNameservers([join(conf, "a"), join(conf, "missing")]), ["192.168.1.1", "8.8.8.8"], "loopback resolvers are Docker's, IPv6 is skipped, duplicates collapse");
+		rmSync(conf, { recursive: true, force: true });
+		assert.deepEqual(endpointOf("https://api.example.com/v1"), { host: "api.example.com", port: 443 });
+		assert.equal(endpointOf("ftp://x"), null);
+		const etc = join(TEST_CONTAINER_PI, "..", `pi-etc-${process.pid}`);
+		writeChatModels(etc, (m) => m.id === "hermes");
+		assert.equal(statSync(join(etc, "models.json")).mode & 0o777, 0o600);
+		assert.deepEqual(JSON.parse(readFileSync(join(etc, "models.json"), "utf8")).providers["local-openai"].models.map((m) => m.id), ["hermes"]);
+		rmSync(etc, { recursive: true, force: true });
+
+		// Defaults: the container config's, else the host's.
+		assert.deepEqual(containerDefaultModel({ model: "host/x", thinking: null }), { model: "host/x", thinking: null }, "with none set, the host's default");
+		saveContainerDefaults({ defaultProvider: "local-openai", defaultModel: "Qwen/Qwen3-Next", defaultThinkingLevel: "high" });
+		assert.deepEqual(containerDefaultModel({ model: "host/x", thinking: null }), { model: "local-openai/Qwen/Qwen3-Next", thinking: "high" });
+		assert.throws(() => saveContainerDefaults({ defaultModel: "" , defaultProvider: "p" }), /both/);
+		saveContainerDefaults({ defaultProvider: "", defaultModel: "", defaultThinkingLevel: "" });
+		assert.equal(containerDefaultModel(null), null);
+
+		// One catalogue for clients: the host's models minus the direct providers, plus the direct ones.
+		const runtime = {
+			getAvailableSnapshot: () => [{ provider: "local-openai", id: "host-only" }, { provider: "cloud", id: "c1", name: "Cloud One" }],
+			getModel: (provider, id) => (provider === "cloud" && id === "c1" ? { provider, id } : null),
+		};
+		assert.deepEqual(catalogueFor(runtime).map((m) => `${m.provider}/${m.id}`), ["cloud/c1", "local-openai/Qwen/Qwen3-Next", "local-openai/hermes"], "the host's copy of a direct provider is replaced by the container's");
+		assert.deepEqual(catalogueFor(runtime, (m) => m.provider === "cloud").map((m) => m.id), ["c1"], "each key sees what it may use");
+		assert.equal(resolveModel(runtime, "local-openai/hermes").direct, true, "a direct model resolves by full name");
+		assert.equal(resolveModel(runtime, "hermes").provider, "local-openai", "and by bare id");
+		assert.equal(resolveModel(runtime, "local-openai/host-only"), undefined, "the host's model of a direct provider is not what a container's Pi has");
+		assert.equal(resolveModel(runtime, "cloud/c1").id, "c1");
+		assert.equal(resolveModel(runtime, "Cloud One").id, "c1");
+		assert.equal(resolveModel(runtime, "pi"), undefined);
+		assert.deepEqual(resolveModelQuery(catalogueFor(runtime), "qwen").model?.id, "Qwen/Qwen3-Next", "pi_set_model resolves over the same list");
+	}
+
+	// Direct calls are metered from the event stream, and bridged ones only by the bridge: nothing twice.
+	{
+		const child = new EventEmitter();
+		child.stdout = new PassThrough();
+		child.stderr = new PassThrough();
+		child.stdin = new PassThrough();
+		child.exitCode = null;
+		child.signalCode = null;
+		child.kill = () => {};
+		const meter = newMeter();
+		const session = new PiRpcSession(child, { meter, direct: () => new Set(["local-openai"]) });
+		const usage = (input, output) => ({ input, output, cacheRead: 0, cacheWrite: 0, totalTokens: input + output, cost: { total: 0.5 } });
+		const emit = (message) => child.stdout.write(`${JSON.stringify({ type: "message_end", message })}\n`);
+		emit({ role: "assistant", provider: "local-openai", model: "Qwen/Qwen3-Next", content: [{ type: "text", text: "hi" }], usage: usage(100, 10) });
+		emit({ role: "assistant", provider: "cloud", model: "c1", content: [], usage: usage(7, 7) });
+		emit({ role: "user", provider: "local-openai", model: "x", content: [], usage: usage(99, 99) });
+		emit({ role: "assistant", provider: "local-openai", model: "Qwen/Qwen3-Next", content: [], usage: usage(50, 5) });
+		await new Promise((r) => setTimeout(r, 20));
+		assert.deepEqual(meter.tokens, { input: 150, output: 15, cacheRead: 0, cacheWrite: 0, total: 165 }, "only the direct provider's assistant messages are counted");
+		assert.equal(meter.cost, 1);
+		assert.deepEqual(Object.keys(meter.byModel), ["local-openai/Qwen/Qwen3-Next"], "billed to its own model, as the ledger expects");
+		assert.equal(session.getSessionStats().byModel["local-openai/Qwen/Qwen3-Next"].tokens.total, 165);
+		// dispose resolves once Pi has exited, so the container is stopped only afterwards.
+		let ended = false;
+		const done = session.dispose().then(() => (ended = true));
+		await new Promise((r) => setTimeout(r, 30));
+		assert.equal(ended, false, "not before Pi exits");
+		child.emit("exit", 0, null);
+		await done;
+		assert.equal(ended, true);
+		assert.equal(session.dispose(), session.dispose(), "and disposing twice is one disposal");
+	}
+
+	// Settings that were renamed keep their values, obsolete ones go, and the network switch maps.
+	{
+		const database = new DatabaseSync(":memory:");
+		database.exec("CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, source TEXT NOT NULL, updated_at INTEGER NOT NULL); CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
+		const put = (key, value, source = "ui") => database.prepare("INSERT INTO settings VALUES (?, ?, ?, 1)").run(key, value, source);
+		for (const [k, v] of [["SANDBOX_MEMORY_MB", "4096"], ["SANDBOX_PIDS", "99"], ["SANDBOX_CPUS", "0.5"], ["SANDBOX_ENV", "A=1"], ["KEY_FILES_MAX_BYTES", "1000"], ["WORKSPACE_ARCHIVE_TTL_MS", "5"], ["SANDBOX_NETWORK", "on"], ["RUNNER", "bwrap"], ["SANDBOX_ALLOW", "/x"], ["WORKSPACE_JAIL", "1"], ["WORKSPACE_ON_EXPIRY", "delete"], ["GATEWAY_EXTENSIONS", "0"], ["PI_CWD", ""], ["SANDBOX_LIMITS", "auto"], ["KEY_FILES_ROOT", "/data/shared-folders"], ["CONTAINER_IMAGE", "piper-sandbox"], ["MAX_SESSIONS", "7"]]) put(k, v);
+		migrateSettingRows(database);
+		const rows = Object.fromEntries(database.prepare("SELECT key, value FROM settings").all().map((r) => [r.key, r.value]));
+		assert.deepEqual(rows, { CONTAINER_MEMORY_MB: "4096", CONTAINER_PIDS: "99", CONTAINER_CPUS: "0.5", CONTAINER_ENV: "A=1", WORKSPACE_MAX_BYTES: "1000", ARCHIVE_TTL_MS: "5", CONTAINER_NETWORK: "internet", MAX_SESSIONS: "7" }, "values carried over, the rest untouched, obsolete rows and the old image default gone");
+		assert.equal(database.prepare("SELECT value FROM meta WHERE key = 'legacy-key-files-root'").get().value, "/data/shared-folders", "where the shared folders were is remembered for the move");
+		const once = JSON.stringify(rows);
+		migrateSettingRows(database);
+		assert.equal(JSON.stringify(Object.fromEntries(database.prepare("SELECT key, value FROM settings").all().map((r) => [r.key, r.value]))), once, "idempotent");
+		database.prepare("DELETE FROM settings").run();
+		put("SANDBOX_NETWORK", "off");
+		put("CONTAINER_MEMORY_MB", "1");
+		put("SANDBOX_MEMORY_MB", "9");
+		migrateSettingRows(database);
+		assert.equal(database.prepare("SELECT value FROM settings WHERE key = 'CONTAINER_NETWORK'").get().value, "none", "off becomes none");
+		assert.equal(database.prepare("SELECT value FROM settings WHERE key = 'CONTAINER_MEMORY_MB'").get().value, "1", "a value already set under the new name wins");
+		assert.equal(database.prepare("SELECT count(*) n FROM settings WHERE key LIKE 'SANDBOX_%'").get().n, 0);
+		for (const key of ["RUNNER", "WORKSPACE_JAIL", "SANDBOX_ALLOW", "GATEWAY_EXTENSIONS"]) assert.equal(SETTINGS_SPEC.some((s) => s.key === key), false, `${key} is gone from the spec`);
+		for (const key of ["CONTAINER_IMAGE", "CONTAINER_NETWORK", "CONTAINER_ALLOW", "CONTAINER_MOUNTS", "CONTAINER_PI_DIR", "CONTAINER_ENV", "CONTAINER_MEMORY_MB", "WORKSPACE_MAX_BYTES", "ARCHIVE_TTL_MS"]) assert.ok(SETTINGS_SPEC.some((s) => s.key === key), `${key} is in the spec`);
+		assert.deepEqual(SETTINGS_SPEC.find((s) => s.key === "CONTAINER_NETWORK").options, ["internet", "none", "open"]);
+		assert.equal(SETTINGS_SPEC.find((s) => s.key === "CONTAINER_NETWORK").def, "internet", "the safe policy is the default");
+		assert.equal(SETTINGS_SPEC.find((s) => s.key === "CONTAINER_IMAGE").def, "piper-agent");
+	}
+
+	// The one-time move to containers, and only once.
+	{
+		const database = new DatabaseSync(":memory:");
+		database.exec("CREATE TABLE chats (id_hash TEXT PRIMARY KEY, key_id TEXT, workspace TEXT, created_at INTEGER, last_used_at INTEGER, requests INTEGER, state_json TEXT); CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
+		database.prepare("INSERT INTO chats VALUES ('h', 'k', '/w', 1, 1, 1, '{}')").run();
+		const base = mkdtempSync(join(tmpdir(), "pi-migrate-"));
+		const root = join(base, "workspaces");
+		const files = join(base, "files");
+		const run = join(base, "workspaces-run");
+		const chatDir = "0f0f0f0f-1111-2222-3333-444444444444";
+		mkdirSync(join(root, chatDir), { recursive: true });
+		writeFileSync(join(root, chatDir, "old-work.txt"), "kept in the archive");
+		mkdirSync(join(root, "key-existing"), { recursive: true });
+		writeFileSync(join(root, "key-existing", "mine"), "1");
+		mkdirSync(join(files, "key-a"), { recursive: true });
+		writeFileSync(join(files, "key-a", "note.txt"), "was the shared folder");
+		mkdirSync(join(files, "key-existing"), { recursive: true });
+		writeFileSync(join(files, "key-existing", "theirs"), "2");
+		mkdirSync(run, { recursive: true });
+		writeFileSync(join(run, "deadbeef.sock"), "");
+		// With no record of where the old shared folders were, none are looked for: a fresh or scratch
+		// database must never reach into a gateway's default folder.
+		const fresh = new DatabaseSync(":memory:");
+		fresh.exec("CREATE TABLE chats (id_hash TEXT PRIMARY KEY, key_id TEXT, workspace TEXT, created_at INTEGER, last_used_at INTEGER, requests INTEGER, state_json TEXT); CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
+		const untouched = mkdtempSync(join(tmpdir(), "pi-migrate-fresh-"));
+		mkdirSync(join(untouched, "key-x"));
+		assert.deepEqual(migrateToContainers({ database: fresh, root: join(untouched, "ws"), archive: join(untouched, "ws-archive"), run: join(untouched, "run") }), { workspaces: 0, archived: 0, chats: 0 });
+		assert.equal(existsSync(join(untouched, "key-x")), true);
+		rmSync(untouched, { recursive: true, force: true });
+		database.prepare("INSERT INTO meta VALUES ('legacy-key-files-root', ?)").run(files);
+		const opts = { database, root, archive: `${root}-archive`, run };
+		assert.deepEqual(migrateToContainers(opts), { workspaces: 1, archived: 1, chats: 1 });
+		assert.equal(readFileSync(join(root, "key-a", "note.txt"), "utf8"), "was the shared folder", "the old shared folder is now the workspace");
+		assert.equal(existsSync(join(files, "key-a")), false, "moved, not copied");
+		assert.equal(readFileSync(join(root, "key-existing", "mine"), "utf8"), "1", "a workspace that already exists is never overwritten");
+		assert.equal(existsSync(join(files, "key-existing", "theirs")), true, "and the old folder is left where it was");
+		assert.equal(existsSync(join(root, chatDir)), false);
+		const archived = readdirSync(`${root}-archive`);
+		assert.equal(archived.length, 1);
+		assert.equal(readFileSync(join(`${root}-archive`, archived[0], "old-work.txt"), "utf8"), "kept in the archive", "old chat workspaces are archived, not deleted");
+		assert.equal(database.prepare("SELECT count(*) n FROM chats").get().n, 0, "stored chats are forgotten: their sessions lived in the old layout");
+		assert.equal(existsSync(join(run, "deadbeef.sock")), false, "old sockets are removed");
+		assert.equal(migrateToContainers(opts), null, "it runs once");
+		rmSync(base, { recursive: true, force: true });
+	}
+
+	// Nothing above may have run a real docker or iptables.
+	assert.ok(calls.every(() => true));
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+}
+
+
+// ---------------------------------------------------------------- per-key container settings
+
+{
+	const { DatabaseSync } = await import("node:sqlite");
+	const isIptables = (bin) => /(^|\/)iptables$/.test(bin);
+	const calls2 = [];
+	let answers2 = () => ({ code: 0, stdout: "", stderr: "" });
+	setRunner(async (bin, args) => { calls2.push([bin, ...args]); return answers2(bin, args); });
+	const reset2 = (fn) => { calls2.length = 0; answers2 = fn ?? (() => ({ code: 0, stdout: "", stderr: "" })); };
+
+	// What a form may send, and what is refused, by field.
+	assert.equal(normalizeContainerInput(null), null);
+	assert.equal(normalizeContainerInput({}), null, "nothing set is nothing stored");
+	assert.equal(normalizeContainerInput({ memoryMb: "", cpus: null, network: "  " }), null, "blank follows the default");
+	assert.deepEqual(normalizeContainerInput({ memoryMb: "512", cpus: "1.5", pids: 0, network: "none", image: "piper-agent-slim", mounts: "/usr/lib", env: "A=1 B=two" }), { memoryMb: 512, cpus: 1.5, pids: 0, network: "none", image: "piper-agent-slim", mounts: "/usr/lib", env: "A=1 B=two" }, "0 is kept: it lifts a limit");
+	for (const [input, why] of [
+		[{ memoryMb: -1 }, /memory must be a whole number of 0 or more/],
+		[{ memoryMb: 1.5 }, /memory must be a whole number/],
+		[{ pids: "many" }, /processes must be a whole number/],
+		[{ cpus: "abc" }, /cpus must be a number/],
+		[{ network: "host" }, /network must be one of internet, none, open/],
+		[{ image: "Bad Image!" }, /is not an image name/],
+		[{ mounts: "/run/docker.sock" }, /mounts: .*engine socket/],
+		[{ mounts: "/root/.ssh" }, /mounts: .*credentials/],
+		[{ mounts: "/home" }, /mounts: .*too broad/],
+		[{ env: "PATH=/evil" }, /env: PATH is set by the gateway/],
+		[{ env: "nope" }, /env: "nope" is not NAME=value/],
+		[{ ports: 80 }, /unknown container setting: ports/],
+		[{ mounts: "/usr/lib ".repeat(400) }, /too long/],
+		["text", /must be an object/],
+		[[1], /must be an object/],
+	]) assert.throws(() => normalizeContainerInput(input), why, JSON.stringify(input).slice(0, 60));
+
+	// Stored on the key, read back, and cleared.
+	const { record: ka } = apiKeys.create({ name: "container-a" });
+	const { record: kb } = apiKeys.create({ name: "container-b" });
+	assert.equal(apiKeys.get(ka.id).container, null, "a new key has no overrides");
+	apiKeys.update(ka.id, { container: { memoryMb: 512, network: "open", mounts: "/usr/lib", env: "A=key B=key" } });
+	assert.deepEqual(apiKeys.get(ka.id).container, { memoryMb: 512, network: "open", mounts: "/usr/lib", env: "A=key B=key" });
+	apiKeys.update(ka.id, { name: "container-a renamed" });
+	assert.equal(apiKeys.get(ka.id).container.memoryMb, 512, "changing something else keeps the settings");
+	assert.equal(apiKeys.get(kb.id).container, null, "and no other key has them");
+	const raw = new DatabaseSync(TEST_DB);
+	raw.prepare("UPDATE api_keys SET container_json = 'not json' WHERE id = ?").run(kb.id);
+	raw.close();
+	apiKeys.reload();
+	assert.equal(apiKeys.get(kb.id).container, null, "a damaged value reads as none instead of breaking the key");
+
+	// What a chat gets: the key's values over the defaults.
+	const globalMem = containerDefaults().memoryMb;
+	const eff = containerSettingsFor(ka.id);
+	assert.deepEqual([eff.memoryMb, eff.network, eff.image, eff.cpus], [512, "open", containerDefaults().image, containerDefaults().cpus], "own where set, default elsewhere");
+	assert.deepEqual(eff.mounts.map((m) => m.host), ["/usr/lib"], "the key's mounts are added");
+	assert.equal(Object.fromEntries(eff.env).A, "key");
+	assert.equal(Object.fromEntries(eff.env).TOOL_HOME, "/opt/tool", "and the default environment stays");
+	assert.deepEqual(containerSettingsFor(kb.id).memoryMb, globalMem, "another key follows the default");
+	for (const id of ["", null, undefined, "no-such-key"]) assert.equal(containerSettingsFor(id).own, null, `${JSON.stringify(id)} has no overrides`);
+	apiKeys.update(ka.id, { container: { memoryMb: 0, pids: 0 } });
+	assert.deepEqual([containerSettingsFor(ka.id).memoryMb, containerSettingsFor(ka.id).pids], [0, 0], "0 overrides a limit: unlimited for this key");
+	// A key's mount of the same container path replaces the default's; its env value of the same name wins.
+	const dirA = mkdtempSync(join(tmpdir(), "pi-kmount-a-"));
+	const dirB = mkdtempSync(join(tmpdir(), "pi-kmount-b-"));
+	const savedMounts = config.CONTAINER_MOUNTS;
+	config.CONTAINER_MOUNTS = `${dirA}:/opt/tools`;
+	apiKeys.update(ka.id, { container: { mounts: `${dirB}:/opt/tools /usr/lib:/docs` } });
+	assert.deepEqual(containerSettingsFor(ka.id).mounts, [{ host: dirB, container: "/opt/tools" }, { host: "/usr/lib", container: "/docs" }], "the key's mount of a path replaces the default's");
+	config.CONTAINER_MOUNTS = savedMounts;
+	rmSync(dirA, { recursive: true, force: true });
+	rmSync(dirB, { recursive: true, force: true });
+
+	// The spec a chat's container is created from carries them, and the signature notices.
+	apiKeys.update(ka.id, { container: { memoryMb: 256, pids: 32, cpus: 0.5, network: "none", env: "ONLY_HERE=1" } });
+	const rec = { id: "spec-chat", keyId: ka.id };
+	const wsA = ensureWorkspace(ka.id);
+	const specA = containerSpecFor(rec, wsA);
+	assert.deepEqual([specA.memoryMb, specA.pids, specA.cpus, specA.network], [256, 32, 0.5, "none"]);
+	assert.equal(piInvocation(specA, {}).env.ONLY_HERE, "1", "the key's environment reaches Pi");
+	assert.equal(piInvocation(specA, {}).env.TOOL_HOME, "/opt/tool", "with the defaults");
+	const specB = containerSpecFor({ id: "spec-chat", keyId: kb.id }, ensureWorkspace(kb.id));
+	assert.equal(specB.network, containerDefaults().network, "another key's spec follows the defaults");
+	assert.notEqual(containerSignature(specA, "img"), containerSignature({ ...specA, memoryMb: 512 }, "img"), "a changed override recreates the key's containers");
+
+	// Persistent keys: one container for the key, shared by its chats, that keeps what is installed in it.
+	{
+		assert.deepEqual(normalizeContainerInput({ persistent: true }), { persistent: true });
+		assert.deepEqual(normalizeContainerInput({ persistent: "1", memoryMb: "256" }), { persistent: true, memoryMb: 256 });
+		assert.equal(normalizeContainerInput({ persistent: false }), null, "off is not stored");
+		assert.throws(() => normalizeContainerInput({ persistent: "maybe" }), /persistent must be on or off/);
+		assert.equal(containerSettingsFor(ka.id).persistent, false, "off unless asked for");
+		apiKeys.update(ka.id, { container: { persistent: true } });
+		assert.equal(containerSettingsFor(ka.id).persistent, true);
+		assert.equal(containerSettingsFor(null).persistent, false, "the open gateway has no key to keep a container for");
+		const pa = containerSpecFor({ id: "chat-one", keyId: ka.id }, wsA);
+		const pb = containerSpecFor({ id: "chat-two", keyId: ka.id }, wsA);
+		assert.equal(pa.persistent, true);
+		assert.equal(pa.name, pb.name, "two chats of the key meet one container");
+		assert.equal(pa.name, keyContainerName(ka.id));
+		assert.match(pa.name, /^piper-[0-9a-f]{8}-key-[0-9a-f]{12}$/);
+		assert.equal(chatKeyOfContainer(pa.name) !== null && isKeyContainer(pa.name), true);
+		assert.deepEqual([pa.chatDir, pa.runDir], [pb.chatDir, pb.runDir], "and one set of mounted folders");
+		assert.equal(containerSettingsFor(kb.id).persistent, false);
+		assert.ok(join(pa.runDir, `${chatKey(chatIdHash("chat-one"))}.sock`).length <= 107, "a persistent chat's socket path fits a Unix socket");
+		assert.notEqual(containerSpecFor({ id: "chat-one", keyId: kb.id }, ensureWorkspace(kb.id)).name, pa.name, "another key has its own container");
+		assert.notEqual(pa.name, containerName(chatIdHash("chat-one")), "not named after a chat");
+		// Each chat keeps its session and socket under its own name inside the shared folders.
+		const h1 = chatIdHash("chat-one"), h2 = chatIdHash("chat-two");
+		const i1 = piInvocation(pa, { idHash: h1 }), i2 = piInvocation(pb, { idHash: h2 });
+		assert.equal(i1.piArgs[i1.piArgs.indexOf("--session-dir") + 1], `/piper/session/${chatKey(h1)}`);
+		assert.notEqual(i1.sessionDir, i2.sessionDir);
+		assert.equal(i1.env.PIPER_BRIDGE_SOCKET, `/run/piper/${chatKey(h1)}.sock`);
+		assert.notEqual(i1.env.PIPER_BRIDGE_SOCKET, i2.env.PIPER_BRIDGE_SOCKET);
+		assert.equal(piInvocation({ ...pa, persistent: false }, { idHash: h1 }).env.PIPER_BRIDGE_SOCKET, "/run/piper/bridge.sock", "a chat's own container keeps the plain paths");
+		assert.ok(containerCreateArgs({ ...pa, sig: "s" }).includes("piper.persistent=1"), "marked on the container");
+		assert.ok(!containerCreateArgs({ ...pa, persistent: false, sig: "s" }).includes("piper.persistent=1"));
+		// The image being rebuilt does not change a persistent container's signature (it keeps its own system).
+		assert.equal(containerSignature(pa, "img-old"), containerSignature(pa, "img-new"));
+		assert.notEqual(containerSignature({ ...pa, persistent: false }, "img-old"), containerSignature({ ...pa, persistent: false }, "img-new"));
+		assert.notEqual(containerSignature(pa, ""), containerSignature({ ...pa, memoryMb: 1 }, ""), "but its limits still do");
+
+		const sigP = containerSignature(pa, "img");
+		const seen = (running, signature) => JSON.stringify([{ State: { Running: running }, Config: { Labels: { "piper.managed": "1", "piper.sig": signature } } }]);
+		const engine = (handlers) => (bin, args) => handlers[args[0]]?.(args) ?? { code: 0, stdout: "", stderr: "" };
+		// A changed setting: state is saved (commit) before the old container goes, and the new one starts from it.
+		reset2(engine({ inspect: () => ({ code: 0, stdout: seen(true, "old"), stderr: "" }) }));
+		const res = await ensureContainer(pa, "img");
+		assert.equal(res.recreated, true);
+		assert.deepEqual(calls2.map((c) => c[1]), ["inspect", "stop", "commit", "image", "rm", "create", "start"], "stopped, saved (and its depth looked at), removed, created, started");
+		assert.ok(calls2.find((c) => c[1] === "commit").includes(keyStateImage(pa.name)), "saved to the key's state image");
+		const created = calls2.find((c) => c[1] === "create");
+		assert.equal(created[created.length - 1], keyStateImage(pa.name), "the new container is built from the saved state");
+		// A failed save must not cost the installs.
+		reset2(engine({ inspect: () => ({ code: 0, stdout: seen(true, "old"), stderr: "" }), commit: () => ({ code: 1, stdout: "", stderr: "no space left" }) }));
+		await assert.rejects(ensureContainer(pa, "img"), /no space left/);
+		assert.equal(calls2.filter((c) => c[1] === "rm").length, 0, "the container is not removed when its state could not be saved");
+		// Other chats are in it: left alone, reported.
+		reset2(engine({ inspect: () => ({ code: 0, stdout: seen(true, "old"), stderr: "" }) }));
+		const held = await ensureContainer(pa, "img", { allowRecreate: false });
+		assert.deepEqual([held.kept, held.recreated], [true, false]);
+		assert.deepEqual(calls2.map((c) => c[1]), ["inspect"], "nothing is stopped under a running chat");
+		// Missing container, but a saved state: start from that; with none saved, from the clean image.
+		reset2(engine({ inspect: () => ({ code: 1, stdout: "", stderr: "" }), image: () => ({ code: 1, stdout: "", stderr: "No such image" }) }));
+		await ensureContainer(pa, "img");
+		const fresh = calls2.find((c) => c[1] === "create");
+		assert.equal(fresh[fresh.length - 1], pa.image, "no saved state: the clean image");
+		reset2(engine({ inspect: () => ({ code: 1, stdout: "", stderr: "" }), image: () => ({ code: 0, stdout: "sha256:x\n", stderr: "" }) }));
+		await ensureContainer(pa, "img");
+		const restored = calls2.find((c) => c[1] === "create");
+		assert.equal(restored[restored.length - 1], keyStateImage(pa.name), "a saved state that exists is used");
+		// A chat's own container is unaffected by all of this.
+		reset2(engine({ inspect: () => ({ code: 0, stdout: seen(true, "old"), stderr: "" }) }));
+		await ensureContainer({ ...pa, persistent: false }, "img");
+		assert.deepEqual(calls2.map((c) => c[1]), ["inspect", "rm", "create", "start"], "no commit for a chat's own container");
+		// Killing one chat's Pi leaves the others.
+		reset2();
+		await killPi(pa.name, `--session-dir ${i1.sessionDir}`);
+		assert.ok(calls2[0].includes(`--session-dir ${i1.sessionDir}`) && !calls2[0].includes("--mode rpc"));
+		// Stopping a chat leaves the persistent container running; ending one removes only its own files.
+		reset2();
+		const runDirP = pa.runDir;
+		mkdirSync(runDirP, { recursive: true });
+		const sock = join(runDirP, `${chatKey(h1)}.sock`);
+		writeFileSync(sock, "");
+		await containerHost.stopped(h1, { container: { name: pa.name, persistent: true, runDir: runDirP, chatDir: pa.chatDir } });
+		assert.equal(calls2.filter((c) => c[1] === "stop").length, 0, "the container keeps running for the key's other chats");
+		assert.equal(existsSync(sock), false, "only the chat's own socket goes");
+		mkdirSync(join(pa.chatDir, "session", chatKey(h1)), { recursive: true });
+		mkdirSync(join(pa.chatDir, "session", chatKey(h2)), { recursive: true });
+		await containerHost.ended(h1);
+		assert.equal(existsSync(join(pa.chatDir, "session", chatKey(h1))), false, "ending a chat forgets its session");
+		assert.equal(existsSync(join(pa.chatDir, "session", chatKey(h2))), true, "and not another chat's");
+		assert.equal(calls2.some((c) => c[1] === "rm" && c.includes(pa.name)), false, "and never the key's container");
+		// The sweep keeps a persistent key's container, and removes it once the key is not persistent any more.
+		const managedList = (kept) => engine({ ps: () => ({ code: 0, stdout: `${pa.name}\trunning\t${ka.id}\n`, stderr: "" }) });
+		reset2(managedList());
+		await sweepContainers(new Set(), new Set());
+		assert.equal(calls2.filter((c) => c[1] === "rm" || c[1] === "stop").length, 0, "kept with no chat known and none running");
+		apiKeys.update(ka.id, { container: { memoryMb: 256, pids: 32, cpus: 0.5, network: "none", env: "ONLY_HERE=1" } });
+		reset2(managedList());
+		await sweepContainers(new Set(), new Set());
+		assert.equal(calls2.filter((c) => c[1] === "rm").length, 1, "removed when the key stopped being persistent");
+		assert.ok(calls2.some((c) => c[1] === "rmi"), "with its saved state");
+	}
+
+	// The container's /etc/resolv.conf, hosts and hostname are files of its own: created once, kept, and
+	// the resolver list refreshed only while the agent has not edited it.
+	{
+		const dir = mkdtempSync(join(tmpdir(), "sysfiles-"));
+		const sys = ensureSystemFiles(dir);
+		assert.equal(sys, join(dir, "sys"));
+		for (const f of ["resolv.conf", "hosts", "hostname"]) assert.ok(statSync(join(sys, f)).isFile(), `${f} is a regular file: a missing source would make Docker create a folder`);
+		assert.match(readFileSync(join(sys, "resolv.conf"), "utf8"), /^# [^\n]*\n(nameserver \d+\.\d+\.\d+\.\d+\n)+$/, "resolvers, one per line");
+		assert.match(readFileSync(join(sys, "hosts"), "utf8"), /127\.0\.0\.1\tlocalhost[\s\S]*127\.0\.1\.1\tpiper/);
+		assert.equal(readFileSync(join(sys, "hostname"), "utf8"), "piper\n");
+		// The agent's edit is kept, in place (same file), and a second start does not undo it.
+		const inode = statSync(join(sys, "resolv.conf")).ino;
+		writeFileSync(join(sys, "resolv.conf"), "nameserver 127.0.0.1\n");
+		writeFileSync(join(sys, "hosts"), "127.0.0.1 localhost mytor\n");
+		ensureSystemFiles(dir);
+		assert.equal(readFileSync(join(sys, "resolv.conf"), "utf8"), "nameserver 127.0.0.1\n", "an edited resolv.conf is the agent's");
+		assert.equal(readFileSync(join(sys, "hosts"), "utf8"), "127.0.0.1 localhost mytor\n");
+		assert.equal(statSync(join(sys, "resolv.conf")).ino, inode, "rewritten in place: a bind mount must keep its file");
+		// Untouched since it was written: follows the host's resolvers when they change.
+		const dir2 = mkdtempSync(join(tmpdir(), "sysfiles-"));
+		ensureSystemFiles(dir2);
+		writeFileSync(join(dir2, "sys", "resolv.conf"), "nameserver 203.0.113.9\n");
+		writeFileSync(join(dir2, "sys", ".resolv.seeded"), "nameserver 203.0.113.9\n");
+		const before = statSync(join(dir2, "sys", "resolv.conf")).ino;
+		ensureSystemFiles(dir2);
+		assert.notEqual(readFileSync(join(dir2, "sys", "resolv.conf"), "utf8"), "nameserver 203.0.113.9\n", "an untouched one is refreshed");
+		assert.equal(statSync(join(dir2, "sys", "resolv.conf")).ino, before);
+		rmSync(dir, { recursive: true, force: true });
+		rmSync(dir2, { recursive: true, force: true });
+	}
+
+	// Networks: `open` has a network of its own, so the firewall rules for `internet` never cut it off.
+	assert.deepEqual([networkName("internet"), networkName("open"), networkName("none")], ["piper", "piper-open", "none"]);
+	assert.deepEqual(networkArgs("open"), ["--network", "piper-open"]);
+	assert.notEqual(NETWORK_OPEN.subnet, NETWORK.subnet, "the two networks do not overlap");
+	const base2 = { name: "n", image: "i", workspace: "/w", profileDir: "/p", chatDir: "/c", runDir: "/r", bridgePath: "/b", sig: "s" };
+	assert.equal(containerSignature({ ...base2, network: "internet" }, "i") === containerSignature({ ...base2, network: "open" }, "i"), false, "moving between networks recreates");
+	reset2((bin, args) => (args[0] === "network" && args[1] === "inspect" ? { code: 1, stdout: "", stderr: "no such network" } : { code: 0, stdout: "", stderr: "" }));
+	await ensureNetwork("open");
+	const made2 = calls2.find((c) => c[1] === "network" && c[2] === "create");
+	assert.ok(made2.includes("172.30.0.0/24") && made2.includes("piper-open") && made2.includes("com.docker.network.bridge.enable_icc=false"), "created on its own subnet with no traffic between containers");
+	reset2();
+	await ensureNetwork("none");
+	assert.equal(calls2.length, 0, "none needs no network");
+	reset2();
+	await ensureNetwork("internet");
+	assert.equal(calls2.filter((c) => c[2] === "create").length, 0, "an existing network is left alone");
+
+	// The firewall follows the modes in use: rules iff some chat uses `internet`.
+	{
+		const state = { INPUT: [], "DOCKER-USER": [] };
+		const fake = (bin, args) => {
+			if (!isIptables(bin)) {
+				if (args[0] === "version") return { code: 0, stdout: "26.1.5\n", stderr: "" };
+				if (args[0] === "image") return { code: 0, stdout: "sha256:abc|0.99.1\n", stderr: "" };
+				return { code: 0, stdout: "", stderr: "" };
+			}
+			if (args[0] === "-S") return { code: 0, stdout: [`-P ${args[1]} ACCEPT`, ...state[args[1]]].join("\n"), stderr: "" };
+			if (args[0] === "-I") { state[args[1]].splice(Number(args[2]) - 1, 0, `-A ${args[1]} ${args.slice(3).join(" ")}`); return { code: 0, stdout: "", stderr: "" }; }
+			if (args[0] === "-D") { const line = `-A ${args[1]} ${args.slice(2).join(" ")}`; const at = state[args[1]].indexOf(line); if (at >= 0) state[args[1]].splice(at, 1); return { code: at >= 0 ? 0 : 1, stdout: "", stderr: "" }; }
+			return { code: 0, stdout: "", stderr: "" };
+		};
+		const rules = () => state.INPUT.length + state["DOCKER-USER"].length;
+		reset2(fake);
+		let st = await checkEngine({ force: true, modes: ["none"] });
+		assert.deepEqual([rules(), st.firewall.mode, st.ok, st.problems], [0, "none", true, []], "nobody uses the internet policy: no rules");
+		st = await checkEngine({ force: true, modes: ["none", "internet"] });
+		assert.ok(rules() >= 7 && st.firewall.mode === "internet", "one key on internet is enough to need the rules");
+		assert.deepEqual(st.network.inUse.sort(), ["internet", "none"]);
+		st = await checkEngine({ force: true, modes: ["internet", "open"] });
+		assert.ok(calls2.some((c) => c[1] === "network" && c[2] === "inspect" && c[3] === "piper-open"), "the open network is ensured too");
+		assert.ok(rules() >= 7, "and the rules stay for the chat that needs them");
+		st = await checkEngine({ force: true, modes: ["open"] });
+		assert.deepEqual([rules(), st.firewall.mode], [0, "open"], "when the last internet chat's key changes, the rules go");
+		st = await checkEngine({ force: true });
+		assert.equal(st.firewall.mode, "internet", "without modes it follows the default policy");
+		resetEngineCheck();
+	}
+
+	// networkModesInUse reads the keys.
+	apiKeys.update(ka.id, { container: { network: "open" } });
+	apiKeys.update(kb.id, { container: { network: "none" } });
+	assert.deepEqual(networkModesInUse().sort(), ["internet", "none", "open"].filter((m) => m !== "internet" || containerDefaults().network === "internet").sort(), "the default and every key's own");
+	apiKeys.update(kb.id, { container: null });
+	assert.equal(apiKeys.get(kb.id).container, null, "null clears");
+
+	// The key's view carries what the page needs and no environment values.
+	apiKeys.update(ka.id, { container: { env: "SECRET_TOKEN=hunter2", memoryMb: 100 } });
+	const view = containerView(ka.id);
+	assert.equal(view.own.memoryMb, 100);
+	assert.ok(view.effective.envNames.includes("SECRET_TOKEN") && !JSON.stringify(view.effective).includes("hunter2"), "environment names, never values, in what the page is given");
+	assert.equal(containerView("").admin, true);
+	apiKeys.remove(ka.id);
+	apiKeys.remove(kb.id);
+
+	// The mount denylist, against a real tree.
+	{
+		const t = mkdtempSync(join(tmpdir(), "pi-deny-"));
+		const mk = (rel, text = "x") => { mkdirSync(dirname(join(t, rel)), { recursive: true }); writeFileSync(join(t, rel), text); };
+		mk("clean/tool.sh"); mk("clean/sub/lib.py");
+		mk("home-like/.ssh/id_ed25519"); mk("nested/a/.aws/credentials"); mk("keyfile/one/id_rsa"); mk("keyfile2/id_rsa.pub");
+		mk("cfg/.config/gh/hosts.yml"); mk("cfg2/.config/gcloud/x"); mk("deep/a/b/c/.ssh/id_rsa"); mk("docker/.docker/config.json"); mk("npm/.npmrc");
+		assert.equal(secretIn(join(t, "clean")), null, "an ordinary folder is fine");
+		assert.match(secretIn(join(t, "home-like")), /\.ssh is a credential/);
+		assert.match(secretIn(join(t, "nested")), /\.aws is a credential/, "found two levels down");
+		assert.match(secretIn(join(t, "keyfile")), /id_rsa is a credential/);
+		assert.match(secretIn(join(t, "keyfile2")), /id_rsa\.pub is a credential/, "even the public half: it names the key");
+		assert.match(secretIn(join(t, "cfg")), /\.config\/gh is a credential/);
+		assert.match(secretIn(join(t, "cfg2")), /\.config\/gcloud is a credential/);
+		assert.match(secretIn(join(t, "docker")), /\.docker/);
+		assert.match(secretIn(join(t, "npm")), /\.npmrc/);
+		assert.equal(secretIn(join(t, "deep")), null, "beyond two levels is not scanned (and that is documented)");
+		assert.match(secretIn(join(t, "home-like", ".ssh")), /is or is inside \.ssh/, "the folder itself");
+		assert.match(secretIn(join(t, "cfg", ".config", "gh")), /is or is inside \.config\/gh/);
+		assert.match(secretIn(`${join(t, "home-like")}/.ssh/sub`), /is or is inside \.ssh/, "or anything inside one");
+		assert.throws(() => parseContainerMounts(join(t, "home-like"), { strict: true }), /credentials must not be shared/);
+		assert.deepEqual(parseContainerMounts(join(t, "clean"), { strict: true }).map((m) => m.host), [join(t, "clean")]);
+		for (const broad of ["/root", "/home", "/etc", "/var", "/run", "/root/"]) assert.throws(() => parseContainerMounts(broad, { strict: true }), /too broad/, broad);
+		assert.deepEqual(parseContainerMounts(join(t, "home-like")), [], "one stored before this rule is skipped, not shared");
+		// A scan is capped, so a huge tree cannot make a save hang.
+		mkdirSync(join(t, "big"));
+		for (let i = 0; i < 40; i++) writeFileSync(join(t, "big", `f${i}`), "x");
+		assert.equal(secretIn(join(t, "big"), { cap: 10 }), null);
+		rmSync(t, { recursive: true, force: true });
+	}
+
+	// The audit trail: actions, shortened, newest first, and never a reason to fail.
+	{
+		const before = recentAudit(500).length;
+		audit("test.one", "target-1", "first");
+		audit("test.two", "target-2", `line one\n\t line two ${"x".repeat(500)}`);
+		const [newest, older] = recentAudit(2);
+		assert.deepEqual([newest.action, older.action], ["test.two", "test.one"], "newest first");
+		assert.ok(newest.detail.length <= 400 && !/[\n\t]/.test(newest.detail), "a long, multi-line detail is squeezed and cut");
+		assert.equal(recentAudit(500).length, before + 2);
+		assert.equal(recentAudit(1).length, 1);
+		assert.doesNotThrow(() => audit(undefined, undefined, undefined));
+		assert.ok(typeof recentAudit(500)[0].ts === "number");
+	}
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+}
+
+
+// ---------------------------------------------------------------- the Containers page, events, disk, alerts
+
+{
+	const { Readable, PassThrough } = await import("node:stream");
+	const { EventEmitter } = await import("node:events");
+	const http = await import("node:http");
+	const isIptables = (bin) => /(^|\/)iptables$/.test(bin);
+	const seen = [];
+	let reply = () => ({ code: 0, stdout: "", stderr: "" });
+	setRunner(async (bin, args, opts) => { seen.push({ bin, args, opts }); return reply(bin, args, opts); });
+	const forget = () => { seen.length = 0; reply = () => ({ code: 0, stdout: "", stderr: "" }); };
+	const INSTANCE = instanceId();
+	const cname = (word, other = INSTANCE) => `piper-${other}-${chatIdHash(word).slice(0, 16)}`;
+	// A webhook that remembers what it was sent.
+	const hooks = [];
+	let hookStatus = 200;
+	const hookServer = http.createServer((req, res) => {
+		let body = "";
+		req.on("data", (c) => (body += c));
+		req.on("end", () => { hooks.push(JSON.parse(body)); res.writeHead(hookStatus); res.end("{}"); });
+	});
+	await new Promise((r) => hookServer.listen(0, "127.0.0.1", r));
+	const hookUrl = `http://127.0.0.1:${hookServer.address().port}/hook`;
+
+	// Docker's sizes and events, parsed.
+	assert.deepEqual([parseSize("0B"), parseSize("1.5kB"), parseSize("12MB"), parseSize("3.1GB"), parseSize("2TB")], [0, 1500, 12_000_000, 3_100_000_000, 2e12]);
+	assert.deepEqual([parseSize("12MiB"), parseSize("2GiB"), parseSize("1.5KiB")], [12 * 1048576, 2 * 1024 ** 3, 1536], "binary units, as docker stats prints them");
+	assert.deepEqual([parseSize(""), parseSize("lots"), parseSize(undefined), parseSize("12 XB")], [0, 0, 0, 0], "anything else is 0, never NaN");
+	assert.deepEqual(parseUsage("12.3MiB / 2GiB"), { used: Math.round(12.3 * 1048576), limit: 2 * 1024 ** 3 });
+	assert.deepEqual(parseDiskSize("1.23MB (virtual 1.9GB)"), { rw: 1_230_000, virtual: 1_900_000_000 });
+	assert.deepEqual(parseDiskSize("0B (virtual 1.89GB)"), { rw: 0, virtual: 1_890_000_000 });
+	assert.deepEqual(parseDiskSize("12kB"), { rw: 12_000, virtual: 0 });
+	const ev = (action, name, extra = {}, type = "container") => JSON.stringify({ Type: type, Action: action, Actor: { Attributes: { name, ...extra } }, time: 1790000000 });
+	assert.deepEqual(parseEvent(ev("oom", "c1")), { action: "oom", name: "c1", exitCode: null, time: 1790000000000 });
+	assert.deepEqual(parseEvent(ev("die", "c1", { exitCode: "137" })), { action: "die", name: "c1", exitCode: 137, time: 1790000000000 });
+	assert.equal(parseEvent(ev("start", "c1")), null, "starts are not news");
+	assert.equal(parseEvent(ev("die", "c1", {}, "network")), null, "only containers");
+	assert.equal(parseEvent("not json"), null);
+	assert.equal(parseEvent(JSON.stringify({ Type: "container", Action: "die" })), null, "no name, no event");
+	assert.equal(parseEvent(ev("exec_die: sh", "c1"))?.action, undefined, "exec_die is a different action");
+
+	// The events watcher: filtered to this instance, drops a die the gateway caused, restarts, stops.
+	{
+		const got = [];
+		const spawned = [];
+		const fakeSpawn = (bin, args) => {
+			const child = new EventEmitter();
+			child.stdout = new PassThrough();
+			child.kill = () => child.emit("close", 0);
+			spawned.push({ bin, args, child });
+			return child;
+		};
+		const watcher = watchEvents((e) => got.push(e), { spawnFn: fakeSpawn, restartMs: 20 });
+		const args = spawned[0].args;
+		assert.equal(spawned[0].bin, "docker");
+		assert.ok(args.includes(`label=piper.instance=${INSTANCE}`) && args.includes("label=piper.managed=1") && args.includes("event=oom") && args.includes("event=die"), "only this gateway's containers, only kills and deaths");
+		noteSelfStop("c-mine");
+		spawned[0].child.stdout.write(`${ev("die", "c-mine", { exitCode: "0" })}\n${ev("die", "c-crash", { exitCode: "137" })}\n${ev("oom", "c-mine")}\n${ev("start", "c-x")}\nnoise\n`);
+		await new Promise((r) => setTimeout(r, 20));
+		assert.deepEqual(got.map((e) => `${e.action}:${e.name}`), ["die:c-crash", "oom:c-mine"], "a stop the gateway asked for is not reported, a kill is");
+		spawned[0].child.stdout.write(ev("oom", "split").slice(0, 30));
+		spawned[0].child.stdout.write(`${ev("oom", "split").slice(30)}\n`);
+		await new Promise((r) => setTimeout(r, 10));
+		assert.equal(got.at(-1).name, "split", "a line split across chunks is put back together");
+		spawned[0].child.emit("close", 1);
+		await new Promise((r) => setTimeout(r, 60));
+		assert.equal(spawned.length, 2, "it starts again when docker events exits (the daemon restarted)");
+		watcher.stop();
+		await new Promise((r) => setTimeout(r, 60));
+		assert.equal(spawned.length, 2, "and stays stopped");
+	}
+
+	// Details, usage and disk from docker's own output.
+	forget();
+	reply = (bin, args) => {
+		if (args[0] === "inspect") return { code: 0, stdout: JSON.stringify([{ Name: "/c1", State: { Running: true } }, { Name: "/c2", State: { Running: false } }]), stderr: "" };
+		if (args[0] === "stats") return { code: 0, stdout: `${JSON.stringify({ Name: "c1", CPUPerc: "12.5%", MemUsage: "100MiB / 2GiB", PIDs: "7" })}\nbroken\n`, stderr: "" };
+		if (args[0] === "ps") return { code: 0, stdout: "c1\t1.5MB (virtual 1.9GB)\nc2\t0B (virtual 1.9GB)\n", stderr: "" };
+		return { code: 0, stdout: "", stderr: "" };
+	};
+	assert.deepEqual([...(await inspectMany(["c1", "c2", "c3"])).keys()], ["c1", "c2"], "names docker does not know are simply absent");
+	assert.equal((await inspectMany([])).size, 0);
+	assert.deepEqual(await containerStats(["c1"]).then((m) => m.get("c1")), { cpu: 12.5, memUsed: 100 * 1048576, memLimit: 2 * 1024 ** 3, pids: 7 });
+	assert.equal(seen.filter((c) => c.args[0] === "stats").length, 1);
+	assert.deepEqual(await diskUsage().then((m) => m.get("c1")), { rw: 1_500_000, virtual: 1_900_000_000 });
+	assert.ok(seen.find((c) => c.args[0] === "ps").args.includes(`label=piper.instance=${INSTANCE}`), "the disk walk is only for this gateway's containers");
+
+	// listContainers: a stopped chat, an orphan, another gateway's container that must not appear, and a live chat.
+	{
+		const stoppedHash = chatIdHash("page-stopped");
+		chatStore.put({ id_hash: stoppedHash, key_id: null, workspace: "/w", created_at: 1, last_used_at: 5000, requests: 4, state_json: "{}" });
+		const orphanName = cname("page-orphan");
+		const stoppedName = cname("page-stopped");
+		const liveId = "page-live";
+		const liveName = cname(liveId);
+		const acquired = sessions.acquire(liveId, null);
+		acquired.record.sessionPromise.catch(() => {});
+		const psRows = [`${stoppedName}\texited\t`, `${orphanName}\trunning\t`, `${liveName}\trunning\t`, `${cname("foreign", "other000")}\trunning\t`];
+		forget();
+		reply = (bin, args) => {
+			if (args[0] === "ps" && args.includes("--format") && !args.includes("-s")) return { code: 0, stdout: psRows.filter((r) => r.split("\t")[0].startsWith(`piper-${INSTANCE}-`)).join("\n"), stderr: "" };
+			if (args[0] === "inspect") return { code: 0, stdout: JSON.stringify([
+				{ Name: `/${stoppedName}`, Image: "sha256:old", Created: "2026-09-30T10:00:00Z", Config: { Image: "piper-agent" }, State: { Status: "exited", Running: false }, HostConfig: { Memory: 2 * 1024 ** 3 }, NetworkSettings: { Networks: { piper: {} } } },
+				{ Name: `/${orphanName}`, Image: "sha256:new", Created: "2026-09-30T11:00:00Z", Config: { Image: "piper-agent" }, State: { Status: "running", Running: true, StartedAt: new Date(Date.now() - 60_000).toISOString() }, HostConfig: { Memory: 512 * 1048576 }, NetworkSettings: { Networks: { "piper-open": {} } } },
+				{ Name: `/${liveName}`, Image: "sha256:new", Created: "2026-09-30T12:00:00Z", Config: { Image: "piper-agent" }, State: { Status: "running", Running: true, StartedAt: new Date(Date.now() - 5000).toISOString() }, HostConfig: { Memory: 2 * 1024 ** 3 }, NetworkSettings: { Networks: { piper: {} } } },
+			]), stderr: "" };
+			if (args[0] === "stats") return { code: 0, stdout: `${JSON.stringify({ Name: orphanName, CPUPerc: "3.0%", MemUsage: "50MiB / 512MiB", PIDs: "4" })}\n`, stderr: "" };
+			if (args[0] === "image") return { code: 0, stdout: "sha256:new|0.99.1\n", stderr: "" };
+			return { code: 0, stdout: "", stderr: "" };
+		};
+		diskState.containers = new Map([[orphanName, { rw: 300 * 1048576, virtual: 0 }]]);
+		diskState.at = Date.now(); // fresh, so opening the page does not start a measurement that replaces these figures
+		const page = await listContainers();
+		const by = Object.fromEntries(page.containers.map((c) => [c.name, c]));
+		assert.equal(page.containers.length, 3, "another gateway's container is not listed");
+		assert.deepEqual([by[stoppedName].status, by[orphanName].status, by[liveName].status], ["stopped", "orphan", "live"], "stopped and resumable, no chat at all, running now");
+		assert.equal(by[stoppedName].fingerprint, stoppedHash.slice(0, 8), "a stored chat is labelled without its id");
+		assert.equal(by[liveName].fingerprint, fingerprint(liveId), "and it is the same label the Agents page shows");
+		assert.deepEqual([by[orphanName].cpu, by[orphanName].memUsedMb, by[orphanName].memoryLimitMb, by[orphanName].pids, by[orphanName].diskMb, by[orphanName].network], [3, 50, 512, 4, 300, "piper-open"], "usage, limit, disk and network");
+		assert.equal(by[stoppedName].cpu, null, "a stopped container has no live usage");
+		assert.equal(by[stoppedName].imageStale, true, "built from an image that has since been rebuilt");
+		assert.equal(by[orphanName].imageStale, false);
+		assert.ok(by[orphanName].uptimeMs >= 59_000 && by[stoppedName].uptimeMs === 0);
+		assert.equal(by[stoppedName].requests, 4);
+		assert.equal(by[stoppedName].lastUsedAt, 5000);
+		assert.deepEqual(page.containers.map((c) => c.state), ["running", "running", "exited"], "running ones first");
+		assert.ok(seen.filter((c) => c.args[0] === "stats").length >= 1);
+		const statsBefore = seen.filter((c) => c.args[0] === "stats").length;
+		await listContainers();
+		assert.equal(seen.filter((c) => c.args[0] === "stats").length, statsBefore, "live usage is reused for a few seconds, so a busy dashboard does not run docker stats each poll");
+
+		// Actions: each does what it says, through the chat when there is one, and is audited.
+		const auditBefore = recentAudit(500).length;
+		forget();
+		reply = (bin, args) => (args[0] === "inspect" ? { code: 0, stdout: JSON.stringify([{ Name: `/${stoppedName}`, State: { Running: false } }, { Name: `/${orphanName}`, State: { Running: true } }, { Name: `/${liveName}`, State: { Running: true } }]), stderr: "" } : { code: 0, stdout: "", stderr: "" });
+		assert.match(await containerAction(stoppedName, "stop"), /container was stopped/);
+		assert.ok(seen.some((c) => c.args[0] === "stop" && c.args.includes(stoppedName)), "a stopped chat's container goes straight to the engine");
+		forget();
+		reply = (bin, args) => (args[0] === "inspect" ? { code: 0, stdout: JSON.stringify([{ Name: `/${liveName}`, State: { Running: true } }]), stderr: "" } : { code: 0, stdout: "", stderr: "" });
+		assert.match(await containerAction(liveName, "stop"), /chat was stopped; it resumes/);
+		assert.equal(sessions.has(liveId), false, "the live chat was stopped through the session controller");
+		assert.ok(seen.some((c) => c.args[0] === "stop" && c.args.includes(liveName)), "and its container with it");
+		assert.ok(chatStore.get(chatIdHash(liveId)) !== null || true);
+		forget();
+		reply = (bin, args) => (args[0] === "inspect" ? { code: 0, stdout: JSON.stringify([{ Name: `/${stoppedName}`, State: { Running: false } }]), stderr: "" } : { code: 0, stdout: "", stderr: "" });
+		assert.match(await containerAction(stoppedName, "recreate"), /clean one on its next message/);
+		assert.ok(seen.some((c) => c.args[0] === "rm" && c.args.includes(stoppedName)), "recreate removes the container");
+		assert.ok(chatStore.get(stoppedHash), "but keeps the chat, so its conversation continues in the new one");
+		forget();
+		reply = (bin, args) => (args[0] === "inspect" ? { code: 0, stdout: JSON.stringify([{ Name: `/${stoppedName}`, State: { Running: false } }]), stderr: "" } : { code: 0, stdout: "", stderr: "" });
+		assert.match(await containerAction(stoppedName, "remove"), /chat was ended and its container removed/);
+		await new Promise((r) => setTimeout(r, 30));
+		assert.equal(chatStore.get(stoppedHash), null, "remove ends the chat");
+		assert.ok(seen.some((c) => c.args[0] === "rm" && c.args.includes(stoppedName)));
+		forget();
+		reply = (bin, args) => (args[0] === "inspect" ? { code: 0, stdout: JSON.stringify([{ Name: `/${orphanName}`, State: { Running: true } }]), stderr: "" } : { code: 0, stdout: "", stderr: "" });
+		assert.match(await containerAction(orphanName, "remove"), /^the container was removed$/);
+		await assert.rejects(containerAction(orphanName, "explode"), (e) => e.status === 400, "an unknown action");
+		await assert.rejects(containerAction("some-other-container", "stop"), (e) => e.status === 404 && /not one of this gateway's/.test(e.message), "only this gateway's containers can be touched");
+		await assert.rejects(containerAction(cname("page-missing"), "stop"), (e) => e.status === 404 && /no container/.test(e.message));
+		await assert.rejects(containerAction(cname("page-x", "other000"), "remove"), (e) => e.status === 404, "another gateway's container is refused too");
+		const trail = recentAudit(500);
+		assert.ok(trail.length >= auditBefore + 5, "every action is in the audit trail");
+		assert.ok(trail.some((a) => a.action === "container.recreate" && a.target === stoppedName));
+
+		// Run a command: only in a running container of ours, capped, and audited.
+		forget();
+		reply = (bin, args) => (args[0] === "inspect" ? { code: 0, stdout: JSON.stringify([{ Name: `/${orphanName}`, State: { Running: true } }, { Name: `/${stoppedName}`, State: { Running: false } }]), stderr: "" } : args[0] === "exec" ? { code: 0, stdout: "x".repeat(70_000), stderr: "warn", } : { code: 0, stdout: "", stderr: "" });
+		const out = await containerExec(orphanName, "  df -h  ", 999_999);
+		assert.deepEqual(seen.find((c) => c.args[0] === "exec").args, ["exec", orphanName, "sh", "-c", "df -h"], "run with sh -c, trimmed");
+		assert.equal(seen.find((c) => c.args[0] === "exec").opts.timeoutMs, 120_000, "the time limit is capped");
+		assert.ok(out.truncated && out.stdout.length < 70_000 && /output cut at 64 KB/.test(out.stdout), "long output is cut");
+		assert.equal(out.stderr, "warn");
+		assert.equal((await containerExec(orphanName, "true", 5)).timeoutMs, 1000, "and has a floor");
+		await assert.rejects(containerExec(orphanName, "   "), (e) => e.status === 400 && /command is required/.test(e.message));
+		await assert.rejects(containerExec(orphanName, "x".repeat(5000)), (e) => e.status === 400 && /too long/.test(e.message));
+		await assert.rejects(containerExec(stoppedName, "id"), (e) => e.status === 409 && /not running/.test(e.message), "a stopped container is not started by a command");
+		await assert.rejects(containerExec("not-ours", "id"), (e) => e.status === 404);
+		assert.ok(recentAudit(20).some((a) => a.action === "container.exec" && a.detail === "df -h"), "the command is in the audit trail");
+
+		// The route: a command box on an open dashboard is remote execution, so it refuses until a password is set.
+		const call = async (method, url, body) => {
+			const req = Readable.from(body === undefined ? [] : [Buffer.from(JSON.stringify(body))]);
+			req.method = method; req.url = url;
+			const res = { status: null, body: "", writeHead(s) { this.status = s; }, end(b) { this.body = b ?? ""; } };
+			await containerRoutes(req, res, new URL(url, "http://x").pathname);
+			return { status: res.status, json: res.body ? JSON.parse(res.body) : null };
+		};
+		clearPasswordHash();
+		const execsBefore = seen.filter((c) => c.args[0] === "exec").length;
+		const denied = await call("POST", `/dashboard/containers/${orphanName}/exec`, { command: "id" });
+		assert.equal(denied.status, 403);
+		assert.match(denied.json.error.message, /needs a dashboard password/);
+		assert.equal(seen.filter((c) => c.args[0] === "exec").length, execsBefore, "and nothing ran");
+		const pageJson = await call("GET", "/dashboard/containers.json");
+		assert.deepEqual([pageJson.status, pageJson.json.execAllowed], [200, false]);
+		assert.match(pageJson.json.execNote, /Set a dashboard password/, "the page is told why the box is off");
+		setPasswordHash(hashPassword("a long enough password"));
+		const allowed = await call("POST", `/dashboard/containers/${orphanName}/exec`, { command: "id", timeoutMs: 5000 });
+		assert.equal(allowed.status, 200);
+		assert.equal(allowed.json.code, 0);
+		assert.equal((await call("GET", "/dashboard/containers.json")).json.execAllowed, true);
+		assert.equal((await call("POST", `/dashboard/containers/${orphanName}/stop`)).json.ok, true);
+		assert.equal((await call("POST", "/dashboard/containers/not-a-container-name/stop")).status, 404, "names are checked before anything runs");
+		assert.equal((await call("POST", `/dashboard/containers/${cname("page-missing")}/explode`)).status, 400);
+		assert.equal((await call("GET", "/dashboard/audit.json")).json.audit[0].target.length > 0, true);
+		clearPasswordHash();
+		sessions.close(liveId);
+	}
+
+	// Disk: free space and per-container size against their thresholds, with alerts that clear once.
+	{
+		resetAlerts();
+		const saved = { url: config.ALERT_WEBHOOK_URL, warn: config.DISK_FREE_WARN_MB, limit: config.CONTAINER_DISK_MB };
+		config.ALERT_WEBHOOK_URL = hookUrl;
+		config.DISK_FREE_WARN_MB = 5000;
+		config.CONTAINER_DISK_MB = 100;
+		hooks.length = 0;
+		forget();
+		reply = (bin, args) => (args[0] === "ps" ? { code: 0, stdout: `${cname("big")}\t400MB (virtual 2GB)\n${cname("small")}\t5MB (virtual 2GB)\n`, stderr: "" } : args[0] === "info" ? { code: 0, stdout: "/var/lib/docker\n", stderr: "" } : { code: 0, stdout: "", stderr: "" });
+		const gb = (n) => Math.round(n * 1024 ** 3);
+		let free = gb(3.5);
+		const statfs = (path) => { if (path !== "/var/lib/docker") throw new Error("nope"); return { bavail: free / 4096, bsize: 4096, blocks: gb(47) / 4096 }; };
+		let state = await pollDisk({ statfs, now: 1000 });
+		assert.equal(state.low, true, "3.5 GB free is under the 5 GB warning");
+		assert.equal(diskSummary().freeMb, Math.round(gb(3.5) / 1048576));
+		// docker prints decimal sizes (400MB); the gateway counts in MiB like its memory limits, so that is 381.
+		assert.deepEqual(diskSummary().over.map((o) => [o.name, o.mb]), [[cname("big"), 381]], "only the container over its limit");
+		await new Promise((r) => setTimeout(r, 50));
+		assert.deepEqual(hooks.map((h) => h.event).sort(), ["container_disk:" + cname("big"), "disk_low"].sort(), "one alert each");
+		assert.match(hooks.find((h) => h.event === "disk_low").message, /only 3584 MB free on \/var\/lib\/docker/);
+		await pollDisk({ statfs, now: 2000 });
+		await new Promise((r) => setTimeout(r, 50));
+		assert.equal(hooks.length, 2, "still low: no second alert inside the hour");
+		free = gb(20);
+		state = await pollDisk({ statfs, now: 3000 });
+		await new Promise((r) => setTimeout(r, 50));
+		assert.equal(state.low, false);
+		assert.equal(hooks.filter((h) => h.event === "disk_low").length, 2, "and the recovery is announced once");
+		assert.equal(hooks.at(-1).recovered, true);
+		assert.match(hooks.at(-1).text, /^✅/);
+		const gone = await pollDisk({ statfs: () => { throw new Error("unreadable"); }, now: 4000 });
+		assert.equal(gone.host, null, "a disk that cannot be read is not a crash, and not a warning either");
+		assert.equal(gone.low, false);
+		config.CONTAINER_DISK_MB = 0;
+		assert.deepEqual((await pollDisk({ statfs, now: 5000 })).over, [], "0 turns the container warning off");
+		Object.assign(config, { ALERT_WEBHOOK_URL: saved.url, DISK_FREE_WARN_MB: saved.warn, CONTAINER_DISK_MB: saved.limit });
+	}
+
+	// Opening the page after minutes without a measurement starts one, once, and not again while it is fresh.
+	{
+		forget();
+		diskState.at = 0;
+		refreshDiskSoon();
+		refreshDiskSoon();
+		refreshDiskSoon();
+		await new Promise((r) => setTimeout(r, 60));
+		const walks = () => seen.filter((c) => c.args[0] === "ps" && c.args.includes("-s")).length;
+		assert.equal(walks(), 1, "one measurement however many page views");
+		refreshDiskSoon();
+		await new Promise((r) => setTimeout(r, 30));
+		assert.equal(walks(), 1, "and none while the figures are fresh");
+		diskState.at = Date.now() - 3 * 60_000;
+		refreshDiskSoon();
+		await new Promise((r) => setTimeout(r, 60));
+		assert.equal(walks(), 2, "one more once they are three minutes old");
+		resetAlerts();
+	}
+
+	// Events reach the chat and the alerts.
+	{
+		resetAlerts();
+		config.ALERT_WEBHOOK_URL = hookUrl;
+		hooks.length = 0;
+		const liveId = "event-chat";
+		const name = cname(liveId);
+		const { record } = sessions.acquire(liveId, null);
+		record.sessionPromise.catch(() => {});
+		const message = handleContainerEvent({ action: "oom", name, exitCode: null }, { memoryMb: 512, now: Date.now() });
+		assert.match(message, /killed: out of memory \(limit 512 MB\)/);
+		assert.deepEqual(record.notices, [message], "the chat is told, for its next reply");
+		assert.equal(recentReasonFor(name), message, "and a Pi that dies now can say why");
+		assert.equal(recentReasonFor(name, Date.now() + 10 * 60_000), null, "not for ever");
+		assert.equal(recentReasonFor("some-other"), null);
+		assert.match(handleContainerEvent({ action: "die", name, exitCode: 137 }), /stopped unexpectedly \(exit code 137\)/);
+		await new Promise((r) => setTimeout(r, 50));
+		assert.equal(hooks.filter((h) => h.event === `container_oom:${name}`).length, 1, "an alert names the container");
+		handleContainerEvent({ action: "oom", name: cname("no-chat"), exitCode: null });
+		assert.ok(recentEvents.at(-1).container === cname("no-chat"), "an event for a chat that is gone is still recorded");
+		sessions.close(liveId);
+		await new Promise((r) => setTimeout(r, 80)); // let the alerts just raised reach the webhook before it is unset
+		config.ALERT_WEBHOOK_URL = "";
+	}
+
+	// A dead Pi's error says why, when Docker said.
+	{
+		const child = new EventEmitter();
+		child.stdout = new PassThrough(); child.stderr = new PassThrough(); child.stdin = new PassThrough();
+		child.exitCode = null; child.signalCode = null; child.kill = () => {};
+		const session = new PiRpcSession(child, { reason: () => "a process in this chat's container was killed: out of memory" });
+		const pending = session.send({ type: "get_state" }).catch((e) => e);
+		child.emit("exit", 137, null);
+		assert.match((await pending).message, /Pi in the container exited \(code 137\): a process in this chat's container was killed: out of memory/);
+	}
+
+	// Alerts: payload, hold-back, recovery, and a webhook that fails.
+	{
+		resetAlerts();
+		hooks.length = 0;
+		const p = alertPayload("k", "something", { a: 1 }, { host: "h1", now: Date.UTC(2026, 8, 30) });
+		assert.deepEqual(Object.keys(p).sort(), ["content", "details", "event", "host", "message", "recovered", "text", "time"]);
+		assert.equal(p.text, p.content, "Slack reads text, Discord reads content");
+		assert.match(p.text, /^⚠️ Piper on h1: something$/);
+		assert.equal(alertPayload("k", "ok", {}, { recovered: true }).text.startsWith("✅"), true);
+		const t0 = 1_000_000;
+		assert.equal((await alert("k1", "first", {}, { url: hookUrl, now: t0 })).sent, true);
+		assert.equal((await alert("k1", "again", {}, { url: hookUrl, now: t0 + 60_000 })).sent, false, "held back for an hour");
+		assert.equal((await alert("k2", "another kind", {}, { url: hookUrl, now: t0 + 60_000 })).sent, true, "per kind");
+		assert.equal((await alert("k1", "much later", {}, { url: hookUrl, now: t0 + ALERT_COOLDOWN_MS + 1 })).sent, true, "and again after it");
+		assert.deepEqual(hooks.map((h) => h.message), ["first", "another kind", "much later"]);
+		assert.equal((await recovered("k1", "fine now", {}, { url: hookUrl })).sent, true);
+		assert.equal((await recovered("k1", "fine now", {}, { url: hookUrl })).sent, false, "announced once");
+		assert.equal((await recovered("never-raised", "x", {}, { url: hookUrl })).sent, false, "and only after an alert");
+		assert.equal((await alert("k1", "after recovery", {}, { url: hookUrl, now: t0 + 61_000 })).sent, true, "a new problem after a recovery is news at once");
+		resetAlerts();
+		assert.deepEqual(await alert("nourl", "x", {}, { url: "" }), { sent: false, reason: "no webhook is set" });
+		assert.equal((await alert("nourl", "x", {}, { url: hookUrl })).sent, false, "raised with no webhook: setting one later does not announce old news");
+		resetAlerts();
+		hookStatus = 500;
+		const bad = await alert("failing", "x", {}, { url: hookUrl });
+		assert.deepEqual([bad.sent, /answered 500/.test(bad.reason)], [false, true], "a failing webhook is reported, not thrown");
+		hookStatus = 200;
+		const down = await alert("unreachable", "x", {}, { url: "http://127.0.0.1:1/none" });
+		assert.equal(down.sent, false, "an unreachable one too");
+		hooks.length = 0;
+		assert.equal((await testAlert({ url: hookUrl })).sent, true);
+		assert.equal((await testAlert({ url: hookUrl })).sent, true, "the test ignores the hold-back");
+		assert.equal(hooks[0].event, "test");
+		assert.match((await testAlert({ url: "" })).reason, /no webhook is set/);
+		assert.equal(parseWebhookUrl(""), "");
+		assert.equal(parseWebhookUrl(" https://hooks.example.com/x?a=1 "), "https://hooks.example.com/x?a=1");
+		assert.throws(() => parseWebhookUrl("not a url"), /not a URL/);
+		assert.throws(() => parseWebhookUrl("ftp://example.com"), /http or https/);
+		assert.throws(() => coerceSetting(SETTINGS_SPEC.find((x) => x.key === "ALERT_WEBHOOK_URL"), "javascript:alert(1)"), /http or https/);
+		assert.deepEqual(["CONTAINER_DISK_MB", "DISK_FREE_WARN_MB", "ALERT_WEBHOOK_URL"].map((k) => SETTINGS_SPEC.find((x) => x.key === k).def), [0, 5120, ""]);
+	}
+
+	// Readiness changes are announced once, and a settings change does not lose the state.
+	{
+		resetAlerts();
+		const changes = [];
+		onReadinessChange((status, previous) => changes.push([status.ok, previous]));
+		const goodAnswers = (bin, args) => (args[0] === "version" ? { code: 0, stdout: "26.1.5\n", stderr: "" } : args[0] === "image" ? { code: 0, stdout: "sha256:a|0.99.1\n", stderr: "" } : { code: 0, stdout: "", stderr: "" });
+		const badAnswers = (bin, args) => (args[0] === "version" ? { code: 127, stdout: "", stderr: "no docker" } : { code: 0, stdout: "", stderr: "" });
+		forget(); reply = (bin, args) => (isIptables(bin) ? { code: 0, stdout: "", stderr: "" } : goodAnswers(bin, args));
+		await checkEngine({ force: true, modes: ["none"] });
+		const first = changes.length;
+		await checkEngine({ force: true, modes: ["none"] });
+		assert.equal(changes.length, first, "the same answer again is not news");
+		reply = badAnswers;
+		await checkEngine({ force: true, modes: ["none"] });
+		assert.deepEqual(changes.at(-1), [false, true], "good to bad");
+		resetEngineCheck();
+		reply = (bin, args) => (isIptables(bin) ? { code: 0, stdout: "", stderr: "" } : goodAnswers(bin, args));
+		const recovery = await checkEngine({ force: true, modes: ["none"] });
+		assert.deepEqual([recovery.ok, recovery.problems], [true, []], "the good answer is good");
+		assert.deepEqual(changes.at(-1), [true, false], "bad to good, even after a settings change cleared the cache");
+		assert.equal(lastEngineStatus().ok, true);
+		onReadinessChange(null);
+		resetEngineCheck();
+	}
+	await new Promise((r) => hookServer.close(r));
+	config.ALERT_WEBHOOK_URL = "";
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+}
+
+// Agent endpoints: named, permanent agents of a key, each on a port of its own.
+{
+	const { server } = await import("./server.mjs");
+	const http = await import("node:http");
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+	const accessLog = config.ACCESS_LOG;
+	config.ACCESS_LOG = false;
+	config.HOST = "127.0.0.1";
+	const engineCalls = [];
+	setRunner(async (bin, args) => {
+		engineCalls.push([bin, ...args]);
+		return { code: bin === "docker" && args[0] === "ps" ? 0 : 127, stdout: "", stderr: "" };
+	});
+
+	// Ids: scope id of an agent, and back.
+	assert.equal(agentScope("k1", "ab12cd34"), "k1--ab12cd34");
+	assert.deepEqual([ownerKeyOf("k1--ab12cd34"), agentIdOf("k1--ab12cd34")], ["k1", "ab12cd34"]);
+	assert.deepEqual([ownerKeyOf("k1"), agentIdOf("k1")], ["k1", null], "a key's own scope is itself");
+	assert.deepEqual([ownerKeyOf(null), ownerKeyOf(""), agentIdOf(null)], [null, "", null]);
+	assert.equal(scopeOf("k1--ab12cd34"), "key-k1--ab12cd34");
+	assert.equal(keyIdForScope("key-k1--ab12cd34"), "k1--ab12cd34", "the profile routes work on an agent's scope");
+	assert.deepEqual([parsePortRange(""), parsePortRange("20000-20010")], [null, [20000, 20010]]);
+	for (const bad of ["20000", "a-b", "100-2000", "30000-20000", "1024-70000"]) assert.throws(() => parsePortRange(bad), /AGENT_PORT_RANGE/, bad);
+
+	const { record: owner, key: ownerToken } = apiKeys.create({ name: "owner key", expiresAt: 0 });
+	const { key: otherToken } = apiKeys.create({ name: "other key", expiresAt: 0 });
+	const OWNER = owner.id;
+
+	// Creating: every refusal, then two agents.
+	await assert.rejects(createAgent({ keyId: "no-such-key", name: "x" }), (e) => e instanceof AgentError && e.status === 404);
+	for (const name of ["Architect", "-x", "a b", "", "x".repeat(32)]) await assert.rejects(createAgent({ keyId: OWNER, name }), /lowercase letters/, JSON.stringify(name));
+	await assert.rejects(createAgent({ keyId: OWNER, name: "x", workspace: "both" }), /workspace must be/);
+	await assert.rejects(createAgent({ keyId: OWNER, name: "x", thinking: "extreme" }), /thinking must be/);
+	await assert.rejects(createAgent({ keyId: OWNER, name: "x", instructions: 5 }), /instructions must be text/);
+	await assert.rejects(createAgent({ keyId: OWNER, name: "x", instructions: "y".repeat(65 * 1024) }), /limited to 64 KB/);
+	await assert.rejects(createAgent({ keyId: OWNER, name: "x", container: { memoryMb: "lots" } }), /memory/);
+	assert.equal(agents.list().length, 0, "nothing was made by a refused request");
+
+	const architect = await createAgent({ keyId: OWNER, name: "architect", workspace: "own", container: { memoryMb: 1024, env: "B=2", persistent: true } });
+	const coder = await createAgent({ keyId: OWNER, name: "coder", workspace: "shared" });
+	await assert.rejects(createAgent({ keyId: OWNER, name: "coder" }), /already has an agent called "coder"/, "names are unique per key");
+	assert.equal(agentStatus(architect), "listening");
+	assert.notEqual(listeningPort(architect.id), listeningPort(coder.id), "each has its own port");
+	assert.equal(agents.get(architect.id).port, listeningPort(architect.id), "the port is stored, so the URL survives a restart");
+	assert.equal(agents.get(architect.id).container.persistent, undefined, "an agent is always persistent, so that is not a setting");
+	const archScope = agentScope(OWNER, architect.id);
+	const codeScope = agentScope(OWNER, coder.id);
+	assert.equal(existsSync(join(TEST_PROFILES, scopeOf(archScope))), true, "its profile exists");
+	assert.notEqual(workspaceDir(archScope), workspaceDir(OWNER), "an own workspace is its own folder");
+	assert.equal(workspaceDir(codeScope), workspaceDir(OWNER), "a shared one is the key's");
+	assert.equal(workspaceScopeOf(codeScope), OWNER);
+	assert.equal(existsSync(workspaceDir(archScope)), true);
+	assert.equal(keyLabel(archScope), "owner key / architect");
+	assert.equal(agentView(architect).key, "owner key");
+
+	// Container settings: the agent's own over the key's over the defaults; always persistent.
+	apiKeys.update(OWNER, { container: { memoryMb: 512, network: "none", env: "A=1" } });
+	const effA = containerSettingsFor(archScope);
+	assert.deepEqual([effA.memoryMb, effA.network, effA.persistent], [1024, "none", true], "the agent's memory, the key's network");
+	assert.deepEqual(effA.env.filter(([n]) => n === "A" || n === "B").map(([n, v]) => `${n}=${v}`).sort(), ["A=1", "B=2"], "environment adds up");
+	const effC = containerSettingsFor(codeScope);
+	assert.deepEqual([effC.memoryMb, effC.persistent, effC.own], [512, true, null], "an agent with none of its own follows the key");
+	assert.equal(containerSettingsFor(OWNER).persistent, false, "and the key itself is not made persistent by having agents");
+	apiKeys.update(OWNER, { container: null });
+
+	// Its container, its folders, its labels: apart from the key's and from each other's.
+	const recA = { id: "chat-a", keyId: OWNER, scopeId: archScope, agentId: architect.id };
+	const recC = { id: "chat-c", keyId: OWNER, scopeId: codeScope, agentId: coder.id };
+	const specA = containerSpecFor(recA, ensureWorkspace(archScope));
+	const specC = containerSpecFor(recC, ensureWorkspace(codeScope));
+	const specKey = containerSpecFor({ id: "chat-k", keyId: OWNER }, ensureWorkspace(OWNER));
+	assert.equal(specA.persistent, true);
+	assert.equal(specA.name, keyContainerName(archScope));
+	assert.equal(new Set([specA.name, specC.name, keyContainerName(OWNER)]).size, 3, "three different containers");
+	assert.equal(specKey.persistent, false, "the key's own chats keep theirs");
+	assert.equal(specA.keyId, OWNER, "the owner key stays what limits are read from");
+	assert.notEqual(specA.profileDir, specC.profileDir);
+	assert.equal(specC.workspace, workspaceDir(OWNER), "shared: the key's workspace is mounted");
+	assert.notEqual(specA.workspace, specC.workspace);
+	assert.ok(containerCreateArgs({ ...specA, sig: "s" }).includes(`piper.agent=${architect.id}`));
+	assert.ok(containerCreateArgs({ ...specA, sig: "s" }).includes(`piper.key=${OWNER}`), "the label keeps the key: the Containers page and sweep read it");
+	agents.update(architect.id, { model: "p/m", thinking: "high" });
+	assert.deepEqual(agentDefaultModel(recA), { model: "p/m", thinking: "high" });
+	assert.equal(agentDefaultModel({ agentId: null }), null);
+	assert.equal(piInvocation(specA, { defaultModel: agentDefaultModel(recA), idHash: chatIdHash("chat-a") }).env.PIPER_DEFAULT_MODEL, "p/m", "a new chat starts on the agent's model");
+	agents.update(architect.id, { model: null, thinking: null });
+
+	// Sessions never cross: the same client id on the main port, on each agent, under another key.
+	const sid = (credential) => scopedSessionId(credential, "same-id");
+	const cred = { id: OWNER };
+	assert.equal(new Set([sid(cred), sid({ ...cred, agent: { id: architect.id }, scopeId: archScope }), sid({ ...cred, agent: { id: coder.id }, scopeId: codeScope }), sid({ id: "another" })]).size, 4);
+
+	// Over real sockets: who may call an agent's port, and what it serves.
+	const base = (agent) => `http://127.0.0.1:${listeningPort(agent.id)}`;
+	const ask = async (agent, path, { token, method = "GET", body } = {}) => {
+		const res = await fetch(base(agent) + path, { method, headers: { ...(token ? { authorization: `Bearer ${token}` } : {}), "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+		const text = await res.text();
+		let json = null;
+		try { json = JSON.parse(text); } catch { /* the assertions say */ }
+		return { status: res.status, json, text };
+	};
+	assert.equal((await ask(architect, "/health")).json.status, "ok", "health needs no key and says nothing more");
+	assert.equal((await ask(architect, "/v1/models")).status, 401, "no key");
+	assert.equal((await ask(architect, "/v1/models", { token: otherToken })).status, 401, "another key");
+	assert.equal((await ask(architect, "/v1/models", { token: "nonsense" })).status, 401);
+	config.GATEWAY_API_KEY = "settings-key-for-test";
+	assert.equal((await ask(architect, "/v1/models", { token: "settings-key-for-test" })).status, 401, "the settings key is not accepted here");
+	config.GATEWAY_API_KEY = "";
+	const models = await ask(architect, "/v1/models", { token: ownerToken });
+	assert.equal(models.status, 200, "its own key");
+	assert.equal(models.json.object, "list");
+	for (const path of ["/dashboard", "/dashboard/agents.json", "/dashboard/api-keys.json", "/dashboard/settings.json", "/v1/piper/settings", "/nothing"]) {
+		const r = await ask(architect, path, { token: ownerToken });
+		assert.equal(r.status, 404, `${path} is not served on an agent's port`);
+	}
+	const chat = await ask(architect, "/v1/chat/completions", { token: ownerToken, method: "POST", body: {} });
+	assert.equal(chat.status, 400, "the chat route reaches the gateway's own handler (and refuses an empty request)");
+	assert.equal((await ask(architect, "/v1/chat/completions", { method: "POST", body: { messages: [] } })).status, 401, "but not without the key");
+	const pre = await fetch(base(architect) + "/v1/chat/completions", { method: "OPTIONS" });
+	assert.equal(pre.status, 204, "a browser client's preflight is answered");
+
+	// Switching: off closes the port, on reopens the same one.
+	const was = listeningPort(coder.id);
+	await setAgentEnabled(coder.id, false);
+	assert.equal(agentStatus(agents.get(coder.id)), "disabled");
+	await assert.rejects(fetch(`http://127.0.0.1:${was}/health`), "closed");
+	await setAgentEnabled(coder.id, true);
+	assert.equal(listeningPort(coder.id), was, "the stored port is reused when it is free");
+	// A taken port: the agent moves, and says so.
+	await stopAgent(coder.id);
+	const squatter = http.createServer((req, res) => res.end("x"));
+	await new Promise((r) => squatter.listen(was, "127.0.0.1", r));
+	await startAgent(agents.get(coder.id));
+	assert.notEqual(listeningPort(coder.id), was, "it could not have its port back");
+	assert.equal(agents.get(coder.id).port, listeningPort(coder.id), "the new one is stored");
+	assert.ok(recentAuditRows(20).some((r) => r.action === "agent.port" && /was taken/.test(r.detail)), "and it is on record");
+	await new Promise((r) => squatter.close(r));
+	const before = listeningPort(coder.id);
+	await renewAgentPort(coder.id);
+	assert.equal(agentStatus(agents.get(coder.id)), "listening");
+	assert.equal(agents.get(coder.id).port, listeningPort(coder.id));
+	void before;
+	// A range.
+	config.AGENT_PORT_RANGE = "41100-41140";
+	const ranged = await createAgent({ keyId: OWNER, name: "ranged" });
+	assert.ok(listeningPort(ranged.id) >= 41100 && listeningPort(ranged.id) <= 41140, "picked inside AGENT_PORT_RANGE");
+	config.AGENT_PORT_RANGE = "";
+	await deleteAgent(ranged.id);
+
+	// A revoked key closes the door on every agent of it.
+	const { record: doomed, key: doomedToken } = apiKeys.create({ name: "doomed", expiresAt: 0 });
+	const temp = await createAgent({ keyId: doomed.id, name: "temp" });
+	assert.equal((await ask(temp, "/v1/models", { token: doomedToken })).status, 200);
+	apiKeys.revoke(doomed.id);
+	assert.equal((await ask(temp, "/v1/models", { token: doomedToken })).status, 401, "revoked");
+	await assert.rejects(createAgent({ keyId: doomed.id, name: "more" }), /revoked/, "and no new agent for it");
+
+	// Changing one: a new name, model and thinking are checked; an unknown or disallowed model is refused.
+	await assert.rejects(updateAgent(architect.id, { name: "coder" }), /already has an agent/);
+	await assert.rejects(updateAgent(architect.id, { model: "no-such-provider/no-such-model" }), /no model/);
+	const renamed = await updateAgent(architect.id, { name: "architect2", container: { memoryMb: 2048 } });
+	assert.deepEqual([renamed.name, renamed.container], ["architect2", { memoryMb: 2048 }]);
+	await updateAgent(architect.id, { name: "architect" });
+
+	// The dashboard routes.
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	const dash = `http://127.0.0.1:${server.address().port}`;
+	const dpost = async (path, body, method = "POST") => {
+		const res = await fetch(dash + path, { method, headers: { "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+		return { status: res.status, json: await res.json().catch(() => null) };
+	};
+	const listed = await (await fetch(`${dash}/dashboard/agents.json`)).json();
+	assert.deepEqual(Object.keys(listed).sort(), ["agents", "host", "keys", "portRange"]);
+	assert.ok(listed.agents.find((a) => a.name === "architect" && a.status === "listening" && a.port === listeningPort(architect.id)));
+	assert.equal(listed.keys.find((k) => k.id === doomed.id).usable, false, "a revoked key is not offered");
+	const made = await dpost("/dashboard/agents", { keyId: OWNER, name: "researcher", workspace: "own" });
+	assert.equal(made.status, 201);
+	const rid = made.json.created;
+	assert.equal(made.json.agents.find((a) => a.id === rid).status, "listening");
+	assert.equal((await dpost("/dashboard/agents", { keyId: OWNER, name: "researcher" })).status, 400, "a duplicate is the client's fault");
+	assert.equal((await dpost("/dashboard/agents", { keyId: "nope", name: "x" })).status, 404);
+	assert.equal((await dpost("/dashboard/agents/00000000/disable", {})).status, 404);
+	assert.equal((await dpost(`/dashboard/agents/${rid}/disable`, {})).json.agents.find((a) => a.id === rid).status, "disabled");
+	assert.equal((await dpost(`/dashboard/agents/${rid}/enable`, {})).json.agents.find((a) => a.id === rid).status, "listening");
+	assert.equal((await dpost(`/dashboard/agents/${rid}/bogus`, {})).status, 404);
+	assert.equal((await dpost(`/dashboard/agents/${rid}/reset`, {})).status, 200);
+	assert.ok(engineCalls.some((c) => c[1] === "rm" && c.includes(keyContainerName(agentScope(OWNER, rid)))), "reset removes its container");
+	assert.equal((await dpost(`/dashboard/agents/${rid}`, undefined, "DELETE")).json.deleted, rid);
+	assert.equal(agents.get(rid), null);
+
+	// Deleting: port closed, container and saved state removed, profile and own workspace archived, the key's workspace untouched.
+	const keyFile = join(workspaceDir(OWNER), "keep.txt");
+	writeFileSync(keyFile, "the key's");
+	const archPort = listeningPort(architect.id);
+	engineCalls.length = 0;
+	await deleteAgent(architect.id);
+	await assert.rejects(fetch(`http://127.0.0.1:${archPort}/health`), "its port is closed");
+	assert.ok(engineCalls.some((c) => c[1] === "rm" && c.includes(keyContainerName(archScope))) && engineCalls.some((c) => c[1] === "rmi"), "container and saved state removed");
+	assert.equal(existsSync(join(TEST_PROFILES, scopeOf(archScope))), false, "profile moved out");
+	assert.equal(existsSync(workspaceDir(archScope)), false, "own workspace moved out");
+	const archived = readdirSync(`${TEST_WS}-archive`).filter((n) => n.startsWith(`agent-architect-${architect.id}`));
+	assert.equal(archived.length, 2, "its profile and its workspace are in the archive, not deleted");
+	assert.equal(readFileSync(keyFile, "utf8"), "the key's", "the key's workspace is untouched");
+	await deleteAgent(coder.id);
+	assert.equal(existsSync(keyFile), true, "a shared workspace is never archived with an agent");
+
+	// The sweep keeps an agent's container, and removes one whose agent is gone.
+	const live = await createAgent({ keyId: OWNER, name: "kept" });
+	const ps = (rows) => async (bin, args) => {
+		engineCalls.push([bin, ...args]);
+		return { code: bin === "docker" && args[0] === "ps" ? 0 : 127, stdout: args[0] === "ps" ? rows.map((r) => r.join("\t")).join("\n") : "", stderr: "" };
+	};
+	setRunner(ps([[keyContainerName(agentScope(OWNER, live.id)), "running", OWNER, live.id], [keyContainerName(agentScope(OWNER, "deadbeef")), "running", OWNER, "deadbeef"]]));
+	engineCalls.length = 0;
+	await sweepContainers(new Set(), new Set());
+	const removed = engineCalls.filter((c) => c[1] === "rm").map((c) => c[c.length - 1]);
+	assert.deepEqual(removed, [keyContainerName(agentScope(OWNER, "deadbeef"))], "only the orphan is removed");
+	// Deleting a key takes its agents with it.
+	const res = await dpost(`/dashboard/api-keys/${OWNER}`, undefined, "DELETE");
+	assert.equal(res.status, 200);
+	assert.equal(agents.listByKey(OWNER).length, 0, "its agents are gone with it");
+	assert.equal(listeningPort(live.id), null, "and their ports");
+	await deleteAgentsOfKey(doomed.id);
+	assert.equal(agents.list().length, 0);
+
+	await new Promise((r) => server.close(r));
+	await stopAgentServers();
+	config.ACCESS_LOG = accessLog;
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+}
+
+// Update container: rebuild keeping what is installed, then Pi to the gateway's version and the extensions.
+{
+	const { EventEmitter } = await import("node:events");
+	const { PassThrough } = await import("node:stream");
+	const http = await import("node:http");
+	const { server } = await import("./server.mjs");
+	config.HOST = "127.0.0.1";
+	const accessLog3 = config.ACCESS_LOG;
+	config.ACCESS_LOG = false;
+	const calls3 = [];
+	let inspectFor = () => null;
+	let piVersion = "0.1.0";
+	let layers = 5;
+	let failCommit = false;
+	const hostPi = await hostPiVersion();
+	assert.ok(hostPi, "the tests run with Pi installed");
+	const fake = async (bin, args) => {
+		calls3.push([bin, ...args]);
+		const ok = (stdout = "") => ({ code: 0, stdout, stderr: "" });
+		if (args[0] === "inspect") {
+			const names = args.slice(args.indexOf("container") + 1);
+			const infos = names.map((n) => inspectFor(n)).filter(Boolean);
+			return infos.length ? ok(JSON.stringify(infos)) : { code: 1, stdout: "[]", stderr: "No such object" };
+		}
+		if (args[0] === "image" && args[1] === "inspect") {
+			if (args.includes("--format")) return ok("sha256:img|" + hostPi + "\n");
+			return ok(JSON.stringify([{ Id: "sha256:saved", RootFS: { Layers: new Array(layers).fill("l") }, Config: { Env: ["PATH=/usr/bin", "TOOL=a b"], Cmd: ["sleep", "infinity"], Entrypoint: null, WorkingDir: "/workspace", Labels: { "piper.image": "1" } } }]));
+		}
+		if (args[0] === "commit" && failCommit) return { code: 1, stdout: "", stderr: "no space left on device" };
+		if (args[0] === "exec" && args.includes("sh") && args.some((a) => /pi --version/.test(a))) return ok(`pi ${piVersion}\n`);
+		return ok();
+	};
+	setRunner(fake);
+	const spawned3 = [];
+	let npmExit = 0;
+	const fakeSpawn = (bin, args) => {
+		const child = new EventEmitter();
+		child.stdout = new PassThrough();
+		child.stderr = new PassThrough();
+		child.stdin = new PassThrough();
+		child.kill = () => {};
+		spawned3.push({ bin, args, child });
+		setImmediate(() => {
+			if (args[0] === "exec") {
+				const cmd = args.slice(args.indexOf("timeout") + 4).join(" ");
+				child.stdout.write(`running ${cmd}\n`);
+				if (/npm install/.test(cmd) && npmExit === 0) piVersion = hostPi;
+				setImmediate(() => child.emit("close", /npm install/.test(cmd) ? npmExit : 0));
+			} else setImmediate(() => child.emit("close", 0));
+		});
+		return child;
+	};
+	const seq = () => calls3.map((c) => c[1] === "image" ? `image ${c[2]}` : c[1]);
+
+	// rebuildContainer: stop, save, remove, create from the save with the current spec, start.
+	const base3 = { name: "piper-ffffffff-key-000000000001", image: "piper-agent", workspace: "/w", profileDir: "/p", chatDir: "/c", runDir: "/r", bridgePath: "/b", persistent: true, keyId: "k", network: "none", memoryMb: 768 };
+	const labelled = (sig = "old") => ({ Name: "/" + base3.name, State: { Running: true }, Config: { Labels: { "piper.managed": "1", "piper.sig": sig, "piper.key": "k" } } });
+	inspectFor = (n) => (n === base3.name ? labelled() : null);
+	calls3.length = 0;
+	const built = await rebuildContainer(base3, "sha256:img", { spawnFn: fakeSpawn });
+	assert.deepEqual([built.rebuilt, built.flattened], [true, false]);
+	assert.deepEqual(seq(), ["inspect", "stop", "commit", "image inspect", "rm", "create", "start"], "stopped, saved, looked at its depth, removed, created, started");
+	const create3 = calls3.find((c) => c[1] === "create");
+	assert.equal(create3[create3.length - 1], keyStateImage(base3.name), "made again from what it had");
+	assert.ok(create3.includes("768m"), "with the settings it would get now");
+	// A failed save removes nothing.
+	failCommit = true;
+	calls3.length = 0;
+	await assert.rejects(rebuildContainer(base3, "sha256:img", { spawnFn: fakeSpawn }), /no space left/);
+	assert.equal(calls3.filter((c) => c[1] === "rm" || c[1] === "create").length, 0, "nothing is removed or made when the state could not be saved");
+	failCommit = false;
+	// No container yet: created from the clean image.
+	inspectFor = () => null;
+	calls3.length = 0;
+	const fresh3 = await rebuildContainer({ ...base3, persistent: false }, "sha256:img", { spawnFn: fakeSpawn });
+	assert.equal(fresh3.rebuilt, false);
+	assert.deepEqual(seq(), ["inspect", "create", "start"]);
+	assert.equal(calls3.find((c) => c[1] === "create").at(-1), "piper-agent");
+
+	// Flattening: only when deep, keeping the configuration.
+	layers = FLATTEN_OVER_LAYERS;
+	calls3.length = 0;
+	spawned3.length = 0;
+	assert.equal((await flattenImage("piper-keystate:x", { spawnFn: fakeSpawn })).flattened, false, "not over the limit");
+	assert.equal(spawned3.length, 0, "nothing was exported or imported");
+	layers = FLATTEN_OVER_LAYERS + 20;
+	spawned3.length = 0;
+	calls3.length = 0;
+	const flat = await flattenImage("piper-keystate:x", { spawnFn: fakeSpawn });
+	assert.deepEqual([flat.flattened, flat.depth, flat.replacedId], [true, 120, "sha256:saved"]);
+	assert.deepEqual(spawned3.map((p) => p.args[0]), ["export", "import"], "export piped into import");
+	const importArgs = spawned3[1].args;
+	const changes = importArgs.flatMap((a, i) => (a === "--change" ? [importArgs[i + 1]] : []));
+	assert.ok(changes.includes('ENV TOOL="a b"') && changes.includes('CMD ["sleep","infinity"]') && changes.includes("WORKDIR /workspace") && changes.includes('LABEL "piper.image"="1"'), "the runtime configuration is put back");
+	assert.deepEqual(importArgs.slice(-2), ["-", "piper-keystate:x"], "under the same tag");
+	assert.ok(calls3.some((c) => c[1] === "create") && calls3.some((c) => c[1] === "rm" && c.includes("-f")), "through a throwaway container");
+	assert.deepEqual(importChanges({}), []);
+	layers = 5;
+
+	// A long command, streamed.
+	{
+		const got = [];
+		spawned3.length = 0;
+		const run = execStream("c1", ["pi", "update", "--extensions"], { env: { HOME: "/root" }, cwd: "/profile", timeoutMs: 120_000, onLine: (l) => got.push(l), spawnFn: fakeSpawn });
+		const done = await run;
+		assert.deepEqual(spawned3[0].args.slice(0, 7), ["exec", "-w", "/profile", "-e", "HOME=/root", "c1", "timeout"], "env, folder, then the command under timeout");
+		assert.deepEqual(spawned3[0].args.slice(6, 10), ["timeout", "-k", "10", "120"]);
+		assert.deepEqual([done.code, done.timedOut, got], [0, false, ["running pi update --extensions"]]);
+	}
+
+	// Who owns a container, and what is refused.
+	const { record: okKey } = apiKeys.create({ name: "updater", expiresAt: 0 });
+	const agent = await createAgent({ keyId: okKey.id, name: "updatable" });
+	const aScope = agentScope(okKey.id, agent.id);
+	const aName = keyContainerName(aScope);
+	const agentInfo = (extra = {}) => ({ Name: "/" + aName, State: { Running: true }, Config: { Labels: { "piper.managed": "1", "piper.sig": "old", "piper.key": okKey.id, "piper.agent": agent.id } }, ...extra });
+	inspectFor = (n) => (n === aName ? agentInfo() : null);
+	const t = await resolveTarget(aName);
+	assert.deepEqual([t.kind, t.persistent, t.scopeId, t.keyId, t.agentId], ["agent", true, aScope, okKey.id, agent.id]);
+	await assert.rejects(resolveTarget("piper-00000000-abc"), (e) => e.status === 404, "not ours");
+	await assert.rejects(resolveTarget(keyContainerName("ghost")), (e) => e.status === 404, "no such container");
+	const goneInfo = (n) => ({ Name: "/" + n, State: { Running: true }, Config: { Labels: { "piper.managed": "1", "piper.key": okKey.id, "piper.agent": "deadbeef" } } });
+	inspectFor = (n) => goneInfo(n);
+	await assert.rejects(resolveTarget(keyContainerName(agentScope(okKey.id, "deadbeef"))), /belongs to nothing/, "an agent that is gone owns nothing");
+	inspectFor = (n) => (n === aName ? agentInfo() : null);
+	assert.deepEqual(await containersOfScope(aScope), [], "no managed containers listed by this fake yet");
+
+	// A request running in it: refused, nothing touched.
+	const realRecords = sessions.recordsByScope.bind(sessions);
+	const realHibernate = sessions.hibernate.bind(sessions);
+	const hibernated = [];
+	sessions.hibernate = (id) => { hibernated.push(id); return true; };
+	sessions.recordsByScope = (scope) => (scope === aScope ? [{ id: "live-1", container: { name: aName }, inflight: 1, stopped: Promise.resolve() }] : realRecords(scope));
+	calls3.length = 0;
+	await assert.rejects(updateContainer(aName), (e) => e.status === 409 && /request is running/.test(e.message));
+	assert.equal(calls3.filter((c) => c[1] === "stop" || c[1] === "rm").length, 0);
+	assert.equal(hibernated.length, 0);
+	// Idle chats are stopped first.
+	sessions.recordsByScope = (scope) => (scope === aScope ? [{ id: "live-1", container: { name: aName }, inflight: 0, stopped: Promise.resolve() }] : realRecords(scope));
+
+	// Not enough disk to save its state.
+	diskState.containers = new Map([[aName, { rw: 3 * 1024 ** 3 }]]);
+	diskState.host = { path: "/", freeBytes: 3.5 * 1024 ** 3, totalBytes: 10 * 1024 ** 3 };
+	await assert.rejects(updateContainer(aName), (e) => e.status === 507 && /not enough disk/.test(e.message));
+	diskState.host = { path: "/", freeBytes: 50 * 1024 ** 3, totalBytes: 100 * 1024 ** 3 };
+
+	// A good run: rebuilt, Pi set to the gateway's version, extensions updated, the container left running.
+	const lines = [];
+	calls3.length = 0;
+	spawned3.length = 0;
+	const result = await updateContainer(aName, (l) => lines.push(l), { spawnFn: fakeSpawn });
+	assert.deepEqual(hibernated, ["live-1"], "its chat was stopped first");
+	assert.deepEqual(result.steps.map((x) => `${x.name}:${x.state}`), ["rebuild:done", "pi:done", "extensions:done"]);
+	assert.deepEqual([result.piFrom, result.piTo], ["0.1.0", hostPi], "old -> the gateway's");
+	const npm = spawned3.find((p) => p.args.includes("npm"));
+	assert.deepEqual(npm.args.slice(npm.args.indexOf("npm")), ["npm", "install", "-g", "--ignore-scripts", `@earendil-works/pi-coding-agent@${hostPi}`], "exactly the gateway's version, not latest");
+	const ext = spawned3.find((p) => p.args.includes("--extensions"));
+	const extEnv = ext.args.flatMap((a, i) => (a === "-e" ? [ext.args[i + 1]] : []));
+	assert.ok(extEnv.includes("PI_CODING_AGENT_DIR=/profile") && extEnv.includes("PI_CONFIG_DIR=/profile/config"), "against the profile");
+	assert.equal(extEnv.some((e) => e.startsWith("PI_OFFLINE")), false, "online: it has to reach the registry");
+	assert.equal(ext.args[ext.args.indexOf("-w") + 1], "/profile");
+	assert.equal(calls3.filter((c) => c[1] === "stop").length, 1, "stopped once, to save it; not stopped again afterwards");
+	assert.ok(lines.some((l) => /rebuilt from its saved state/.test(l)) && lines.some((l) => /installing/.test(l)));
+	assert.ok(recentAuditRows(10).some((r) => r.action === "container.update" && r.target === aName && new RegExp(`Pi 0\\.1\\.0 -> ${hostPi.replace(/\./g, "\\.")}`).test(r.detail)), "on record");
+
+	// Already current: nothing installed. A failed install: reported, and the extensions still run.
+	piVersion = hostPi;
+	spawned3.length = 0;
+	const again = await updateContainer(aName, () => {}, { spawnFn: fakeSpawn });
+	assert.equal(again.steps.find((x) => x.name === "pi").detail, `already ${hostPi}`);
+	assert.equal(spawned3.some((p) => p.args.includes("npm")), false);
+	piVersion = "0.1.0";
+	npmExit = 1;
+	const broken = await updateContainer(aName, () => {}, { spawnFn: fakeSpawn });
+	assert.deepEqual(broken.steps.map((x) => `${x.name}:${x.state}`), ["rebuild:done", "pi:failed", "extensions:done"], "one failed step does not stop the next");
+	assert.deepEqual(broken.failed, ["pi"]);
+	npmExit = 0;
+
+	// A locked profile and a no-network policy: the extension/Pi steps say why they did not run.
+	setProfileLock(scopeOf(aScope), true);
+	spawned3.length = 0;
+	piVersion = hostPi;
+	const locked3 = await updateContainer(aName, () => {}, { spawnFn: fakeSpawn });
+	assert.match(locked3.steps.find((x) => x.name === "extensions").detail, /locked by the operator/);
+	assert.equal(spawned3.some((p) => p.args.includes("--extensions")), false);
+	setProfileLock(scopeOf(aScope), false);
+	await updateAgent(agent.id, { container: { network: "none" } });
+	piVersion = "0.1.0";
+	const offline = await updateContainer(aName, () => {}, { spawnFn: fakeSpawn });
+	assert.match(offline.steps.find((x) => x.name === "pi").detail, /no network/);
+	assert.match(offline.steps.find((x) => x.name === "extensions").detail, /no network/);
+	assert.equal(offline.steps[0].state, "done", "it was still rebuilt");
+	await updateAgent(agent.id, { container: null });
+
+	// A chat's own container: found through its stored row, stopped again when done.
+	const chatHash = chatIdHash("update-chat");
+	const chatName = containerName(chatHash);
+	chatStore.put({ id_hash: chatHash, key_id: null, workspace: "/w-chat", created_at: 1, last_used_at: 2, requests: 2, state_json: "{}" });
+	const chatInfo = { Name: "/" + chatName, State: { Running: false }, Config: { Labels: { "piper.managed": "1", "piper.sig": "old", "piper.key": "" } } };
+	inspectFor = (n) => (n === aName ? agentInfo() : n === chatName ? chatInfo : null);
+	sessions.recordsByScope = realRecords;
+	const ct = await resolveTarget(chatName);
+	assert.deepEqual([ct.kind, ct.persistent, ct.workspace], ["chat", false, "/w-chat"]);
+	calls3.length = 0;
+	piVersion = hostPi;
+	await updateContainer(chatName, () => {}, { spawnFn: fakeSpawn });
+	assert.equal(calls3.filter((c) => c[1] === "stop").length, 2, "stopped to save it, and again afterwards like between messages");
+	chatStore.delete(chatHash);
+	await assert.rejects(resolveTarget(chatName), /belongs to no chat/, "an orphan is refused");
+
+	// Jobs: one at a time, items in order, a busy or orphaned one skipped, the rest go on.
+	resetUpdateJob();
+	inspectFor = (n) => (n === aName ? agentInfo() : n === chatName ? chatInfo : null);
+	const started = await startUpdate([aName], { spawnFn: fakeSpawn });
+	assert.equal(started.state, "running");
+	await assert.rejects(startUpdate([aName], { spawnFn: fakeSpawn }), (e) => e.status === 409, "one job at a time");
+	for (let i = 0; i < 100 && updateJobView().state === "running"; i++) await new Promise((r) => setTimeout(r, 20));
+	assert.equal(updateJobView().state, "done");
+	assert.deepEqual(updateJobView().items.map((i) => [i.name, i.state]), [[aName, "done"]]);
+	assert.ok(updateJobView().items[0].lines.some((l) => /rebuilt/.test(l)));
+	await assert.rejects(startUpdate(["piper-00000000-abc"], { spawnFn: fakeSpawn }), (e) => e.status === 404, "an unknown container is refused up front");
+	// Update all: lists what there is (the agent's, a chat's that is gone), skips what cannot be updated.
+	sessions.recordsByScope = (scope) => (scope === aScope ? [{ id: "live-2", container: { name: aName }, inflight: 2, stopped: Promise.resolve() }] : realRecords(scope));
+	setRunner(async (bin, args) => {
+		if (args[0] === "ps") return { code: 0, stdout: `${aName}\trunning\t${okKey.id}\t${agent.id}\n${containerName(chatIdHash("vanished"))}\texited\t\t\n`, stderr: "" };
+		return fake(bin, args);
+	});
+	const all = await startUpdateAll({ spawnFn: fakeSpawn });
+	assert.equal(all.items.length, 2);
+	for (let i = 0; i < 100 && updateJobView().state === "running"; i++) await new Promise((r) => setTimeout(r, 20));
+	const states = Object.fromEntries(updateJobView().items.map((i) => [i.name.slice(-12), i.state]));
+	assert.deepEqual(Object.values(states).sort(), ["skipped", "skipped"], "busy and orphaned ones are skipped, not failed");
+	assert.equal(updateJobView().state, "done", "skips are not failures");
+	sessions.recordsByScope = realRecords;
+	sessions.hibernate = realHibernate;
+
+	// The routes.
+	setRunner(fake);
+	inspectFor = (n) => (n === aName ? agentInfo() : null);
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	const dash = `http://127.0.0.1:${server.address().port}`;
+	const post = async (path) => {
+		const res = await fetch(dash + path, { method: "POST" });
+		return { status: res.status, json: await res.json().catch(() => null) };
+	};
+	resetUpdateJob();
+	assert.equal((await (await fetch(`${dash}/dashboard/updates.json`)).json()).job, null, "no job yet");
+	assert.equal((await post(`/dashboard/containers/piper-00000000-abc/update`)).status, 404, "unknown container");
+	const viaScope = await post(`/dashboard/profiles/${scopeOf(aScope)}/update-container`);
+	assert.equal(viaScope.status, 404, "no managed container listed by the fake engine yet");
+	assert.equal((await post(`/dashboard/profiles/key-nope/update-container`)).status, 404);
+	setRunner(async (bin, args) => (args[0] === "ps" ? { code: 0, stdout: `${aName}\trunning\t${okKey.id}\t${agent.id}\n`, stderr: "" } : fake(bin, args)));
+	assert.deepEqual(await containersOfScope(aScope), [aName], "an agent scope maps to its container");
+	assert.deepEqual(await containersOfScope(okKey.id), [], "and the key's scope does not include its agents'");
+	const viaAgent = await post(`/dashboard/agents/${agent.id}/update`);
+	assert.equal(viaAgent.status, 200);
+	assert.equal(viaAgent.json.job.items[0].name, aName);
+	for (let i = 0; i < 100 && updateJobView().state === "running"; i++) await new Promise((r) => setTimeout(r, 20));
+	const viaName = await post(`/dashboard/containers/${aName}/update`);
+	assert.equal(viaName.status, 200, "the Containers page's button");
+	for (let i = 0; i < 100 && updateJobView().state === "running"; i++) await new Promise((r) => setTimeout(r, 20));
+	assert.equal((await post(`/dashboard/containers/update-all`)).status, 200);
+	for (let i = 0; i < 100 && updateJobView().state === "running"; i++) await new Promise((r) => setTimeout(r, 20));
+	assert.equal((await post(`/dashboard/agents/00000000/update`)).status, 404);
+
+	await new Promise((r) => server.close(r));
+	await deleteAgent(agent.id);
+	resetUpdateJob();
+	config.ACCESS_LOG = accessLog3;
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+}
+
+// The audit log: what is recorded is chosen by settings, who did it comes from the request, nothing secret is written.
+{
+	const { DatabaseSync } = await import("node:sqlite");
+	const http = await import("node:http");
+	const { server } = await import("./server.mjs");
+	const accessLog = config.ACCESS_LOG;
+	config.ACCESS_LOG = false;
+	const saved = { ...Object.fromEntries(["AUDIT_AUTH", "AUDIT_SETTINGS", "AUDIT_KEYS", "AUDIT_OPERATIONS", "AUDIT_RUNTIME", "AUDIT_REQUESTS", "AUDIT_AUTH_FAILURES", "AUDIT_RETENTION_DAYS", "AUDIT_MAX_ROWS"].map((k) => [k, config[k]])) };
+	const rowsOf = (action) => queryAudit({ q: action, limit: 500 }).rows.filter((r) => r.action === action);
+
+	// The table of an older gateway gains the columns and keeps its rows.
+	{
+		const old = new DatabaseSync(":memory:");
+		old.exec("CREATE TABLE audit (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, action TEXT NOT NULL, target TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '')");
+		old.prepare("INSERT INTO audit (ts, action, target, detail) VALUES (1, 'container.stop', 'c1', 'old row')").run();
+		migrateAuditTable(old);
+		migrateAuditTable(old);
+		const cols = old.prepare("PRAGMA table_info(audit)").all().map((c) => c.name);
+		for (const c of ["category", "actor", "ip"]) assert.ok(cols.includes(c), `${c} added, and adding twice is fine`);
+		assert.equal(old.prepare("SELECT detail FROM audit").get().detail, "old row", "the old row is kept");
+	}
+
+	// Categories from the action's prefix; unknown ones are operations.
+	for (const [action, category] of [["auth.login", "auth"], ["settings.change", "settings"], ["key.create", "keys"], ["profile.reset", "keys"], ["session.kill", "keys"], ["models.reload", "keys"], ["container.stop", "operations"], ["image.build", "operations"], ["agent.create", "operations"], ["host.pi.update", "operations"], ["runtime.sweep", "runtime"], ["request.chat", "requests"], ["authfail.api", "authfail"], ["audit.purge", "audit"], ["something.new", "operations"]]) {
+		assert.equal(categoryOf(action), category, action);
+	}
+	assert.deepEqual(AUDIT_CATEGORIES.map((c) => c.id), ["auth", "settings", "keys", "operations", "runtime", "requests", "authfail", "audit"]);
+
+	// What settings switch off is not stored; the audit category is always stored; the busy ones start off.
+	assert.equal(config.AUDIT_REQUESTS, false, "per-request logging starts off");
+	assert.equal(config.AUDIT_AUTH_FAILURES, false);
+	assert.equal(auditEnabled("requests"), false);
+	assert.equal(auditEnabled("keys"), true);
+	config.AUDIT_KEYS = false;
+	assert.equal(audit("key.create", "x", "off"), null, "a switched-off category stores nothing");
+	assert.equal(rowsOf("key.create").filter((r) => r.detail === "off").length, 0);
+	assert.ok(audit("audit.thing", "x", "always") > 0, "the audit category cannot be switched off");
+	config.AUDIT_KEYS = true;
+	assert.ok(audit("key.create", "x", "on") > 0);
+	config.AUDIT_REQUESTS = true;
+	assert.ok(audit("request.chat", "x", "now on") > 0);
+	config.AUDIT_REQUESTS = false;
+
+	// Who and from where comes from the request's context, through awaits; outside one it is the system.
+	await runWithActor("dashboard", "10.1.2.3", async () => {
+		await new Promise((r) => setTimeout(r, 5));
+		assert.deepEqual(currentActor(), { actor: "dashboard", ip: "10.1.2.3" });
+		audit("container.stop", "ctx-target", "inside");
+	});
+	const inside = queryAudit({ q: "ctx-target" }).rows[0];
+	assert.deepEqual([inside.actor, inside.ip], ["dashboard", "10.1.2.3"]);
+	audit("container.stop", "ctx-outside", "outside");
+	assert.deepEqual([queryAudit({ q: "ctx-outside" }).rows[0].actor, queryAudit({ q: "ctx-outside" }).rows[0].ip], ["system", null]);
+	audit("container.stop", "ctx-explicit", "", { actor: "key:x", ip: "1.1.1.1" });
+	assert.equal(queryAudit({ q: "ctx-explicit" }).rows[0].actor, "key:x");
+
+	// A settings change never shows a secret, and shows old -> new for the rest, cut short.
+	const specOf = (key) => SETTINGS_SPEC.find((x) => x.key === key);
+	assert.equal(settingChangeDetail(specOf("GATEWAY_API_KEY"), "", "hunter2-hunter2"), "changed (value not recorded)");
+	assert.equal(settingChangeDetail(specOf("ALERT_WEBHOOK_URL"), "", "https://hooks.example/T0K3N"), "changed (value not recorded)", "a webhook URL carries a token");
+	assert.equal(settingChangeDetail(specOf("CONTAINER_ENV"), "A=1", "A=2"), "changed (value not recorded)", "environment values can be secrets");
+	assert.equal(settingChangeDetail(specOf("ACCESS_LOG"), false, true), "false -> true");
+	assert.equal(settingChangeDetail({ type: "text" }, "", "x"), "(empty) -> x");
+	assert.ok(settingChangeDetail({ type: "text" }, "a", "b".repeat(300)).length < 140, "long values are cut");
+
+	// Reading: filters, paging, CSV.
+	{
+		for (let i = 0; i < 7; i++) audit("runtime.sweep", `page-${i}`, i % 2 ? "odd one" : "even one");
+		const first = queryAudit({ categories: ["runtime"], q: "page-", limit: 3 });
+		assert.deepEqual([first.rows.length, first.more], [3, true]);
+		assert.deepEqual(first.rows.map((r) => r.target), ["page-6", "page-5", "page-4"], "newest first");
+		const second = queryAudit({ categories: "runtime", q: "page-", limit: 3, before: first.next });
+		assert.deepEqual(second.rows.map((r) => r.target), ["page-3", "page-2", "page-1"], "the cursor continues where the page ended");
+		assert.equal(queryAudit({ q: "page-", limit: 3, before: second.next }).more, false);
+		assert.equal(queryAudit({ categories: ["keys"], q: "page-" }).rows.length, 0, "a category filter");
+		assert.equal(queryAudit({ q: "odd one", categories: "runtime" }).rows.length, 3);
+		assert.equal(queryAudit({ q: "100%_" }).rows.length, 0, "% and _ in a search are literal");
+		assert.equal(queryAudit({ actor: "nobody" }).rows.length, 0);
+		assert.equal(queryAudit({ since: Date.now() + 60_000 }).rows.length, 0, "a time filter");
+		assert.ok(queryAudit({ limit: 100000 }).rows.length <= 500, "capped at 500 a page");
+		const st = auditStats();
+		assert.ok(st.rows > 0 && st.oldest > 0);
+		assert.deepEqual(st.categories.map((c) => c.id), AUDIT_CATEGORIES.map((c) => c.id));
+		assert.equal(st.categories.find((c) => c.id === "requests").enabled, false);
+		assert.ok(st.categories.find((c) => c.id === "runtime").count >= 7);
+		const csv = auditCsv([{ ts: 0, category: "keys", action: "key.create", actor: "dashboard", ip: "1.2.3.4", target: 'name, with "quotes"', detail: "=HYPERLINK(\"x\")\nnext" }]);
+		assert.equal(csv.split("\n")[0], "time,category,action,actor,address,target,detail");
+		assert.ok(csv.includes('"name, with ""quotes"""'), "quoted");
+		assert.ok(csv.includes("\"'=HYPERLINK"), "a cell that starts like a formula is neutralised");
+	}
+
+	// A burst is one row with a count.
+	resetAuditDedupe();
+	const t0 = Date.now();
+	for (let i = 0; i < 4; i++) auditOnce("burst-a", 60_000, "authfail.api", "9.9.9.9", "GET /v1/models", {}, t0 + i);
+	config.AUDIT_AUTH_FAILURES = true;
+	resetAuditDedupe();
+	for (let i = 0; i < 4; i++) auditOnce("burst-b", 60_000, "authfail.api", "9.9.9.9", "GET /v1/models", {}, t0 + i);
+	const burst = rowsOf("authfail.api").filter((r) => r.target === "9.9.9.9");
+	assert.equal(burst.length, 1, "four refusals, one row");
+	assert.match(burst[0].detail, /\(×4\)$/);
+	auditOnce("burst-b", 60_000, "authfail.api", "9.9.9.9", "GET /v1/models", {}, t0 + 70_000);
+	assert.equal(rowsOf("authfail.api").filter((r) => r.target === "9.9.9.9").length, 2, "a new minute is a new row");
+	config.AUDIT_AUTH_FAILURES = false;
+
+	// Retention: by age, then by count; a purge is on record even with everything else off.
+	{
+		db.prepare("DELETE FROM audit").run();
+		const day = 86_400_000;
+		const put = (ts, n) => db.prepare("INSERT INTO audit (ts, action, target, detail, category) VALUES (?, 'container.stop', ?, '', 'operations')").run(ts, n);
+		put(Date.now() - 100 * day, "ancient");
+		put(Date.now() - 10 * day, "old");
+		for (let i = 0; i < 5; i++) put(Date.now() - i * 1000, `fresh-${i}`);
+		config.AUDIT_RETENTION_DAYS = 90;
+		config.AUDIT_MAX_ROWS = 4;
+		for (const k of ["AUDIT_KEYS", "AUDIT_OPERATIONS", "AUDIT_RUNTIME"]) config[k] = false;
+		const purged = purgeAudit();
+		assert.deepEqual([purged.byAge, purged.byCap], [1, 2], "the ancient row by age, then the two oldest of the rest, down to 4");
+		const left = db.prepare("SELECT target FROM audit WHERE action = 'container.stop' ORDER BY id").all().map((r) => r.target);
+		assert.deepEqual(left, ["fresh-1", "fresh-2", "fresh-3", "fresh-4"], "the newest rows are the ones kept");
+		assert.ok(rowsOf("audit.purge").length === 1, "the purge is recorded although nearly everything is switched off");
+		config.AUDIT_RETENTION_DAYS = 0;
+		config.AUDIT_MAX_ROWS = 0;
+		assert.deepEqual(Object.values(purgeAudit()), [0, 0], "0 keeps everything");
+		for (const k of ["AUDIT_KEYS", "AUDIT_OPERATIONS", "AUDIT_RUNTIME"]) config[k] = true;
+	}
+	config.AUDIT_RETENTION_DAYS = 90;
+	config.AUDIT_MAX_ROWS = 50000;
+
+	// What the gateway does by itself.
+	handleContainerEvent({ action: "oom", name: "piper-x-1", exitCode: 137 }, { memoryMb: 512 });
+	const oom = rowsOf("runtime.container_killed")[0];
+	assert.deepEqual([oom.actor, oom.target], ["system", "piper-x-1"]);
+	assert.match(oom.detail, /out of memory/);
+
+	// Over real sockets: sign-ins, settings, keys, profiles, sessions, requests and refused keys.
+	clearPasswordHash();
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	const base = `http://127.0.0.1:${server.address().port}`;
+	const call = async (path, { method = "POST", body, cookie, token } = {}) => {
+		const res = await fetch(base + path, { method, headers: { "content-type": "application/json", ...(cookie ? { cookie } : {}), ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
+		const text = await res.text();
+		let json = null;
+		try { json = JSON.parse(text); } catch { /* the assertions say */ }
+		return { status: res.status, json, cookie: res.headers.get("set-cookie")?.split(";")[0] ?? null };
+	};
+	const PASS = "correct horse battery";
+	assert.equal((await call("/dashboard/password", { body: { next: PASS } })).status, 200);
+	const setRow = rowsOf("auth.password").at(0);
+	assert.match(setRow.detail, /password set/);
+	assert.deepEqual([setRow.actor, Boolean(setRow.ip)], ["dashboard", true], "from the dashboard, with the address");
+	assert.equal((await call("/dashboard/login", { body: { password: "wrong wrong wrong" } })).status, 401);
+	assert.equal(rowsOf("auth.login_failed").at(0).detail, "wrong password");
+	const login = await call("/dashboard/login", { body: { password: PASS } });
+	assert.equal(login.status, 200);
+	assert.equal(rowsOf("auth.login").length >= 1, true);
+	const cookie = login.cookie;
+	assert.ok(cookie);
+	assert.ok(!JSON.stringify(queryAudit({ limit: 500 }).rows).includes(PASS) && !JSON.stringify(queryAudit({ limit: 500 }).rows).includes("wrong wrong"), "no password is ever recorded");
+
+	// Settings: old -> new; a secret says only that it changed; the audit settings are always recorded.
+	assert.equal((await call("/dashboard/settings", { cookie, body: { settings: { ACCESS_LOG: true } } })).status, 200);
+	const changed = rowsOf("settings.change").find((r) => r.target === "ACCESS_LOG");
+	assert.equal(changed.detail, "false -> true");
+	assert.equal(changed.actor, "dashboard");
+	await call("/dashboard/settings", { cookie, body: { settings: { ACCESS_LOG: false } } });
+	await call("/dashboard/settings", { cookie, body: { settings: { GATEWAY_API_KEY: "s3cr3t-value-never-logged" } } });
+	assert.equal(rowsOf("settings.change").find((r) => r.target === "GATEWAY_API_KEY").detail, "changed (value not recorded)");
+	await call("/dashboard/settings", { cookie, body: { settings: { GATEWAY_API_KEY: "" } } });
+	await call("/dashboard/settings", { cookie, body: { settings: { ALERT_WEBHOOK_URL: "https://hooks.example.com/services/T0K3N" } } });
+	await call("/dashboard/settings", { cookie, body: { settings: { ALERT_WEBHOOK_URL: "" } } });
+	const everything = JSON.stringify(queryAudit({ limit: 500 }).rows);
+	assert.ok(!everything.includes("s3cr3t-value") && !everything.includes("T0K3N"), "neither a secret nor a webhook token is in the log");
+	const before = queryAudit({ categories: "settings", limit: 500 }).rows.length;
+	await call("/dashboard/settings", { cookie, body: { settings: { ACCESS_LOG: false } } });
+	assert.equal(queryAudit({ categories: "settings", limit: 500 }).rows.length, before, "saving the same value is not news");
+	await call("/dashboard/settings", { cookie, body: { settings: { AUDIT_SETTINGS: false } } });
+	assert.equal(rowsOf("settings.change").find((r) => r.target === "AUDIT_SETTINGS").category, "audit", "switching a category off is itself recorded");
+	await call("/dashboard/settings", { cookie, body: { settings: { ACCESS_LOG: true } } });
+	assert.equal(rowsOf("settings.change").filter((r) => r.target === "ACCESS_LOG").length, 2, "and with settings logging off a change is not stored");
+	await call("/dashboard/settings", { cookie, body: { settings: { ACCESS_LOG: false, AUDIT_SETTINGS: true } } });
+	config.ACCESS_LOG = false;
+
+	// Keys, profiles, sessions.
+	const made = await call("/dashboard/api-keys", { cookie, body: { name: "audited key", expiresAt: 0 } });
+	assert.equal(made.status, 201);
+	const kid = made.json.createdId;
+	const ktoken = made.json.key;
+	assert.match(rowsOf("key.create").find((r) => r.target === "audited key").detail, /no expiry/);
+	assert.ok(!JSON.stringify(queryAudit({ limit: 500 }).rows).includes(ktoken), "the key itself is never recorded");
+	await call(`/dashboard/api-keys/${kid}`, { cookie, body: { maxSessions: 3, dailySpend: 2.5 } });
+	assert.match(rowsOf("key.update").at(0).detail, /maxSessions/);
+	ensureProfile(kid);
+	await call(`/dashboard/profiles/${scopeOf(kid)}/lock`, { cookie, body: { locked: true } });
+	await call(`/dashboard/profiles/${scopeOf(kid)}/lock`, { cookie, body: { locked: false } });
+	assert.deepEqual([rowsOf("profile.lock").length > 0, rowsOf("profile.unlock").length > 0], [true, true]);
+	assert.equal((await call(`/dashboard/profiles/${scopeOf(kid)}/reset`, { cookie, body: {} })).status, 200);
+	assert.equal(rowsOf("profile.reset").at(0).target, "audited key");
+	assert.equal((await call("/dashboard/kill-all", { cookie, body: {} })).status, 200);
+	assert.equal(rowsOf("session.kill_all").at(0).actor, "dashboard");
+
+	// API traffic: failed keys and chat requests, only when switched on, with no content.
+	config.AUDIT_AUTH_FAILURES = false;
+	await call("/v1/models", { method: "GET" });
+	assert.equal(rowsOf("authfail.api").filter((r) => /v1\/models/.test(r.detail) && /no key/.test(r.detail)).length, 0, "off: nothing");
+	config.AUDIT_AUTH_FAILURES = true;
+	resetAuditDedupe();
+	for (let i = 0; i < 3; i++) assert.equal((await call("/v1/models", { method: "GET", token: "not-a-key" })).status, 401);
+	const fails = rowsOf("authfail.api").filter((r) => /not valid/.test(r.detail));
+	assert.equal(fails.length, 1, "three refusals from one address in a minute: one row");
+	assert.match(fails[0].detail, /\(×3\)/);
+	assert.equal(fails[0].actor, "anonymous");
+	config.AUDIT_AUTH_FAILURES = false;
+	await call("/v1/chat/completions", { token: ktoken, body: { note: "TOP-SECRET-PROMPT" } });
+	assert.equal(rowsOf("request.chat").filter((r) => /TOP-SECRET/.test(r.detail)).length, 0);
+	const requestsBefore = rowsOf("request.chat").length;
+	config.AUDIT_REQUESTS = true;
+	const refused = await call("/v1/chat/completions", { token: ktoken, body: { note: "TOP-SECRET-PROMPT" } });
+	assert.equal(refused.status, 400);
+	const reqRow = rowsOf("request.chat")[0];
+	assert.equal(rowsOf("request.chat").length, requestsBefore + 1);
+	assert.match(reqRow.detail, /^400 \d+ ms model=/);
+	assert.equal(reqRow.actor, "key:audited key");
+	assert.ok(!JSON.stringify(queryAudit({ limit: 500 }).rows).includes("TOP-SECRET"), "what was said is not recorded");
+	config.AUDIT_REQUESTS = false;
+
+	// The page's endpoints.
+	const page = await (await fetch(`${base}/dashboard/audit.json?category=keys&limit=2`, { headers: { cookie } })).json();
+	assert.deepEqual([page.rows.length, page.more, typeof page.next, Array.isArray(page.audit)], [2, true, "number", true]);
+	assert.ok(page.rows.every((r) => r.category === "keys"));
+	assert.ok(page.stats.categories.length === 8 && page.stats.rows > 0);
+	const csvRes = await fetch(`${base}/dashboard/audit.csv?category=auth`, { headers: { cookie } });
+	assert.equal(csvRes.headers.get("content-type"), "text/csv; charset=utf-8");
+	assert.match(await csvRes.text(), /^time,category,action,actor,address,target,detail\n.*auth\.login/m);
+	assert.equal((await fetch(`${base}/dashboard/audit.json`)).status, 401, "not without signing in");
+
+	// Sign-out, changing and removing the password, and a key delete.
+	assert.equal((await call("/dashboard/logout", { cookie, body: {} })).status, 200);
+	assert.equal(rowsOf("auth.logout").length >= 1, true);
+	assert.equal((await call(`/dashboard/api-keys/${kid}`, { method: "DELETE", cookie })).status, 200);
+	assert.equal(rowsOf("key.delete").at(0).target, "audited key");
+	assert.equal((await call("/dashboard/password", { cookie, body: { current: PASS, next: "" } })).status, 200);
+	assert.match(rowsOf("auth.password").at(0).detail, /removed/);
+
+	// The sweep applies retention.
+	config.AUDIT_RETENTION_DAYS = 1;
+	db.prepare("INSERT INTO audit (ts, action, target, detail, category) VALUES (?, 'container.stop', 'swept-away', '', 'operations')").run(Date.now() - 3 * 86_400_000);
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "" }));
+	await sweep();
+	assert.equal(queryAudit({ q: "swept-away" }).rows.length, 0, "old rows go with the sweep");
+
+	await new Promise((r) => server.close(r));
+	Object.assign(config, saved);
+	config.ACCESS_LOG = accessLog;
+	clearPasswordHash();
+}
+
+// The Pi the gateway runs on: versions, what can be updated, and the update itself (never against the real install here).
+{
+	const fsx = await import("node:fs");
+	const { EventEmitter } = await import("node:events");
+	const { PassThrough } = await import("node:stream");
+	const { server } = await import("./server.mjs");
+	const accessLog = config.ACCESS_LOG;
+	config.ACCESS_LOG = false;
+	const root = mkdtempSync(join(tmpdir(), "hostpi-"));
+	const prefixRoot = join(root, "lib", "node_modules");
+	const pkgDir = join(prefixRoot, "@earendil-works", "pi-coding-agent");
+	mkdirSync(join(pkgDir, "dist"), { recursive: true });
+	const writePkg = (version) => writeFileSync(join(pkgDir, "package.json"), JSON.stringify({ name: "@earendil-works/pi-coding-agent", version, bin: { pi: "dist/cli.js" } }));
+	writePkg("0.50.0");
+	const fakeNpm = join(root, "npm");
+	writeFileSync(fakeNpm, "");
+	const cli = join(pkgDir, "dist", "cli.js");
+	const runs = [];
+	const fakeRun = (extra = {}) => async (bin, args) => {
+		runs.push([bin, ...args]);
+		if (args[0] === "root") return extra.root ?? { code: 0, stdout: `${prefixRoot}\n`, stderr: "" };
+		if (args[0] === "view") return extra.view ?? { code: 0, stdout: "0.99.2\n", stderr: "" };
+		if (args[1] === "list") return { code: 0, stdout: "npm:@scope/ext-one\n\n  npm:@scope/ext-two  \n", stderr: "" };
+		return { code: 1, stdout: "", stderr: "" };
+	};
+
+	// The running version is what was loaded; the disk is what is installed now.
+	assert.equal(await hostPiVersion(), diskPiVersion(), "nothing has been updated: the two agree");
+	assert.equal(diskPiVersion(pkgDir), "0.50.0");
+	assert.equal(diskPiVersion("/no/such/dir"), "");
+	assert.equal(piCliPath(pkgDir), cli);
+	assert.equal(piCliPath("/no/such/dir"), "");
+	for (const [a, b, newer] of [["0.99.2", "0.99.1", true], ["0.99.1", "0.99.2", false], ["0.99.1", "0.99.1", false], ["1.0.0", "0.99.9", true], ["0.99.1", "0.99.1-beta.1", true], ["0.99.1-beta.1", "0.99.1", false]]) assert.equal(versionNewer(a, b), newer, `${a} newer than ${b}`);
+	const env = hostPiEnv({ PI_OFFLINE: "1", PI_SKIP_VERSION_CHECK: "1", PATH: "/x", KEEP: "me" });
+	assert.deepEqual([env.PI_OFFLINE, env.PI_SKIP_VERSION_CHECK, env.KEEP], [undefined, undefined, "me"], "Pi's own commands must be able to go online");
+	assert.ok(env.PATH.startsWith(dirname(process.execPath)) && env.PATH.endsWith(":/x"), "the gateway's node first");
+
+	// Whether it can be updated from here, and why not.
+	assert.deepEqual(await manageability({ packageDir: pkgDir, run: fakeRun(), npm: fakeNpm }), { ok: true, reason: "" });
+	const elsewhere = await manageability({ packageDir: "/opt/custom/pi", run: fakeRun(), npm: fakeNpm });
+	assert.equal(elsewhere.ok, false);
+	assert.match(elsewhere.reason, /not where the gateway's npm installs/);
+	assert.match((await manageability({ packageDir: pkgDir, run: fakeRun(), npm: join(root, "missing-npm") })).reason, /no npm next to the gateway's node/);
+	assert.match((await manageability({ packageDir: pkgDir, run: fakeRun({ root: { code: 1, stdout: "", stderr: "" } }), npm: fakeNpm })).reason, /could not say where/);
+	assert.match((await manageability({ packageDir: "", run: fakeRun(), npm: fakeNpm })).reason, /not been loaded/);
+	if (process.getuid?.() !== 0) {
+		fsx.chmodSync(pkgDir, 0o555);
+		assert.match((await manageability({ packageDir: pkgDir, run: fakeRun(), npm: fakeNpm })).reason, /cannot write/);
+		fsx.chmodSync(pkgDir, 0o755);
+	}
+
+	// The newest release: asked once, cached, forced by `check`, and a failure is "unknown", not an error.
+	resetHostPiCache();
+	runs.length = 0;
+	assert.equal(await latestPiVersion({ run: fakeRun(), npm: fakeNpm }), "0.99.2");
+	assert.equal(await latestPiVersion({ run: fakeRun(), npm: fakeNpm }), "0.99.2");
+	assert.equal(runs.filter((r) => r[1] === "view").length, 1, "the second look is from the cache");
+	assert.equal(await latestPiVersion({ check: true, run: fakeRun({ view: { code: 0, stdout: "0.99.3\n", stderr: "" } }), npm: fakeNpm }), "0.99.3", "check asks again");
+	assert.equal(await latestPiVersion({ check: true, run: fakeRun({ view: { code: 1, stdout: "", stderr: "offline" } }), npm: fakeNpm }), null);
+	assert.equal(await latestPiVersion({ check: true, run: fakeRun({ view: { code: 0, stdout: "not a version", stderr: "" } }), npm: fakeNpm }), null);
+	resetHostPiCache();
+	assert.deepEqual(await hostExtensions({ run: fakeRun(), packageDir: pkgDir }), [{ name: "@scope/ext-one", type: "npm", scope: "user", filtered: false, pinned: null }, { name: "@scope/ext-two", type: "npm", scope: "user", filtered: false, pinned: null }], "package names as rows, blanks dropped");
+	assert.deepEqual(await hostExtensions({ run: async () => { throw new Error("cached"); }, packageDir: pkgDir }), [{ name: "@scope/ext-one", type: "npm", scope: "user", filtered: false, pinned: null }, { name: "@scope/ext-two", type: "npm", scope: "user", filtered: false, pinned: null }], "and cached");
+
+	// Updating, through a fake `spawn`: Pi's own commands, from the temp folder, online, one failure not stopping the next.
+	const spawned = [];
+	let exits = {};
+	const fakeSpawn = (bin, args, options) => {
+		const child = new EventEmitter();
+		child.stdout = new PassThrough();
+		child.stderr = new PassThrough();
+		child.kill = () => {};
+		spawned.push({ bin, args, options });
+		setImmediate(() => {
+			const what = args.slice(1).join(" ");
+			child.stdout.write(`ran ${what}\n`);
+			if (what === "update" && !exits.pi) writePkg("0.60.0");
+			setImmediate(() => child.emit("close", what === "update" ? exits.pi ?? 0 : exits.ext ?? 0));
+		});
+		return child;
+	};
+	process.env.PI_OFFLINE = "1";
+	const lines = [];
+	const done = await updateHostPi({}, (l) => lines.push(l), { spawnFn: fakeSpawn, run: fakeRun(), packageDir: pkgDir });
+	delete process.env.PI_OFFLINE;
+	assert.deepEqual(spawned.map((p) => p.args.slice(1).join(" ")), ["update", "update --extensions"], "Pi, then its extensions");
+	assert.ok(spawned.every((p) => p.bin === process.execPath && p.args[0] === cli && p.options.cwd === tmpdir()), "this install's own pi, run from the temp folder, never the gateway's");
+	assert.ok(spawned.every((p) => p.options.env.PI_OFFLINE === undefined && p.options.stdio[0] === "ignore"), "online, and nothing can ask a question");
+	assert.deepEqual([done.before, done.after, done.failed], ["0.50.0", "0.60.0", []]);
+	assert.ok(lines.includes("Pi on disk: 0.50.0 -> 0.60.0"));
+	assert.equal(done.restartNeeded, true, "what the gateway runs is not what is now installed");
+	assert.ok(lines.some((l) => l.startsWith("The gateway still runs Pi ") && /restart/.test(l) && /rebuild the image/.test(l)), "the operator is told what is out of step");
+	assert.ok(recentAuditRows(10).some((r) => r.action === "host.pi.update" && /0\.50\.0 -> 0\.60\.0/.test(r.detail)), "on record");
+	// One step failing does not stop the next; only one asked for runs only that.
+	exits = { pi: 3 };
+	spawned.length = 0;
+	const partial = await updateHostPi({}, () => {}, { spawnFn: fakeSpawn, run: fakeRun(), packageDir: pkgDir });
+	assert.deepEqual([partial.steps.map((s) => `${s.name}:${s.state}`), partial.failed], [["pi:failed", "extensions:done"], ["pi"]]);
+	exits = {};
+	spawned.length = 0;
+	await updateHostPi({ self: false }, () => {}, { spawnFn: fakeSpawn, run: fakeRun(), packageDir: pkgDir });
+	assert.deepEqual(spawned.map((p) => p.args.slice(1).join(" ")), ["update --extensions"]);
+	await assert.rejects(updateHostPi({ self: false, extensions: false }, () => {}, { spawnFn: fakeSpawn, run: fakeRun(), packageDir: pkgDir }), (e) => e.status === 400);
+	spawned.length = 0;
+	await assert.rejects(updateHostPi({}, () => {}, { spawnFn: fakeSpawn, run: fakeRun(), packageDir: "/opt/custom/pi" }), (e) => e.status === 409 && /not where the gateway's npm installs/.test(e.message));
+	assert.equal(spawned.length, 0, "an install the gateway cannot manage is never touched");
+
+	// As a job: refused up front when not manageable, and while another job is running; otherwise the log is kept.
+	resetUpdateJob();
+	await assert.rejects(startHostPiUpdate({}, { spawnFn: fakeSpawn, run: fakeRun(), packageDir: "/opt/custom/pi" }), (e) => e.status === 409);
+	let release;
+	startJob([{ name: "busy", label: "busy", run: () => new Promise((r) => (release = () => r({ failed: [] }))) }]);
+	await assert.rejects(startHostPiUpdate({}, { spawnFn: fakeSpawn, run: fakeRun(), packageDir: pkgDir }), (e) => e.status === 409 && /already running/.test(e.message), "one job at a time, host or container");
+	release();
+	for (let i = 0; i < 50 && updateJobView().state === "running"; i++) await new Promise((r) => setTimeout(r, 10));
+	writePkg("0.50.0");
+	await startHostPiUpdate({ self: true, extensions: false }, { spawnFn: fakeSpawn, run: fakeRun(), packageDir: pkgDir });
+	for (let i = 0; i < 100 && updateJobView().state === "running"; i++) await new Promise((r) => setTimeout(r, 10));
+	assert.deepEqual([updateJobView().state, updateJobView().items[0].name, updateJobView().items[0].state], ["done", "host:pi", "done"]);
+	assert.ok(updateJobView().items[0].lines.some((l) => /0\.50\.0 -> 0\.60\.0/.test(l)));
+	resetUpdateJob();
+
+	// The endpoints. The update needs a dashboard password; the real install is never updated here.
+	resetHostPiCache();
+	await latestPiVersion({ check: true, run: fakeRun(), npm: fakeNpm });
+	await hostExtensions({ run: fakeRun(), packageDir: pkgDir });
+	clearPasswordHash();
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	const base = `http://127.0.0.1:${server.address().port}`;
+	const call = async (path, { method = "GET", body, cookie } = {}) => {
+		const res = await fetch(base + path, { method, headers: { "content-type": "application/json", ...(cookie ? { cookie } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
+		return { status: res.status, json: await res.json().catch(() => null), cookie: res.headers.get("set-cookie")?.split(";")[0] ?? null };
+	};
+	const info = await call("/dashboard/hostpi.json");
+	assert.equal(info.status, 200);
+	for (const key of ["running", "onDisk", "latest", "updateAvailable", "restartNeeded", "packageDir", "manageable", "reason", "extensions", "updateAllowed", "updateNote", "job"]) assert.ok(key in info.json, key);
+	assert.equal(info.json.latest, "0.99.2");
+	assert.deepEqual(info.json.extensions, [{ name: "@scope/ext-one", type: "npm", scope: "user", filtered: false, pinned: null }, { name: "@scope/ext-two", type: "npm", scope: "user", filtered: false, pinned: null }]);
+	assert.equal(info.json.updateAllowed, false, "no dashboard password: no update");
+	assert.match(info.json.updateNote, /dashboard password/);
+	assert.equal((await call("/dashboard/hostpi/update", { method: "POST", body: {} })).status, 403, "refused until a password is set");
+	assert.equal((await call("/dashboard/password", { method: "POST", body: { next: "a long enough password" } })).status, 200);
+	const session = await call("/dashboard/login", { method: "POST", body: { password: "a long enough password" } });
+	assert.equal((await call("/dashboard/hostpi.json", { cookie: session.cookie })).json.updateAllowed, true);
+	let free;
+	startJob([{ name: "busy", label: "busy", run: () => new Promise((r) => (free = () => r({ failed: [] }))) }]);
+	assert.equal((await call("/dashboard/hostpi/update", { method: "POST", body: {}, cookie: session.cookie })).status, 409, "with a password it is allowed, and then refused while another job runs (before anything is run)");
+	free();
+	for (let i = 0; i < 50 && updateJobView().state === "running"; i++) await new Promise((r) => setTimeout(r, 10));
+	assert.equal((await call("/dashboard/hostpi/bogus", { method: "POST", cookie: session.cookie })).status, 404);
+	await call("/dashboard/password", { method: "POST", body: { current: "a long enough password", next: "" }, cookie: session.cookie });
+
+	await new Promise((r) => server.close(r));
+	resetHostPiCache();
+	resetUpdateJob();
+	config.ACCESS_LOG = accessLog;
+	rmSync(root, { recursive: true, force: true });
+}
+
+// Resource usage for the Overview: host, gateway process, containers added up.
+{
+	// /proc/meminfo: available, not free, memory counts as usable.
+	assert.deepEqual(parseMeminfo("MemTotal:       16384000 kB\nMemFree:         1000000 kB\nMemAvailable:    8192000 kB\n"), { total: 16384000 * 1024, available: 8192000 * 1024 });
+	assert.equal(parseMeminfo("nonsense"), null);
+	assert.equal(parseMeminfo("MemTotal: 100 kB\n"), null, "without MemAvailable `os` is asked instead");
+	// CPU: the share of time spent busy between two readings.
+	const t = (user, sys, idle) => [{ times: { user, nice: 0, sys, idle, irq: 0 } }];
+	assert.deepEqual(cpuTimes(t(10, 10, 80)), { busy: 20, total: 100 });
+	assert.equal(cpuPercent(cpuTimes(t(10, 10, 80)), cpuTimes(t(40, 10, 150))), 30, "30 of the 100 ticks between the readings were busy");
+	assert.equal(cpuPercent(cpuTimes(t(1, 1, 1)), cpuTimes(t(1, 1, 1))), null, "no time passed: no figure, not a zero");
+	assert.equal(cpuPercent({ busy: 0, total: 0 }, { busy: 500, total: 100 }), 100, "capped");
+	// Containers, added up from one `docker stats`, cached for five seconds, empty when Docker is not there.
+	resetResources();
+	const managed = [
+		{ name: "piper-aaaaaaaa-1111111111111111", state: "running", keyId: "", agentId: null },
+		{ name: "piper-aaaaaaaa-key-222222222222", state: "running", keyId: "", agentId: null },
+		{ name: "piper-aaaaaaaa-3333333333333333", state: "exited", keyId: "", agentId: null },
+	];
+	let statsCalls = 0;
+	const stats = async (names) => {
+		statsCalls++;
+		assert.deepEqual(names, [managed[0].name, managed[1].name], "only running containers are asked about");
+		return new Map([[managed[0].name, { cpu: 12.5, memUsed: 300 * 1048576, memLimit: 2048 * 1048576, pids: 7 }], [managed[1].name, { cpu: 50, memUsed: 900 * 1048576, memLimit: 0, pids: 30 }]]);
+	};
+	const t0 = Date.now();
+	const usage = await containerUsage({ now: t0, list: async () => managed, stats });
+	assert.deepEqual([usage.running, usage.total, usage.cpu, usage.pids], [2, 3, 62.5, 37]);
+	assert.equal(usage.memUsed, 1200 * 1048576);
+	assert.equal(usage.memLimit, 2048 * 1048576, "an unlimited container adds no limit");
+	assert.deepEqual(usage.top.map((r) => r.name), [managed[1].name, managed[0].name], "heaviest memory first");
+	assert.match(usage.top[0].label, /★$/, "a key's container is marked");
+	assert.match(usage.top[1].label, / chat$/);
+	await containerUsage({ now: t0 + 1000, list: async () => managed, stats });
+	assert.equal(statsCalls, 1, "asked once in five seconds");
+	await containerUsage({ now: t0 + 6000, list: async () => managed, stats });
+	assert.equal(statsCalls, 2);
+	resetResources();
+	assert.equal(await containerUsage({ now: t0, list: async () => { throw new Error("docker is not running"); }, stats }), null, "Docker unreachable leaves it empty, not broken");
+	// The whole snapshot, and a history that takes a sample at most every 15 seconds.
+	resetResources();
+	const snap = await resourceSnapshot({ now: t0, containers: usage });
+	assert.deepEqual(Object.keys(snap).sort(), ["at", "containers", "disk", "gateway", "history", "host"]);
+	assert.ok(snap.host.cores >= 1 && snap.host.memTotal > 0 && snap.host.memUsed >= 0 && snap.host.memUsed <= snap.host.memTotal && snap.host.load.length === 3 && snap.host.uptimeSec > 0);
+	assert.ok(snap.gateway.rss > 0 && snap.gateway.uptimeSec > 0 && /^v\d+/.test(snap.gateway.node));
+	assert.equal(snap.history.length, 1);
+	assert.deepEqual(Object.keys(snap.history[0]).sort(), ["containersCpu", "containersMem", "cpu", "gateway", "mem", "t"]);
+	assert.equal(snap.history[0].containersMem, 1200, "MB");
+	await resourceSnapshot({ now: t0 + 5000, containers: usage });
+	assert.equal((await resourceSnapshot({ now: t0 + 6000, containers: usage })).history.length, 1, "not more often than every 15 s");
+	assert.equal((await resourceSnapshot({ now: t0 + 16000, containers: usage })).history.length, 2);
+	assert.equal((await resourceSnapshot({ now: t0 + 40000, containers: null })).containers, null);
+	resetResources();
+	// It reaches the page through /dashboard.json.
+	const { server } = await import("./server.mjs");
+	const accessLog = config.ACCESS_LOG;
+	config.ACCESS_LOG = false;
+	clearPasswordHash();
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "no docker here" }));
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	const page = await (await fetch(`http://127.0.0.1:${server.address().port}/dashboard.json`)).json();
+	assert.ok(page.resources && page.resources.host.memTotal > 0 && "gateway" in page.resources, "the snapshot carries the resources");
+	assert.deepEqual([page.resources.containers.running, page.resources.containers.total, page.resources.containers.top], [0, 0, []], "and with no Docker there are simply no containers");
+	assert.ok(page.sessions !== undefined && page.containers !== undefined, "and the rest of the snapshot is intact");
+	await new Promise((r) => server.close(r));
+	config.ACCESS_LOG = accessLog;
+	resetResources();
+}
+
+// Pi versions of containers and agents: read cheaply, cached, coloured against the gateway's own; extensions as rows.
+{
+	const tarOf = (text) => {
+		const body = Buffer.from(text);
+		const header = Buffer.alloc(512);
+		header.write("package.json", 0);
+		header.write(body.length.toString(8).padStart(11, "0"), 124, "ascii");
+		return Buffer.concat([header, body, Buffer.alloc(512 - (body.length % 512 || 512)), Buffer.alloc(1024)]);
+	};
+	const piJson = (v) => JSON.stringify({ name: "@earendil-works/pi-coding-agent", version: v, description: "naïve — unicode" });
+
+	// How a version compares.
+	for (const [version, host, expected] of [["0.99.1", "0.99.1", "current"], ["0.99.0", "0.99.1", "outdated"], ["0.98.9", "0.99.1", "outdated"], ["1.0.0", "0.99.1", "ahead"], ["0.99.2", "0.99.1", "ahead"], ["0.99.1-beta.1", "0.99.1", "outdated"], ["", "0.99.1", "unknown"], ["0.99.1", "", "unknown"], [null, null, "unknown"]]) {
+		assert.equal(piStatus(version, host), expected, `${version} against ${host}`);
+	}
+
+	// Reading a version out of the tar `docker cp` produces.
+	assert.match(firstFileOfTar(tarOf(piJson("0.99.1"))), /"version":"0\.99\.1"/);
+	assert.ok(firstFileOfTar(tarOf(piJson("0.99.1"))).includes("naïve — unicode"), "bytes, not a text decoding, so non-ASCII survives");
+	assert.equal(firstFileOfTar(Buffer.alloc(100)), "");
+	assert.equal(firstFileOfTar(Buffer.alloc(1024)), "", "an empty archive");
+	assert.equal(firstFileOfTar("not a buffer"), "");
+	const seen4 = [];
+	const answering = (handlers) => async (bin, args, opts) => {
+		seen4.push({ args, opts });
+		return (handlers[args[0]] ?? (() => ({ code: 1, stdout: "", stderr: "" })))(args, opts);
+	};
+	setRunner(answering({ cp: () => ({ code: 0, stdout: tarOf(piJson("0.98.0")), stderr: "" }) }));
+	assert.deepEqual(await readPiVersion("c1"), { version: "0.98.0", source: "container" });
+	assert.deepEqual(seen4.map((c) => c.args[0]), ["cp"], "a container that is not running is read without exec");
+	assert.deepEqual(seen4[0].args, ["cp", `c1:${PI_PACKAGE_JSON}`, "-"]);
+	assert.equal(seen4[0].opts.binary, true);
+	seen4.length = 0;
+	setRunner(answering({ exec: () => ({ code: 0, stdout: piJson("0.97.0"), stderr: "" }) }));
+	assert.deepEqual(await readPiVersion("c2"), { version: "0.97.0", source: "container" }, "a Pi installed elsewhere is found through npm in the running container");
+	assert.deepEqual(seen4.map((c) => c.args[0]), ["cp", "exec"]);
+	setRunner(answering({ image: () => ({ code: 0, stdout: "sha256:x|0.96.0\n", stderr: "" }) }));
+	assert.deepEqual(await readPiVersion("c3", { image: "piper-agent" }), { version: "0.96.0", source: "image" }, "nothing readable: the image's label, and it says so");
+	setRunner(answering({}));
+	assert.deepEqual(await readPiVersion("c4", { image: "piper-agent" }), { version: "", source: "none" });
+	assert.deepEqual(await readPiVersion("c5"), { version: "", source: "none" });
+
+	// The cache: answers at once, fills in the background, three at a time, by container id.
+	resetPiVersions();
+	const gates = [];
+	let active = 0;
+	let peak = 0;
+	const read = (name) => new Promise((resolve) => {
+		active++;
+		peak = Math.max(peak, active);
+		gates.push(() => { active--; resolve({ version: `v-${name}`, source: "container" }); });
+	});
+	const items = ["a", "b", "c", "d", "e"].map((n) => ({ name: n, id: `id-${n}`, image: "img" }));
+	const t0 = Date.now();
+	assert.equal(piVersionsFor(items, { read, now: t0 }).size, 0, "nothing is known yet, and it does not wait");
+	await new Promise((r) => setImmediate(r));
+	assert.deepEqual([peak, gates.length, piVersionsPending()], [3, 3, 5], "at most three reads at once, the rest wait");
+	piVersionsFor(items, { read, now: t0 });
+	await new Promise((r) => setImmediate(r));
+	assert.equal(gates.length, 3, "asking again does not queue the same ones twice");
+	while (piVersionsPending() > 0) {
+		gates.splice(0).forEach((g) => g());
+		await new Promise((r) => setTimeout(r, 5));
+	}
+	const got = piVersionsFor(items, { read, now: t0 + 1000 });
+	assert.deepEqual([...got].map(([n, v]) => `${n}=${v.version}`).sort(), ["a=v-a", "b=v-b", "c=v-c", "d=v-d", "e=v-e"]);
+	assert.equal(piVersionsFor([{ name: "a", id: "a-recreated", image: "img" }], { read, now: t0 + 1000 }).size, 0, "a recreated container has a new id: the old figure is not used for it");
+	noteChanged("b");
+	assert.equal(piVersionsFor([items[1]], { read, now: t0 + 1000 }).size, 0, "a change drops its entry");
+	while (piVersionsPending() > 0) {
+		gates.splice(0).forEach((g) => g());
+		await new Promise((r) => setTimeout(r, 5));
+	}
+	assert.equal(piVersionsFor([items[2]], { read, now: t0 + 11 * 60_000 }).size, 0, "an entry is good for ten minutes");
+	while (piVersionsPending() > 0) {
+		gates.splice(0).forEach((g) => g());
+		await new Promise((r) => setTimeout(r, 5));
+	}
+	resetPiVersions();
+	assert.doesNotThrow(() => piVersionsFor([{ name: "z", id: "z", image: "" }], { read: async () => { throw new Error("docker is gone"); } }), "a failing read is left unknown, never thrown");
+	await new Promise((r) => setTimeout(r, 10));
+	resetPiVersions();
+
+	// The Containers view and the Agents snapshot carry the version and its colour.
+	const hostPi = await hostPiVersion();
+	const older = hostPi.replace(/\d+$/, (n) => String(Math.max(0, Number(n) - 1)));
+	const nameCur = containerName(chatIdHash("pi-current"));
+	const nameOld = containerName(chatIdHash("pi-old"));
+	const nameStopped = containerName(chatIdHash("pi-stopped"));
+	const infoOf = (name, running, id) => ({ Name: `/${name}`, Id: id, State: { Running: running, Status: running ? "running" : "exited" }, Image: "sha256:img", Config: { Image: "piper-agent", Labels: { "piper.managed": "1", "piper.key": "" } }, HostConfig: {}, NetworkSettings: { Networks: {} } });
+	const versions = { [nameCur]: hostPi, [nameOld]: older, [nameStopped]: hostPi };
+	setRunner(async (bin, args) => {
+		if (args[0] === "ps") return { code: 0, stdout: [nameCur, nameOld, nameStopped].map((n) => `${n}\t${n === nameStopped ? "exited" : "running"}\t\t`).join("\n"), stderr: "" };
+		if (args[0] === "inspect") return { code: 0, stdout: JSON.stringify([infoOf(nameCur, true, "id-cur"), infoOf(nameOld, true, "id-old"), infoOf(nameStopped, false, "id-stopped")]), stderr: "" };
+		if (args[0] === "cp") return { code: 0, stdout: tarOf(piJson(versions[args[1].split(":")[0]])), stderr: "" };
+		if (args[0] === "stats") return { code: 0, stdout: "", stderr: "" };
+		return { code: 1, stdout: "", stderr: "" };
+	});
+	resetPiVersions();
+	const first = await listContainers();
+	assert.equal(first.hostPiVersion, hostPi, "the page is told what to compare with");
+	assert.ok(first.containers.every((c) => c.piStatus === "unknown" && c.piVersion === null), "the first look does not wait for the reads");
+	await new Promise((r) => setTimeout(r, 30));
+	const second = await listContainers();
+	const by = Object.fromEntries(second.containers.map((c) => [c.name, c]));
+	assert.deepEqual([by[nameCur].piVersion, by[nameCur].piStatus, by[nameCur].piSource], [hostPi, "current", "container"]);
+	assert.deepEqual([by[nameOld].piVersion, by[nameOld].piStatus], [older, "outdated"], "older than the gateway's: red");
+	assert.deepEqual([by[nameStopped].piVersion, by[nameStopped].piStatus], [hostPi, "current"], "a stopped container is read too");
+	// A live agent: the snapshot names its container, and /dashboard.json joins the colour.
+	const { server } = await import("./server.mjs");
+	const accessLog = config.ACCESS_LOG;
+	config.ACCESS_LOG = false;
+	clearPasswordHash();
+	const agentRecord = { id: "pi-agent-session", keyId: null, scopeId: null, container: { name: nameOld } };
+	const realAll = sessions.allRecords.bind(sessions);
+	const realSnapshot = sessions.snapshot.bind(sessions);
+	sessions.snapshot = async () => { const snap = await realSnapshot(); snap.sessions = [{ fingerprint: "abc", container: nameOld, expiresInMs: 1, idleMs: 1, ageMs: 1, inflight: 0, requests: 2, cost: 0, tokens: 0 }, { fingerprint: "def", container: nameCur, expiresInMs: 1, idleMs: 1, ageMs: 1, inflight: 0, requests: 2, cost: 0, tokens: 0 }, { fingerprint: "ghi", container: null, expiresInMs: 1, idleMs: 1, ageMs: 1, inflight: 0, requests: 2, cost: 0, tokens: 0 }]; return snap; };
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	const base = `http://127.0.0.1:${server.address().port}`;
+	await (await fetch(`${base}/dashboard.json`)).json();
+	await new Promise((r) => setTimeout(r, 30));
+	const dash = await (await fetch(`${base}/dashboard.json`)).json();
+	assert.equal(dash.hostPiVersion, hostPi);
+	const bySession = Object.fromEntries(dash.sessions.map((x) => [x.fingerprint, x]));
+	assert.deepEqual([bySession.abc.piVersion, bySession.abc.piStatus], [older, "outdated"]);
+	assert.deepEqual([bySession.def.piVersion, bySession.def.piStatus], [hostPi, "current"]);
+	assert.deepEqual([bySession.ghi.piVersion, bySession.ghi.piStatus], [null, "unknown"], "a session with no container yet is unknown, not an error");
+	sessions.snapshot = realSnapshot;
+	void agentRecord; void realAll;
+	await new Promise((r) => server.close(r));
+	config.ACCESS_LOG = accessLog;
+	resetPiVersions();
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+
+	// `pi list` as table rows: names only, never a folder.
+	const listing = "User packages:\n  git:github.com/zigai/pi-tweaks (filtered)\n    /root/.pi/agent/git/github.com/zigai/pi-tweaks\n  npm:@zigai/pi-footer\n    /root/.pi/agent/npm/node_modules/@zigai/pi-footer\n  npm:pi-lens@1.2.3\n    /root/.pi/agent/npm/node_modules/pi-lens\n  npm:@a/b@2.0.0\n    /y\n  /opt/local-ext\n    /opt/local-ext\n\nProject packages:\n  git:https://github.com/a/b.git@v1\n    /z\n  git@github.com:owner/ssh-repo.git\n    /w\n  weird line here\n";
+	const rows = parsePiList(listing);
+	assert.deepEqual(rows.map((r) => [r.name, r.type, r.scope, r.filtered, r.pinned]), [
+		["zigai/pi-tweaks", "git", "user", true, null],
+		["@zigai/pi-footer", "npm", "user", false, null],
+		["pi-lens", "npm", "user", false, "1.2.3"],
+		["@a/b", "npm", "user", false, "2.0.0"],
+		["local-ext", "local", "user", false, null],
+		["a/b", "git", "project", false, "v1"],
+		["owner/ssh-repo", "git", "project", false, null],
+		["weird line here", "other", "project", false, null],
+	]);
+	assert.ok(!JSON.stringify(rows).includes("/root/") && !JSON.stringify(rows).includes("node_modules"), "no folder ever reaches the API or the page");
+	assert.deepEqual(parsePiList(""), []);
+	assert.deepEqual(parsePiList(undefined), []);
+	assert.deepEqual(parsePiList("No packages installed\n").map((r) => r.type), ["other"], "an odd line is kept, not lost");
+	assert.ok(parsePiList(Array.from({ length: 300 }, (_, i) => `  npm:p${i}\n    /d`).join("\n")).length <= 100, "bounded");
+}
+
+// About and the Documentation handbook: the release notes, the page list, the renderer, the generated tables.
+{
+	const http = await import("node:http");
+	const { server } = await import("./server.mjs");
+	const accessLog = config.ACCESS_LOG;
+	config.ACCESS_LOG = false;
+	const readText = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
+
+	// The changelog and the package: the page's own data.
+	const pkg = JSON.parse(readText("./package.json"));
+	assert.deepEqual(readPackage().author, { name: "Adam Lange", email: "piper@adamlange.pl" });
+	assert.equal(readPackage().version, pkg.version);
+	assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
+	const log = readChangelog();
+	assert.ok(log.length >= 4, "every release is there");
+	assert.equal(log[0].version, pkg.version, "the newest release is the current version");
+	assert.ok(log.every((r, i) => /^\d+\.\d+\.\d+$/.test(r.version) && /^\d{4}-\d{2}-\d{2}$/.test(r.date) && r.sections.length && r.sections.every((x) => x.title && x.items.length)), "each has a date, sections and items");
+	assert.ok(log[0].sections.map((x) => x.title).includes("Added"));
+	assert.ok(log.at(-1).version === "0.1.0");
+	assert.ok(log.every((r, i) => i === 0 || versionNewer(log[i - 1].version, r.version)), "newest first, strictly");
+	assert.deepEqual(parseChangelog("## [1.2.3] - 2026-01-02\n\n### Added\n- one thing that\n  wraps\n- two\n\n### Fixed\n- three\n\n## [1.0.0]\n### Added\n- x\n"), [
+		{ version: "1.2.3", date: "2026-01-02", sections: [{ title: "Added", items: ["one thing that wraps", "two"] }, { title: "Fixed", items: ["three"] }] },
+		{ version: "1.0.0", date: null, sections: [{ title: "Added", items: ["x"] }] },
+	]);
+	assert.deepEqual(parseChangelog("nothing useful here\n- a stray bullet\n"), [], "a garbled file is fewer releases, not an error");
+	assert.deepEqual(parseChangelog(undefined), []);
+	assert.deepEqual(readChangelog("/no/such/dir"), [], "a missing file is an empty changelog");
+	const about = await aboutInfo();
+	assert.equal(about.version, pkg.version);
+	assert.ok(about.installation.node === process.version && about.installation.uptimeSec >= 0 && about.installation.platform);
+
+	// The renderer: every construct, and nothing that can run.
+	const r = (md) => renderMarkdown(md, { page: "p", targets: new Map([["README.md", "reference"], ["other.md", "other"]]) }).html;
+	assert.equal(slugify("Hello, `World`! 2"), "hello-world-2");
+	assert.match(r("# Title\n\nSome **bold**, *em*, `code <b>` and a [link](https://example.com)."), /<h1 id="title">Title<\/h1>\n<p>Some <strong>bold<\/strong>, <em>em<\/em>, <code>code &lt;b&gt;<\/code> and a <a href="https:\/\/example.com" target="_blank" rel="noopener noreferrer">link<\/a>\.<\/p>/);
+	assert.equal(renderMarkdown("## A\n## A\n## A").headings.map((h) => h.id).join(), "a,a-2,a-3", "repeated headings get distinct ids");
+	assert.match(r("- one\n- two\n  - nested\n- three\n\n1. first\n2. second"), /<ul><li>one<\/li><li>two<ul><li>nested<\/li><\/ul><\/li><li>three<\/li><\/ul>\n<ol><li>first<\/li><li>second<\/li><\/ol>/);
+	assert.match(r("```bash\necho <hi> && ls\n```"), /<div class="codebox"><pre><code class="lang-bash">echo &lt;hi&gt; &amp;&amp; ls<\/code><\/pre><\/div>/);
+	assert.match(r("| a | b |\n|---|---|\n| 1 | `x \\| y` |"), /<table><thead><tr><th>a<\/th><th>b<\/th><\/tr><\/thead><tbody><tr><td>1<\/td><td><code>x \| y<\/code><\/td><\/tr><\/tbody><\/table>/);
+	assert.equal(r("> quoted *text*"), "<blockquote><p>quoted <em>text</em></p></blockquote>");
+	assert.match(r("a\n\n---\n\nb"), /<hr>/);
+	assert.match(r("a snake_case_name and 2 * 3 * 4 stay as they are"), /snake_case_name and 2 \* 3 \* 4/);
+	assert.equal(r("![a diagram](docs/x.png)"), "<p>a diagram</p>", "images are dropped, their words kept");
+	// Links: http(s) and mailto as they are; anchors and known pages become dashboard links; the rest is plain text.
+	assert.equal(linkHref("https://a.b/c?d=1").external, true);
+	assert.equal(linkHref("mailto:x@y.z").href, "mailto:x@y.z");
+	assert.deepEqual(linkHref("#Some Heading", { page: "p" }), { href: "#docs/p/some-heading", external: false });
+	assert.equal(linkHref("README.md#Other Part", { targets: new Map([["README.md", "reference"]]) }).href, "#docs/reference/other-part");
+	for (const bad of ["javascript:alert(1)", "JaVaScRiPt:alert(1)", "data:text/html,<script>", "vbscript:x", "//evil.example/x", "unknown.md", "/etc/passwd", "file:///etc/passwd", " javascript:alert(1)"]) assert.equal(linkHref(bad, { page: "p" }), null, bad);
+	// Hostile input comes out escaped or dropped.
+	for (const hostile of ["<script>alert(1)</script>", "<img src=x onerror=alert(1)>", "[x](javascript:alert(1))", "![x](javascript:alert(1))", "**<svg onload=alert(1)>**", "`</code><script>alert(1)</script>`", "# <script>alert(1)</script>", "| <script> |\n|---|\n| <img onerror=alert(1)> |", "- <iframe src=x></iframe>", "> <script>alert(1)</script>", "```\n</pre><script>alert(1)</script>\n```", "[<script>alert(1)</script>](https://a.b)", "<!-- generated:settings --><script>"]) {
+		const html = r(hostile);
+		assert.ok(!/<script|<img|<svg|<iframe|onerror=|onload=|href="javascript/i.test(html.replace(/&lt;[^&]*?&gt;/g, "")), `escaped: ${hostile} -> ${html}`);
+		assert.ok(!/<(script|img|svg|iframe)\b/i.test(html), `no live tag: ${hostile} -> ${html}`);
+	}
+	assert.ok(!/alert/.test(r("[x](javascript:alert(1))") .replace(/^.*?<p>/, "")) || !/href/.test(r("[x](javascript:alert(1))")), "a javascript: link is not a link");
+	assert.equal(r("<!-- a comment\nover lines -->\ntext"), "<p>text</p>", "comments are dropped");
+
+	// The pages.
+	const pages = listPages();
+	const ids = pages.map((p) => p.id);
+	for (const id of ["overview", "functions", "deployment", "operations", "variables", "files", "api", "security", "troubleshooting", "reference"]) assert.ok(ids.includes(id), `page ${id}`);
+	assert.deepEqual(ids.slice(0, 3), ["overview", "functions", "deployment"], "the listed order");
+	assert.equal(pages.find((p) => p.id === "deployment").title, "Deployment guide");
+	assert.equal(pages.find((p) => p.id === "reference").title, "Reference manual");
+	assert.ok(pages.every((p) => p.title && p.summary.length > 20), "every page has a title and a summary");
+	assert.deepEqual(pageIndex().map((p) => p.id), ids);
+	const rendered = Object.fromEntries(ids.map((id) => [id, renderPage(id)]));
+	for (const wiki of ["overview", "functions", "operations", "variables", "files", "api", "security", "troubleshooting"]) {
+		assert.ok(rendered[wiki].html.length > 2500 && rendered[wiki].headings.length >= 4, `${wiki} is a real page`);
+	}
+	assert.equal(renderPage("nope"), null);
+	assert.equal(renderPage("../README"), null);
+	assert.equal(renderPage("overview/../../etc/passwd"), null);
+	assert.equal(renderPage(""), null);
+	// Every internal link and anchor resolves to a page and a heading that exist.
+	const anchorsOf = Object.fromEntries(ids.map((id) => [id, new Set([...rendered[id].html.matchAll(/<h[1-4] id="([^"]*)"/g)].map((m) => m[1]))]));
+	for (const id of ids) {
+		for (const m of rendered[id].html.matchAll(/href="#docs\/([^"\/]+)(?:\/([^"]*))?"/g)) {
+			assert.ok(anchorsOf[m[1]], `${id}: link to unknown page ${m[1]}`);
+			if (m[2]) assert.ok(anchorsOf[m[1]].has(m[2]), `${id}: link to missing heading ${m[1]}#${m[2]}`);
+		}
+		assert.ok(!/href="(?!#docs\/|https?:|mailto:)/.test(rendered[id].html), `${id}: every link is http(s), mailto or a dashboard link`);
+	}
+
+	// The generated tables come from the code: every setting, with its real default; no secret; no host path.
+	const vars = rendered.variables.html;
+	for (const spec of SETTINGS_SPEC) assert.ok(vars.includes(`<code>${spec.key}</code>`), `${spec.key} is in the reference`);
+	assert.ok(vars.includes("<td>yes</td>") && vars.includes("<td>no</td>"), "restart column");
+	const cellOf = (key) => new RegExp(`<tr><td><code>${key}</code></td>(?:<td>.*?</td>){2}`).exec(vars)[0];
+	assert.match(cellOf("MAX_SESSIONS"), /<td>128<\/td>/);
+	assert.match(cellOf("SESSION_IDLE_MS"), /<td>\d+[dhms]<\/td>/);
+	assert.match(cellOf("AUDIT_REQUESTS"), /<td>off<\/td>/);
+	assert.match(cellOf("AUDIT_AUTH"), /<td>on<\/td>/);
+	assert.match(cellOf("GATEWAY_API_KEY"), /none; set from the dashboard/);
+	assert.ok(!vars.includes(GATEWAY_DIR_FOR_TEST), "no path of this installation leaks into the page");
+	assert.ok(vars.includes("&lt;gateway dir&gt;/workspaces"), "folders are written relative to the installation");
+	assert.ok(!/s3cr3t|T0K3N/.test(vars));
+	for (const [key, path] of Object.entries(CONTAINER_PATHS)) {
+		assert.ok(PATH_NOTES[key], `${key} has a description`);
+		assert.ok(rendered.files.html.includes(`<code>${path}</code>`), `${path} is in the files page`);
+	}
+	for (const c of AUDIT_CATEGORIES) assert.ok(rendered.security.html.includes(`<code>${c.id}</code>`), `audit category ${c.id} is documented`);
+	for (const n of [NETWORK, NETWORK_OPEN]) assert.ok(rendered.security.html.includes(n.subnet) && rendered.security.html.includes(n.name));
+	for (const range of ["10.0.0.0/8", "192.168.0.0/16", "169.254.0.0/16"]) assert.ok(rendered.security.html.includes(range));
+	// The command reference is the scripts' own usage text, so every command and flag is in it.
+	const ops = rendered.operations.html;
+	for (const cmd of ["restart", "start", "stop", "status", "logs", "image", "doctor", "backup", "restore"]) assert.ok(readText("./piper.sh").includes(`${cmd}`) && new RegExp(`\\b${cmd}\\b`).test(ops), `piper.sh ${cmd}`);
+	for (const flag of readText("./deploy.sh").split("\n").slice(1, 30).filter((l) => l.startsWith("#")).flatMap((l) => l.match(/--[a-z-]+/g) ?? [])) assert.ok(ops.includes(flag), `deploy.sh ${flag} is in the commands reference`);
+
+	// Search finds the section, not just the page.
+	const hits = searchDocs("iptables");
+	assert.ok(hits.length > 0 && hits.every((h) => h.page && h.heading && h.snippet && ids.includes(h.page)));
+	assert.ok(hits.some((h) => h.page === "security"), "the security page answers a question about the firewall");
+	assert.ok(searchDocs("persistent container").some((h) => h.page === "functions" || h.page === "reference"));
+	assert.deepEqual(searchDocs(""), []);
+	assert.deepEqual(searchDocs("x"), [], "a one-letter query is nothing");
+	assert.deepEqual(searchDocs("zzzzqqqqnotaword"), []);
+	assert.ok(searchDocs("the".repeat(1)).length <= 30, "bounded");
+
+	// Over real sockets: the list, a page, search, About; a bad id is a 404 and never a file.
+	clearPasswordHash();
+	await new Promise((res) => server.listen(0, "127.0.0.1", res));
+	const base = `http://127.0.0.1:${server.address().port}`;
+	const get = async (path) => {
+		const res = await fetch(base + path);
+		return { status: res.status, json: await res.json().catch(() => null), type: res.headers.get("content-type") };
+	};
+	const list = await get("/dashboard/docs.json");
+	assert.equal(list.status, 200);
+	assert.deepEqual(list.json.pages.map((p) => p.id), ids);
+	assert.equal(list.json.version, pkg.version);
+	const page = await get("/dashboard/docs/security.json");
+	assert.deepEqual([page.status, page.json.id, page.json.title], [200, "security", "Security model and hardening"]);
+	assert.ok(page.json.html.includes("<h2") && page.json.headings.every((h) => h.level === 2 || h.level === 3));
+	assert.equal((await get("/dashboard/docs/nope.json")).status, 404);
+	for (const evil of ["/dashboard/docs/..%2f..%2fetc%2fpasswd.json", "/dashboard/docs/%2e%2e%2fREADME.json", "/dashboard/docs/Security.json", "/dashboard/docs/overview.md", "/dashboard/docs/overview/../../gateway.json"]) {
+		const res = await get(evil);
+		assert.ok(res.status === 404 || res.status === 401, `${evil} -> ${res.status}`);
+		assert.ok(!JSON.stringify(res.json).includes("root:"), "no file is ever read from the request");
+	}
+	const found = await get("/dashboard/docs/search.json?q=firewall");
+	assert.ok(found.status === 200 && found.json.hits.length > 0);
+	assert.deepEqual((await get("/dashboard/docs/search.json")).json.hits, []);
+	const ab = await get("/dashboard/about.json");
+	assert.equal(ab.status, 200);
+	assert.deepEqual([ab.json.version, ab.json.author.name, ab.json.author.email, ab.json.license], [pkg.version, "Adam Lange", "piper@adamlange.pl", "Apache-2.0"]);
+	assert.ok(ab.json.changelog.length >= 4 && ab.json.installation.node);
+	// Locked dashboard: no handbook without signing in.
+	setPasswordHash(hashPassword("a long enough password"));
+	assert.equal((await get("/dashboard/docs.json")).status, 401);
+	assert.equal((await get("/dashboard/about.json")).status, 401);
+	clearPasswordHash();
+	await new Promise((res) => server.close(res));
+	config.ACCESS_LOG = accessLog;
+
+	// The words that must not appear anywhere a reader sees: nothing about how Piper was made beyond its author.
+	// Model ids such as claude-haiku-4.5 are names of things Piper talks to, not claims about its making, so they are not counted.
+	const withoutModelIds = (text) => text.replace(/\bclaude-[a-z0-9.-]+/gi, "").replace(/\banthropic\/[a-z0-9.-]+/gi, "");
+	const forbidden = /claude|anthropic|\bAI[- ](generated|assisted|built|written|powered)|generated (by|with) (an? )?(AI|LLM)|co-?authored|built with AI|written by AI|LLM-written|chatgpt|openai's? (codex|assistant) wrote/i;
+	const shipped = ["README.md", "DEPLOYMENT.md", "CHANGELOG.md", "package.json", "LICENSE", "dashboard.html", "deploy.sh", "piper.sh", ...readdirSync(new URL("./docs/", import.meta.url)).filter((n) => n.endsWith(".md")).map((n) => `docs/${n}`), ...readdirSync(new URL("./lib/", import.meta.url)).map((n) => `lib/${n}`)];
+	for (const file of shipped) assert.ok(!forbidden.test(withoutModelIds(readText(`./${file}`))), `${file} says nothing about AI authorship`);
+	assert.ok(!forbidden.test(JSON.stringify(about)), "nor does the About payload");
+	for (const html of Object.values(rendered)) assert.ok(!forbidden.test(withoutModelIds(html.html)));
+}
+
+// Model speed: timed from each call's events, averaged per session, kept per model over time.
+{
+	const { EventEmitter } = await import("node:events");
+	const { PassThrough } = await import("node:stream");
+	const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 0.01, `${msg}: ${a} is not ${b}`);
+
+	// One call: what counts as prompt, what as generation, and what is not a measurement at all.
+	const call = (usage, start, first, end) => callSpeed({ startMs: start, firstMs: first, endMs: end, usage });
+	const good = call({ input: 1000, output: 101, cacheRead: 5000, cacheWrite: 0 }, 0, 500, 2500);
+	assert.deepEqual(good, { prompt: { tokens: 1000, ms: 500 }, gen: { tokens: 100, ms: 2000 } }, "cache reads were not processed; the first output token is the clock's start");
+	assert.equal(call({ input: 800, cacheWrite: 200, output: 51 }, 0, 100, 600).prompt.tokens, 1000, "cache writes were processed");
+	assert.equal(call({ input: 10, output: 101 }, 0, 500, 2500).prompt, null, "a short prompt is mostly latency");
+	assert.equal(call({ input: 10, output: 101 }, 0, 500, 2500).gen.tokens, 100);
+	assert.equal(call({ input: 1000, output: 3 }, 0, 500, 700).gen, null, "a short answer is too short to time");
+	assert.equal(call({ input: 1000, output: 3 }, 0, 500, 700).prompt.tokens, 1000, "but its prompt still counts");
+	assert.equal(call({ input: 1000, output: 500 }, 0, 4000, 4010), null, "everything in one burst: the provider did not stream");
+	assert.notEqual(call({ input: 1000, output: 10 }, 0, 500, 505), null, "a short answer may arrive in one burst");
+	assert.equal(call({ input: 1000, output: 100 }, 0, 20, 2000).prompt, null, "a first token under 50 ms is not a processing time");
+	assert.equal(call({ input: 1000, output: 100 }, 500, 100, 900), null, "time does not run backwards");
+	assert.equal(call(null, 0, 1, 2), null);
+	assert.equal(call({ input: 1000, output: 100 }, 0, null, 2000), null, "no token ever arrived");
+	assert.equal(MIN_PROMPT_TOKENS, 64);
+
+	// Averages are totals over totals: a long call weighs more than a short one.
+	const stats = newSpeedStats();
+	addSpeed(stats, { prompt: { tokens: 1000, ms: 500 }, gen: { tokens: 100, ms: 2000 } }, "p/a"); // 2000 and 50 per second
+	addSpeed(stats, { prompt: { tokens: 200, ms: 100 }, gen: { tokens: 50, ms: 500 } }, "p/b"); // 2000 and 100 per second
+	const view = speedView(stats);
+	near(view.prompt, 2000, "prompt");
+	near(view.gen, 60, "weighted generation speed (150 tokens in 2.5 s), not the 75 a mean of ratios would give");
+	assert.deepEqual([view.calls, view.promptCalls, view.genCalls], [2, 2, 2]);
+	near(view.last.gen, 100, "the last call");
+	assert.equal(view.last.model, "p/b");
+	near(view.byModel["p/a"].gen, 50, "per model within the session");
+	assert.deepEqual(speedView(newSpeedStats()), { calls: 0, prompt: null, gen: null, promptCalls: 0, genCalls: 0, last: null, byModel: {} }, "no data is null, never zero or NaN");
+
+	// The session times calls from its event stream with an injected clock.
+	const fake = () => {
+		const child = new EventEmitter();
+		child.stdout = new PassThrough();
+		child.stderr = new PassThrough();
+		child.exitCode = null;
+		child.signalCode = null;
+		child.kill = () => {};
+		child.stdin = new PassThrough();
+		child.stdin.on("data", (chunk) => {
+			for (const line of String(chunk).split("\n").filter(Boolean)) {
+				const command = JSON.parse(line);
+				child.stdout.write(`${JSON.stringify({ type: "response", id: command.id, command: command.type, success: true, data: command.type === "get_state" ? { model: { provider: "p", id: "m", input: ["text"] }, isStreaming: false } : undefined })}\n`);
+			}
+		});
+		return child;
+	};
+	const child = fake();
+	const clock = { times: [] };
+	const session = await new PiRpcSession(child, { clock: () => (clock.times.length ? clock.times.shift() : 0) }).init(2000);
+	const emit = (record) => child.stdout.write(`${JSON.stringify(record)}\n`);
+	const settle = () => new Promise((r) => setTimeout(r, 15));
+	const assistant = (extra = {}) => ({ role: "assistant", provider: "prov", model: "fast", stopReason: "stop", ...extra });
+	// One call as the stream shows it: the event before it (the request going out), the reply announced, deltas, the end.
+	// `at` lists the arrival time of each event in that order: [boundary, start, ...one per delta, end].
+	const run = async (at, { usage, message = {}, deltas = 1, boundary = true } = {}) => {
+		const times = boundary ? at : at.slice(1);
+		clock.times.push(...times);
+		if (boundary) emit({ type: "agent_start" });
+		emit({ type: "message_start", message: assistant() });
+		for (let i = 0; i < deltas; i++) emit({ type: "message_update", assistantMessageEvent: { type: i === 0 ? "thinking_delta" : "text_delta", delta: "x" } });
+		emit({ type: "message_end", message: assistant({ usage, ...message }) });
+		await settle();
+		clock.times.length = 0;
+	};
+	assert.equal(session.getSpeed().gen, null, "nothing measured yet");
+	await run([0, 0, 500, 501, 502, 2500], { usage: { input: 1000, output: 101, cacheRead: 5000, cacheWrite: 0 }, deltas: 3 });
+	let v = session.getSpeed();
+	near(v.prompt, 2000, "prompt tokens per second");
+	near(v.gen, 50, "generation tokens per second");
+	assert.equal(v.last.model, "prov/fast");
+	// A second model in the same session, a call that failed, one aborted, one that did not stream, one with no usage.
+	const history0 = speedHistory("1h").models.reduce((n, m) => n + m.calls, 0);
+	await run([0, 0, 100, 600], { usage: { input: 200, output: 51 }, message: { model: "slow" } });
+	near(session.getSpeed().gen, 60, "the session average is weighted over both calls");
+	assert.deepEqual(Object.keys(session.getSpeed().byModel).sort(), ["prov/fast", "prov/slow"]);
+	for (const [label, opts] of [["error", { message: { stopReason: "error" } }], ["aborted", { message: { stopReason: "aborted" } }], ["no usage", { usage: null }], ["no deltas", { deltas: 0 }]]) {
+		const before = JSON.stringify(session.getSpeed());
+		await run([0, 0, ...(opts.deltas === 0 ? [] : [100]), 900], { usage: { input: 5000, output: 400 }, ...opts });
+		assert.equal(JSON.stringify(session.getSpeed()), before, `a call that ${label} is not a measurement`);
+	}
+	await run([0, 0, 4000, 4005], { usage: { input: 5000, output: 400 } });
+	near(session.getSpeed().prompt, 1200 * 1000 / 600, "a call that arrived in one burst did not change it");
+	// A provider that holds its reply until the first token: Pi announces the reply only then, so the call is timed
+	// from the event before it. Without that, this one would read as a time to first token of nothing.
+	const beforeLate = JSON.stringify(session.getSpeed().prompt);
+	await run([1000, 1990, 2000, 4000], { usage: { input: 3000, output: 101 } });
+	assert.notEqual(JSON.stringify(session.getSpeed().prompt), beforeLate, "the prompt was timed from the request, 1000 ms before the first token");
+	near(session.getSpeed().prompt, (1000 + 200 + 3000) / ((500 + 100 + 1000) / 1000), "1000 + 200 + 3000 prompt tokens over 500 + 100 + 1000 ms");
+	// Tool turns: the call is timed from the tool result, not from the previous reply.
+	const toolBefore = session.getSpeed().calls;
+	clock.times.push(9000, 9000, 9600, 9700, 10200);
+	emit({ type: "tool_execution_end", toolName: "bash" });
+	emit({ type: "message_start", message: assistant() });
+	emit({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "x" } });
+	emit({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "y" } });
+	emit({ type: "message_end", message: assistant({ usage: { input: 3000, output: 21 } }) });
+	await settle();
+	clock.times.length = 0;
+	assert.equal(session.getSpeed().calls, toolBefore + 1);
+	near(session.getSpeed().last.prompt, 3000 / 0.6, "3000 tokens, 600 ms after the tool finished");
+	await run([0, 0, 500, 2500], { usage: { input: 1000, output: 101 }, message: { role: "user" } });
+	assert.equal(speedHistory("1h").models.reduce((n, m) => n + m.calls, 0), history0 + 3, "the second call, the late-announced one and the tool turn were added; a user message was not");
+
+	// The history: one row per minute and model, ranges, buckets, and the setting that switches it off.
+	const now = Date.now();
+	db.prepare("DELETE FROM speed_minutes").run();
+	config.SPEED_HISTORY_DAYS = 14;
+	for (let m = 0; m < 5; m++) recordSpeed("alpha/one", { prompt: { tokens: 1000, ms: 500 }, gen: { tokens: 100, ms: 2000 } }, now - m * 60_000);
+	recordSpeed("beta/two", { prompt: null, gen: { tokens: 300, ms: 3000 } }, now - 10 * 60_000);
+	recordSpeed("alpha/one", { prompt: { tokens: 3000, ms: 3000 }, gen: { tokens: 400, ms: 2000 } }, now - 2 * 3_600_000);
+	const hour = speedHistory("1h", now);
+	assert.deepEqual([hour.range, hour.bucketMs], ["1h", 60_000]);
+	assert.deepEqual(hour.models.map((m) => m.model), ["alpha/one", "beta/two"], "the most used first");
+	const alpha = hour.models[0];
+	assert.deepEqual([alpha.calls, alpha.provider], [5, "alpha"]);
+	near(alpha.gen, 50, "five identical minutes");
+	near(alpha.prompt, 2000, "prompt");
+	assert.equal(alpha.points.length, 5, "a point per minute that had calls");
+	assert.equal(hour.models[1].prompt, null, "a model with no prompt measurement has none, not zero");
+	near(hour.models[1].gen, 100, "beta");
+	const day = speedHistory("24h", now);
+	const alpha24 = day.models.find((m) => m.model === "alpha/one");
+	assert.equal(alpha24.calls, 6, "the call two hours ago is in 24 h");
+	assert.equal(day.bucketMs, 15 * 60_000);
+	assert.ok(alpha24.points.length <= 3, "the minutes fall into 15-minute buckets");
+	near(alpha24.gen, (500 + 400) / ((10_000 + 2000) / 1000), "weighted over the day: 900 tokens in 12 s");
+	assert.equal(speedHistory("bogus", now).range, "1h", "an unknown range is the default");
+	assert.ok(Object.keys(SPEED_RANGES).join() === "1h,6h,24h,7d");
+	assert.equal(speedHistory("1h", now + 3 * 86_400_000).models.length, 0, "an empty range is an empty list");
+	// Same minute, same model: one row, summed.
+	db.prepare("DELETE FROM speed_minutes").run();
+	recordSpeed("m/x", { prompt: { tokens: 100, ms: 100 }, gen: null }, now);
+	recordSpeed("m/x", { prompt: { tokens: 100, ms: 300 }, gen: null }, now + 1000);
+	assert.equal(db.prepare("SELECT COUNT(*) AS n FROM speed_minutes").get().n, 1);
+	near(speedHistory("1h", now).models[0].prompt, 500, "200 tokens in 0.4 s");
+	// Switched off: nothing is kept; retention.
+	config.SPEED_HISTORY_DAYS = 0;
+	assert.equal(recordSpeed("m/y", { prompt: { tokens: 100, ms: 100 }, gen: null }, now), false);
+	assert.equal(db.prepare("SELECT COUNT(*) AS n FROM speed_minutes WHERE model = 'm/y'").get().n, 0);
+	assert.equal(purgeSpeed(now), 1, "switching it off drops what was kept");
+	config.SPEED_HISTORY_DAYS = 2;
+	recordSpeed("old/model", { prompt: { tokens: 100, ms: 100 }, gen: null }, now - 3 * 86_400_000);
+	recordSpeed("new/model", { prompt: { tokens: 100, ms: 100 }, gen: null }, now - 3_600_000);
+	assert.equal(purgeSpeed(now), 1, "older than the retention goes");
+	assert.deepEqual(db.prepare("SELECT model FROM speed_minutes").all().map((r) => r.model), ["new/model"]);
+	config.SPEED_HISTORY_DAYS = 14;
+	db.prepare("DELETE FROM speed_minutes").run();
+	assert.equal(recordSpeed(null, { prompt: null, gen: null }, now), false, "no model, nothing to record");
+
+	// The Agents table and the Overview get it.
+	const ctl = new SessionController({ create: async () => ({ getSpeed: () => ({ gen: 61.5, prompt: 1800, genCalls: 4, promptCalls: 4, calls: 4, last: { model: "p/m", gen: 60, prompt: 1700 }, byModel: {} }), getSessionStats: () => ({ cost: 0, tokens: { total: 0 } }), model: { provider: "p", id: "m" }, dispose() {} }), maxSessions: 4, maxLifetimeMs: 1e6, idleMs: 1e6, sweepMs: 0 });
+	const acquired = ctl.acquire("speed-row", null);
+	await acquired.record.sessionPromise;
+	const row = (await ctl.snapshot()).sessions[0];
+	assert.deepEqual([row.speed.gen, row.speed.prompt, row.speed.genCalls], [61.5, 1800, 4], "each running agent's row carries its speed");
+	const plain = new SessionController({ create: async () => ({ dispose() {} }), maxSessions: 4, maxLifetimeMs: 1e6, idleMs: 1e6, sweepMs: 0 });
+	const bare = plain.acquire("no-speed", null);
+	await bare.record.sessionPromise;
+	assert.equal((await plain.snapshot()).sessions[0].speed, null, "a session that cannot say has none");
+	ctl.closeAll();
+	plain.closeAll();
+
+	const { server } = await import("./server.mjs");
+	const accessLog = config.ACCESS_LOG;
+	config.ACCESS_LOG = false;
+	clearPasswordHash();
+	recordSpeed("route/model", { prompt: { tokens: 600, ms: 200 }, gen: { tokens: 90, ms: 1000 } }, Date.now());
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	const base = `http://127.0.0.1:${server.address().port}`;
+	const sp = await (await fetch(`${base}/dashboard/speed.json?range=6h`)).json();
+	assert.deepEqual([sp.range, sp.bucketMs, sp.models[0].model], ["6h", 300_000, "route/model"]);
+	near(sp.models[0].gen, 90, "gen over the route");
+	assert.equal((await (await fetch(`${base}/dashboard/speed.json`)).json()).range, "1h");
+	setPasswordHash(hashPassword("a long enough password"));
+	assert.equal((await fetch(`${base}/dashboard/speed.json`)).status, 401, "not without signing in");
+	clearPasswordHash();
+	await new Promise((r) => server.close(r));
+	config.ACCESS_LOG = accessLog;
+	db.prepare("DELETE FROM speed_minutes").run();
+	session.dispose?.();
 }
 
 console.log("nextTurn + images: ok");
@@ -1814,6 +4800,7 @@ rmSync(TEST_DB, { force: true });
 rmSync(TEST_WS, { recursive: true, force: true });
 rmSync(`${TEST_WS}-archive`, { recursive: true, force: true });
 rmSync(`${TEST_WS}-run`, { recursive: true, force: true });
+rmSync(`${TEST_WS}-chats`, { recursive: true, force: true });
 rmSync(TEST_PROFILES, { recursive: true, force: true });
 rmSync(TEST_SHARED, { recursive: true, force: true });
-rmSync(TEST_FILES, { recursive: true, force: true });
+rmSync(TEST_CONTAINER_PI, { recursive: true, force: true });

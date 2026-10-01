@@ -1,5 +1,7 @@
 # Runtime state, created next to server.mjs. Never commit it: gateway.db holds settings, API key
-# hashes and the spend ledger; the folders hold users' profiles, shared bundles and chat files.
+# hashes and the spend ledger; the folders hold users' profiles, shared bundles, workspaces and chat
+# state; container-pi/models.json holds the API key of the models configured for containers; backups
+# hold all of it.
 gateway.db
 gateway.db-*
 *.log
@@ -8,5 +10,9 @@ files/
 shared/
 workspaces/
 workspaces-archive/
+workspaces-chats/
 workspaces-run/
+container-pi/
+backups/
+.watchdog-state
 node_modules/
