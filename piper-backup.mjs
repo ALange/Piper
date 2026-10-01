@@ -35,6 +35,7 @@ const FOLDER_SETTINGS = [
 	["profiles", "PROFILE_ROOT", "profiles"],
 	["workspaces", "WORKSPACE_ROOT", "workspaces"],
 	["shared", "SHARED_ROOT", "shared"],
+	["extensions", "EXTENSIONS_ROOT", "extensions"],
 	["container-pi", "CONTAINER_PI_DIR", "container-pi"],
 ];
 

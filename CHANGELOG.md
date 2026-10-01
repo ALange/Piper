@@ -2,6 +2,28 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] - 2026-10-01
+
+### Added
+- **Extension library and per-agent access.** Pi extensions (`npm:`, `git:` or `https://` packages) can be installed **on the
+  host** from the dashboard into a library (`EXTENSIONS_ROOT`): the host's npm or git downloads them with install scripts off by
+  default, git hooks disabled and an environment that holds nothing but `PATH`, and the result must be a Pi package. They are
+  never run on the host: each is mounted read-only into the containers of the keys and agents it is granted to. Grants work at
+  three levels, the global default, a key (all its agents) and an individual agent, each following the one above unless it has
+  its own list. A new **Extensions** page has a Library tab (install, update, remove) and an Access tab (a matrix of who gets
+  what, with the effective result). Settings: `EXTENSIONS_ENABLED`, `EXTENSIONS_ROOT`, `EXTENSION_MAX_BYTES`.
+- **Agent creation wizard.** Agents → Wizard: an existing key or a new one made with the agent, and a template, identity, instructions and skills (leave template skills out, add
+  your own), extensions (follow the key or its own list, plus packages to install into its profile), limits and hand-offs, then a
+  review. The server validates it all in one place and removes the agent again if anything fails.
+- **Template details and editing.** Click a template on Agents → Templates & import to see it in full and, for your own, change its
+  fields and files; built-in templates can be copied to edit.
+- **Playground file view.** A Files panel shows the workspace of the agent you are chatting with, refreshed after each answer, with a
+  preview window for text, Markdown, images and downloads.
+- **Playground.** A chat with any key's agent, first in the menu: streaming Markdown answers, collapsible thinking and tool calls,
+  Stop, retry, copy, a list of chats with search, rename, delete and export, a model picker, phone-friendly. It runs as the chosen
+  key or agent (their limits and spend apply), keeps the messages in the browser only, and needs a dashboard password. Setting:
+  `PLAYGROUND_ENABLED`.
+
 ## [0.6.0] - 2026-10-01
 
 ### Added
@@ -20,6 +42,9 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 - **Hand-offs between agents.** An agent can be allowed to give tasks to the other agents of its key (`piper_agents`,
   `piper_delegate`), with a description for each agent, a depth limit, no loops, a timeout, and the cost on the key. The
   caller stopping stops the colleague. Settings: `DELEGATE_ENABLED`, `DELEGATE_MAX_DEPTH`, `DELEGATE_TIMEOUT_MS`.
+- **Orchestrator template.** A built-in template whose agents may hand work to the other agents of their key and are shown the current
+  list of colleagues, with descriptions, at the start of every turn: new agents are used on the next message. Templates, export,
+  import and clone now carry the hand-offs switch.
 - **Teams.** A chain of agents behind an OpenAI-compatible endpoint of its own: each step's instruction gets the task and the
   previous answer, progress streams as reasoning, and a failing step is named. Setting: `TEAM_MAX_STEPS`.
 - **Agent templates, clone, export and import.** New agents can start from a template (five ship: architect, coder,
@@ -33,7 +58,30 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   and keep a history with results and cost. Finished runs can be POSTed to a signed webhook. A Jobs page manages them.
   Settings: `JOBS_ENABLED`, `JOBS_MAX_PARALLEL`, `JOBS_MIN_INTERVAL_MS`, `JOBS_MAX_PER_KEY`, `JOBS_RESULT_DAYS`.
 
+### Fixed
+- **Docker images that could not be removed.** An old image stayed because stopped containers (this gateway's, or another Piper gateway's
+  on the same machine) still referred to it, and neither **remove** nor prune could touch it. Images now say what holds them (running,
+  stopped, kept, from another gateway); **remove** names the stopped containers and removes them with your go-ahead; a new **clean up…**
+  shows a plan with the reason and size of each candidate (and a list of what is not offered, and why) and removes only what you choose, then
+  keeps the result on screen with the reason for anything that could not be removed; stopped chat containers that keep old images and saved
+  states alive (each update keeps what a chat installed in a saved copy of the image, so the old builds stay behind them) are offered as
+  the way to free them, never preselected, and the saved states and builds under them go in the same run; saved container states and unlabelled
+  leftovers are listed; and unused superseded images are tidied automatically after a build and every few hours
+  (`IMAGE_AUTO_PRUNE`), never one in use.
+- The unit tests no longer fail when the host's Pi ends in `.0` (for example 1.0.0): the "an older Pi" in the container-version test was
+  made by lowering the last digit, which stays 1.0.0 there. Checked against Pi 1.0.0 end to end (see below).
+- `./piper.sh doctor` (and the check at the end of `deploy.sh`) no longer fails with a JSON error when the dashboard has a password: it
+  signs in with `DASHBOARD_PASSWORD` when that is set, and otherwise says the network check was skipped because the dashboard is
+  locked.
+
 ### Changed
+- **Dashboard navigation.** The 15-item sidebar is now 12 items in four groups (Monitor, Build, Infrastructure, Admin), and the
+  long pages are split into tabs: Agents (Agents, Teams, Templates & import, Create), Files & profiles (Files, Profiles &
+  packages), Containers (Containers, Terminal, Images, Pi on this host, Events & command) and Help (Documentation, About).
+  The old *Agents* page is **Live chats**, *Endpoints* is **Agents**, *API Management* is **API keys**; Terminal, Profiles,
+  Documentation and About moved into tabs, and the live-chat and container counts show as badges in the sidebar. Links
+  of earlier versions (`#endpoints`, `#terminal`, `#profiles`, `#docs`, `#about`) keep working; `#agents` now opens the
+  new Agents page rather than the live chats.
 - A chat request and a run without a client (`runAgentTurn`, the base for jobs, delegation and teams) now share one
   path for session limits, crashed-session replacement, spend cap and model allow-list.
 

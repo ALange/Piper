@@ -66,12 +66,12 @@ runtime dependencies beyond Node's standard library, the Pi package you already 
 - **Live view, jobs, templates, hand-offs and teams** — watch a running chat live (with interrupt and a transcript), run
   agents on a schedule, by webhook or through an async API, start agents from templates (clone, export, import), let agents
   hand work to each other, chain them into a team endpoint, install Pi packages and MCP servers from the dashboard, and edit
-  shared bundles in the browser. See the Documentation page for each.
+  shared bundles in the browser. See Help → Documentation for each.
 - **Model speed** — each running agent's average generation and prompt-processing speed (tokens per second) in
-  the Agents table, and per-model charts of both on the Overview, from timing every model call's event stream.
+  the Live chats table, and per-model charts of both on the Overview, from timing every model call's event stream.
 - **Documentation and About** — an administrator's handbook inside the dashboard (architecture, operations, every setting
   generated from the code, API, security, troubleshooting), with search; release notes, version and author.
-- **Pi versions at a glance** — the Containers and Agents pages show the Pi version each container and live agent
+- **Pi versions at a glance** — the Containers and Live chats pages show the Pi version each container and live agent
   runs, green when it matches the gateway's and red when behind.
 - **Audit log and host Pi update** — an Audit page whose recorded categories, retention and row cap are set under
   Settings → Audit, and a panel that updates the Pi the gateway runs on and its extensions.
@@ -298,7 +298,7 @@ Each API key can override, for its own chats: memory, CPU cores, processes (`0` 
 a limit as well as lowers it), the network (`internet`, `none`, `open`), the image, and mounts and
 environment variables that are *added* to the defaults (a key's mount of the same container path, or
 value of the same variable, wins). Blank follows the default. It is set in the key's detail view on the
-Profiles page, and the fields show what the key gets now.
+Files & profiles → Profiles, and the fields show what the key gets now.
 
 - **Saved settings are checked like the global ones.** Mounts and environment go through the same strict
   parsers, an image has to be a Piper image that exists, numbers have to be numbers.
@@ -353,7 +353,7 @@ It is not available to the settings key or the open gateway (there is no key to 
 
 An **agent** is a named, permanent Pi of an existing API key with **a port of its own**: one key can front
 an `architect`, a `coder` and a `researcher`, each reachable as a separate OpenAI-compatible endpoint.
-Create them on the **Endpoints** page (pick the key, name it, write its instructions) and point any
+Create them on the **Agents** page (pick the key, name it, write its instructions) and point any
 OpenAI client at `http://<host>:<port>/v1` with the key the agent belongs to.
 
 - **What makes agents differ.** Each has its own **instructions** (written to the agent's `AGENTS.md`,
@@ -388,7 +388,7 @@ firewall deliberately, or bind `HOST` to localhost and put a TLS reverse proxy i
 
 ### Updating a container
 
-**Update** (Containers page row, an agent's row on Endpoints, **Update container** in a profile's detail, and
+**Update** (Containers tab row, an agent's row on Agents, **Update container** in a profile's detail, and
 **Update all**) rebuilds a container *keeping what is installed in it*, then brings Pi and its extensions up
 to date. **Recreate**/**Reset** is the other tool: it throws the container and its installed state away.
 
@@ -611,7 +611,7 @@ It is created with the key's first chat, is invisible to every other key, and is
 reset (it is data, not configuration). Everything outside it — installed packages, the home
 directory, `/tmp` — belongs to one chat's container. There is no size limit unless you set
 `WORKSPACE_MAX_BYTES`; past it, new chats get the workspace read-only until it is trimmed. Chats of
-one key share it, so they can overwrite each other's files. The Profiles page shows each key's
+one key share it, so they can overwrite each other's files. Files & profiles → Profiles shows each key's
 workspace size, and the key's detail view lists its contents, with a download link per file, delete
 buttons and an upload control.
 
@@ -661,7 +661,7 @@ Each granted bundle is mounted read-only into the key's containers and loaded as
 its extensions, skills and prompts all load. Only the granted bundles are mounted: a key cannot
 see, let alone read, a bundle it was not given. Users cannot change a bundle; edits you make
 reach open chats on their next `/reload`, and a changed grant applies to new chats. `/skills`
-marks where each skill came from, `(shared: base)`, and the Profiles page lists every bundle's
+marks where each skill came from, `(shared: base)`, and Files & profiles → Profiles lists every bundle's
 contents and who gets it.
 
 To share things from your own Pi, copy them in — for example
@@ -758,7 +758,7 @@ the bridge before every model call, so an agent loop on a bridged model that cro
 at its next call, with `[model error: daily spend limit reached ...]`. A key over its cap can still
 use `/profile` and the other gateway commands; only model calls are refused. Calls a container's Pi
 makes *directly* do not pass the gateway, so the cap is checked at the next request, not mid-run.
-Both defaults can be overridden per key on the API Management page (blank follows the default, `0` is
+Both defaults can be overridden per key on the API keys page (blank follows the default, `0` is
 unlimited). `GATEWAY_API_KEY` is the operator's and is never limited.
 
 ### The security model
@@ -804,7 +804,7 @@ What the clock does to chats, whichever comes first, is described under Containe
 is idle, or whose Pi has run for the lifetime, is **stopped** (and resumes); a one-off request is
 **ended**; a stopped chat is **ended** after `CHAT_KEEP_MS`. A session with a request in flight is never
 touched, and LRU eviction past `MAX_SESSIONS` stops the least recently used idle chat. Live agents are in
-memory; chats that can resume are in the `chats` table. The Agents page's "on" column says what will
+memory; chats that can resume are in the `chats` table. The Live chats page's "on" column says what will
 happen and when (`idle → stops`, `one-shot → ends`).
 
 ### Model fallback
@@ -855,7 +855,7 @@ was actually billed rather than a local guess. Tiered pricing is handled inside 
 Two numbers, because they answer different questions:
 
 - **Live** — what the sessions currently in memory have spent so far. Immediate, and shown per
-  agent in the Agents table and on the Overview card.
+  agent in the Live chats table and on the Overview card.
 - **The ledger** — a `spend` table in `gateway.db`, written once as a session closes. Close is the
   single funnel for every way a session can end — reaped, killed, evicted, or shut down — so one
   hook covers them all. A hibernated chat is recorded when it hibernates, and again for what it
@@ -894,7 +894,7 @@ as before — set one from **Settings → Access Control**.
 
 ### API keys
 
-`GATEWAY_API_KEY` remains a single always-valid key, and the **API Management** page adds as many
+`GATEWAY_API_KEY` remains a single always-valid key, and the **API keys** page adds as many
 more as you like. A key has a name, an optional expiry, and one of four states:
 
 | State | Meaning |
@@ -964,7 +964,7 @@ numbers that would then disagree with the per-model and per-day breakdowns besid
 | `GET` | `/dashboard/files/:scope/:path` | A folder (or `?as=list`) lists it; `?as=text` returns an editor's text; otherwise download. `?root=profile` for the profile instead of the workspace |
 | `PUT` / `DELETE` | `/dashboard/files/:scope/:path` | Upload to, or delete from, a workspace or profile; `PUT ?as=text` saves text (409 when the file changed since `expectModified`) |
 | `POST` | `/dashboard/files/:scope/:path?op=mkdir` / `?op=move` | Make a folder; rename or move (`{"to", "overwrite"}`) |
-| `POST` / `GET` / `DELETE` | `/v1/piper/jobs`, `/v1/piper/jobs/:id` | Run a prompt in the background as the key and poll for the result (see the Documentation page) |
+| `POST` / `GET` / `DELETE` | `/v1/piper/jobs`, `/v1/piper/jobs/:id` | Run a prompt in the background as the key and poll for the result (see Help → Documentation) |
 | `POST` | `/v1/piper/jobs/:id/trigger` | Start a job from its own token (`Authorization: Bearer <token>`), not an API key |
 | `GET` (SSE) | `/dashboard/session/:fingerprint/events` | The live view of a running chat (dashboard password required) |
 | `GET` (WebSocket) | `/dashboard/terminal/:container` | An interactive root shell in a running container (dashboard password, same origin) |
@@ -1034,6 +1034,8 @@ on write, so a bad one is rejected with a message rather than reaching the runni
 | Containers | `CONTAINER_DISK_MB` | `0` | Warn when one container has written more than this to its own filesystem. `0` is off. |
 | Containers | `DISK_FREE_WARN_MB` | `5120` | Warn (banner and alert) when the disk Docker uses has less than this free. `0` is off. |
 | Containers | `TERMINAL_ENABLED`, `TERMINAL_IDLE_MS`, `TERMINAL_MAX_SESSIONS` | on, 15m, 4 | The dashboard terminal: whether it is allowed, how long without typing closes it, how many may be open at once. |
+| Agent | `PLAYGROUND_ENABLED` | on | The dashboard Playground (a chat with an agent); needs a dashboard password. |
+| Agent | `EXTENSIONS_ENABLED`, `EXTENSIONS_ROOT`, `EXTENSION_MAX_BYTES` | on, `extensions/`, 200 MB | The host extension library: whether installs are allowed, where it lives, the largest one package may be. |
 | Containers | `LIVE_VIEW_ENABLED`, `PACKAGES_ENABLED` | on, on | The live view of a chat; installing Pi packages and MCP servers from the dashboard. Both need a dashboard password. |
 | Agent | `EXPORT_MAX_BYTES`, `TEMPLATE_MAX_BYTES` | 20 MB, 5 MB | The most an exported or imported agent bundle, and a saved template, may hold. |
 | Agent | `DELEGATE_ENABLED`, `DELEGATE_MAX_DEPTH`, `DELEGATE_TIMEOUT_MS`, `TEAM_MAX_STEPS` | on, 3, 10m, 6 | Hand-offs between agents of a key: allowed, longest chain, longest hand-off; most steps in a team. |
@@ -1069,10 +1071,11 @@ Keys, profiles, the ledger and your dashboard password are untouched.
 
 ## Dashboard
 
-Seven views behind a hash route:
+Fourteen pages in four groups (Monitor, Build, Infrastructure, Admin) behind a hash route; the larger ones have tabs
+(`#agents/teams`, `#containers/terminal`, `#files/profiles`, `#help/docs`). Links from earlier versions still work. The main ones:
 
 - **Overview** — live count, model usage, expiry reasons, and the reaping policy in force.
-- **Agents** — every live session with its model, age, last use, expiry and a kill control.
+- **Live chats** — every live session with its model, age, last use, expiry and a kill control.
   **Conversations** are separated from **one-off** generations: a client that fires auxiliary
   requests alongside a chat (a title, a summary, suggested follow-ups) sends each as a bare
   single-message request, and each really is a separate generation. There is no way to tell one
@@ -1081,9 +1084,9 @@ Seven views behind a hash route:
   and a **reload catalogue** button. Models the containers' Pi calls directly are marked.
 - **Spend** — what agents have cost: today, all time, per model and per day, from the ledger, with
   what the live agents have spent so far shown alongside.
-- **Profiles** — each key's profile: size against the quota, skills, extensions, live agents, and
-  lock and reset controls. Click a key (or **contents** on API Management, or open
-  `#profiles/key-<id>`) for everything that key's agents get, in three parts:
+- **Files & profiles → Profiles** — each key's profile: size against the quota, skills, extensions, live agents, and
+  lock and reset controls. Click a key (or **contents** on the API keys page, or open
+  `#files/profiles/key-<id>`) for everything that key's agents get, in three parts:
   - **installed by the user** — their own skills, extensions, prompts, agent definitions
     (`agents/*.md`), packages and an `AGENTS.md` preview, read through the throwaway helper container;
   - **shared bundles** — each bundle the key is given, with its contents;

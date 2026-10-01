@@ -12,8 +12,8 @@ strip: between them they name most problems. The log is `journalctl -u piper` (s
 | Same, right after installing the service, with `spawn iptables ENOENT` in the log | The service's `PATH` lacks `/usr/sbin` | Units from `deploy.sh` include it; a hand-written unit needs `/usr/sbin` in `Environment=PATH=` |
 | Warning: the image has Pi X but the gateway runs Pi Y | Pi was updated after the image was built | Rebuild the image (Containers → Images, or `./piper.sh image`), then restart |
 | `the image "…" does not exist` for one key | The key's own image setting names an image that is gone | Build it (`./piper.sh image <env>`) or clear the key's image on the Profiles page |
-| A key's chats fail only for that key | Its container settings (mounts, network, image) are wrong or refused | Profiles → the key → Container; saving shows the exact refusal |
-| `429 session_limit_exceeded` / `spend_limit_exceeded` | The key's session cap with every session busy, or its daily cap | Raise it on API Management, or wait (the spend cap resets at local midnight) |
+| A key's chats fail only for that key | Its container settings (mounts, network, image) are wrong or refused | Files & profiles → Profiles → the key → Container; saving shows the exact refusal |
+| `429 session_limit_exceeded` / `spend_limit_exceeded` | The key's session cap with every session busy, or its daily cap | Raise it on the API keys page, or wait (the spend cap resets at local midnight) |
 
 ## Containers misbehave
 
@@ -33,6 +33,41 @@ strip: between them they name most problems. The log is `journalctl -u piper` (s
 | An **update** fails on the Pi step with "no network" | The container's policy is `none` | Expected; update Pi by hand or change the policy |
 | An **update** says a profile is "frozen or over its limit" | The profile is locked or over `PROFILE_MAX_BYTES`, so `/profile` is a throwaway copy and an extension update would be lost | Unlock or shrink the profile |
 
+## Playground
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| "needs a dashboard password" or "switched off" | It runs agents and spends a key's money | Settings → Access; `PLAYGROUND_ENABLED` |
+| The agent list is empty | No usable key (revoked or expired keys are hidden), or no agents on the key | Create a key; the key's main endpoint is always there |
+| "daily spend limit reached" / "all busy" | The key's caps apply to the Playground too | Raise the key's cap, or wait |
+| "model … is not allowed for this API key" | The model is outside the key's allow-list | Pick another from the list |
+| "The connection ended before the agent finished" | The gateway restarted, or a proxy cut the stream | Send again: the chat resumes; behind nginx use `proxy_buffering off` |
+| My chats are gone | They live in this browser's storage (cleared, another browser, a private window) | They cannot be recovered; use **export** to keep one |
+
+## Creation wizard
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| "needs a header with a description" for an added skill | A skill file must start with `---`, a `name:` and a `description:` | Add the header |
+| "there is already a skill called …" | The template ships a skill of that name | Leave the template's out (uncheck it) or use another name |
+| The new key's secret is gone | It is shown once, on the wizard's last screen, and never stored | Create another key on the API keys page and revoke the lost one |
+| "needs a dashboard password" at the review | Granting extensions or installing packages is third-party code | Settings → Access, or leave them out |
+| The agent exists but a package did not install | Packages install after creation, one at a time; the output is on the last screen | Retry from Files & profiles → Profiles → the agent → Packages |
+| "no model …" or "not allowed for this key" | The model is not in the catalogue, or outside the key's allow-list | Pick one from the list, or blank for the default |
+
+## Extensions (library)
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Install says it needs a dashboard password, or is switched off | Installs put third-party code on the host | Settings → Access; `EXTENSIONS_ENABLED` |
+| "that is not a Pi package" | The package has no `pi` section, no `pi-package` keyword and no `extensions/`, `skills/` or `prompts/` folder | Check the source; it may be a library, not a Pi package |
+| "exited with code 1" and an npm 404 | The name or version does not exist | Check it on npmjs.com; try `git:` |
+| It installs but a native module fails in the agent | The package needs install scripts, which are off | Reinstall with *allow install scripts* (they run on the host as the gateway's user) |
+| "takes more than the … limit" | `EXTENSION_MAX_BYTES` | Raise it, or pick a lighter package |
+| An agent does not have a granted extension | Its list, or its key's, does not include it (the Access tab shows what it gets), or the chat has not restarted yet | Fix the grant; send the chat a message |
+| "granted to …; take it away from them first" | Removing an extension something still gets | Remove the grant, or remove it anyway |
+| "already the name of a shared bundle" | Bundles and library extensions share one set of names | Install under another name |
+
 ## Packages, MCP servers and bundles
 
 | Symptom | Cause | Fix |
@@ -45,13 +80,14 @@ strip: between them they name most problems. The log is `journalctl -u piper` (s
 | "a value must be a reference" | A secret was typed into an MCP server's environment | Use `${NAME}` and set the variable in the container settings |
 | The agent does not see the new package or server | The chat started before; reload happens for live chats, but a stopped one loads at its next start | `/reload`, or send the chat a message |
 | A bundle cannot be edited | It is a link, not a folder, or you need a password | Edit its target by hand; set a password |
-| "granted to …; remove it from them first" | Deleting a bundle a key still gets | Remove the grant on API Management, or delete anyway |
+| "granted to …; remove it from them first" | Deleting a bundle a key still gets | Remove the grant on the API keys page, or delete anyway |
 
 ## Hand-offs and teams
 
 | Symptom | Cause | Fix |
 |---|---|---|
 | The agent has no `piper_delegate` tool | Hand-offs are off for it or the gateway, or the chat started before the switch | Agent editor → hand-offs; `DELEGATE_ENABLED`; start a new chat or `/reload` |
+| The orchestrator does everything itself | The key has no other enabled agent, or their descriptions are empty or vague | Create the specialists on the same key and give each a clear description (Agents → edit) |
 | "You have no colleagues…" | No other enabled agent on the key, or all are already in the chain | Create or enable agents on the same key |
 | "hand-offs may be chained N deep" | `DELEGATE_MAX_DEPTH` | Do the part yourself, or raise the limit |
 | "… could not do it: daily spend limit reached" | The key's cap (hand-offs spend the key's money) | Raise the cap |
@@ -86,6 +122,24 @@ strip: between them they name most problems. The log is `journalctl -u piper` (s
 | Trigger answers 429 | Called again within `JOBS_MIN_INTERVAL_MS` | Wait, or lower the setting |
 | The result webhook shows "the webhook failed" | The receiver is down or refused (one retry is made) | Fix the receiver; run again |
 
+## Images that will not go
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| **remove** or `docker rmi` says "container … is using its referenced image" | Docker never deletes an image any container refers to, running or **stopped**. Old images are usually held by stopped chat containers, or by containers of another Piper gateway on this machine (a different folder or database makes a different instance) | Containers → Images → **remove** names the stopped containers and asks; **clean up…** lists every image with the reason and removes what you tick, containers first. Chats, files and profiles are kept; what was installed inside those containers is not |
+| An image is listed but its **remove** is greyed | The default image, one a key names, one a container is running from, or one a key's or agent's kept (persistent) container is built on | Change the setting, stop or recreate the container (Containers → update, reset), then clean up |
+| `piper-keystate:…` images pile up | The saved state of a container that is gone (an update keeps it while the container lives) | They show under *Saved container states* and in clean up; removed automatically when orphaned |
+| Old images remain after every update, and neither remove nor prune frees them | Each update keeps what a chat installed in a saved copy of its image, so the chat's stopped container sits on a saved state that sits on the old build; the whole chain stays while the container exists | Clean up lists those stopped chat containers (*stopped chat container*): select them (the page offers to) and the saved states and old builds go with them. The chat, its files and profile are kept; it resumes in a fresh container |
+| A clean up says an image "stays" or "other images are built on it" | A newer build or a saved container state was made from it, so Docker keeps its layers until those go; clean up removes saved states first and tries again | Select the saved states too (they are offered when their container is gone); the image then goes with them |
+| An image is held by a container that is not a Piper one | Docker will not delete it; Piper will not remove containers it did not make | `docker rm` that container yourself, then clean up |
+| Disk is still full after clean up | Build cache, or untagged layers Piper did not label | `docker builder prune -f`; the *other leftovers* list in clean up shows untagged ones, never preselected |
+
+## Doctor
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `./piper.sh doctor` says the network was "not checked: the dashboard is locked" | It asks the gateway, and a dashboard with a password refuses an unsigned question | `DASHBOARD_PASSWORD=... ./piper.sh doctor`, or read the Containers page |
+
 ## Live view
 
 | Symptom | Cause | Fix |
@@ -108,7 +162,7 @@ strip: between them they name most problems. The log is `journalctl -u piper` (s
 | Behind a proxy it never connects | The proxy does not pass WebSocket upgrades, or rewrites `Host` without `X-Forwarded-Host` | nginx: `proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade"; proxy_read_timeout 1h;` and pass `Host` or `X-Forwarded-Host` |
 | A background job vanished when the terminal closed | Jobs belong to the shell's session and end with it | Start it with `setsid` (or `nohup setsid cmd &`) |
 | File save says "conflict: the file changed" | An agent (or another tab) wrote it after you opened it | **reload from disk**, or **overwrite anyway** |
-| File writes say "frozen" or "locked" | The workspace is over `WORKSPACE_MAX_BYTES` (delete something), or the profile is locked (Profiles → unlock) | As said |
+| File writes say "frozen" or "locked" | The workspace is over `WORKSPACE_MAX_BYTES` (delete something), or the profile is locked (Files & profiles → Profiles → unlock) | As said |
 | A file in the browser shows as a link and cannot be opened | An agent made a symlink; links are never followed | Delete or replace it |
 
 ## Agent endpoints
