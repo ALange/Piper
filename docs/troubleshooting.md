@@ -122,6 +122,12 @@ strip: between them they name most problems. The log is `journalctl -u piper` (s
 | Trigger answers 429 | Called again within `JOBS_MIN_INTERVAL_MS` | Wait, or lower the setting |
 | The result webhook shows "the webhook failed" | The receiver is down or refused (one retry is made) | Fix the receiver; run again |
 
+## Doctor
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `./piper.sh doctor` says the network was "not checked: the dashboard is locked" | It asks the gateway, and a dashboard with a password refuses an unsigned question | `DASHBOARD_PASSWORD=... ./piper.sh doctor`, or read the Containers page |
+
 ## Live view
 
 | Symptom | Cause | Fix |

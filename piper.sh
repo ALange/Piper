@@ -200,13 +200,30 @@ doctor() {
 	if [ -z "$pids" ]; then echo "gateway:  not running (start it to check the network policy)"; return "$ok"; fi
 	port="${PORT:-$(listen_port "$(echo "$pids" | head -1)")}"
 	echo "gateway:  running on port $port; asking it about the network policy"
-	curl -fsS -X POST "http://127.0.0.1:$port/dashboard/containers/recheck" 2>/dev/null \
-		| "$NODE" -e 'let t="";process.stdin.on("data",c=>t+=c).on("end",()=>{const s=JSON.parse(t);
+	# The dashboard may have a password: then the question needs a session. Sign in when the password is given in
+	# DASHBOARD_PASSWORD; otherwise say so, rather than choking on the refusal.
+	local base="http://127.0.0.1:$port" tmp code
+	tmp="$(mktemp -d)"
+	code="$(curl -sS -o "$tmp/body" -w '%{http_code}' -X POST "$base/dashboard/containers/recheck" 2>"$tmp/err" || true)"
+	if [ "$code" = "401" ] && [ -n "${DASHBOARD_PASSWORD:-}" ]; then
+		"$NODE" -e 'process.stdout.write(JSON.stringify({password:process.env.DASHBOARD_PASSWORD}))' \
+			| curl -sS -o /dev/null -c "$tmp/jar" -X POST -H 'Content-Type: application/json' --data-binary @- "$base/dashboard/login" 2>/dev/null || true
+		code="$(curl -sS -o "$tmp/body" -w '%{http_code}' -b "$tmp/jar" -X POST "$base/dashboard/containers/recheck" 2>"$tmp/err" || true)"
+	fi
+	if [ "$code" = "401" ]; then
+		echo "network:  not checked: the dashboard is locked by its password. Run it as  DASHBOARD_PASSWORD=... ./piper.sh doctor  or read the red strip and the Containers page on the dashboard"
+	elif [ "$code" != "200" ]; then
+		echo "network:  the gateway did not answer the question (HTTP ${code:-none}$(head -c 200 "$tmp/err" 2>/dev/null | tr '\n' ' ')): see ./piper.sh logs"
+		ok=1
+	else
+		"$NODE" -e 'let t="";process.stdin.on("data",c=>t+=c).on("end",()=>{let s;try{s=JSON.parse(t)}catch{console.log("network:  the answer was not understood");process.exit(1)}
 			console.log("network:  "+s.network.mode+(s.network.ok?"":" (PROBLEM)"));
 			console.log("firewall: "+(s.firewall.ok?"in place":"NOT ENFORCED")+(s.firewall.allowed.length?"; containers may also reach "+s.firewall.allowed.map(a=>a.endpoint+" ("+a.why+")").join(", "):""));
 			for(const p of s.problems) console.log("PROBLEM:  "+p);
 			for(const w of s.warnings) console.log("warning:  "+w);
-			process.exit(s.ok?0:1)})' || ok=1
+			process.exit(s.ok?0:1)})' < "$tmp/body" || ok=1
+	fi
+	rm -rf "$tmp"
 	return "$ok"
 }
 
