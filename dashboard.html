@@ -3138,7 +3138,7 @@ function imgOpenCleanup() {
   fetch('dashboard/images/cleanup.json', { cache: 'no-store' }).then(readJson).then(function (plan) {
     box.replaceChildren();
     box.appendChild(el('h4', 'Clean up images'));
-    if (!plan.items.length) { box.appendChild(el('p', 'Nothing to clean up: every image is in use or the default.')).className = 'hint'; var c0 = el('button', 'close'); c0.addEventListener('click', function () { box.hidden = true; }); box.appendChild(c0); return; }
+    if (!plan.items.length) { box.appendChild(el('p', 'Nothing to clean up: every image is in use or the default.' + (plan.blocked && plan.blocked.length ? ' (' + plan.blocked.map(function (b) { return b.name + ': ' + b.reason; }).join('; ') + ')' : ''))).className = 'hint'; var c0 = el('button', 'close'); c0.addEventListener('click', function () { box.hidden = true; }); box.appendChild(c0); return; }
     var note = el('p', 'Nothing is removed until you press the button. Never offered: the default image, images a key names, images a container is running from, and images a key’s or agent’s kept container is built on. Removing an image that stopped chat containers hold removes those containers too (what was installed inside them is lost; chats, files and profiles are kept).'); note.className = 'hint'; box.appendChild(note);
     var tbl = el('table'); var hr = el('tr');
     ['', 'image', 'why', 'size', 'also removes'].forEach(function (h) { hr.appendChild(el('th', h)); });
@@ -3159,6 +3159,11 @@ function imgOpenCleanup() {
     var update = function () { var mb = 0, n = 0, withC = 0; boxes.forEach(function (b) { if (b[1].checked) { n++; mb += b[0].sizeMb || 0; if (b[0].containers.length) withC += b[0].containers.length; } }); total.textContent = n + ' selected, about ' + (mb / 1024).toFixed(2) + ' GB' + (withC ? ', and ' + withC + ' stopped container(s) removed with them' : ''); };
     boxes.forEach(function (b) { b[1].addEventListener('change', update); }); update();
     box.appendChild(total);
+    if (plan.blocked && plan.blocked.length) {
+      var det = el('details'); det.appendChild(el('summary', plan.blocked.length + ' image(s) not offered, and why'));
+      plan.blocked.forEach(function (b) { var p = el('p', b.name + ' \u2014 ' + b.reason); p.className = 'hint small'; det.appendChild(p); });
+      box.appendChild(det);
+    }
     var row = el('div'); row.className = 'fieldrow';
     var go = el('button', 'remove selected');
     go.addEventListener('click', function () {
@@ -3168,10 +3173,23 @@ function imgOpenCleanup() {
       if (withC && !confirm('Some of these are held by stopped containers; they will be removed too. Continue?')) return;
       go.disabled = true;
       fetch('dashboard/images/cleanup', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ select: chosen.map(function (x) { return x.id; }), withContainers: withC }) })
-        .then(readJson).then(function (r) {
-          $('imgnote').textContent = 'removed ' + r.removed.length + ' image(s), about ' + (r.reclaimedMb / 1024).toFixed(2) + ' GB' + (r.failed.length ? '; ' + r.failed.length + ' failed: ' + r.failed.map(function (f) { return f.name + ' (' + f.reason + ')'; }).join('; ') : '') + (r.skipped.length ? '; ' + r.skipped.length + ' skipped' : '');
-          box.hidden = true; return loadImages();
-        }).catch(function (e) { $('imgnote').textContent = e.message; go.disabled = false; });
+        .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); return j; }); })
+        .then(function (r) {
+          // The result stays on screen, with every reason, so nothing fails silently.
+          box.replaceChildren();
+          box.appendChild(el('h4', 'Clean up: result'));
+          var sum = el('p', 'Removed ' + r.removed.length + ' image(s), about ' + (r.reclaimedMb / 1024).toFixed(2) + ' GB.' + (r.failed.length ? ' ' + r.failed.length + ' could not be removed.' : '') + (r.skipped.length ? ' ' + r.skipped.length + ' skipped.' : ''));
+          sum.className = r.failed.length ? 'hint bad' : 'hint'; box.appendChild(sum);
+          var lines = r.removed.map(function (n) { return ['✓ removed', n, '']; }).concat(r.failed.map(function (f) { return ['✗ failed', f.name, f.reason]; })).concat(r.skipped.map(function (f) { return ['– skipped', f.name, f.reason]; }));
+          if (lines.length) {
+            var rt = el('table'); var rb = el('tbody'); rt.appendChild(rb);
+            lines.forEach(function (l) { var tr = el('tr'); tr.appendChild(el('td', l[0])); var n = el('td', l[1]); n.className = 'mono'; tr.appendChild(n); var w = el('td', l[2]); if (l[0].indexOf('failed') >= 0) w.className = 'bad'; tr.appendChild(w); rb.appendChild(tr); });
+            box.appendChild(rt);
+          }
+          var ok = el('button', 'close'); ok.addEventListener('click', function () { box.hidden = true; }); box.appendChild(ok);
+          $('imgnote').textContent = 'clean up: ' + r.removed.length + ' removed' + (r.failed.length ? ', ' + r.failed.length + ' failed (see the result below)' : '');
+          return loadImages();
+        }).catch(function (e) { $('imgnote').textContent = e.message; var er = el('p', 'The clean up could not run: ' + e.message); er.className = 'hint bad'; box.insertBefore(er, box.firstChild); go.disabled = false; });
     });
     var cancel = el('button', 'cancel'); cancel.addEventListener('click', function () { box.hidden = true; });
     row.appendChild(go); row.appendChild(cancel); box.appendChild(row);

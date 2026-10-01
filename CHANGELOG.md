@@ -62,7 +62,8 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 - **Docker images that could not be removed.** An old image stayed because stopped containers (this gateway's, or another Piper gateway's
   on the same machine) still referred to it, and neither **remove** nor prune could touch it. Images now say what holds them (running,
   stopped, kept, from another gateway); **remove** names the stopped containers and removes them with your go-ahead; a new **clean up…**
-  shows a plan with the reason and size of each candidate and removes only what you choose; saved container states and unlabelled
+  shows a plan with the reason and size of each candidate (and a list of what is not offered, and why) and removes only what you choose, then
+  keeps the result on screen with the reason for anything that could not be removed; saved container states and unlabelled
   leftovers are listed; and unused superseded images are tidied automatically after a build and every few hours
   (`IMAGE_AUTO_PRUNE`), never one in use.
 - The unit tests no longer fail when the host's Pi ends in `.0` (for example 1.0.0): the "an older Pi" in the container-version test was

@@ -2105,7 +2105,7 @@ assert.equal(isReloadCommand(undefined), false);
 		reply = (bin, args) => {
 			const ok = (stdout = "") => ({ code: 0, stdout, stderr: "" });
 			if (args[0] === "images") {
-				if (args.includes("label=piper.image=1")) return ok(rows.filter((r) => !removedI.includes(r[0])).map(fmt).join("\n"));
+				if (args.includes("label=piper.image=1")) return ok([...rows.filter((r) => !removedI.includes(r[0])).map(fmt), ...states.filter((x) => !removedI.includes(x[0])).map((x) => fmt([x[0], "piper-keystate", x[1], 900]))].join("\n"));
 				if (args.includes("reference=piper-keystate")) return ok(states.filter((x) => !removedI.includes(x[0])).map((x) => fmt([x[0], "piper-keystate", x[1], 900])).join("\n"));
 				if (args.includes("dangling=true")) return ok([fmt(["sha256:dangle", "<none>", "<none>", 300])].join("\n"));
 				return ok();
@@ -2128,6 +2128,7 @@ assert.equal(isReloadCommand(undefined), false);
 		const by = Object.fromEntries(l.images.map((i) => [i.id, i]));
 		assert.deepEqual([by["sha256:default"].running, by["sha256:oldrun"].running, by["sha256:oldidle"].idle.length, by["sha256:keptimg"].kept.length, by["sha256:foreignimg"].foreign, by["sha256:foreignimg"].idle.length], [1, 1, 2, 1, 1, 1], "running, idle, kept and another gateway's containers are told apart");
 		assert.deepEqual(l.states.map((x) => [x.name.split(":")[0], x.orphan]), [["piper-keystate", true], ["piper-keystate", false]], "a saved state is an orphan when its container is gone");
+		assert.ok(!l.images.some((i) => /keystate/.test(i.name ?? "")), "a saved state carries the image label but is a state, listed once");
 		assert.deepEqual(l.dangling.map((d) => d.id), ["sha256:dangle"], "a dangling image with no Piper label is listed on its own");
 
 		// Removing one: the stopped containers holding it are named, and removed only on a go-ahead.
@@ -2157,7 +2158,8 @@ assert.equal(isReloadCommand(undefined), false);
 		// Running it: only what was chosen; items that need containers removed wait for the go-ahead.
 		let done = await runCleanup({ select: ["sha256:orphan", "sha256:oldidle", "sha256:default", "sha256:oldrun", "nonsense"], hostPi: "0.99.1" });
 		assert.equal(done.removed.length, 1);
-		assert.equal(done.skipped.length, 1, "the one that needs its containers removed is skipped without the go-ahead");
+		assert.equal(done.skipped.length, 4, "the one that needs its containers removed waits for the go-ahead, and the three that cannot be removed are said so");
+		assert.ok(done.skipped.some((x) => /stopped containers were not to be removed/.test(x.reason)) && done.skipped.some((x) => /not something that can be removed now/.test(x.reason)));
 		assert.deepEqual(removedC, [], "and its containers stay");
 		assert.ok(!removedI.includes("sha256:default") && !removedI.includes("sha256:oldrun"), "the default image and a running one are not in the plan, so not removed even when asked for");
 		done = await runCleanup({ select: ["sha256:oldidle", "sha256:foreignimg"], withContainers: true, hostPi: "0.99.1" });
@@ -2168,7 +2170,7 @@ assert.equal(isReloadCommand(undefined), false);
 		await view();
 		const auto = await autoPrune();
 		assert.equal(auto.removed, 2, "the unused superseded build and the orphaned saved state");
-		assert.deepEqual(removedI.sort(), ["sha256:orphan", "sha256:st-orphan"].sort());
+		assert.deepEqual([...new Set(removedI)].sort(), ["sha256:orphan", "sha256:st-orphan"].sort());
 		assert.ok(!removedI.includes("sha256:stale") && !removedI.includes("sha256:fresh") && !removedI.includes("sha256:dangle") && !removedI.includes("sha256:oldidle"), "not an old-Pi tagged image, a spare environment, an unlabelled one, or one with containers");
 		assert.ok(recentAudit(30).some((a) => a.action === "image.autoprune"), "and it is on record");
 		// A failing removal is reported, the rest carries on.
@@ -2177,6 +2179,40 @@ assert.equal(isReloadCommand(undefined), false);
 		done = await runCleanup({ select: ["sha256:failing", "sha256:orphan"], hostPi: "0.99.1" });
 		assert.deepEqual([done.failed.length, done.removed.length], [1, 1]);
 		assert.match(done.failed[0].reason, /no space/);
+		// A container Piper did not make holds an image: never offered, never removed, and said so.
+		await view();
+		rows.push(["sha256:mine", "<none>", "<none>", 600]);
+		containers.push({ name: "my-own-database", image: "sha256:mine", running: false });
+		const withMine = await cleanupPlan({ hostPi: "0.99.1" });
+		assert.equal(withMine.items.some((x) => x.id === "sha256:mine"), false, "an image a non-Piper container holds is not offered");
+		assert.match(withMine.blocked.find((b) => /my-own-database/.test(b.reason)).reason, /not a Piper container/, "and the plan says why");
+		await assert.rejects(removeImage("sha256:mine", { hostPi: "0.99.1", force: true }), (e) => e.status === 409 && /not a Piper container, so Piper will not remove it/.test(e.message));
+		assert.ok(!removedC.includes("my-own-database"));
+		// A Piper helper leftover (piper-pkg-…) is Piper's own: it is removed with the go-ahead.
+		rows.push(["sha256:helperimg", "<none>", "<none>", 500]);
+		containers.push({ name: "piper-pkg-1a2b3c", image: "sha256:helperimg", running: false });
+		assert.deepEqual((await cleanupPlan({ hostPi: "0.99.1" })).items.find((x) => x.id === "sha256:helperimg").containers, ["piper-pkg-1a2b3c"]);
+		// An image that others are built on can go once they have: the second pass handles the order.
+		rows.push(["sha256:parent", "<none>", "<none>", 400], ["sha256:child", "<none>", "<none>", 300]);
+		const baseRmi = reply;
+		let parentRefused = 0;
+		reply = (bin, args) => {
+			if (args[0] === "rmi" && args[args.length - 1] === "sha256:parent" && !removedI.includes("sha256:child")) { parentRefused++; return { code: 1, stdout: "", stderr: "Error response from daemon: conflict: unable to delete sha256:parent (cannot be forced) - image has dependent child images" }; }
+			return baseRmi(bin, args);
+		};
+		done = await runCleanup({ select: ["sha256:parent", "sha256:child"], hostPi: "0.99.1" });
+		assert.deepEqual([done.removed.length, done.failed.length], [2, 0], "the parent goes after its child");
+		assert.equal(parentRefused, 1, "it was tried, refused for the child, and tried again");
+		// A refusal that cannot be fixed by order comes back in plain words.
+		rows.push(["sha256:stuck", "<none>", "<none>", 200]);
+		reply = (bin, args) => (args[0] === "rmi" && args[args.length - 1] === "sha256:stuck" ? { code: 1, stdout: "", stderr: "Error response from daemon: conflict: unable to delete sha256:stuck (must be forced) - image is being used by stopped container abc123" } : baseRmi(bin, args));
+		done = await runCleanup({ select: ["sha256:stuck"], hostPi: "0.99.1" });
+		assert.equal(done.failed.length, 1);
+		assert.match(done.failed[0].reason, /container still uses it|several names|abc123/);
+		assert.ok(recentAudit(20).some((a) => a.action === "image.cleanup" && /failed:/.test(a.detail)), "failures are on record with their reason");
+		reply = baseRmi;
+		containers.splice(containers.findIndex((c) => c.name === "my-own-database"), 1);
+		containers.splice(containers.findIndex((c) => c.name === "piper-pkg-1a2b3c"), 1);
 		// Through the page's routes: the plan, the go-ahead on remove, and cleanup.
 		await view();
 		const callApi = async (method, url, body) => {
