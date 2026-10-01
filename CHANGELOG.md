@@ -17,6 +17,8 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   review. The server validates it all in one place and removes the agent again if anything fails.
 - **Template details and editing.** Click a template on Agents → Templates & import to see it in full and, for your own, change its
   fields and files; built-in templates can be copied to edit.
+- **Playground file view.** A Files panel shows the workspace of the agent you are chatting with, refreshed after each answer, with a
+  preview window for text, Markdown, images and downloads.
 - **Playground.** A chat with any key's agent, first in the menu: streaming Markdown answers, collapsible thinking and tool calls,
   Stop, retry, copy, a list of chats with search, rename, delete and export, a model picker, phone-friendly. It runs as the chosen
   key or agent (their limits and spend apply), keeps the messages in the browser only, and needs a dashboard password. Setting:

@@ -133,6 +133,21 @@
   .pgbox button { border-radius:10px; padding:7px 16px; } .pgbox button.stop { background:#3a1f1f; }
   .pgnote { text-align:center; font-size:11px; color:var(--dim); margin-top:4px; }
   #pgdown { position:absolute; right:22px; bottom:96px; border-radius:50%; width:32px; height:32px; padding:0; }
+  .pg.withfiles .pgfiles { display:flex; }
+  .pgfiles { display:none; width:270px; flex:0 0 270px; border-left:1px solid var(--border); flex-direction:column; background:#0c0c0c; }
+  .pgfiles header { display:flex; align-items:center; justify-content:space-between; padding:9px 12px; border-bottom:1px solid var(--border); font-size:12px; }
+  .pgcrumb { padding:6px 12px; font-size:11px; color:var(--muted); word-break:break-all; } .pgcrumb a { color:var(--blue); cursor:pointer; }
+  .pgflist { flex:1; overflow:auto; padding:0 6px 8px; }
+  .pgfrow { display:flex; justify-content:space-between; gap:8px; padding:5px 8px; border-radius:6px; cursor:pointer; font-size:12px; }
+  .pgfrow:hover { background:#151515; } .pgfrow span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .pgfrow small { color:var(--dim); flex:none; } .pgfrow.link { cursor:default; color:var(--dim); }
+  #pgfilesbtn.on { background:#2a3340; }
+  #pgmodal { position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:60; display:flex; align-items:center; justify-content:center; padding:20px; }
+  #pgmodal[hidden] { display:none; }
+  .pgmcard { background:var(--panel); border:1px solid var(--border); border-radius:12px; width:min(900px,100%); max-height:88vh; display:flex; flex-direction:column; }
+  .pgmcard header { display:flex; gap:10px; align-items:center; padding:10px 14px; border-bottom:1px solid var(--border); }
+  .pgmcard header b { flex:1; word-break:break-all; font-weight:600; } .pgmcard header span { color:var(--dim); font-size:11px; }
+  #pgmbody { overflow:auto; padding:14px 16px; } .pgpre { margin:0; white-space:pre-wrap; word-break:break-word; font-size:12px; line-height:1.5; } .pgimg { max-width:100%; display:block; margin:0 auto; }
+  @media (max-width: 800px) { .pg.withfiles .pgfiles { position:absolute; z-index:5; right:0; top:0; bottom:0; } }
   @media (max-width: 800px) {
     .pgside { position:absolute; z-index:5; top:0; bottom:0; left:0; transform:translateX(-100%); transition:transform .15s; } .pgside.open { transform:none; }
     .pgtoggle { display:inline-block; } .pgtitle { display:none; }
@@ -843,6 +858,7 @@
             <select id="pgtarget" title="who you are talking to"></select>
             <select id="pgmodel" title="model for this chat"></select>
             <span id="pgtitle" class="pgtitle"></span>
+            <button id="pgfilesbtn" title="the workspace of this agent: browse and preview its files">Files</button>
           </header>
           <div id="pgscroll" class="pgscroll"><div id="pgmsgs" class="pgmsgs"></div></div>
           <button id="pgdown" hidden title="jump to the latest">&darr;</button>
@@ -851,6 +867,18 @@
             <div class="pgnote" id="pgnote">Runs as the chosen key or agent: its limits and spend apply, and it can use its tools. Chats are kept in this browser only.</div>
           </footer>
         </section>
+        <aside class="pgfiles" id="pgfiles">
+          <header><b>Workspace</b><button id="pgfrefresh" title="reload the list">refresh</button></header>
+          <div class="pgcrumb" id="pgfcrumb"></div>
+          <div class="pgflist" id="pgflist"></div>
+          <p class="hint small" id="pgfnote" style="padding:0 12px"></p>
+        </aside>
+      </div>
+      <div id="pgmodal" hidden>
+        <div class="pgmcard">
+          <header><b id="pgmtitle"></b><span id="pgmmeta"></span><button id="pgmraw" hidden>show source</button><a id="pgmdl" href="#"><button>download</button></a><button id="pgmclose">close</button></header>
+          <div id="pgmbody"></div>
+        </div>
       </div>
     </div><!-- /view-playground -->
 
@@ -3951,7 +3979,7 @@ function pgStart() {
     }).catch(function (e) { PG.targets = null; $('pgmsgs').replaceChildren(pgNotice('The Playground cannot start: ' + e.message)); $('pglist').replaceChildren(); });
 }
 function pgNotice(text) { var d = el('div', text); d.className = 'pgempty bad'; return d; }
-function pgRender() { pgRenderSide(); pgRenderBar(); pgRenderMessages(true); }
+function pgRender() { pgRenderSide(); pgRenderBar(); pgRenderMessages(true); pgfLoad(); }
 function pgRenderSide() {
   var list = $('pglist'); list.replaceChildren();
   var q = $('pgsearch').value.trim().toLowerCase();
@@ -4100,7 +4128,7 @@ function pgSend(text) {
     .then(function () {
       msg.pending = false;
       if (!done && !msg.stopped && !msg.error) msg.error = 'The connection ended before the agent finished.';
-      c.updated = Date.now(); PG.ctrl = null; pgSetBusy(false); pgSave(); pgRenderSide(); pgRenderBar(); pgRenderMessages(false);
+      c.updated = Date.now(); PG.ctrl = null; pgSetBusy(false); pgSave(); pgRenderSide(); pgRenderBar(); pgRenderMessages(false); pgfLoad();
       $('pginput').focus();
     });
 }
@@ -4217,6 +4245,82 @@ function tplRender() {
     bar.appendChild(save); box.appendChild(bar);
   }
 }
+
+
+/* ---- Playground: the workspace of whoever you are talking to, with a preview ---- */
+var PGF = { open: false, path: '', entries: null, scope: '' };
+var PGF_IMG = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', bmp: 'image/bmp', ico: 'image/x-icon' };
+function pgfScope(c) { return c ? 'key-' + c.keyId + (c.agentId ? '--' + c.agentId : '') : ''; }
+function pgfUrl(c, path, query) { return 'dashboard/files/' + encodeURIComponent(pgfScope(c)) + '/' + String(path || '').split('/').filter(Boolean).map(encodeURIComponent).join('/') + '?root=workspace' + (query ? '&' + query : ''); }
+function pgfSay(text, bad) { var n = $('pgfnote'); n.textContent = text || ''; n.className = 'hint small' + (bad ? ' bad' : ''); }
+function pgfLoad() {
+  var c = pgConv();
+  if (!PGF.open || !c) return;
+  if (PGF.scope !== pgfScope(c)) { PGF.scope = pgfScope(c); PGF.path = ''; }
+  fetch(pgfUrl(c, PGF.path, 'as=list'), { cache: 'no-store' }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); return j; }); })
+    .then(function (d) { PGF.entries = d.entries || []; pgfSay(d.truncated ? 'Showing the first ' + PGF.entries.length + ' of ' + d.total + '.' : ''); pgfRender(); })
+    .catch(function (e) { PGF.entries = []; pgfRender(); pgfSay(e.message.indexOf('exist') >= 0 ? 'No files yet.' : e.message, e.message.indexOf('exist') < 0); });
+}
+function pgfRender() {
+  var box = $('pgflist'); box.replaceChildren();
+  var crumb = $('pgfcrumb'); crumb.replaceChildren();
+  function link(label, path) { var a = el('a', label); a.addEventListener('click', function () { PGF.path = path; pgfLoad(); }); return a; }
+  crumb.appendChild(link('workspace', ''));
+  var parts = PGF.path.split('/').filter(Boolean);
+  parts.forEach(function (p, i) { crumb.appendChild(document.createTextNode(' / ')); crumb.appendChild(link(p, parts.slice(0, i + 1).join('/'))); });
+  if (parts.length) { var up = el('div'); up.className = 'pgfrow'; up.appendChild(el('span', '← ..')); up.addEventListener('click', function () { PGF.path = parts.slice(0, -1).join('/'); pgfLoad(); }); box.appendChild(up); }
+  var sorted = (PGF.entries || []).slice().sort(function (a, b) { return (a.type === 'dir' ? 0 : 1) - (b.type === 'dir' ? 0 : 1) || a.name.localeCompare(b.name); });
+  if (!sorted.length && !parts.length) { var e = el('p', 'No files yet. What the agent writes in /workspace appears here.'); e.className = 'hint small'; box.appendChild(e); }
+  sorted.forEach(function (f) {
+    var full = (PGF.path ? PGF.path + '/' : '') + f.name;
+    var row = el('div'); row.className = 'pgfrow ' + f.type;
+    row.appendChild(el('span', (f.type === 'dir' ? '▸ ' : f.type === 'link' ? '⤷ ' : '') + f.name + (f.type === 'dir' ? '/' : '')));
+    if (f.type === 'file') row.appendChild(el('small', bytes(f.bytes)));
+    if (f.type === 'dir') row.addEventListener('click', function () { PGF.path = full; pgfLoad(); });
+    else if (f.type === 'file') row.addEventListener('click', function () { pgfPreview(full, f.bytes); });
+    else row.title = 'a link: never followed';
+    box.appendChild(row);
+  });
+}
+function pgfToggle(on) {
+  PGF.open = on === undefined ? !PGF.open : on;
+  $('pg').classList.toggle('withfiles', PGF.open);
+  $('pgfilesbtn').className = PGF.open ? 'on' : '';
+  if (PGF.open) pgfLoad();
+}
+function pgfClose() { $('pgmodal').hidden = true; $('pgmbody').replaceChildren(); if (PGF.objectUrl) { URL.revokeObjectURL(PGF.objectUrl); PGF.objectUrl = null; } }
+function pgfPreview(path, size) {
+  var c = pgConv(); if (!c) return;
+  var ext = (path.split('.').pop() || '').toLowerCase();
+  $('pgmtitle').textContent = path; $('pgmmeta').textContent = bytes(size);
+  var body = $('pgmbody'); body.replaceChildren(el('p', 'loading…'));
+  $('pgmodal').hidden = false;
+  var dl = $('pgmdl'); dl.href = pgfUrl(c, path); dl.download = path.split('/').pop();
+  var raw = $('pgmraw'); raw.hidden = true;
+  if (PGF_IMG[ext]) {
+    fetch(pgfUrl(c, path)).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); }).then(function (buf) {
+      PGF.objectUrl = URL.createObjectURL(new Blob([buf], { type: PGF_IMG[ext] }));
+      var img = el('img'); img.src = PGF.objectUrl; img.alt = path; img.className = 'pgimg'; body.replaceChildren(img);
+    }).catch(function (e) { body.replaceChildren(el('p', 'cannot show it: ' + e.message)); });
+    return;
+  }
+  fetch(pgfUrl(c, path, 'as=text'), { cache: 'no-store' }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); return j; }); }).then(function (d) {
+    if (d.binary || d.tooBig) { var m = el('p', (d.binary ? 'This is not a text file' : 'This file is too large to preview (' + bytes(d.bytes) + ')') + '. Use download.'); m.className = 'hint'; body.replaceChildren(m); return; }
+    var isMd = ext === 'md' || ext === 'markdown';
+    function show(rendered) {
+      body.replaceChildren();
+      if (rendered) { var md = el('div'); md.className = 'pgmd'; mdRender(d.text, md); body.appendChild(md); }
+      else { var pre = el('pre'); pre.className = 'pgpre'; pre.textContent = d.text; body.appendChild(pre); }
+    }
+    PGF.rendered = isMd; show(isMd);
+    if (isMd) { raw.hidden = false; raw.textContent = 'show source'; raw.onclick = function () { PGF.rendered = !PGF.rendered; raw.textContent = PGF.rendered ? 'show source' : 'show rendered'; show(PGF.rendered); }; }
+  }).catch(function (e) { body.replaceChildren(el('p', 'cannot show it: ' + e.message)); });
+}
+$('pgfilesbtn').addEventListener('click', function () { pgfToggle(); });
+$('pgfrefresh').addEventListener('click', pgfLoad);
+$('pgmclose').addEventListener('click', pgfClose);
+$('pgmodal').addEventListener('click', function (e) { if (e.target === $('pgmodal')) pgfClose(); });
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('pgmodal').hidden) pgfClose(); });
 
 var TEMPLATES = [];
 function loadTemplates(list) {

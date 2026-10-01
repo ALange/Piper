@@ -6964,7 +6964,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	// Model text never goes through innerHTML in the page's chat code, and every id the script uses exists.
 	const chatCode = html.slice(html.indexOf("/* ---- Markdown for the Playground"), html.indexOf("var TEMPLATES = [];"));
 	assert.ok(!/innerHTML|insertAdjacentHTML|document\.write/.test(chatCode), "no innerHTML in the Markdown or Playground code");
-	for (const id of ["pg", "pgside", "pgnew", "pgsearch", "pglist", "pgexport", "pgclear", "pgtarget", "pgmodel", "pgtitle", "pgscroll", "pgmsgs", "pgdown", "pginput", "pgsend", "pgnote", "pgtoggle"]) assert.ok(html.includes(`id="${id}"`), `the Playground has #${id}`);
+	for (const id of ["pg", "pgside", "pgnew", "pgsearch", "pglist", "pgexport", "pgclear", "pgtarget", "pgmodel", "pgtitle", "pgscroll", "pgmsgs", "pgdown", "pginput", "pgsend", "pgnote", "pgtoggle", "pgfilesbtn", "pgfiles", "pgfrefresh", "pgfcrumb", "pgflist", "pgfnote", "pgmodal", "pgmtitle", "pgmmeta", "pgmbody", "pgmraw", "pgmdl", "pgmclose"]) assert.ok(html.includes(`id="${id}"`), `the Playground has #${id}`);
 	assert.ok(/<a href="#playground"/.test(html.slice(html.indexOf('<nav id="nav">'), html.indexOf('<nav id="nav">') + 200)), "Playground is first in the menu");
 	assert.ok(/localStorage/.test(chatCode) && /try \{/.test(chatCode), "conversations are kept in the browser, guarded");
 }

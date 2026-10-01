@@ -30,6 +30,10 @@ endpoint, or one of its agents) and optionally a **model** from what that key ma
 written, with **Markdown** (headings, lists, tables, quotes, code blocks with a copy button) and, collapsed above the answer, the
 agent's **thinking** and each **tool call** with what it ran and what came back. **Enter** sends, **Shift+Enter** is a new line,
 **Stop** ends the turn (the agent's turn is stopped too), **retry** asks the last question again, **copy** copies an answer.
+**Files** in the top bar opens a minimal view of the workspace of whoever you are talking to (the key's, or the agent's own): folders to
+browse, a refresh, and it reloads when an answer ends, so what the agent just wrote shows up. Click a file to preview it in a window: text and
+code as written, Markdown rendered (with a switch to the source), images shown, and anything else (binary, very large) with a download
+button. Preview is read-only; editing is on Files & profiles.
 The left column lists your chats (search, rename by double-click, delete); **export** downloads one as Markdown.
 
 It is a real chat: it runs as that key or agent, so the key's session cap, daily spend cap and model list apply, the cost is
