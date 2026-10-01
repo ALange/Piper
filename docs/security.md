@@ -70,6 +70,61 @@ the call, and only the model's answer goes back. The per-key model allow-list an
 - Bind to `127.0.0.1` and put a **TLS reverse proxy** in front for anything else. On the `open` policy containers can
   reach the dashboard.
 
+## Packages, MCP servers and bundles
+
+All of these end up as code an agent runs, so changing them needs a dashboard password and each can be switched off
+(`PACKAGES_ENABLED`). Package and server commands run **in a throwaway container**, never on the host: the scope's image
+and limits, **only that profile mounted** (no engine socket, no key, no workspace), a read-only root with a scratch
+`/tmp`, a ten-minute limit, and the network only for commands that need it and only if the scope's policy is not `none`.
+Everything typed is validated (package sources are `npm:`, `git:` or `https://` forms only; server names, commands,
+environment names and URLs are checked) and handed to Pi as separate arguments, never a shell string. `mcp.json` never holds
+a secret: values must be `${NAME}` references. Bundle edits go through the same profile helper, in a container with only that
+bundle mounted; a bundle that is a link is not edited from the dashboard. Remember that a package or server is trusted
+code under the agent's network policy: it can send out anything the agent can read.
+
+## Hand-offs and teams
+
+Delegation is bound to the chat's own bridge socket: the gateway decides who is calling from which socket the request came
+on, so an agent cannot claim to be another agent or key, and it can only reach the **enabled agents of its own key**. Chains
+are depth-limited and loop-free, a hand-off is a normal turn under the key's session and spend limits, and stopping the caller
+stops the colleague. A key that has agents delegating can therefore spend more per request than one agent would: each hand-off
+is a model turn, so keep `DELEGATE_MAX_DEPTH` small and give the key a daily spend cap. Teams answer only to their owning key,
+serve nothing but the chat API, and each step is a turn under that key.
+
+## Templates and import
+
+An imported bundle is untrusted input. It is JSON of regular files only (no links, devices or ownership), every path is
+checked against an allow-list (`AGENTS.md`, `settings.json`, `skills/`, `extensions/`, `prompts/`, `agents/`; plain names,
+no `..`, no absolute paths, no duplicates, at most 8 deep and 500 files), data must be base64, the total is capped by
+`EXPORT_MAX_BYTES`, and the profile helper checks everything again and refuses to write through a link, inside a throwaway
+container with only that profile mounted. A refused bundle leaves nothing behind. Importing needs a dashboard password
+because **extensions are code** that runs in the agent's container (under its network policy and limits). A bundle can
+never set environment, mounts, an image or the network. Export carries no keys or secrets, but instructions and skills
+may mention things you consider private: read a bundle before sharing it.
+
+## Jobs
+
+Jobs run agents without a person watching, so they go through the same limits as a chat: the owning key's session cap,
+daily spend cap and model allow-list, with the cost attributed to the key and agent. Revoking or expiring the key stops
+its jobs; deleting the key or agent deletes them. `JOBS_MAX_PARALLEL` and `JOBS_MAX_PER_KEY` bound the load and
+`JOBS_ENABLED` stops everything.
+
+The webhook trigger is its own credential: 192 random bits, shown once, stored hashed, compared in constant time,
+revocable, and valid for that one job only. A wrong token is the same 404 as an unknown job, rate-limited by
+`JOBS_MIN_INTERVAL_MS`, and the body is cut at 16 KB. Put the token in a header, never in the URL (URLs are logged).
+Result webhooks are signed (`X-Piper-Signature`); the URL a **client** sets over the API may not point at an internal
+address (checked again when connecting), while one set on the dashboard by the operator may, like `ALERT_WEBHOOK_URL`.
+The signing secret is stored in the database so the gateway can sign with it.
+
+## The live view
+
+The live view of a chat shows conversations, so it is gated like the terminal's most important check: a dashboard
+password must be set (403 otherwise) and `LIVE_VIEW_ENABLED` must be on. At most 5 people watch one chat and 20
+streams are open in all. A chat is named by its fingerprint; the real session id never leaves the gateway. Watching,
+interrupting and downloading a transcript are each an audit row (`session.watch`, `session.interrupt`,
+`session.transcript`: who, which key and agent), never the content. The items are kept in memory only and go with
+the chat.
+
 ## The terminal
 
 The dashboard's Terminal opens a **root shell in a container** over a WebSocket. It is gated like the command box and

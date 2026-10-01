@@ -215,6 +215,84 @@ function statOrNull(path) {
 	}
 }
 
+/**
+ * Moving an agent's profile between places: what goes (instructions, settings, skills, extensions, prompts, agent
+ * definitions) and nothing else (never auth.json or the model files, which the gateway writes itself). Only regular
+ * files travel: a link or a device is skipped on the way out and cannot be expressed on the way in.
+ */
+const TRANSFER_TOP = ["AGENTS.md", "settings.json", "skills", "extensions", "prompts", "agents"];
+const TRANSFER_SEGMENT = /^[A-Za-z0-9_][A-Za-z0-9._ -]{0,127}$/;
+const TRANSFER_DEPTH = 8;
+const TRANSFER_FILES = 500;
+
+/** A transfer path as segments, or a refusal: relative, plain names, and under one of the allowed top entries. */
+function transferPath(path) {
+	const text = String(path ?? "");
+	const parts = text.split("/");
+	if (!text || text.length > 400 || parts.length > TRANSFER_DEPTH || parts.some((p) => !TRANSFER_SEGMENT.test(p) || p === "." || p === "..")) throw new Refusal(`not a path that can travel: ${text.slice(0, 80)}`);
+	if (!TRANSFER_TOP.includes(parts[0])) throw new Refusal(`not part of a profile that travels: ${parts[0]}`);
+	if ((parts[0] === "AGENTS.md" || parts[0] === "settings.json") && parts.length !== 1) throw new Refusal(`${parts[0]} is a file`);
+	return parts;
+}
+
+function exportTree(maxBytes) {
+	const files = [];
+	let skipped = 0;
+	let bytes = 0;
+	const visit = (rel, depth) => {
+		const stat = lstatSync(join(ROOT, rel), { throwIfNoEntry: false });
+		if (!stat) return;
+		if (stat.isDirectory()) {
+			if (depth >= TRANSFER_DEPTH) return void skipped++;
+			for (const name of readdirSync(join(ROOT, rel)).sort()) visit(`${rel}/${name}`, depth + 1);
+			return;
+		}
+		let parts;
+		try {
+			parts = transferPath(rel);
+		} catch {
+			return void skipped++;
+		}
+		if (!stat.isFile()) return void skipped++;
+		if (files.length >= TRANSFER_FILES) throw new Refusal(`more than ${TRANSFER_FILES} files: too much to export`);
+		bytes += stat.size;
+		if (bytes > maxBytes) throw new Refusal(`the profile is over the ${maxBytes}-byte export limit`);
+		files.push({ path: parts.join("/"), data: readFileSync(join(ROOT, rel)).toString("base64") });
+	};
+	for (const top of TRANSFER_TOP) visit(top, 0);
+	return { files, skipped, bytes };
+}
+
+function importTree(files, maxBytes) {
+	if (!Array.isArray(files) || files.length > TRANSFER_FILES) throw new Refusal(`a bundle holds at most ${TRANSFER_FILES} files`);
+	const seen = new Set();
+	const decoded = files.map((f) => {
+		const parts = transferPath(f?.path);
+		const key = parts.join("/").toLowerCase();
+		if (seen.has(key)) throw new Refusal(`the same file twice: ${f.path}`);
+		seen.add(key);
+		if (typeof f.data !== "string" || !/^[A-Za-z0-9+/]*={0,2}$/.test(f.data)) throw new Refusal(`not valid data: ${f.path}`);
+		return { parts, data: Buffer.from(f.data, "base64") };
+	});
+	const total = decoded.reduce((n, f) => n + f.data.length, 0);
+	if (total > maxBytes) throw new Refusal(`the bundle is over the ${maxBytes}-byte limit`);
+	checkQuota(total);
+	for (const { parts, data } of decoded) {
+		// No step of the way may be a link: a planted `skills -> /elsewhere` would send the write there.
+		let at = ROOT;
+		for (const part of parts.slice(0, -1)) {
+			at = join(at, part);
+			const stat = lstatSync(at, { throwIfNoEntry: false });
+			if (stat && !stat.isDirectory()) throw new Refusal(`something other than a folder is in the way: ${parts.join("/")}`);
+			if (!stat) mkdirSync(at);
+		}
+		const target = join(ROOT, ...parts);
+		if (lstatSync(target, { throwIfNoEntry: false })?.isDirectory()) throw new Refusal(`a folder is in the way: ${parts.join("/")}`);
+		writeAtomic(target, data);
+	}
+	return { files: decoded.length, bytes: total };
+}
+
 const OPS = {
 	// The key's workspace, when this helper runs over it: list and delete. Reading and writing
 	// file contents go through the raw modes below, so large files never pass through JSON.
@@ -320,6 +398,8 @@ const OPS = {
 		rmSync(target, { recursive: true, force: true });
 		return { deleted: path };
 	},
+	"tree.export": ({ max }) => exportTree(Math.min(Number(max) || 20 * 1024 * 1024, 64 * 1024 * 1024)),
+	"tree.import": ({ files, max }) => importTree(files, Math.min(Number(max) || 20 * 1024 * 1024, 64 * 1024 * 1024)),
 	inventory: () => ({ ...inventory(ROOT), bytes: sizeOf(ROOT), maxBytes: MAX_BYTES }),
 	summary: () => {
 		let settings = null;

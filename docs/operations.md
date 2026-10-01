@@ -122,6 +122,13 @@ with `text` and `content`, so Slack and Discord webhooks work as they are. Raise
 failing (and recovering), low disk, a container killed for memory or over its disk warning, an agent losing its
 port, and, from the watchdog, the gateway not answering. The same kind is sent at most once an hour.
 
+## Behind a proxy: the terminal
+
+The Terminal page is a WebSocket. A reverse proxy has to pass `Upgrade`/`Connection: upgrade` and a long read timeout, and
+the `Host` (or `X-Forwarded-Host`) must be the one the page was served from, or the gateway refuses it as a foreign origin.
+nginx: `proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";
+proxy_read_timeout 1h;`. Check `TERMINAL_*` under Settings → Containers.
+
 ## Routine checks
 
 - Weekly: Containers page for red Pi versions and orphans; Overview for disk; the Audit page for anything odd.

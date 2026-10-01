@@ -186,6 +186,52 @@ export default async function piperBridge(pi) {
 		},
 	});
 
+	// Hand-offs: only when the gateway says this agent may delegate (PIPER_DELEGATE), and only to agents of the
+	// same key, which the gateway decides: the socket is this chat's, so it cannot be used to speak for another.
+	if (process.env.PIPER_DELEGATE === "1") {
+		const reply = (value) => ({ content: [{ type: "text", text: value }], details: {} });
+		pi.registerTool({
+			name: "piper_agents",
+			label: "List colleague agents",
+			description: "List the other agents you can hand work to, with what each is for. Use it before piper_delegate when you do not already know who to ask.",
+			promptSnippet: "List the colleague agents you can delegate to",
+			parameters: { type: "object", properties: {} },
+			async execute() {
+				try {
+					const { agents } = await readJson(await request("/agents"));
+					if (!agents.length) return reply("You have no colleagues you can hand work to right now.");
+					return reply(agents.map((a) => `- ${a.name}${a.description ? `: ${a.description}` : ""}`).join("\n"));
+				} catch (err) {
+					return reply(`Could not list colleagues: ${err?.message ?? err}`);
+				}
+			},
+		});
+		pi.registerTool({
+			name: "piper_delegate",
+			label: "Delegate to a colleague",
+			description:
+				"Give a task to one of your colleague agents and wait for its answer. The colleague has its own instructions, skills and files, and sees only the task you write, so make it self-contained: say what you need, what you already know, and what form the answer should take. " +
+				"It keeps its own conversation across your calls, so a follow-up can refer to earlier ones. Its answer comes back as text. Do not delegate what you can do yourself in a step or two.",
+			promptSnippet: "Hand a self-contained task to a colleague agent and get its answer",
+			parameters: {
+				type: "object",
+				properties: {
+					agent: { type: "string", description: "The colleague's name, from piper_agents." },
+					task: { type: "string", description: "A complete, self-contained task." },
+				},
+				required: ["agent", "task"],
+			},
+			async execute(_toolCallId, params, signal) {
+				try {
+					const answer = await readJson(await request("/delegate", { agent: String(params?.agent ?? ""), task: String(params?.task ?? "") }, signal));
+					return reply(answer.text);
+				} catch (err) {
+					return reply(`Delegation failed: ${err?.message ?? err}`);
+				}
+			},
+		});
+	}
+
 	// A new chat starts on the operator's current default model, unless the key's profile names its
 	// own. The gateway sets PIPER_DEFAULT_MODEL only for new chats; a resumed one keeps its model.
 	const defaultModel = process.env.PIPER_DEFAULT_MODEL;

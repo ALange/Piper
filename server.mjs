@@ -48,6 +48,11 @@ import { vendorFile } from "./lib/vendor.mjs";
 import { closeAllTerminals } from "./lib/terminal.mjs";
 import { pageIndex, renderPage, searchDocs } from "./lib/docs.mjs";
 import { piStatus } from "./lib/versions.mjs";
+import { liveRoutes } from "./lib/liveroutes.mjs";
+import { bundleRoutes, packageRoutes } from "./lib/bundleroutes.mjs";
+import { jobApiRoutes, jobDashboardRoutes, triggerRoute } from "./lib/jobroutes.mjs";
+import { startJobs, stopJobs } from "./lib/jobs.mjs";
+import { startTeamServers, stopTeamServers } from "./lib/teams.mjs";
 import { dashboardFilesRoutes, filesRoutes, keyIdForScope, profileAdminRoutes, profileRoutes } from "./lib/profiles.mjs";
 import { sessions, spendReport, startSweeps } from "./lib/sessions.mjs";
 import { chatCompletions, listModels } from "./lib/chat.mjs";
@@ -72,6 +77,16 @@ export * from "./lib/alerts.mjs";
 export * from "./lib/images.mjs";
 export * from "./lib/sessions.mjs";
 export * from "./lib/chat.mjs";
+export * from "./lib/livesession.mjs";
+export * from "./lib/agentrun.mjs";
+export * from "./lib/liveroutes.mjs";
+export * from "./lib/jobs.mjs";
+export * from "./lib/jobroutes.mjs";
+export * from "./lib/templates.mjs";
+export * from "./lib/bundleroutes.mjs";
+export * from "./lib/pipackages.mjs";
+export * from "./lib/teams.mjs";
+export * from "./lib/delegate.mjs";
 export * from "./lib/agents.mjs";
 export * from "./lib/agentservers.mjs";
 export * from "./lib/updates.mjs";
@@ -135,6 +150,8 @@ async function handle(req, res) {
 		const isDashboard = isDashboardPath(path);
 		// Resolved once, so the log line and the session record both know which key was used.
 		req.credential = credentialOf(req);
+		// A job's webhook is authorised by that job's own token, so it is answered before the API-key check.
+		if (await triggerRoute(req, res, path)) return;
 		if (!isDashboard && authRequired() && !req.credential) {
 			const from = req.socket?.remoteAddress ?? "unknown";
 			auditOnce(`authfail:${from}`, 60_000, "authfail.api", from, `${req.method} ${path}${req.headers.authorization ? " (a key was sent, and is not valid)" : " (no key)"}`);
@@ -183,10 +200,12 @@ async function handle(req, res) {
 			return res.end(JSON.stringify(await aboutInfo()));
 		}
 		if (path === "/dashboard/hostpi.json" || path === "/dashboard/hostpi/update") return await hostPiRoutes(req, res, path);
-		if (path === "/dashboard/agents.json" || path === "/dashboard/agents" || path.startsWith("/dashboard/agents/")) return await agentRoutes(req, res, path);
+		if (path === "/dashboard/agents.json" || path === "/dashboard/templates.json" || path === "/dashboard/teams.json" || path === "/dashboard/teams" || path.startsWith("/dashboard/teams/") || path === "/dashboard/templates" || path.startsWith("/dashboard/templates/") || path === "/dashboard/agents" || path.startsWith("/dashboard/agents/")) return await agentRoutes(req, res, path);
 		const updateMatch = /^\/dashboard\/profiles\/([A-Za-z0-9_-]+)\/update-container$/.exec(path);
 		if (updateMatch) return await updateScopeRoute(req, res, updateMatch[1]);
 		if (path === "/dashboard/profiles.json" || path.startsWith("/dashboard/profiles/")) return await profileAdminRoutes(req, res, path);
+		if ((path === "/dashboard/bundles.json" || path === "/dashboard/bundles" || path.startsWith("/dashboard/bundles/") || path.startsWith("/dashboard/bundlefiles/")) && (await bundleRoutes(req, res, path))) return;
+		if (path.startsWith("/dashboard/packages/") && (await packageRoutes(req, res, path))) return;
 		const filesMatch = /^\/dashboard\/files\/([A-Za-z0-9_-]+)(\/.*)?$/.exec(path);
 		if (filesMatch) {
 			const keyId = keyIdForScope(filesMatch[1]);
@@ -241,12 +260,14 @@ async function handle(req, res) {
 			res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
 			return res.end(JSON.stringify(snapshot));
 		}
+		if (path.startsWith("/dashboard/session/") && req.method !== "DELETE" && (await liveRoutes(req, res, path))) return;
 		if (req.method === "DELETE" && path.startsWith("/dashboard/session/")) {
 			const closed = sessions.closeByFingerprint(path.slice("/dashboard/session/".length));
 			audit("session.kill", path.slice("/dashboard/session/".length), closed ? "ended from the dashboard" : "no such session");
 			res.writeHead(closed ? 200 : 404, { "Content-Type": "application/json" });
 			return res.end(JSON.stringify({ closed }));
 		}
+		if (path === "/dashboard/jobs.json" || path === "/dashboard/jobs" || path.startsWith("/dashboard/jobs/")) return await jobDashboardRoutes(req, res, path);
 		if (path === "/dashboard/container-pi" || path === "/dashboard/containers/recheck") return await containerPiRoutes(req, res, path);
 		if (path === "/dashboard/containers.json" || path.startsWith("/dashboard/containers/") || path === "/dashboard/audit.json" || path === "/dashboard/audit.csv" || path === "/dashboard/updates.json" || path === "/dashboard/alerts/test" || path === "/dashboard/images.json" || path.startsWith("/dashboard/images/")) return await containerRoutes(req, res, path);
 		if (req.method === "POST" && path === "/dashboard/kill-all") {
@@ -260,6 +281,7 @@ async function handle(req, res) {
 			return res.end(dashboardPage());
 		}
 		if (req.method === "GET" && path === "/v1/models") return await listModels(res, req.credential);
+		if (path === "/v1/piper/jobs" || path.startsWith("/v1/piper/jobs/")) return await jobApiRoutes(req, res, path);
 		if (path === "/v1/piper/profile" || path.startsWith("/v1/piper/profile/")) return await profileRoutes(req, res, path);
 		// A key's own workspace, and the operator's view of any key's.
 		if (path === "/v1/piper/files" || path.startsWith("/v1/piper/files/")) {
@@ -304,7 +326,9 @@ if (isMain) {
 		stopping = true;
 		process.stderr.write(`${signal}: hibernating ${sessions.size} chat(s)\n`);
 		server.close();
+		stopJobs();
 		void stopAgentServers();
+		void stopTeamServers();
 		closeAllTerminals();
 		const deadline = setTimeout(() => process.exit(0), 10_000);
 		deadline.unref?.();
@@ -329,13 +353,15 @@ if (isMain) {
 				for (const warn of status.warnings) process.stderr.write(`containers: ${warn}\n`);
 				if (status.ok) process.stderr.write(`containers: docker ${status.engine.version}, image ${config.CONTAINER_IMAGE} (Pi ${status.image.piVersion || "?"}), network ${status.network.mode}${status.firewall.allowed.length ? `, allowed: ${status.firewall.allowed.map((a) => a.endpoint).join(" ")}` : ""}\n`);
 				startSweeps();
+				startJobs();
 				startEventWatch();
 				startDiskWatch();
-				void startAgentServers();
+				void startAgentServers().then(() => startTeamServers());
 			},
 			() => {
 				startSweeps();
-				void startAgentServers();
+				startJobs();
+				void startAgentServers().then(() => startTeamServers());
 			},
 		);
 	});

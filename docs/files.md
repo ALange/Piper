@@ -20,6 +20,8 @@ what is safe to delete. Paths are relative to the gateway folder unless they sta
 | `backups/` | Archives made by `./piper.sh backup` (mode `0600`) | As the data they hold | n/a |
 | `docker/` | The image definitions: `Dockerfile` (the `full` environment) and `environments/<name>/Dockerfile` | no | no (in the repository) |
 | `docs/` | This handbook's pages | no | no (in the repository) |
+| `templates/` | The built-in agent templates: a `template.json` and a `profile/` tree each | no | no (in the repository) |
+| `vendor/xterm/` | xterm.js and its fit addon (MIT), served to the Terminal page; see `THIRD_PARTY.md` | no | no (in the repository) |
 | `gw.log` | The log when the gateway is run by `piper.sh` without systemd | Some request metadata | no |
 | `.watchdog-state` | The watchdog's memory of whether it has said the gateway is down | no | no |
 

@@ -87,12 +87,32 @@ A key manages **its own** profile (never another's); after each change its live 
 
 The files are read and written by the profile helper in a throwaway container, never by the gateway on the host.
 
+## Jobs: `/v1/piper/jobs`
+
+Run a prompt in the background as the calling key. Needs an API key; a key sees only its own requests.
+
+| Request | Does |
+|---|---|
+| `POST /v1/piper/jobs` with `{"prompt", "model"?, "agent"?, "webhook_url"?, "timeout_ms"?}` | Queue it; `202 {"id", "status"}`. `agent` is the name of one of the key's agents. A `webhook_url` gets the finished run, signed, and its `webhook_secret` is returned once; it may not point at an internal address |
+| `GET /v1/piper/jobs/<id>` | `{"status": queued\|running\|ok\|error\|timeout\|skipped\|cancelled, "text", "error", "tokens", "cost", "startedAt", "endedAt"}` |
+| `DELETE /v1/piper/jobs/<id>` | Cancel it if it is still queued or running |
+| `POST /v1/piper/jobs/<id>/trigger` | Start a dashboard-made job. **Not an API key call**: it takes the job's own trigger token (`Authorization: Bearer` or `X-Piper-Token`); the body becomes `{{payload}}`. `202 {"run", "status"}`; 404 for a wrong token or job, 429 when called too soon |
+
+A key may have `JOBS_MAX_PER_KEY` requests waiting or running (429 beyond it). Results are kept `JOBS_RESULT_DAYS` days.
+
 ## Agent endpoints
 
 An agent on its own port serves `GET /health`, `GET /v1/models`, `POST /v1/chat/completions` (and
 `/chat/completions`), `/v1/piper/profile/*` and `/v1/piper/files/*`, for **that agent's** profile and workspace, and
 only for the key that owns it. Anything else (the dashboard, settings, other routes) is `404`. `OPTIONS` is answered
 for browser clients.
+
+## Teams
+
+A team's port serves `GET /health`, `GET /v1/models` and `POST /v1/chat/completions` (also `/chat/completions`), only for the
+key that owns it. The model name is ignored; the request's newest user message is the team's task. `stream: true` sends
+progress as `reasoning_content` deltas and then the answer. Errors name the step: `step 2 of 3 (coder) failed: …`. `409` means
+an agent of the team was deleted.
 
 ## Files and the terminal (dashboard)
 
@@ -108,6 +128,15 @@ container). Browser to gateway: a binary message is keystrokes, a text message i
 Gateway to browser: binary is the shell's output, text is JSON (`{"t":"exit","code"}`, `{"t":"error","message"}`,
 `{"t":"idle"}`). Refusals are plain HTTP answers to the upgrade: 401 not signed in, 403 no dashboard password, wrong
 origin or terminals off, 404 not one of this gateway's containers, 409 not running, 429 too many open.
+
+## Live view (dashboard)
+
+`GET /dashboard/session/<fingerprint>/events` is a Server-Sent Events stream: `snapshot` (`{items, state, chat}`),
+then `add` / `update` (`{item}`), `state` and `end`. Items are `user`, `assistant`, `thinking`, `tool` (`name`,
+`summary`, `state` running|done|error, `result`) and `note`. `POST …/interrupt` stops the turn in flight
+(`{interrupted, wasRunning}`); `GET …/transcript.md` or `.json` downloads the conversation. All need the dashboard
+cookie **and** a dashboard password; 403 when none is set or `LIVE_VIEW_ENABLED` is off, 404 for a chat that is not
+running, 429 past 5 watchers on a chat or 20 in all.
 
 ## Health: `GET /health`
 
@@ -125,6 +154,12 @@ debugging, not as a stable interface.
 | `GET /dashboard/settings.json`, `POST /dashboard/settings` | Read and change settings |
 | `/dashboard/api-keys…` | List (`.json`, `/usage.json`), create, update, revoke, delete keys |
 | `/dashboard/profiles…`, `/dashboard/files/<scope>/…` | Profiles, lock and reset, update a profile's container; a key's workspace |
+| `/dashboard/jobs…` | Jobs: list, create, change, `run`, `runs`, `trigger`, `webhook-secret`, cancel a run |
+| `/dashboard/bundles…`, `/dashboard/bundlefiles/<name>/…` | Shared bundles: list, create, delete; the file browser over one bundle |
+| `/dashboard/packages/<scope>.json`, `…/<scope>/install\|remove\|update\|mcp-add\|mcp-remove\|mcp-enable\|mcp-test`, `…/job.json` | Packages and MCP servers of a profile; the running or last job |
+| `/dashboard/teams…` | Teams: list, create, change (`enabled`, steps), delete |
+| `/dashboard/templates…` | Templates: list, save from an agent, delete |
+| `/dashboard/agents/from-template`, `/dashboard/agents/import`, `/dashboard/agents/<id>/clone`, `…/export` | New agent from a template; import a bundle (needs a dashboard password); clone; download a bundle |
 | `/dashboard/agents…` | Agent endpoints: list, create, update, `enable`, `disable`, `new-port`, `reset`, `update`, delete |
 | `/dashboard/containers.json`, `/dashboard/containers/<name>/<action>` | List; `stop`, `update`, `recreate`, `remove`, `exec` |
 | `/dashboard/containers/update-all`, `/dashboard/updates.json` | Update every container; the running or last update job |

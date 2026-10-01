@@ -769,14 +769,12 @@ assert.equal(isReloadCommand(undefined), false);
 		[],
 		"every #spawn call has to forward the credential, or the ledger loses the key",
 	);
-	assert.match(
-		src,
-		/const scopedId = scopedSessionId\(req\.credential, clientSessionId\)/,
-		"the handler has to scope the id by the credential",
-	);
+	// Scoping and acquiring now live in one shared function (openSession), which the handler and the internal runs call.
+	assert.match(src, /const scopedId = scopedSessionId\(credential, clientSessionId\)/, "the shared opener has to scope the id by the credential");
+	assert.match(src, /openSession\(req\.credential, clientSessionId\)/, "the handler has to open its session with the request's credential");
 	const acquires = [...src.matchAll(/sessions\.acquire\(([^)]*)\)/g)].map((m) => m[1]);
 	assert.ok(acquires.length >= 1);
-	assert.deepEqual(acquires.filter((args) => args !== "scopedId, req.credential"), [], "every acquire in the handler passes the scoped id and the credential");
+	assert.deepEqual(acquires.filter((args) => !/^(scopedId|acquired\.scopedId), credential$/.test(args)), [], "every acquire passes the scoped id and the credential");
 }
 
 // The settings key is compared as a hash, exactly like a created API key, so the database never
@@ -5490,6 +5488,850 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.deepEqual(about.thirdParty.map((t) => t.licence), ["MIT", "MIT"], "credited on the About page");
 	await new Promise((r) => server.close(r));
 	config.ACCESS_LOG = accessLog;
+}
+
+// Phase 0: the live event log, the shared agent turn, and spend per agent.
+{
+	const { LiveLog, MAX_ITEMS, MAX_TEXT, MAX_RESULT, credentialFor, runAgentTurn, AgentRunError, agentSpendToday } = await import("./server.mjs");
+	const log = new LiveLog();
+	const seen = [];
+	const stop = log.subscribe((c) => seen.push(c));
+	log.feed({ type: "agent_start" });
+	log.feed({ type: "message_start", message: { role: "user", content: [{ type: "text", text: "hello" }] } });
+	log.feed({ type: "message_start", message: { role: "assistant" } });
+	for (const delta of ["Hel", "lo ", "there"]) log.feed({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta } });
+	log.feed({ type: "message_update", assistantMessageEvent: { type: "thinking_delta", delta: "hmm" } });
+	log.feed({ type: "tool_execution_start", toolCallId: "t1", toolName: "bash", args: { command: "ls  -la" } });
+	log.feed({ type: "tool_execution_end", toolCallId: "t1", toolName: "bash", isError: false, result: { content: [{ type: "text", text: "x".repeat(MAX_RESULT * 2) }] } });
+	let snap = log.snapshot();
+	assert.deepEqual(snap.items.map((i) => i.kind), ["user", "assistant", "thinking", "tool"], "deltas fold into one item each");
+	assert.equal(snap.items[1].text, "Hello there");
+	assert.equal(snap.items[3].summary, "bash: ls -la");
+	assert.equal(snap.items[3].state, "done");
+	assert.ok(snap.items[3].result.length <= MAX_RESULT + 1, "a tool result is capped");
+	assert.equal(snap.state.working, true);
+	assert.ok(seen.some((c) => c.op === "update") && seen.some((c) => c.op === "add"), "watchers see adds and updates");
+	log.feed({ type: "agent_settled" });
+	assert.equal(log.snapshot().state.working, false);
+	assert.equal(JSON.stringify(log.snapshot()).includes("sessionId"), false);
+	// Bounded: items and text.
+	for (let i = 0; i < MAX_ITEMS + 50; i++) log.note(`n${i}`);
+	assert.equal(log.snapshot().items.length, MAX_ITEMS);
+	const big = new LiveLog();
+	big.feed({ type: "message_start", message: { role: "assistant" } });
+	for (let i = 0; i < 40; i++) big.feed({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "y".repeat(2000) } });
+	assert.ok(big.snapshot().items[0].text.length <= MAX_TEXT + 1, "message text is capped");
+	// A throwing watcher is dropped and does not stop the others.
+	let calls = 0;
+	log.subscribe(() => {
+		throw new Error("bad watcher");
+	});
+	log.subscribe(() => calls++);
+	log.note("x");
+	log.note("y");
+	assert.equal(calls, 2);
+	assert.equal(log.watchers, 2, "the broken watcher is gone");
+	stop();
+	log.end("bye");
+	assert.equal(log.ended, true);
+	const after = seen.length;
+	log.feed({ type: "agent_start" });
+	assert.equal(seen.length, after, "nothing after the end");
+
+	// credentialFor and the refusals of runAgentTurn.
+	const created = apiKeys.create({ name: "run-test" });
+	const key = created.record ?? created;
+	const cred = credentialFor(key.id);
+	assert.equal(cred.id, key.id);
+	await assert.rejects(async () => credentialFor("nope"), (e) => e instanceof AgentRunError && e.status === 401);
+	const agent = await createAgent({ keyId: key.id, name: "runner" });
+	const ac = credentialFor(key.id, agent.id);
+	assert.equal(ac.scopeId, agentScope(key.id, agent.id));
+	assert.deepEqual(ac.agent, { id: agent.id, name: "runner" });
+	await assert.rejects(async () => credentialFor(key.id, "not-an-agent"), (e) => e.status === 404);
+	await assert.rejects(runAgentTurn({ credential: cred, prompt: "   " }), (e) => e.status === 400);
+	apiKeys.update(key.id, { dailySpend: 0.01 });
+	recordSpend({ id: "agentrun-spend", requests: 1, keyId: key.id, agentId: agent.id }, { getSessionStats: () => ({ cost: 0.5, tokens: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, total: 2 } }), model: { provider: "p", id: "m" } });
+	await assert.rejects(runAgentTurn({ credential: cred, prompt: "hi", clientSessionId: "over-cap" }), (e) => e.status === 429 && e.code === "spend_limit_exceeded");
+	// Spend per agent.
+	const report = await spendReport();
+	const row = report.byAgent.find((r) => r.agentId === agent.id);
+	assert.ok(row && Math.abs(row.cost - 0.5) < 1e-9, "the agent's spend is its own row");
+	assert.match(row.label, /run-test/);
+	assert.ok(Math.abs(agentSpendToday(agent.id) - 0.5) < 1e-9);
+	assert.equal(agentSpendToday("someone-else"), 0);
+	apiKeys.update(key.id, { dailySpend: null });
+	await deleteAgent(agent.id).catch(() => {});
+	apiKeys.revoke?.(key.id);
+	await assert.rejects(async () => credentialFor(key.id), (e) => e.status === 401, "a revoked key runs nothing");
+}
+
+// Phase 1: the live view's routes.
+{
+	const { liveRoutes, renderTranscript, watcherCount, MAX_WATCHERS_PER_SESSION } = await import("./server.mjs");
+	const http = await import("node:http");
+	const fakeId = "live-view-chat";
+	const { record } = sessions.acquire(fakeId, null);
+	record.sessionPromise.catch(() => {});
+	let aborts = 0;
+	record.session = { model: { provider: "p", id: "m" }, getSessionStats: () => ({ cost: 0.25, tokens: { total: 42 } }), abort: async () => void aborts++, send: async (c) => (c.type === "get_messages" ? { messages: [
+		{ role: "user", content: "hi" },
+		{ role: "assistant", content: [{ type: "thinking", thinking: "t" }, { type: "text", text: "yo" }, { type: "toolCall", name: "bash", arguments: { command: "ls" } }] },
+		{ role: "toolResult", toolName: "bash", isError: false, content: [{ type: "text", text: "z".repeat(10_000) }] },
+	] } : {}) };
+	const fp = fingerprint(fakeId);
+	const srv = http.createServer((req, res) => void liveRoutes(req, res, new URL(req.url, "http://x").pathname).then((handled) => handled || (res.writeHead(404), res.end())));
+	await new Promise((r) => srv.listen(0, "127.0.0.1", r));
+	const base = `http://127.0.0.1:${srv.address().port}/dashboard/session`;
+	const before = recentAudit(500).length;
+
+	clearPasswordHash();
+	assert.equal((await fetch(`${base}/${fp}/transcript.md`)).status, 403, "no dashboard password, no live view");
+	setPasswordHash(hashPassword("a long enough password"));
+	assert.equal((await fetch(`${base}/${"0".repeat(12)}/transcript.md`)).status, 404, "unknown chat");
+	assert.equal((await fetch(`${base}/not-hex/events`)).status, 404, "not a route of ours");
+	config.LIVE_VIEW_ENABLED = false;
+	assert.equal((await fetch(`${base}/${fp}/transcript.md`)).status, 403, "switched off");
+	config.LIVE_VIEW_ENABLED = true;
+
+	const md = await fetch(`${base}/${fp}/transcript.md`);
+	assert.equal(md.status, 200);
+	assert.match(md.headers.get("content-disposition"), /attachment; filename="piper-/);
+	const text = await md.text();
+	assert.match(text, /## You\n\nhi/);
+	assert.match(text, /> t/);
+	assert.match(text, /\*\*Tool: bash\*\*/);
+	assert.match(text, /more characters cut/, "a long tool result is truncated");
+	assert.equal(text.includes(fakeId), false, "the real session id is never in a transcript");
+	assert.equal((await (await fetch(`${base}/${fp}/transcript.json`)).json()).messages.length, 3);
+	assert.equal(renderTranscript(null), "# Piper chat\n");
+
+	// Interrupt: nothing running is not an abort; a run in flight is aborted once.
+	assert.deepEqual(await (await fetch(`${base}/${fp}/interrupt`, { method: "POST" })).json(), { interrupted: false, wasRunning: false });
+	assert.equal(aborts, 0);
+	record.inflight = 1;
+	assert.deepEqual(await (await fetch(`${base}/${fp}/interrupt`, { method: "POST" })).json(), { interrupted: true, wasRunning: true });
+	assert.equal(aborts, 1);
+	record.inflight = 0;
+	assert.equal((await fetch(`${base}/${fp}/interrupt`)).status, 405, "interrupt is a POST");
+
+	// The stream: a snapshot first, then live changes, then the end.
+	const stream = await fetch(`${base}/${fp}/events`);
+	assert.equal(stream.headers.get("content-type"), "text/event-stream; charset=utf-8");
+	record.live.feed({ type: "message_start", message: { role: "assistant" } });
+	const reader = stream.body.getReader();
+	let got = "";
+	const readUntil = async (re) => {
+		const deadline = Date.now() + 3000;
+		while (!re.test(got) && Date.now() < deadline) got += new TextDecoder().decode((await reader.read()).value ?? new Uint8Array());
+	};
+	await readUntil(/event: snapshot/);
+	assert.match(got, /event: snapshot\ndata: .*"chat":\{"key"/);
+	assert.equal(got.includes(fakeId), false, "no real session id in the stream");
+	assert.equal(watcherCount(), 1);
+	record.live.feed({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "live!" } });
+	await readUntil(/live!/);
+	assert.match(got, /event: add/);
+	sessions.close(fakeId);
+	await readUntil(/event: end/);
+	assert.match(got, /event: end/);
+	await reader.cancel().catch(() => {});
+	await new Promise((r) => setTimeout(r, 50));
+	assert.equal(watcherCount(), 0, "the watcher is released");
+	assert.ok(recentAudit(500).length > before);
+	const kinds = recentAudit(50).map((r) => r.action);
+	assert.ok(kinds.includes("session.watch") && kinds.includes("session.interrupt") && kinds.includes("session.transcript"));
+	assert.equal(recentAudit(50).some((r) => /yo|live!/.test(r.detail)), false, "the audit never holds content");
+
+	// Watcher limit per chat.
+	const other = sessions.acquire("live-view-limit", null).record;
+	other.sessionPromise.catch(() => {});
+	other.session = record.session;
+	const ofp = fingerprint("live-view-limit");
+	const opened = [];
+	for (let i = 0; i < MAX_WATCHERS_PER_SESSION; i++) {
+		const r = await fetch(`${base}/${ofp}/events`);
+		assert.equal(r.status, 200);
+		opened.push(r);
+	}
+	assert.equal((await fetch(`${base}/${ofp}/events`)).status, 429, "one more watcher than allowed");
+	for (const r of opened) await r.body.cancel().catch(() => {});
+	sessions.close("live-view-limit");
+	clearPasswordHash();
+	await new Promise((r) => srv.close(r));
+	srv.closeAllConnections?.();
+}
+
+// Phase 2: jobs.
+{
+	const J = await import("./server.mjs");
+	const { validateSchedule, nextRun, describeSchedule, createJob, updateJob, deleteJob, queueRun, pump, tick, cancelRun, trigger, newTrigger, clearTrigger, signWebhook, submit, requestStatus, cancelRequest, getJob, listRuns, setJobRunner, purgeRuns, JobError, scheduledJobView, deliverWebhook, validateWebhookUrl, getRun } = J;
+	const created = apiKeys.create({ name: "jobs-test" });
+	const key = created.record ?? created;
+	const other = apiKeys.create({ name: "jobs-other" });
+	const otherKey = other.record ?? other;
+	const at = (y, m, d, h = 0, mi = 0) => new Date(y, m - 1, d, h, mi, 0, 0).getTime();
+
+	// Schedules.
+	assert.deepEqual(validateSchedule({ kind: "interval", every: "15", unit: "minutes" }), { kind: "interval", every: 15, unit: "minutes" });
+	for (const bad of [null, {}, { kind: "cron" }, { kind: "interval", every: 0, unit: "minutes" }, { kind: "interval", every: 1.5, unit: "hours" }, { kind: "interval", every: 1, unit: "days" }, { kind: "interval", every: 9999, unit: "hours" }, { kind: "daily", at: "25:00" }, { kind: "daily", at: "7" }, { kind: "weekly", days: [], at: "07:30" }, { kind: "weekly", days: [7], at: "07:30" }, { kind: "once", at: "never" }]) assert.throws(() => validateSchedule(bad), JobError, JSON.stringify(bad));
+	assert.deepEqual(validateSchedule({ kind: "daily", at: "7:05" }), { kind: "daily", at: "07:05" });
+	assert.equal(nextRun({ kind: "interval", every: 2, unit: "hours" }, 1000), 1000 + 7_200_000);
+	assert.equal(nextRun({ kind: "daily", at: "07:30" }, at(2026, 3, 10, 7, 0)), at(2026, 3, 10, 7, 30), "later today");
+	assert.equal(nextRun({ kind: "daily", at: "07:30" }, at(2026, 3, 10, 7, 30)), at(2026, 3, 11, 7, 30), "exactly now is already past");
+	assert.equal(nextRun({ kind: "daily", at: "07:30" }, at(2026, 12, 31, 23, 0)), at(2027, 1, 1, 7, 30), "over a year end");
+	assert.equal(nextRun({ kind: "daily", at: "09:00" }, at(2026, 2, 28, 10, 0)), at(2026, 3, 1, 9, 0), "over a month end");
+	// 2026-03-15 is a Sunday; Monday and Thursday at 06:00.
+	const week = { kind: "weekly", days: [1, 4], at: "06:00" };
+	assert.equal(new Date(nextRun(week, at(2026, 3, 15, 12, 0))).getDay(), 1);
+	assert.equal(nextRun(week, at(2026, 3, 15, 12, 0)), at(2026, 3, 16, 6, 0));
+	assert.equal(nextRun(week, at(2026, 3, 16, 6, 0)), at(2026, 3, 19, 6, 0), "Monday's slot is over, Thursday is next");
+	assert.equal(nextRun({ kind: "weekly", days: [0], at: "06:00" }, at(2026, 3, 15, 6, 1)), at(2026, 3, 22, 6, 0), "the same weekday, a week on");
+	assert.equal(nextRun({ kind: "once", at: 5000 }, 4000), 5000);
+	assert.equal(nextRun({ kind: "once", at: 5000 }, 5000), null);
+	assert.equal(nextRun({ kind: "manual" }, 0), null);
+	// Daylight saving: the wall-clock time holds on the days the clock moves, whatever the zone is here.
+	for (const [d0, d1] of [[at(2026, 3, 28, 12), at(2026, 3, 29, 3)], [at(2026, 10, 24, 12), at(2026, 10, 25, 3)], [at(2026, 3, 7, 12), at(2026, 3, 8, 3)], [at(2026, 11, 1, 0, 1), at(2026, 11, 1, 3)]]) {
+		const n = new Date(nextRun({ kind: "daily", at: "07:30" }, d0));
+		assert.deepEqual([n.getHours(), n.getMinutes()], [7, 30], "07:30 stays 07:30 across a clock change");
+		assert.ok(nextRun({ kind: "daily", at: "07:30" }, d1) > d1);
+	}
+	assert.match(describeSchedule({ kind: "weekly", days: [1, 4], at: "06:00" }), /Mon, Thu at 06:00/);
+	assert.equal(describeSchedule({ kind: "interval", every: 1, unit: "hours" }), "every hour");
+
+	// Creating, validating, changing.
+	assert.throws(() => createJob({ keyId: "nope", name: "x", prompt: "p" }), (e) => e.status === 404);
+	assert.throws(() => createJob({ keyId: key.id, name: "", prompt: "p" }), /needs a name/);
+	assert.throws(() => createJob({ keyId: key.id, name: "x", prompt: "  " }), /prompt is empty/);
+	assert.throws(() => createJob({ keyId: key.id, name: "x", prompt: "p", timeoutMs: 5 }), /time limit/);
+	assert.throws(() => createJob({ keyId: key.id, name: "x", prompt: "p", webhookUrl: "ftp://x" }), /http or https/);
+	assert.throws(() => createJob({ keyId: key.id, name: "x", prompt: "p", webhookUrl: "https://u:p@x.test/" }), /credentials/);
+	assert.throws(() => validateWebhookUrl("http://127.0.0.1:9/", { strict: true }), /internal/);
+	assert.equal(validateWebhookUrl("http://127.0.0.1:9/"), "http://127.0.0.1:9/", "the operator may point at their own network");
+	assert.throws(() => createJob({ keyId: key.id, agentId: "deadbeef", name: "x", prompt: "p" }), (e) => e.status === 404, "an agent that is not this key's");
+	const made = createJob({ keyId: key.id, name: "daily", prompt: "say {{payload}}", schedule: { kind: "interval", every: 1, unit: "hours" } });
+	assert.ok(made.job.nextRunAt > Date.now(), "timed from now");
+	assert.equal(made.webhookSecret, null);
+	const withHook = createJob({ keyId: key.id, name: "hooked", prompt: "p", webhookUrl: "http://127.0.0.1:1/x" });
+	assert.match(withHook.webhookSecret, /^whsec_/);
+	assert.equal(JSON.stringify(scheduledJobView(getJob(withHook.job.id))).includes(withHook.webhookSecret), false, "the signing secret is not in the view");
+	assert.equal(updateJob(made.job.id, { name: "renamed", enabled: false }).job.nextRunAt, null, "off means no next run");
+	assert.ok(updateJob(made.job.id, { enabled: true }).job.nextRunAt > Date.now());
+
+	// Running, with an injected turn.
+	const calls = [];
+	let hold = null;
+	setJobRunner(async ({ credential, clientSessionId, prompt, model, signal }) => {
+		calls.push({ key: credential.id, clientSessionId, prompt, model });
+		if (hold) await new Promise((resolve, reject) => { hold.release = resolve; signal.addEventListener("abort", () => reject(new Error("aborted"))); });
+		return { text: `answer to: ${prompt}`, usage: { total_tokens: 12 }, cost: 0.02, scopedId: `scoped-${clientSessionId}` };
+	});
+	const waitFor = async (fn, ms = 3000) => { const end = Date.now() + ms; while (Date.now() < end) { const v = fn(); if (v) return v; await new Promise((r) => setTimeout(r, 15)); } throw new Error("timed out waiting"); };
+	const run1 = queueRun(made.job.id, "manual", { payload: "hello" });
+	assert.equal(run1.status, "queued");
+	await waitFor(() => getRun(run1.id).status === "ok");
+	const done = listRuns(made.job.id)[0];
+	assert.deepEqual([done.status, done.tokens, done.cost, done.trigger], ["ok", 12, 0.02, "manual"]);
+	assert.equal(calls[0].prompt, "say hello", "{{payload}} is filled in");
+	assert.match(calls[0].clientSessionId, new RegExp(`^job:${made.job.id}:\\d+$`), "a fresh session per run");
+	updateJob(made.job.id, { sessionMode: "continue" });
+	const run2 = queueRun(made.job.id, "manual");
+	await waitFor(() => getRun(run2.id).status === "ok");
+	assert.equal(calls[1].clientSessionId, `job:${made.job.id}`, "one stable session when it continues");
+
+	// No overlap, the per-key cap, and the concurrency cap.
+	hold = {};
+	const slow = queueRun(made.job.id, "manual");
+	await waitFor(() => getRun(slow.id).status === "running");
+	const second = queueRun(made.job.id, "schedule");
+	assert.deepEqual([second.status, second.error], ["skipped", "the previous run is still going"]);
+	assert.equal(cancelRun(slow.id), true);
+	await waitFor(() => getRun(slow.id).status === "cancelled");
+	hold = null;
+	config.JOBS_MAX_PER_KEY = 1;
+	hold = {};
+	const a = createJob({ keyId: key.id, name: "a", prompt: "p" }).job;
+	const b = createJob({ keyId: key.id, name: "b", prompt: "p" }).job;
+	const ra = queueRun(a.id, "manual");
+	await waitFor(() => getRun(ra.id).status === "running");
+	assert.throws(() => queueRun(b.id, "manual"), (e) => e.status === 429, "a person is told");
+	assert.equal(queueRun(b.id, "schedule").status, "skipped", "a schedule is recorded as skipped");
+	cancelRun(ra.id);
+	await waitFor(() => getRun(ra.id).status === "cancelled");
+	hold = null;
+	config.JOBS_MAX_PER_KEY = 20;
+	config.JOBS_MAX_PARALLEL = 1;
+	hold = {};
+	const p1 = queueRun(a.id, "manual");
+	const p2 = queueRun(b.id, "manual");
+	await waitFor(() => getRun(p1.id).status === "running");
+	await new Promise((r) => setTimeout(r, 60));
+	assert.equal(getRun(p2.id).status, "queued", "only JOBS_MAX_PARALLEL run at once");
+	hold.release();
+	await waitFor(() => getRun(p1.id).status === "ok");
+	await waitFor(() => getRun(p2.id).status === "running");
+	hold.release();
+	await waitFor(() => getRun(p2.id).status === "ok");
+	hold = null;
+	config.JOBS_MAX_PARALLEL = 2;
+
+	// Time limit.
+	hold = {};
+	const timed = createJob({ keyId: key.id, name: "timed", prompt: "p", timeoutMs: 10_000 }).job;
+	db.prepare("UPDATE jobs SET timeout_ms = 60 WHERE id = ?").run(timed.id);
+	const rt = queueRun(timed.id, "manual");
+	await waitFor(() => getRun(rt.id).status === "timeout");
+	assert.match(getRun(rt.id).error, /no answer within/);
+	hold = null;
+
+	// The scheduler: due jobs queue once, late ones make up one run, a one-time job switches off.
+	const sched = createJob({ keyId: key.id, name: "sched", prompt: "tick", schedule: { kind: "interval", every: 30, unit: "minutes" } }).job;
+	const nowT = Date.now();
+	assert.equal(tick(nowT), 0, "nothing due yet");
+	db.prepare("UPDATE jobs SET next_run_at = ? WHERE id = ?").run(nowT - 3 * 3_600_000, sched.id);
+	assert.equal(tick(nowT), 1, "three hours of missed runs make up one");
+	await waitFor(() => listRuns(sched.id).length === 1 && listRuns(sched.id)[0].status === "ok");
+	assert.match(listRuns(sched.id)[0].note, /late by .* made up once/);
+	assert.ok(getJob(sched.id).next_run_at > nowT, "timed from now");
+	assert.equal(tick(nowT), 0);
+	const once = createJob({ keyId: key.id, name: "once", prompt: "o", schedule: { kind: "once", at: Date.now() + 60_000 } }).job;
+	assert.equal(tick(Date.now() + 120_000), 1);
+	assert.equal(getJob(once.id).enabled, 0, "a one-time job turns itself off");
+	config.JOBS_ENABLED = false;
+	db.prepare("UPDATE jobs SET next_run_at = 1 WHERE id = ?").run(sched.id);
+	assert.equal(tick(), 0, "a switched-off scheduler queues nothing");
+	assert.throws(() => queueRun(sched.id, "manual"), (e) => e.status === 409);
+	config.JOBS_ENABLED = true;
+
+	// A key that cannot run: the run is skipped with the reason, the turn never starts.
+	setJobRunner(null);
+	const victim = apiKeys.create({ name: "jobs-victim" });
+	const victimKey = victim.record ?? victim;
+	const vj = createJob({ keyId: victimKey.id, name: "v", prompt: "p" }).job;
+	apiKeys.revoke(victimKey.id);
+	const rv = queueRun(vj.id, "manual");
+	await waitFor(() => getRun(rv.id).status === "skipped");
+	assert.match(getRun(rv.id).error, /revoked/);
+	assert.equal(deleteJob(vj.id), true);
+	assert.equal(getRun(rv.id), null, "a job's history goes with it");
+
+	// The inbound webhook.
+	let calls2 = 0;
+	setJobRunner(async ({ prompt }) => (calls2++, { text: prompt, usage: { total_tokens: 1 }, cost: 0, scopedId: "x" }));
+	const hookJob = createJob({ keyId: key.id, name: "inbound", prompt: "got {{payload}}" }).job;
+	assert.throws(() => trigger(hookJob.id, "anything", "x"), (e) => e.status === 404, "no token yet: not found");
+	const token = newTrigger(hookJob.id);
+	assert.match(token, /^pjt_/);
+	assert.equal(JSON.stringify(getJob(hookJob.id)).includes(token), false, "only a hash is stored");
+	assert.throws(() => trigger(hookJob.id, "pjt_wrong", "x"), (e) => e.status === 404 && e.message === "not found");
+	assert.throws(() => trigger("jffffffffffff", token, "x"), (e) => e.status === 404, "an unknown job answers the same");
+	config.JOBS_MIN_INTERVAL_MS = 60_000;
+	const big = "z".repeat(40_000);
+	const tr = trigger(hookJob.id, token, big);
+	await waitFor(() => getRun(tr.id).status === "ok");
+	assert.ok(getRun(tr.id).prompt.length <= "got ".length + 16 * 1024, "the payload is capped at 16 KB");
+	assert.throws(() => trigger(hookJob.id, token, "again"), (e) => e.status === 429, "rate limited");
+	config.JOBS_MIN_INTERVAL_MS = 0;
+	clearTrigger(hookJob.id);
+	assert.throws(() => trigger(hookJob.id, token, "x"), (e) => e.status === 404, "a revoked token stops working");
+	updateJob(hookJob.id, { enabled: false });
+	const token2 = newTrigger(hookJob.id);
+	assert.throws(() => trigger(hookJob.id, token2, "x"), (e) => e.status === 409, "a switched-off job is not started");
+
+	// The async API: ownership, status, cancel.
+	const sub = submit(key, { prompt: "async please", model: null });
+	assert.match(sub.id, /^j[0-9a-f]{12}$/);
+	await waitFor(() => requestStatus(key, sub.id).status === "ok");
+	assert.equal(requestStatus(key, sub.id).text, "async please");
+	assert.throws(() => requestStatus(otherKey, sub.id), (e) => e.status === 404, "another key cannot read it");
+	assert.throws(() => cancelRequest(otherKey, sub.id), (e) => e.status === 404);
+	assert.throws(() => requestStatus(key, hookJob.id), (e) => e.status === 404, "a dashboard job is not an API request");
+	assert.throws(() => submit(key, { prompt: "x", agent: "nobody" }), (e) => e.status === 404);
+	assert.throws(() => submit(key, { prompt: "x", webhook_url: "http://169.254.169.254/" }), /internal/);
+	assert.throws(() => submit({}, { prompt: "x" }), (e) => e.status === 401);
+
+	// The completion webhook is signed and tried once more on failure.
+	const received = [];
+	const receiver = (await import("node:http")).createServer((req, res) => {
+		let body = "";
+		req.on("data", (c) => (body += c));
+		req.on("end", () => {
+			received.push({ body, sig: req.headers["x-piper-signature"] });
+			res.writeHead(received.length === 1 ? 500 : 200);
+			res.end();
+		});
+	});
+	await new Promise((r) => receiver.listen(0, "127.0.0.1", r));
+	const wh = createJob({ keyId: key.id, name: "notify", prompt: "report", webhookUrl: `http://127.0.0.1:${receiver.address().port}/hook` });
+	const rw = queueRun(wh.job.id, "manual");
+	await waitFor(() => getRun(rw.id).webhook);
+	assert.equal(received.length, 2, "one retry after a 500");
+	assert.match(getRun(rw.id).webhook, /delivered \(200\)/);
+	const { body, sig } = received[1];
+	const [, t, mac] = /^t=(\d+),v1=([0-9a-f]{64})$/.exec(sig);
+	assert.equal(signWebhook(wh.webhookSecret, body, Number(t)), sig, "the receiver can verify it with the secret");
+	assert.equal(JSON.parse(body).status, "ok");
+	assert.equal(JSON.parse(body).job.name, "notify");
+	await new Promise((r) => receiver.close(r));
+	receiver.closeAllConnections?.();
+
+	// Retention, and what goes when a key goes.
+	db.prepare("UPDATE job_runs SET ended_at = 1 WHERE job_id = ?").run(sub.id);
+	assert.ok(purgeRuns() >= 1);
+	assert.equal(getJob(sub.id), null, "an old API request disappears with its results");
+	assert.ok(J.deleteJobsOf({ keyId: key.id }) > 3);
+	assert.equal(listJobsCount(key.id), 0);
+	setJobRunner(null);
+	function listJobsCount(id) { return db.prepare("SELECT COUNT(*) AS n FROM jobs WHERE key_id = ?").get(id).n; }
+	J.stopJobs();
+}
+
+// Phase 2: jobs over HTTP.
+{
+	const { server, setJobRunner, apiKeys, createJob, newTrigger, getRun, stopJobs } = await import("./server.mjs");
+	setJobRunner(async ({ prompt }) => ({ text: `ran: ${prompt}`, usage: { total_tokens: 3 }, cost: 0, scopedId: "s" }));
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	const base = `http://127.0.0.1:${server.address().port}`;
+	const k1 = apiKeys.create({ name: "http-jobs-1" });
+	const k2 = apiKeys.create({ name: "http-jobs-2" });
+	const secret1 = k1.key ?? k1.secret ?? k1.token;
+	const secret2 = k2.key ?? k2.secret ?? k2.token;
+	const rec1 = k1.record ?? k1;
+	assert.ok(secret1 && secret2, "the key is shown on creation");
+	const call = (path, { key, method = "GET", body, headers = {} } = {}) => fetch(`${base}${path}`, { method, headers: { ...(key ? { Authorization: `Bearer ${key}` } : {}), "Content-Type": "application/json", ...headers }, body: body === undefined ? undefined : typeof body === "string" ? body : JSON.stringify(body) });
+	const waitFor = async (fn) => { const end = Date.now() + 3000; while (Date.now() < end) { const v = await fn(); if (v) return v; await new Promise((r) => setTimeout(r, 20)); } throw new Error("timed out"); };
+
+	assert.equal((await call("/v1/piper/jobs", { method: "POST", body: { prompt: "x" } })).status, 401, "a key is needed");
+	const submitted = await call("/v1/piper/jobs", { key: secret1, method: "POST", body: { prompt: "hello async" } });
+	assert.equal(submitted.status, 202);
+	const { id } = await submitted.json();
+	const status = await waitFor(async () => { const j = await (await call(`/v1/piper/jobs/${id}`, { key: secret1 })).json(); return j.status === "ok" ? j : null; });
+	assert.equal(status.text, "ran: hello async");
+	assert.equal((await call(`/v1/piper/jobs/${id}`, { key: secret2 })).status, 404, "another key sees nothing");
+	assert.equal((await call(`/v1/piper/jobs/${id}`, { key: secret1, method: "DELETE" })).status, 200);
+	assert.equal((await call("/v1/piper/jobs", { key: secret1, method: "POST", body: { prompt: "" } })).status, 400);
+
+	// The trigger answers to the job's token, not to a key; and keeps working when keys are required.
+	const job = createJob({ keyId: rec1.id, name: "hooked", prompt: "payload={{payload}}" }).job;
+	const token = newTrigger(job.id);
+	const path = `/v1/piper/jobs/${job.id}/trigger`;
+	assert.equal((await call(path, { method: "POST", body: "x" })).status, 404, "no token");
+	assert.equal((await call(path, { method: "POST", key: secret1, body: "x" })).status, 404, "an API key is not the job's token");
+	assert.equal((await call(path)).status, 405);
+	const ok = await call(path, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: '{"event":"push"}' });
+	assert.equal(ok.status, 202);
+	const runId = (await ok.json()).run;
+	await waitFor(() => getRun(runId).status === "ok");
+	assert.equal(getRun(runId).prompt, 'payload={"event":"push"}');
+	const viaHeader = await call(path, { method: "POST", headers: { "X-Piper-Token": token }, body: "again" });
+	assert.equal(viaHeader.status, 202, "the token may come in X-Piper-Token (config is 0 s apart here)");
+
+	// Dashboard routes (no password set here, so the page is open).
+	const created = await call("/dashboard/jobs", { method: "POST", body: { keyId: rec1.id, name: "from page", prompt: "p", schedule: { kind: "daily", at: "07:30" } } });
+	assert.equal(created.status, 201);
+	const jid = (await created.json()).job.id;
+	const list = await (await call("/dashboard/jobs.json")).json();
+	assert.ok(list.jobs.some((j) => j.id === jid && j.scheduleText === "every day at 07:30"));
+	assert.equal(JSON.stringify(list).includes(token), false, "no token in the list");
+	const run = await (await call(`/dashboard/jobs/${jid}/run`, { method: "POST" })).json();
+	await waitFor(() => getRun(run.run.id).status === "ok");
+	const runs = await (await call(`/dashboard/jobs/${jid}/runs`)).json();
+	assert.equal(runs.runs[0].status, "ok");
+	assert.equal((await (await call(`/dashboard/jobs/runs/${run.run.id}`)).json()).run.text, "ran: p");
+	const t = await (await call(`/dashboard/jobs/${jid}/trigger`, { method: "POST" })).json();
+	assert.match(t.token, /^pjt_/);
+	assert.equal((await call(`/dashboard/jobs/${jid}`, { method: "PATCH", body: { schedule: { kind: "weekly", days: [], at: "07:30" } } })).status, 400);
+	assert.equal((await call(`/dashboard/jobs/${jid}`, { method: "DELETE" })).status, 200);
+	assert.equal((await call(`/dashboard/jobs/${jid}`)).status, 404);
+	await new Promise((r) => server.close(r));
+	server.closeAllConnections?.();
+	setJobRunner(null);
+	stopJobs();
+}
+
+// Phase 3: templates, clone, export and import.
+{
+	const T = await import("./server.mjs");
+	const { validPath, validateBundle, listTemplates, getTemplate, saveTemplate, deleteTemplate, exportAgent, importBundle, cloneAgent, createFromTemplate, createAgent, deleteAgent, agents, profileOp, agentScope, apiKeys, config } = T;
+	const b64 = (t) => Buffer.from(t).toString("base64");
+	const base = { format: "piper-agent", version: 1, agent: { name: "ok-name" }, files: [{ path: "AGENTS.md", data: b64("hi") }] };
+
+	// Paths and bundles: what may travel.
+	for (const good of ["AGENTS.md", "settings.json", "skills/a/SKILL.md", "extensions/x.ts", "prompts/p.md", "agents/a.md", "skills/with space/SKILL.md"]) assert.equal(validPath(good), true, good);
+	for (const evil of ["", "/etc/passwd", "../x", "skills/../../x", "skills//x", "skills/./x", "auth.json", "models.json", "AGENTS.md/x", "settings.json/y", ".ssh/id", "skills/.hidden/x", "a".repeat(500), "skills/a/b/c/d/e/f/g/h/i.md", "skills/a\\b", "skills/a\0b", "skills/‮"]) assert.equal(validPath(evil), false, JSON.stringify(evil));
+	assert.equal(validateBundle(base).files.length, 1);
+	const refuse = (mutate, re) => assert.throws(() => validateBundle(mutate(structuredClone(base))), re);
+	refuse((b) => ({ ...b, format: "tar" }), /not a Piper agent bundle/);
+	refuse((b) => ({ ...b, version: 2 }), /version 2/);
+	refuse((b) => ({ ...b, files: "x" }), /no list of files/);
+	refuse((b) => ({ ...b, files: [{ path: "../x", data: "" }] }), /cannot be used/);
+	refuse((b) => ({ ...b, files: [{ path: "auth.json", data: "" }] }), /cannot be used/);
+	refuse((b) => ({ ...b, files: [{ path: "AGENTS.md", data: "a" }, { path: "agents.md", data: "a" }] }), /twice|cannot be used/);
+	refuse((b) => ({ ...b, files: [{ path: "skills/A.md", data: "" }, { path: "skills/a.md", data: "" }] }), /the same file twice/);
+	refuse((b) => ({ ...b, files: [{ path: "AGENTS.md", data: "not base64!" }] }), /not valid base64/);
+	refuse((b) => ({ ...b, files: Array.from({ length: 501 }, (_, i) => ({ path: `skills/f${i}.md`, data: "" })) }), /at most 500/);
+	refuse((b) => ({ ...b, agent: { name: "Bad Name" } }), /not a valid name/);
+	assert.throws(() => validateBundle({ ...base, files: [{ path: "AGENTS.md", data: b64("x".repeat(100)) }] }, { maxBytes: 50 }), /over the 50-byte limit/);
+	const fields = validateBundle({ ...base, agent: { name: "n", model: "p/m", thinking: "bogus", workspace: "../x", container: { memoryMb: 512, network: "open", env: "SECRET=1", mounts: "/:/x", pids: -1 }, extra: "x" } }).agent;
+	assert.deepEqual([fields.thinking, fields.workspace, fields.container], [null, "own", { memoryMb: 512 }], "only the safe fields survive, and bad ones fall back");
+
+	// The built-in templates are real and every file of them can travel.
+	const listed = listTemplates();
+	assert.deepEqual(listed.filter((t) => t.builtin).map((t) => t.name), ["architect", "coder", "devops", "researcher", "reviewer"]);
+	for (const t of listed) {
+		const full = getTemplate(t.name);
+		assert.ok(t.description.length > 10 && full.files.some((f) => f.path === "AGENTS.md"), `${t.name} has a description and instructions`);
+		validateBundle({ format: "piper-agent", version: 1, agent: { name: t.name }, files: full.files });
+		assert.ok(Buffer.from(full.files.find((f) => f.path === "AGENTS.md").data, "base64").toString().length > 300, `${t.name}'s instructions are real`);
+	}
+	assert.ok(getTemplate("reviewer").files.some((f) => f.path === "skills/review-checklist/SKILL.md"));
+	assert.throws(() => deleteTemplate("architect"), /built-in/);
+
+	// A fake docker that runs the profile helper over the mounted folder, so the real ops are exercised.
+	const bin = mkdtempSync(join(tmpdir(), "fakedocker3-"));
+	const helper = fileURLToPath(new URL("./piper-profile.mjs", import.meta.url));
+	writeFileSync(join(bin, "docker"), `#!/usr/bin/env bash
+dir=""; max=0; args=("$@"); rest=(); i=0
+while [ $i -lt $# ]; do
+  a="\${args[$i]}"
+  case "$a" in
+    -v) v="\${args[$((i+1))]}"; case "$v" in *:/data) dir="\${v%:/data}";; esac;;
+    -e) e="\${args[$((i+1))]}"; case "$e" in PROFILE_MAX_BYTES=*) max="\${e#*=}";; esac;;
+    /opt/piper/profile.mjs) rest=("\${args[@]:$((i+1))}"); break;;
+  esac
+  i=$((i+1))
+done
+[ -z "$dir" ] && exit 1
+cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
+`);
+	(await import("node:fs")).chmodSync(join(bin, "docker"), 0o755);
+	const oldPath = process.env.PATH;
+	process.env.PATH = `${bin}:${oldPath}`;
+	const made = apiKeys.create({ name: "template test", expiresAt: 0 });
+	const key = made.record ?? made;
+	const other = apiKeys.create({ name: "template other", expiresAt: 0 });
+	const otherKey = other.record ?? other;
+
+	// From a template: the profile has its instructions, the settings are applied.
+	const arch = await createFromTemplate({ keyId: key.id, template: "reviewer", name: "rev" });
+	assert.equal(arch.agent.workspace, "shared", "the template's workspace mode");
+	assert.equal(arch.agent.thinking, "high");
+	const scope = agentScope(key.id, arch.agent.id);
+	const instr = await profileOp(scope, { op: "instructions.get" });
+	assert.match(JSON.stringify(instr), /Reviewer/);
+	assert.ok((await profileOp(scope, { op: "skills.list" })).some((s) => s.name === "review-checklist"));
+	await assert.rejects(createFromTemplate({ keyId: key.id, template: "nope", name: "x" }), (e) => e.status === 404);
+	await assert.rejects(createFromTemplate({ keyId: key.id, template: "coder", name: "rev" }), /already has an agent/);
+	assert.equal(agents.find(key.id, "rev").id, arch.agent.id);
+
+	// Export, with things in the profile that must not travel: a link, auth.json, a stray folder.
+	const profileDir = join(TEST_PROFILES, scopeOf(scope));
+	await profileOp(scope, { op: "settings.put", settings: { theme: "dark" } });
+	writeFileSync(join(profileDir, "auth.json"), '{"secret":"do-not-export"}');
+	mkdirSync(join(profileDir, "scratch"), { recursive: true });
+	writeFileSync(join(profileDir, "scratch", "x"), "x");
+	symlinkSync("/etc/passwd", join(profileDir, "skills", "passwd-link"));
+	symlinkSync("/etc", join(profileDir, "prompts"));
+	const bundle = await exportAgent(arch.agent.id);
+	const paths = bundle.files.map((f) => f.path).sort();
+	assert.deepEqual(paths, ["AGENTS.md", "settings.json", "skills/review-checklist/SKILL.md"]);
+	assert.ok(bundle.skipped >= 1, "the links were skipped");
+	assert.equal(JSON.stringify(bundle).includes("do-not-export"), false, "auth.json never travels");
+	assert.deepEqual(Object.keys(bundle.agent).sort(), ["container", "description", "model", "name", "thinking", "workspace"]);
+
+	// Import into another key: same files, a fresh profile; a hostile bundle writes nothing and leaves no agent.
+	const imported = await importBundle({ keyId: otherKey.id, bundle: JSON.parse(JSON.stringify(bundle)), name: "copy" });
+	const otherScope = agentScope(otherKey.id, imported.agent.id);
+	assert.match(JSON.stringify(await profileOp(otherScope, { op: "instructions.get" })), /Reviewer/);
+	assert.deepEqual((await profileOp(otherScope, { op: "settings.get" })), { theme: "dark" });
+	const before = agents.listByKey(otherKey.id).length;
+	for (const files of [[{ path: "../../escape", data: b64("x") }], [{ path: "skills/x/SKILL.md", data: b64("ok") }, { path: "auth.json", data: b64("x") }]]) {
+		await assert.rejects(importBundle({ keyId: otherKey.id, bundle: { ...bundle, files }, name: "evil" }), (e) => e.status === 400);
+	}
+	assert.equal(agents.listByKey(otherKey.id).length, before, "a refused bundle leaves no agent behind");
+	assert.equal(existsSync(join(TEST_PROFILES, "escape")), false);
+	await assert.rejects(importBundle({ keyId: otherKey.id, bundle, name: "copy" }), /already has an agent/);
+	await assert.rejects(importBundle({ keyId: "nope", bundle, name: "z" }), (e) => e.status === 404);
+	// A planted link in the new profile is not written through (the helper checks every step of the way).
+	const target = await createAgent({ keyId: key.id, name: "linked" });
+	const targetScope = agentScope(key.id, target.id);
+	const targetDir = join(TEST_PROFILES, scopeOf(targetScope));
+	mkdirSync(join(TEST_WS, "elsewhere"), { recursive: true });
+	symlinkSync(join(TEST_WS, "elsewhere"), join(targetDir, "skills"));
+	await assert.rejects(profileOp(targetScope, { op: "tree.import", files: [{ path: "skills/x/SKILL.md", data: b64("pwn") }] }), /in the way/);
+	assert.equal(existsSync(join(TEST_WS, "elsewhere", "x")), false, "nothing was written through the link");
+	// A quota is respected.
+	config.PROFILE_MAX_BYTES = 100;
+	await assert.rejects(profileOp(otherScope, { op: "tree.import", files: [{ path: "prompts/big.md", data: b64("x".repeat(5000)) }] }), /quota/);
+	config.PROFILE_MAX_BYTES = 0;
+
+	// Clone: a new agent of the same key, same profile.
+	const clone = await cloneAgent(arch.agent.id, "rev-two");
+	assert.equal(clone.agent.keyId, key.id);
+	assert.equal(clone.agent.workspace, "shared");
+	assert.match(JSON.stringify(await profileOp(agentScope(key.id, clone.agent.id), { op: "instructions.get" })), /Reviewer/);
+
+	// Save as a template, use it, delete it.
+	await assert.rejects(saveTemplate({ fromAgent: arch.agent.id, name: "Bad Name" }), /lowercase/);
+	await assert.rejects(saveTemplate({ fromAgent: arch.agent.id, name: "coder" }), /already a template/);
+	const savedT = await saveTemplate({ fromAgent: arch.agent.id, name: "my-reviewer", description: "mine" });
+	assert.deepEqual([savedT.builtin, savedT.description], [false, "mine"]);
+	const fromSaved = await createFromTemplate({ keyId: otherKey.id, template: "my-reviewer", name: "from-saved", model: null });
+	assert.match(JSON.stringify(await profileOp(agentScope(otherKey.id, fromSaved.agent.id), { op: "instructions.get" })), /Reviewer/);
+	config.TEMPLATE_MAX_BYTES = 64 * 1024;
+	writeFileSync(join(profileDir, "AGENTS.md"), "y".repeat(80 * 1024));
+	await assert.rejects(saveTemplate({ fromAgent: arch.agent.id, name: "too-big" }), /over the .* limit/);
+	config.TEMPLATE_MAX_BYTES = 5 * 1024 * 1024;
+	assert.equal(deleteTemplate("my-reviewer"), true);
+	assert.equal(getTemplate("my-reviewer"), null);
+
+	for (const a of agents.list().filter((x) => [key.id, otherKey.id].includes(x.keyId))) await deleteAgent(a.id);
+	process.env.PATH = oldPath;
+}
+
+// Phase 4: delegation and teams.
+{
+	const D = await import("./server.mjs");
+	const { colleagues, delegatorFor, mayDelegate, setAgentTurnRunner, createTeam, updateTeam, deleteTeam, listTeams, getTeam, runTeam, fillStep, checkedSteps, startTeam, stopTeamServers, listeningTeamPort, agents, apiKeys, config, db } = D;
+	const mk = (name) => { const c = apiKeys.create({ name, expiresAt: 0 }); return { record: c.record ?? c, token: c.key }; };
+	const k1 = mk("deleg-1");
+	const k2 = mk("deleg-2");
+	const mkAgent = (keyId, name, extra = {}) => { const a = agents.create({ keyId, name }); return agents.update(a.id, extra); };
+	const arch = mkAgent(k1.record.id, "arch", { description: "designs", canDelegate: true });
+	const coder = mkAgent(k1.record.id, "coder", { description: "writes code" });
+	const off = mkAgent(k1.record.id, "off", { enabled: false });
+	const foreign = mkAgent(k2.record.id, "stranger");
+	const rec = (agent, extra = {}) => ({ id: `rec-${agent.id}`, keyId: agent.keyId, agentId: agent.id, delegateDepth: 0, delegateChain: [], live: { note() {} }, ...extra });
+
+	// Who may delegate, and to whom.
+	assert.equal(mayDelegate(rec(arch)), true);
+	assert.equal(mayDelegate(rec(coder)), false, "off by default");
+	assert.equal(mayDelegate({ keyId: k1.record.id, agentId: null }), false, "the key's main endpoint does not delegate");
+	assert.deepEqual(colleagues(rec(arch)), [{ name: "coder", description: "writes code" }], "not itself, not a disabled agent, not another key's");
+	assert.deepEqual(colleagues(rec(arch, { delegateChain: [coder.id] })), [], "nobody already in the chain");
+	config.DELEGATE_ENABLED = false;
+	assert.equal(mayDelegate(rec(arch)), false);
+	assert.deepEqual(colleagues(rec(arch)), []);
+	config.DELEGATE_ENABLED = true;
+
+	// A hand-off runs the colleague with its credential, a derived session, and a deeper chain.
+	const seen = [];
+	let hold = null;
+	setAgentTurnRunner(async ({ credential, clientSessionId, prompt, signal }) => {
+		seen.push({ credential, clientSessionId, prompt });
+		if (hold) await new Promise((res, rej) => signal.addEventListener("abort", () => rej(new Error("aborted"))));
+		return { text: `done: ${prompt}`, usage: { total_tokens: 5 }, cost: 0.01, scopedId: "x" };
+	});
+	const d = delegatorFor(rec(arch));
+	assert.deepEqual(d.agents(), [{ name: "coder", description: "writes code" }]);
+	assert.equal(await d.delegate("coder", "write fizzbuzz"), "done: write fizzbuzz");
+	assert.equal(seen[0].credential.agent.id, coder.id);
+	assert.equal(seen[0].credential.id, k1.record.id, "run as the same key");
+	assert.equal(seen[0].credential.delegateDepth, 1);
+	assert.deepEqual(seen[0].credential.delegateChain, [arch.id]);
+	await d.delegate("coder", "again");
+	assert.equal(seen[1].clientSessionId, seen[0].clientSessionId, "the colleague keeps its conversation across calls from one chat");
+	await delegatorFor(rec(arch, { id: "another-chat" })).delegate("coder", "x");
+	assert.notEqual(seen[2].clientSessionId, seen[0].clientSessionId, "another chat of the caller gets its own");
+	for (const [name, task, re] of [["arch", "x", /itself/], ["nobody", "x", /no agent called/], ["stranger", "x", /no agent called/], ["off", "x", /switched off/], ["coder", "  ", /no task/], ["coder", "x".repeat(40000), /over 32768/]]) {
+		await assert.rejects(d.delegate(name, task), re, name);
+	}
+	await assert.rejects(delegatorFor(rec(arch, { delegateDepth: 3 })).delegate("coder", "x"), /3 deep/, "depth limit");
+	config.DELEGATE_MAX_DEPTH = 5;
+	await delegatorFor(rec(arch, { delegateDepth: 3 })).delegate("coder", "x");
+	config.DELEGATE_MAX_DEPTH = 3;
+	await assert.rejects(delegatorFor(rec(arch, { delegateChain: [coder.id] })).delegate("coder", "x"), /already waiting/, "no loops");
+	await assert.rejects(delegatorFor(rec(coder)).delegate("arch", "x"), /not allowed to delegate/);
+	// A caller that goes away stops the colleague; a slow colleague times out.
+	hold = {};
+	const ac = new AbortController();
+	const pending = d.delegate("coder", "slow", ac.signal);
+	setTimeout(() => ac.abort(), 30);
+	await assert.rejects(pending, /the caller stopped/);
+	config.DELEGATE_TIMEOUT_MS = 40;
+	await assert.rejects(d.delegate("coder", "slow"), /took too long/);
+	config.DELEGATE_TIMEOUT_MS = 600000;
+	hold = null;
+	// A refusal inside the colleague's turn reaches the caller in words.
+	setAgentTurnRunner(async () => { throw new D.AgentRunError("daily spend limit reached", 429, "spend_limit_exceeded", "rate_limit_error"); });
+	await assert.rejects(d.delegate("coder", "x"), /could not do it: daily spend limit reached/);
+
+	// Teams: steps are checked.
+	assert.equal(fillStep("A {{task}} B {{previous}}", "T", "P"), "A T B P");
+	assert.throws(() => checkedSteps(k1.record.id, []), /at least one step/);
+	assert.throws(() => checkedSteps(k1.record.id, [{ agent: "stranger", instruction: "{{task}}" }]), /no agent "stranger"/);
+	assert.throws(() => checkedSteps(k1.record.id, [{ agent: "arch", instruction: "do it" }]), /\{\{task\}\} or \{\{previous\}\}/);
+	config.TEAM_MAX_STEPS = 2;
+	assert.throws(() => checkedSteps(k1.record.id, [1, 2, 3].map(() => ({ agent: "arch", instruction: "{{task}}" }))), /at most 2/);
+	config.TEAM_MAX_STEPS = 6;
+	await assert.rejects(createTeam({ keyId: k1.record.id, name: "Bad Name", steps: [{ agent: "arch", instruction: "{{task}}" }] }), /lowercase/);
+
+	// A team runs its steps in order on its own port.
+	const log = [];
+	setAgentTurnRunner(async ({ credential, clientSessionId, prompt }) => {
+		log.push({ agent: credential.agent.name, clientSessionId, prompt });
+		if (/FAIL/.test(prompt)) throw new D.AgentRunError("boom", 500);
+		return { text: `${credential.agent.name} says (${prompt.replace(/\s+/g, " ")})`, usage: { total_tokens: 10 }, cost: 0.5, scopedId: "x" };
+	});
+	const team = await createTeam({ keyId: k1.record.id, name: "pipeline", description: "design then code", steps: [{ agent: "arch", instruction: "Design: {{task}}" }, { agent: "coder", instruction: "Implement {{previous}} for {{task}}" }] });
+	assert.equal(team.status, "listening");
+	assert.ok(team.port > 0);
+	const url = `http://127.0.0.1:${team.port}`;
+	const post = (body, token = k1.token, headers = {}) => fetch(`${url}/v1/chat/completions`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...headers }, body: JSON.stringify(body) });
+	assert.equal((await post({ messages: [{ role: "user", content: "hi" }] }, k2.token)).status, 401, "only the owning key");
+	assert.equal((await fetch(`${url}/v1/chat/completions`, { method: "POST", body: "{}" })).status, 401);
+	assert.equal((await fetch(`${url}/v1/piper/profile`, { headers: { Authorization: `Bearer ${k1.token}` } })).status, 404, "nothing else is served");
+	assert.equal((await post({ messages: [{ role: "system", content: "x" }] })).status, 400);
+	log.length = 0;
+	const answer = await (await post({ messages: [{ role: "user", content: "a todo app" }] }, k1.token, { "X-Session-Id": "conv1" })).json();
+	assert.equal(answer.choices[0].message.content, "coder says (Implement arch says (Design: a todo app) for a todo app)");
+	assert.deepEqual(log.map((l) => l.agent), ["arch", "coder"], "in order");
+	assert.match(answer.choices[0].message.reasoning_content, /▸ step 1 of 2: arch[\s\S]*✓ arch[\s\S]*▸ step 2 of 2: coder/);
+	assert.equal(answer.usage.total_tokens, 20);
+	assert.equal(new Set(log.map((l) => l.clientSessionId)).size, 2, "each step has its own session");
+	log.length = 0;
+	await post({ messages: [{ role: "user", content: "a todo app" }, { role: "assistant", content: "x" }, { role: "user", content: "add tags" }] }, k1.token, { "X-Session-Id": "conv1" });
+	assert.match(log[0].prompt, /add tags/, "{{task}} is the newest user message");
+	assert.match(log[0].clientSessionId, /:conv1:0$/, "a follow-up reaches the same agent sessions");
+	// Streaming: progress as reasoning, then the answer.
+	const streamed = await (await post({ stream: true, messages: [{ role: "user", content: "stream it" }] })).text();
+	assert.match(streamed, /"reasoning_content":"▸ step 1 of 2: arch\\n"/);
+	assert.match(streamed, /"content":"coder says/);
+	assert.ok(streamed.trimEnd().endsWith("data: [DONE]"));
+	// A failing step is named; the team stops there.
+	log.length = 0;
+	const failed = await post({ messages: [{ role: "user", content: "FAIL please" }] });
+	assert.equal(failed.status, 500);
+	assert.match((await failed.json()).error.message, /step 1 of 2 \(arch\) failed: boom/);
+	assert.equal(log.length, 1, "the chain stopped at the failing step");
+	// Switching off closes the port; a deleted agent breaks the team plainly.
+	assert.equal(listTeams().find((t) => t.id === team.id).broken, false);
+	const updated = await updateTeam(team.id, { description: "changed" });
+	assert.equal(updated.description, "changed");
+	agents.remove(coder.id);
+	assert.equal(listTeams().find((t) => t.id === team.id).broken, true);
+	const broken = await post({ messages: [{ role: "user", content: "x" }] });
+	assert.equal(broken.status, 409);
+	assert.match((await broken.json()).error.message, /agent was deleted/);
+	await updateTeam(team.id, { enabled: false });
+	await assert.rejects(fetch(`${url}/health`), /fetch failed/);
+	assert.equal(listeningTeamPort(team.id), null);
+	await deleteTeam(team.id);
+	assert.equal(getTeam(team.id), null);
+	setAgentTurnRunner(null);
+	await stopTeamServers();
+}
+
+// Phase 5: packages, MCP servers and bundles.
+{
+	const P = await import("./server.mjs");
+	const { validateSource, mcpAddArgs, packageRunArgs, runPiCommand, PackageError, installPackage, addMcp, listMcp, setMcpEnabled, createBundle, deleteBundle, bundleOverview, bundleDir, bundleUsers, bundleRoutes, packageRoutes, apiKeys, config, setProfileLock, profileOp, ensureProfile, sharedRoot } = P;
+
+	// Package sources: what may be typed.
+	for (const good of ["npm:left-pad", "npm:@scope/pkg", "npm:pkg@1.2.3", "npm:@scope/pkg@^1.0.0", "git:github.com/user/repo", "git:github.com/user/repo@v1.2", "https://github.com/user/repo", "https://gitlab.example.com:8443/group/sub/repo@main"]) assert.equal(validateSource(good), good, good);
+	for (const evil of ["", "  ", "./local/path", "/etc/passwd", "../x", "-l", "--local", "npm:--registry=http://evil", "npm:pkg --global", "npm:pkg;rm -rf /", "npm:pkg$(id)", "npm:Pkg With Space", "git:git@github.com:user/repo", "ssh://git@github.com/user/repo", "http://github.com/user/repo", "https://user:pw@github.com/user/repo", "https://localhost/x", "https://github.com/user/repo?x=1", "file:///etc", "npm:", "npm:@/x", "x".repeat(300), "https://github.com/../x", "git:github.com/a/b\nc"]) assert.throws(() => validateSource(evil), PackageError, JSON.stringify(evil));
+
+	// MCP: composed as separate arguments, secrets only as references.
+	assert.deepEqual(mcpAddArgs({ name: "fs", command: "npx", args: ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"] }), ["mcp", "add", "fs", "--", "npx", "-y", "@modelcontextprotocol/server-filesystem", "/workspace"]);
+	assert.deepEqual(mcpAddArgs({ name: "tools", command: "uvx", args: ["tools-mcp"], env: { API_KEY: "${TOOLS_KEY}" }, exposure: "direct" }), ["mcp", "add", "tools", "--exposure", "direct", "--env", "API_KEY=${TOOLS_KEY}", "--", "uvx", "tools-mcp"]);
+	assert.deepEqual(mcpAddArgs({ name: "docs", url: "https://example.com/mcp", bearerTokenEnv: "DOCS_TOKEN" }), ["mcp", "add", "docs", "--url", "https://example.com/mcp", "--bearer-token-env-var", "DOCS_TOKEN"]);
+	for (const [input, re] of [
+		[{ name: "bad name", command: "npx" }, /name is letters/],
+		[{ name: "x", command: "npx -y evil" }, /one program/],
+		[{ name: "x", command: "-rf" }, /one program/],
+		[{ name: "x", command: "npx", args: ["a\nb"] }, /arguments/],
+		[{ name: "x", command: "npx", args: Array(41).fill("a") }, /at most 40/],
+		[{ name: "x", command: "npx", env: { KEY: "sk-live-secret" } }, /never the secret itself/],
+		[{ name: "x", command: "npx", env: { "BAD KEY": "${A}" } }, /not an environment variable name/],
+		[{ name: "x", command: "npx", env: { KEY: "${A} and more" } }, /never the secret itself/],
+		[{ name: "x", command: "npx", exposure: "everything" }, /exposure is one of/],
+		[{ name: "x", url: "ftp://x/y" }, /http or https/],
+		[{ name: "x", url: "https://user:pw@example.com/mcp" }, /no credentials/],
+		[{ name: "x", url: "https://example.com/mcp", command: "npx" }, /not both/],
+		[{ name: "x", url: "https://example.com/mcp", bearerTokenEnv: "not a name" }, /bearer token variable/],
+		[{ name: "x", url: "nonsense" }, /not valid/],
+	]) assert.throws(() => mcpAddArgs(input), re, JSON.stringify(input));
+
+	// The container command line: only the profile is mounted.
+	const run = packageRunArgs({ name: "piper-pkg-1", image: "piper-agent", profileDir: "/p/key-1", piArgs: ["install", "npm:x"], network: "internet", memoryMb: 512, pids: 100, cpus: 1.5, timeoutSeconds: 120 });
+	assert.deepEqual(run.filter((_, i) => run[i - 1] === "-v"), ["/p/key-1:/profile"], "the profile is the only mount");
+	assert.equal(run.some((a) => /docker\.sock|--privileged|--cap-add|--volumes-from|--mount|--device/.test(a)), false);
+	assert.ok(run.includes("--read-only") && run.includes("--rm") && run.includes("no-new-privileges"));
+	assert.deepEqual(run.slice(run.indexOf("--entrypoint")), ["--entrypoint", "timeout", "piper-agent", "-k", "10", "120", "pi", "install", "npm:x"], "the arguments go as separate words after the image");
+	assert.ok(run.join(" ").includes("--memory 512m --memory-swap 512m") && run.join(" ").includes("--pids-limit 100") && run.join(" ").includes("--cpus 1.5"));
+	assert.ok(run.includes("PI_CODING_AGENT_DIR=/profile"));
+	assert.equal(run.some((a) => /PI_OFFLINE/.test(a)), false, "Pi may reach the network for an install");
+	assert.deepEqual(run.slice(run.indexOf("--network"), run.indexOf("--network") + 2), ["--network", "piper"], "the scope's own network");
+	assert.deepEqual(packageRunArgs({ name: "n", image: "i", profileDir: "/p", piArgs: ["mcp", "add"], network: "none" }).slice(0), packageRunArgs({ name: "n", image: "i", profileDir: "/p", piArgs: ["mcp", "add"], network: "none" }));
+	const nonet = packageRunArgs({ name: "n", image: "i", profileDir: "/p", piArgs: ["mcp", "add"], network: "none" });
+	assert.deepEqual(nonet.slice(nonet.indexOf("--network"), nonet.indexOf("--network") + 2), ["--network", "none"]);
+
+	// Refusals before anything runs: the network policy, a locked profile, the switch.
+	const made = apiKeys.create({ name: "pkg test", expiresAt: 0 });
+	const key = made.record ?? made;
+	apiKeys.update(key.id, { container: { network: "none" } });
+	await assert.rejects(runPiCommand(key.id, ["install", "npm:x"], { needsNetwork: true }), (e) => e.status === 409 && /network policy is "none"/.test(e.message));
+	apiKeys.update(key.id, { container: null });
+	ensureProfile(key.id);
+	setProfileLock(P.profileScope(key.id), true);
+	assert.throws(() => installPackage(key.id, "npm:x"), (e) => e.status === 423);
+	setProfileLock(P.profileScope(key.id), false);
+	config.PACKAGES_ENABLED = false;
+	assert.throws(() => installPackage(key.id, "npm:x"), (e) => e.status === 403);
+	assert.throws(() => addMcp(key.id, { name: "a", command: "npx" }), (e) => e.status === 403);
+	config.PACKAGES_ENABLED = true;
+	assert.throws(() => installPackage(key.id, "./local"), PackageError, "validated before any container");
+	assert.throws(() => addMcp(key.id, { name: "a", command: "npx", env: { K: "plain" } }), /never the secret/);
+
+	// Bundles: the folder, its checks, who gets it.
+	const root = sharedRoot();
+	mkdirSync(root, { recursive: true });
+	assert.deepEqual(createBundle("team-tools"), { name: "team-tools" });
+	for (const sub of ["skills", "extensions", "prompts"]) assert.ok(existsSync(join(root, "team-tools", sub)));
+	for (const evil of ["", "../x", "a/b", ".hidden", "x".repeat(65), "a b"]) assert.throws(() => createBundle(evil), /name/, JSON.stringify(evil));
+	assert.throws(() => createBundle("team-tools"), /already a bundle/);
+	assert.equal(bundleDir("team-tools"), join(root, "team-tools"));
+	assert.throws(() => bundleDir("nope"), (e) => e.status === 404);
+	assert.throws(() => bundleDir("../etc"), /not a bundle name/);
+	mkdirSync(join(TEST_WS, "outside-bundle"), { recursive: true });
+	symlinkSync(join(TEST_WS, "outside-bundle"), join(root, "linked"));
+	assert.throws(() => bundleDir("linked"), (e) => e.status === 409 && /link/.test(e.message), "a linked bundle is not edited from here");
+	assert.equal(bundleOverview().bundles.find((b) => b.name === "linked").editable, false);
+	apiKeys.update(key.id, { sharedBundles: "team-tools" });
+	assert.deepEqual(bundleUsers("team-tools").map((u) => u.label), ["pkg test"]);
+	await assert.rejects(deleteBundle("team-tools"), (e) => e.status === 409 && /granted to pkg test/.test(e.message));
+	assert.deepEqual((await deleteBundle("team-tools", { force: true })), { deleted: "team-tools" });
+	assert.equal(existsSync(join(root, "team-tools")), false);
+	assert.ok(existsSync(join(TEST_WS, "outside-bundle")), "deleting never follows a link");
+
+	// Routes: changes need a dashboard password; reading does not.
+	const http = await import("node:http");
+	const srv = http.createServer((req, res) => void (async () => { const p = new URL(req.url, "http://x").pathname; (await bundleRoutes(req, res, p)) || (await packageRoutes(req, res, p)) || (res.writeHead(404), res.end()); })());
+	await new Promise((r) => srv.listen(0, "127.0.0.1", r));
+	const base = `http://127.0.0.1:${srv.address().port}`;
+	const call = (path, method = "GET", body) => fetch(base + path, { method, headers: { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+	P.clearPasswordHash();
+	assert.equal((await call("/dashboard/bundles", "POST", { name: "x1" })).status, 403);
+	assert.equal((await call("/dashboard/bundles/x1", "DELETE")).status, 403);
+	assert.equal((await call("/dashboard/bundlefiles/x1/skills/a.md?as=text", "PUT", { text: "x" })).status, 403);
+	assert.equal((await call(`/dashboard/packages/key-${key.id}/install`, "POST", { source: "npm:x" })).status, 403);
+	assert.equal((await call(`/dashboard/packages/key-${key.id}/mcp-enable`, "POST", { name: "a" })).status, 403);
+	assert.equal((await call("/dashboard/bundles.json")).status, 200);
+	const info = await (await call(`/dashboard/packages/key-${key.id}.json`)).json();
+	assert.deepEqual([info.passwordSet, info.enabled, info.packages, info.mcp.servers], [false, true, [], []]);
+	assert.equal((await call("/dashboard/packages/key-nonexistent-key.json")).status, 404);
+	assert.equal((await call("/dashboard/packages/job.json")).status, 200);
+	P.setPasswordHash(P.hashPassword("a long enough password"));
+	assert.equal((await call("/dashboard/bundles", "POST", { name: "x1" })).status, 201);
+	assert.equal((await call("/dashboard/bundles", "POST", { name: "x1" })).status, 409);
+	assert.equal((await call(`/dashboard/packages/key-${key.id}/install`, "POST", { source: "../../x" })).status, 400);
+	assert.equal((await call(`/dashboard/packages/key-${key.id}/mcp-add`, "POST", { name: "a", command: "npx", env: { K: "plain" } })).status, 400);
+	assert.equal((await call(`/dashboard/packages/key-${key.id}/nonsense`, "POST", {})).status, 404);
+	assert.equal((await call("/dashboard/bundles/x1", "DELETE")).status, 200);
+	P.clearPasswordHash();
+	await new Promise((r) => srv.close(r));
+	srv.closeAllConnections?.();
+	rmSync(join(root, "linked"), { force: true });
 }
 
 console.log("nextTurn + images: ok");

@@ -30,8 +30,17 @@ start (Docker, the image or the network policy) or the disk is nearly full.
 Every live conversation: session fingerprint, model, the **Pi version in its container** (green when it matches
 the gateway's, red when behind), its average **generation speed** and **prompt processing speed** in tokens per
 second (hover for the last call and each model's figure), age, idle time, time to expiry and what happens then (stops or ends), requests,
-cost and state. **kill** ends one session; **kill all agents** ends every live session. Killing ends a chat for
+cost and state. **watch** opens a live view of the chat (below). **kill** ends one session; **kill all agents** ends every live session. Killing ends a chat for
 good, unlike idling, which only stops it.
+
+### Live view
+
+**watch** on a row opens a drawer that follows the chat as it happens: what you and the agent said, its thinking
+(dimmed), and each tool call with what it ran and what came back (results are cut at 2 KB). The header shows the
+model, tokens and cost. **interrupt** stops the turn that is running (the chat stays, and the next message
+continues it); **transcript** downloads the conversation so far as Markdown (tool results cut at 4 KB each).
+Only a chat that is running can be watched, and what it shows is what happened since the chat was last started:
+the last 300 items, kept in memory. It needs a dashboard password, because it shows what people say to agents.
 
 ## Endpoints (agent endpoints)
 
@@ -46,6 +55,96 @@ Named, permanent agents of an API key, each on its own port, for different roles
 - **Rules.** The port accepts only the owning key and serves only the API. The agent always has one persistent
   container. Limits, spend and the model allow-list stay on the key. Deleting archives its profile and own
   workspace instead of deleting them.
+
+### Packages and MCP servers (Profiles)
+
+The detail view of a key's or an agent's profile has a **Packages and MCP servers** section.
+
+- **Packages.** The packages in the profile's settings; **install** (`npm:name[@version]`, `git:host/owner/repo[@ref]` or an
+  `https://` repository, nothing else: no local paths, no flags), **remove**, **update all**. They are Pi's own packages, so
+  skills, extensions and prompts they carry load in that agent's chats.
+- **MCP servers.** The servers in the profile's `mcp.json` with what each runs; **add** a command (stdio: one program, its
+  arguments, environment) or a URL (HTTP, with a bearer-token variable), **remove**, **enable/disable**, and **test
+  connections** (`pi mcp list`: state, tools and errors). **Secrets are never written to `mcp.json`**: an environment value
+  must be a `${NAME}` reference, and the variable itself goes in the key's or agent's extra environment (container settings).
+- Each action is Pi's own command (`pi install`, `pi mcp add`) run in a **throwaway container**: the scope's image and limits,
+  only that profile mounted, no other mount or key, a ten-minute limit, and a network only when needed (an install, a test)
+  and only if the scope's policy is not `none`. Output streams into the panel. The live chats of that scope reload after.
+- Packages and MCP servers **run third-party code**. Changes need a dashboard password; `PACKAGES_ENABLED` switches the
+  feature off.
+
+### Shared bundles (Files)
+
+**Files → Bundles** edits the shared bundles under `SHARED_ROOT`: **new bundle** (creates `skills/`, `extensions/` and
+`prompts/`), the same browser and text editor as for profiles, upload, rename, delete, and **delete bundle**. Granting a
+bundle to keys stays on API Management. After a change the live chats of every key and agent that gets the bundle reload.
+A bundle that is a link (you pointed it at another folder) is shown but not edited here. Changes need a dashboard
+password, because every granted key runs a bundle's extensions.
+
+### Hand-offs between agents
+
+Switch **may hand work to the other agents of its key** on an agent's editor (and give each agent a **description**: what
+it is for). That agent then gets two tools: `piper_agents` lists its colleagues with their descriptions, and
+`piper_delegate` gives one of them a self-contained task and waits for the text answer. The colleague is a whole turn on
+the other agent with its own instructions, skills, files and container, run with the same key, so the key's limits and spend
+apply and the cost is the key's. Colleagues are only the **enabled agents of the same key**: never itself, never anyone
+already waiting in the chain (a call back would never be answered), and the chain is at most `DELEGATE_MAX_DEPTH` deep. A
+colleague keeps its conversation across the calls of one chat. If the caller is stopped (interrupt, kill), so is the
+colleague's turn; a hand-off that takes longer than `DELEGATE_TIMEOUT_MS` is stopped and the caller told. Each hand-off is
+a `runtime.delegate` audit row and a note in the live view.
+
+### Teams
+
+A **team** is a fixed chain of agents of one key with an OpenAI-compatible endpoint of its own (a port, like an agent's;
+only the owning key may use it). A chat completion runs the steps in order: each step has an agent and an instruction
+containing `{{task}}` (the newest user message) and/or `{{previous}}` (the last step's answer); the last step's text is
+the reply. Progress (`▸ step 1 of 3: architect`) streams as reasoning. The agents keep their context across follow-ups of
+the same conversation (send `X-Session-Id`). A failing step stops the run and is named in the error. At most
+`TEAM_MAX_STEPS` steps; every step is a turn on the key.
+
+### Templates, clone, export and import
+
+On the Endpoints page:
+
+- **Templates.** Pick one when you create an agent and it starts with that profile: instructions, skills and settings
+  (model, thinking level, workspace mode). Five ship with Piper (`architect`, `coder`, `researcher`, `reviewer` with a
+  review checklist skill, `devops`; the files are in `templates/`). **save as template** on an agent keeps a copy of its
+  profile in the database (up to `TEMPLATE_MAX_BYTES`) for new agents; deleting a template never touches agents made from it.
+- **Clone** makes a new agent of the same key with this one's profile and settings. Its workspace and its container's
+  installed state are not copied: it starts clean.
+- **Export** downloads one JSON file (`piper-agent`, version 1): the agent's name, description, model, thinking level,
+  workspace mode and memory/process/CPU limits, plus its instructions, settings, skills, extensions, prompts and agent
+  definitions. Never `auth.json`, model files, environment, mounts, image or network, and never a key.
+- **Import** reads such a file into any key, here or on another gateway, under a name you choose. It needs a dashboard
+  password, because a bundle can carry extensions (code). A model the gateway does not have is dropped and reported.
+
+Only regular files travel. A link or an odd file in the profile is skipped on export, and cannot be expressed in a
+bundle; every path is checked when the bundle is read and again by the profile helper that writes it.
+
+## Jobs
+
+A job is a prompt an agent runs with nobody at a client. Each belongs to a key (and optionally one of its agents) and
+runs **as that key**: its session cap, daily spend cap and model list apply, the cost is counted to it and to the
+agent, and a revoked, expired or switched-off key runs nothing (the run is recorded as *skipped*, with the reason).
+
+Three things start a run:
+
+- **A schedule**, in the gateway's local time: every N minutes or hours, every day at a time, on chosen weekdays at a
+  time, once, or only when started. A job never overlaps itself (a run that finds the previous one still going is
+  recorded as skipped). After downtime a missed run is made up **once**, not once per missed time.
+- **A webhook**: *create webhook trigger* gives the job a token, shown once and stored only as a hash. `POST
+  /v1/piper/jobs/<id>/trigger` with `Authorization: Bearer <token>` (or `X-Piper-Token`) starts it; the request body (cut
+  at 16 KB) replaces `{{payload}}` in the prompt. Calls closer than `JOBS_MIN_INTERVAL_MS` get 429. Revoke it any time.
+- **A request** through the API: `POST /v1/piper/jobs` (see the [API](api.md)).
+
+Each run has a time limit (the turn is stopped when it passes), a history with status, duration, cost and the full
+result text, and a **cancel** while it is going. A job can **continue one conversation** (the agent remembers earlier
+runs) or start fresh each time. With a **webhook URL** the finished run is POSTed there as JSON, signed in the
+`X-Piper-Signature` header (`t=<seconds>,v1=<hex>`: HMAC-SHA256 of `<seconds>.<body>` with the job's signing secret,
+shown once); a failed delivery is retried once and the outcome is written on the run.
+
+Settings (Settings → Jobs): `JOBS_ENABLED`, `JOBS_MAX_PARALLEL`, `JOBS_MIN_INTERVAL_MS`, `JOBS_MAX_PER_KEY`,
+`JOBS_RESULT_DAYS`.
 
 ## Containers
 
@@ -110,7 +209,7 @@ configuration. A **reload** button re-reads them.
 
 ## Spend
 
-What agents have cost, per model and per day, today and all time, tokens, cache reads and writes, and what is
+What agents have cost, per model and per day, **per key and agent**, today and all time, tokens, cache reads and writes, and what is
 running now. Costs for bridged models are the gateway's own metering; for direct models they come from the
 container's event stream.
 
