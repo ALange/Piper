@@ -36,8 +36,8 @@ Inside containers the gateway sets `PI_CODING_AGENT_DIR=/profile`, `PI_CONFIG_DI
 
 ## Per-key and per-agent overrides
 
-Some values have a default here and can be overridden for one API key (Profiles → the key → Container, and API
-Management):
+Some values have a default here and can be overridden for one API key (Files & profiles → Profiles → the key → Container, and the
+API keys page):
 
 | Override | Default it follows |
 |---|---|

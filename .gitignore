@@ -16,3 +16,4 @@ container-pi/
 backups/
 .watchdog-state
 node_modules/
+extensions/

@@ -9,7 +9,7 @@ guarded by the dashboard password. An agent endpoint's own port serves a small s
 Authorization: Bearer <api key>
 ```
 
-- Keys are created on the dashboard (API Management) and shown once. `GATEWAY_API_KEY`, when set, is an operator key
+- Keys are created on the dashboard (API keys) and shown once. `GATEWAY_API_KEY`, when set, is an operator key
   that is never limited.
 - While **no** key and no settings key exist, `/v1/*` is open. Once any key exists (even a revoked one) a valid
   key is required, so revoking your last key locks the API rather than opening it.
@@ -155,10 +155,13 @@ debugging, not as a stable interface.
 | `/dashboard/api-keys…` | List (`.json`, `/usage.json`), create, update, revoke, delete keys |
 | `/dashboard/profiles…`, `/dashboard/files/<scope>/…` | Profiles, lock and reset, update a profile's container; a key's workspace |
 | `/dashboard/jobs…` | Jobs: list, create, change, `run`, `runs`, `trigger`, `webhook-secret`, cancel a run |
+| `/dashboard/playground/targets.json`, `POST /dashboard/playground/chat`, `DELETE /dashboard/playground/conversation/<id>` | The Playground: who can be chatted with and their models; a turn as a Server-Sent Events stream (`item` events with the session's text, thinking and tool calls, then `done` or `error`); end a conversation's session. Needs a dashboard password |
+| `/dashboard/wizard.json`, `POST /dashboard/agents/wizard` | What the creation wizard offers; create an agent from all its choices at once (`{keyId or newKey: {name, expiresAt}, name, description, template?, model, thinking, workspace, instructions, skills: {exclude, add}, extensions, packages, container, canDelegate}`) |
+| `/dashboard/extensions.json`, `/dashboard/extensions/install\|update\|remove\|access` | The extension library, and who gets what (`{level: default\|key\|agent, id, list}`; blank follows the level above, `none` gives nothing) |
 | `/dashboard/bundles…`, `/dashboard/bundlefiles/<name>/…` | Shared bundles: list, create, delete; the file browser over one bundle |
 | `/dashboard/packages/<scope>.json`, `…/<scope>/install\|remove\|update\|mcp-add\|mcp-remove\|mcp-enable\|mcp-test`, `…/job.json` | Packages and MCP servers of a profile; the running or last job |
 | `/dashboard/teams…` | Teams: list, create, change (`enabled`, steps), delete |
-| `/dashboard/templates…` | Templates: list, save from an agent, delete |
+| `/dashboard/templates…` | Templates: list, `GET` one in full, `PATCH` your own (fields and files), `POST …/copy`, save from an agent, delete |
 | `/dashboard/agents/from-template`, `/dashboard/agents/import`, `/dashboard/agents/<id>/clone`, `…/export` | New agent from a template; import a bundle (needs a dashboard password); clone; download a bundle |
 | `/dashboard/agents…` | Agent endpoints: list, create, update, `enable`, `disable`, `new-port`, `reset`, `update`, delete |
 | `/dashboard/containers.json`, `/dashboard/containers/<name>/<action>` | List; `stop`, `update`, `recreate`, `remove`, `exec` |

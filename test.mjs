@@ -18,6 +18,8 @@ const TEST_PROFILES = `${tmpdir()}/piper-test-profiles-${process.pid}`;
 process.env.PROFILE_ROOT = TEST_PROFILES;
 const TEST_SHARED = `${tmpdir()}/piper-test-shared-${process.pid}`;
 process.env.SHARED_ROOT = TEST_SHARED;
+const TEST_EXT = `${tmpdir()}/piper-test-extlib-${process.pid}`;
+process.env.EXTENSIONS_ROOT = TEST_EXT;
 const TEST_CONTAINER_PI = `${tmpdir()}/piper-test-container-pi-${process.pid}`;
 process.env.CONTAINER_PI_DIR = TEST_CONTAINER_PI;
 const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
@@ -1750,7 +1752,7 @@ assert.equal(isReloadCommand(undefined), false);
 		const db = new DatabaseSync(path);
 		db.exec("CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, source TEXT, updated_at INTEGER); CREATE TABLE chats (id_hash TEXT PRIMARY KEY, key_id TEXT, workspace TEXT NOT NULL); CREATE TABLE marker (n INTEGER)");
 		const put = db.prepare("INSERT INTO settings VALUES (?, ?, 'ui', 1)");
-		put.run("PROFILE_ROOT", join(dir, "profiles")); put.run("WORKSPACE_ROOT", join(dir, "workspaces")); put.run("SHARED_ROOT", join(dir, "shared")); put.run("CONTAINER_PI_DIR", join(dir, "container-pi")); put.run("PORT", "18771");
+		put.run("PROFILE_ROOT", join(dir, "profiles")); put.run("WORKSPACE_ROOT", join(dir, "workspaces")); put.run("SHARED_ROOT", join(dir, "shared")); put.run("EXTENSIONS_ROOT", join(dir, "extensions")); put.run("CONTAINER_PI_DIR", join(dir, "container-pi")); put.run("PORT", "18771");
 		db.prepare("INSERT INTO chats VALUES ('h1', 'k1', ?)").run(join(dir, "workspaces", "key-k1"));
 		db.prepare("INSERT INTO chats VALUES ('h2', 'k2', '/somewhere/else')").run();
 		db.exec("INSERT INTO marker VALUES (42)");
@@ -2071,13 +2073,222 @@ assert.equal(isReloadCommand(undefined), false);
 		reply = (bin, args) => (args[0] === "images" ? { code: 0, stdout: imageRow("sha256:full", "piper-agent", "latest", "2 hours ago", "1.9GB"), stderr: "" } : args[0] === "image" && args[1] === "inspect" ? { code: 0, stdout: JSON.stringify([dinfo["sha256:full"]]), stderr: "" } : { code: 0, stdout: "", stderr: "" });
 		const list = await call("GET", "/dashboard/images.json");
 		assert.equal(list.status, 200);
-		assert.deepEqual(Object.keys(list.json).sort(), ["environments", "hostPiVersion", "images", "job"]);
+		assert.deepEqual(Object.keys(list.json).sort(), ["dangling", "environments", "hostPiVersion", "idleContainers", "images", "job", "states"]);
 		assert.equal((await call("POST", "/dashboard/images/build", { env: "nope" })).status, 404);
 		assert.equal((await call("POST", "/dashboard/images/remove", { image: "piper-agent" })).status, 409, "the default image cannot be removed from the page either");
 		assert.equal((await call("POST", "/dashboard/images/remove", { image: "" })).status, 400, "a blank reference is refused, not read as \"every image\"");
 		assert.equal((await call("POST", "/dashboard/images/remove", { image: "sha" })).status, 404, "and a short string does not pick an image by its prefix");
 		assert.equal((await call("POST", "/dashboard/images/nonsense", {})).status, 404);
 		assert.equal((await call("GET", "/dashboard/images/build")).status, 404, "building needs POST");
+	}
+
+	// Cleaning up: a fake docker with the situations that keep old images alive.
+	{
+		const { cleanupPlan, runCleanup, autoPrune, NeedsForce } = await import("./server.mjs");
+		const own = (w) => `piper-${instanceId()}-${chatIdHash(w).slice(0, 16)}`;
+		const other = (w) => `piper-deadbeef-${chatIdHash(w).slice(0, 16)}`;
+		const rows = [
+			["sha256:default", "piper-agent", "latest", 1900], ["sha256:oldrun", "<none>", "<none>", 1800], ["sha256:oldidle", "<none>", "<none>", 1700], ["sha256:orphan", "<none>", "<none>", 1600],
+			["sha256:stale", "piper-agent-slim", "latest", 700], ["sha256:fresh", "piper-agent-re", "latest", 800], ["sha256:keptimg", "<none>", "<none>", 1500], ["sha256:foreignimg", "<none>", "<none>", 1400],
+		];
+		const labels = (id) => ({ "piper.image": "1", "piper.pi-version": id === "sha256:stale" ? "0.98.0" : "0.99.1" });
+		const containers = [
+			{ name: own("run"), image: "sha256:oldrun", running: true }, { name: own("idle1"), image: "sha256:oldidle", running: false }, { name: own("idle2"), image: "sha256:oldidle", running: false },
+			{ name: `piper-${instanceId()}-key-abcdef123456`, image: "sha256:keptimg", running: false, persistent: true }, { name: other("far"), image: "sha256:foreignimg", running: false },
+			{ name: own("cur"), image: "sha256:default", running: true },
+		];
+		const states = [["sha256:st-orphan", `gone${"0".repeat(8)}-abc`], ["sha256:st-live", `${containers[3].name.replace(/^piper-/, "")}`]];
+		let removedC = [];
+		let removedI = [];
+		const alive = () => containers.filter((c) => !removedC.includes(c.name));
+		const fmt = (r) => JSON.stringify({ ID: r[0], Repository: r[1], Tag: r[2], CreatedSince: "1 day ago", Size: `${r[3]}MB` });
+		reply = (bin, args) => {
+			const ok = (stdout = "") => ({ code: 0, stdout, stderr: "" });
+			if (args[0] === "images") {
+				if (args.includes("label=piper.image=1")) return ok([...rows.filter((r) => !removedI.includes(r[0])).map(fmt), ...states.filter((x) => !removedI.includes(x[0])).map((x) => fmt([x[0], "piper-keystate", x[1], 900]))].join("\n"));
+				if (!args.includes("--filter")) return ok([...states.filter((x) => !removedI.includes(x[0])).map((x) => fmt([x[0], "piper-keystate", x[1], 900])), fmt(["sha256:dangle", "<none>", "<none>", 300])].join("\n"));
+				return ok();
+			}
+			if (args[0] === "image" && args[1] === "inspect") return ok(JSON.stringify(args.slice(2).map((id) => ({ Id: id, Size: (rows.find((r) => r[0] === id)?.[3] ?? 900) * 1048576, Config: { Labels: id === "sha256:dangle" || id.startsWith("sha256:st-") ? {} : labels(id) } }))));
+			if (args[0] === "ps") return ok(alive().filter((c) => !args.some((x) => /label=piper\.instance=/.test(x)) || c.name.startsWith(`piper-${instanceId()}-`)).map((c) => `${c.name}\t${c.running ? "running" : "exited"}\t\t`).join("\n"));
+			if (args[0] === "inspect") return ok(JSON.stringify(alive().map((c) => ({ Name: `/${c.name}`, Image: c.image, State: { Running: c.running }, Config: { Labels: c.persistent ? { "piper.persistent": "1" } : {} } }))));
+			if (args[0] === "rm") { removedC.push(args[args.length - 1]); return ok(); }
+			if (args[0] === "rmi") {
+				const ref = args[args.length - 1];
+				const id = rows.find((r) => r[1] !== "<none>" && `${r[1]}` === ref)?.[0] ?? states.find((x) => `piper-keystate:${x[1]}` === ref)?.[0] ?? ref;
+				if (alive().some((c) => c.image === id)) return { code: 1, stdout: "", stderr: `Error response from daemon: conflict: unable to delete ${id} (must be forced) - image is being used by stopped container x` };
+				if (ref === "sha256:failing") return { code: 1, stdout: "", stderr: "no space" };
+				removedI.push(id); return ok();
+			}
+			return ok();
+		};
+		const view = async () => { removedC = []; removedI = []; return listImages({ hostPi: "0.99.1" }); };
+		const l = await view();
+		const by = Object.fromEntries(l.images.map((i) => [i.id, i]));
+		assert.deepEqual([by["sha256:default"].running, by["sha256:oldrun"].running, by["sha256:oldidle"].idle.length, by["sha256:keptimg"].kept.length, by["sha256:foreignimg"].foreign, by["sha256:foreignimg"].idle.length], [1, 1, 2, 1, 1, 1], "running, idle, kept and another gateway's containers are told apart");
+		assert.deepEqual(l.states.map((x) => [x.name.split(":")[0], x.orphan]), [["piper-keystate", true], ["piper-keystate", false]], "a saved state is an orphan when its container is gone");
+		assert.ok(!l.images.some((i) => /keystate/.test(i.name ?? "")), "a saved state carries the image label but is a state, listed once");
+		assert.deepEqual(l.dangling.map((d) => d.id), ["sha256:dangle"], "a dangling image with no Piper label is listed on its own");
+
+		// Removing one: the stopped containers holding it are named, and removed only on a go-ahead.
+		await assert.rejects(removeImage("sha256:oldrun", { hostPi: "0.99.1" }), (e) => e.status === 409 && /running from it/.test(e.message));
+		await assert.rejects(removeImage("sha256:keptimg", { hostPi: "0.99.1" }), (e) => e.status === 409 && /kept container/.test(e.message));
+		await assert.rejects(removeImage("sha256:oldidle", { hostPi: "0.99.1" }), (e) => e instanceof NeedsForce && e.errorCode === "needs_force" && /2 stopped container\(s\)/.test(e.message) && e.message.includes(own("idle1")));
+		await assert.rejects(removeImage("sha256:foreignimg", { hostPi: "0.99.1" }), (e) => e instanceof NeedsForce && /belong to another Piper gateway/.test(e.message));
+		assert.deepEqual(removedC, [], "nothing was removed without the go-ahead");
+		assert.match(await removeImage("sha256:oldidle", { hostPi: "0.99.1", force: true }), /removed sha256:oldidle and 2 stopped container/);
+		assert.deepEqual(removedC.sort(), [own("idle1"), own("idle2")].sort());
+		assert.ok(removedI.includes("sha256:oldidle"), "then the image goes");
+		assert.match(await removeImage("sha256:orphan", { hostPi: "0.99.1" }), /removed/, "an unused one just goes");
+		assert.match(await removeImage(l.states[0].name, { hostPi: "0.99.1" }), /removed piper-keystate/, "a saved state with no container goes");
+		await assert.rejects(removeImage(l.states[1].name, { hostPi: "0.99.1" }), (e) => e.status === 409 && /still exists/.test(e.message));
+		await assert.rejects(removeImage("sha256:default", { hostPi: "0.99.1" }), (e) => e.status === 409);
+
+		// The plan: what is offered, why, and what it costs.
+		await view();
+		const plan = await cleanupPlan({ hostPi: "0.99.1" });
+		const kind = (id) => plan.items.find((x) => x.id === id)?.kind;
+		assert.deepEqual([kind("sha256:orphan"), kind("sha256:stale"), kind("sha256:fresh"), kind("sha256:oldidle"), kind("sha256:foreignimg"), kind("sha256:dangle"), kind("sha256:st-orphan")], ["safe", "safe", "rebuild", "containers", "containers", "other", "safe"]);
+		for (const never of ["sha256:default", "sha256:oldrun", "sha256:keptimg", "sha256:st-live"]) assert.equal(kind(never), undefined, `${never} is never offered`);
+		assert.deepEqual(plan.items.find((x) => x.id === "sha256:oldidle").containers.sort(), [own("idle1"), own("idle2")].sort());
+		assert.equal(plan.items.find((x) => x.id === "sha256:foreignimg").foreign, 1);
+		assert.equal(plan.safeMb, 1600 + 700 + 900, "the safe total is the unused ones");
+		assert.ok(plan.allMb > plan.safeMb);
+		// Running it: only what was chosen; items that need containers removed wait for the go-ahead.
+		let done = await runCleanup({ select: ["sha256:orphan", "sha256:oldidle", "sha256:default", "sha256:oldrun", "nonsense"], hostPi: "0.99.1" });
+		assert.equal(done.removed.length, 1);
+		assert.equal(done.skipped.length, 4, "the one that needs its containers removed waits for the go-ahead, and the three that cannot be removed are said so");
+		assert.ok(done.skipped.some((x) => /stopped containers were not to be removed/.test(x.reason)) && done.skipped.some((x) => /not something that can be removed now/.test(x.reason)));
+		assert.deepEqual(removedC, [], "and its containers stay");
+		assert.ok(!removedI.includes("sha256:default") && !removedI.includes("sha256:oldrun"), "the default image and a running one are not in the plan, so not removed even when asked for");
+		done = await runCleanup({ select: ["sha256:oldidle", "sha256:foreignimg"], withContainers: true, hostPi: "0.99.1" });
+		assert.equal(done.removed.length, 2);
+		assert.ok(done.reclaimedMb >= 1700 + 1400);
+		assert.deepEqual(removedC.sort(), [own("idle1"), own("idle2"), other("far")].sort(), "with the go-ahead their containers go first");
+		// The automatic part touches only what is plainly unused.
+		await view();
+		const auto = await autoPrune();
+		assert.equal(auto.removed, 2, "the unused superseded build and the orphaned saved state");
+		assert.deepEqual([...new Set(removedI)].sort(), ["sha256:orphan", "sha256:st-orphan"].sort());
+		assert.ok(!removedI.includes("sha256:stale") && !removedI.includes("sha256:fresh") && !removedI.includes("sha256:dangle") && !removedI.includes("sha256:oldidle"), "not an old-Pi tagged image, a spare environment, an unlabelled one, or one with containers");
+		assert.ok(recentAudit(30).some((a) => a.action === "image.autoprune"), "and it is on record");
+		// A failing removal is reported, the rest carries on.
+		await view();
+		rows.push(["sha256:failing", "<none>", "<none>", 100]);
+		done = await runCleanup({ select: ["sha256:failing", "sha256:orphan"], hostPi: "0.99.1" });
+		assert.deepEqual([done.failed.length, done.removed.length], [1, 1]);
+		assert.match(done.failed[0].reason, /no space/);
+		const baseReplyForRoutes = reply;
+		// A container Piper did not make holds an image: never offered, never removed, and said so.
+		await view();
+		rows.push(["sha256:mine", "<none>", "<none>", 600]);
+		containers.push({ name: "my-own-database", image: "sha256:mine", running: false });
+		const withMine = await cleanupPlan({ hostPi: "0.99.1" });
+		assert.equal(withMine.items.some((x) => x.id === "sha256:mine"), false, "an image a non-Piper container holds is not offered");
+		assert.match(withMine.blocked.find((b) => /my-own-database/.test(b.reason)).reason, /not a Piper container/, "and the plan says why");
+		await assert.rejects(removeImage("sha256:mine", { hostPi: "0.99.1", force: true }), (e) => e.status === 409 && /not a Piper container, so Piper will not remove it/.test(e.message));
+		assert.ok(!removedC.includes("my-own-database"));
+		// A Piper helper leftover (piper-pkg-…) is Piper's own: it is removed with the go-ahead.
+		rows.push(["sha256:helperimg", "<none>", "<none>", 500]);
+		containers.push({ name: "piper-pkg-1a2b3c", image: "sha256:helperimg", running: false });
+		assert.deepEqual((await cleanupPlan({ hostPi: "0.99.1" })).items.find((x) => x.id === "sha256:helperimg").containers, ["piper-pkg-1a2b3c"]);
+		// An image that others are built on can go once they have: the second pass handles the order.
+		rows.push(["sha256:parent", "<none>", "<none>", 400], ["sha256:child", "<none>", "<none>", 300]);
+		const baseRmi = reply;
+		let parentRefused = 0;
+		reply = (bin, args) => {
+			if (args[0] === "rmi" && args[args.length - 1] === "sha256:parent" && !removedI.includes("sha256:child")) { parentRefused++; return { code: 1, stdout: "", stderr: "Error response from daemon: conflict: unable to delete sha256:parent (cannot be forced) - image has dependent child images" }; }
+			return baseRmi(bin, args);
+		};
+		done = await runCleanup({ select: ["sha256:parent", "sha256:child"], hostPi: "0.99.1" });
+		assert.deepEqual([done.removed.length, done.failed.length], [2, 0], "the parent goes after its child");
+		assert.equal(parentRefused, 1, "it was tried, refused for the child, and tried again");
+		// A refusal that cannot be fixed by order comes back in plain words.
+		rows.push(["sha256:stuck", "<none>", "<none>", 200]);
+		reply = (bin, args) => (args[0] === "rmi" && args[args.length - 1] === "sha256:stuck" ? { code: 1, stdout: "", stderr: "Error response from daemon: conflict: unable to delete sha256:stuck (must be forced) - image is being used by stopped container abc123" } : baseRmi(bin, args));
+		done = await runCleanup({ select: ["sha256:stuck"], hostPi: "0.99.1" });
+		assert.equal(done.failed.length, 1);
+		assert.match(done.failed[0].reason, /container still uses it|several names|abc123/);
+		assert.ok(recentAudit(20).some((a) => a.action === "image.cleanup" && /failed:/.test(a.detail)), "failures are on record with their reason");
+		reply = baseRmi;
+		containers.splice(containers.findIndex((c) => c.name === "my-own-database"), 1);
+		containers.splice(containers.findIndex((c) => c.name === "piper-pkg-1a2b3c"), 1);
+		// The chain that updates leave: stopped chat containers run from saved states, which sit on older builds.
+		{
+			const c1 = own("chain1"), c2 = own("chain2"), c3 = own("chain3");
+			const tag = (c) => `piper-keystate:${c.replace(/^piper-/, "")}`;
+			const imgs = { cur: ["sha256:cur", "piper-agent", "latest", 1900], p1: ["sha256:p1", "<none>", "<none>", 1890], p2: ["sha256:p2", "<none>", "<none>", 2000] };
+			const stateIds = { [tag(c1)]: "sha256:s1", [tag(c2)]: "sha256:s2" };
+			const parentOf = { "sha256:s1": "sha256:p1", "sha256:s2": "sha256:p2" };
+			const boxes = [{ name: c1, image: "sha256:s1", running: false, at: "2026-10-01T10:00:00Z" }, { name: c2, image: "sha256:s2", running: false, at: "2026-10-01T10:05:00Z" }, { name: c3, image: "sha256:cur", running: false, at: "2026-10-01T10:06:00Z" }];
+			const gone = new Set();
+			const goneC = new Set();
+			const sizes = { "sha256:s1": 2030, "sha256:s2": 2150 };
+			const ok2 = (stdout = "") => ({ code: 0, stdout, stderr: "" });
+			const fmt2 = (r) => JSON.stringify({ ID: r[0], Repository: r[1], Tag: r[2], CreatedSince: "1 day ago", Size: `${r[3]}MB` });
+			const childOf = (id) => Object.entries(parentOf).find(([child, parent]) => parent === id && !gone.has(child))?.[0];
+			reply = (bin, args) => {
+				const live = () => boxes.filter((b) => !goneC.has(b.name));
+				if (args[0] === "images") {
+					if (args.includes("label=piper.image=1")) return ok2([...Object.values(imgs), ...Object.entries(stateIds).map(([t, id]) => [id, "piper-keystate", t.split(":")[1], sizes[id]])].filter((r) => !gone.has(r[0])).map(fmt2).join("\n"));
+					if (!args.includes("--filter")) return ok2(Object.entries(stateIds).filter(([, id]) => !gone.has(id)).map(([t, id]) => fmt2([id, "piper-keystate", t.split(":")[1], sizes[id]])).join("\n"));
+					return ok2();
+				}
+				if (args[0] === "image" && args[1] === "inspect") return ok2(JSON.stringify(args.slice(2).map((id) => ({ Id: id, Size: (sizes[id] ?? Object.values(imgs).find((r) => r[0] === id)?.[3] ?? 900) * 1048576, Config: { Labels: { "piper.image": "1", "piper.pi-version": "0.99.1" } } }))));
+				if (args[0] === "ps") return ok2(live().filter((b) => !args.some((x) => /label=piper\.instance=/.test(x)) || b.name.startsWith(`piper-${instanceId()}-`)).map((b) => `${b.name}\texited\t\t`).join("\n"));
+				if (args[0] === "inspect") return ok2(JSON.stringify(live().map((b) => ({ Name: `/${b.name}`, Image: b.image, State: { Running: false, FinishedAt: b.at }, Config: { Labels: {} } }))));
+				if (args[0] === "rm") { goneC.add(args.at(-1)); return ok2(); }
+				if (args[0] === "rmi") {
+					const ref = args.at(-1);
+					const id = stateIds[ref] ?? ref;
+					if (live().some((b) => b.image === id)) return { code: 1, stdout: "", stderr: `Error response from daemon: conflict: unable to delete ${id} - image is being used by stopped container x` };
+					if (childOf(id)) return { code: 1, stdout: "", stderr: `Error response from daemon: conflict: unable to delete ${id} (cannot be forced) - image has dependent child images` };
+					gone.add(id);
+					// Docker removes an untagged parent that nothing else needs.
+					if (parentOf[id] && !childOf(parentOf[id])) gone.add(parentOf[id]);
+					return ok2();
+				}
+				return ok2();
+			};
+			const l2 = await listImages({ hostPi: "0.99.1" });
+			assert.deepEqual(l2.idleContainers.map((c) => c.name).sort(), [c1, c2].sort(), "the stopped chat containers that keep a saved state alive; not the one on the current image");
+			assert.ok(l2.idleContainers.every((c) => c.saved && c.sizeMb > 2000 && c.finishedAt > 0));
+			const plan2 = await cleanupPlan({ hostPi: "0.99.1" });
+			assert.deepEqual(plan2.items.filter((x) => x.kind === "idle").map((x) => x.id).sort(), [`container:${c1}`, `container:${c2}`].sort());
+			assert.match(plan2.items.find((x) => x.id === `container:${c1}`).reason, /stopped chat container .*saved state.*resumes in a fresh container/);
+			assert.deepEqual(plan2.items.filter((x) => x.kind === "safe").map((x) => x.id).sort(), ["sha256:p1", "sha256:p2"], "the untagged builds behind them are offered too");
+			assert.equal(plan2.blocked.filter((b) => /still exists/.test(b.reason)).length, 2, "the saved states are explained, not offered on their own");
+			const everything = plan2.items.map((x) => x.id);
+			// Without the go-ahead the containers stay, and the builds under them say what is in the way.
+			let r2 = await runCleanup({ select: everything, hostPi: "0.99.1" });
+			assert.equal(r2.skipped.filter((x) => /stopped containers were not to be removed/.test(x.reason)).length, 2);
+			assert.equal(r2.failed.length, 2, "the two builds are refused");
+			assert.match(r2.failed[0].reason, /other images are built on it|container still uses it/);
+			assert.equal(goneC.size, 0);
+			// With it: containers first, then the saved states go with them and the builds follow.
+			r2 = await runCleanup({ select: everything, withContainers: true, hostPi: "0.99.1" });
+			assert.deepEqual(r2.failed, [], "nothing is left stuck");
+			assert.deepEqual([...goneC].sort(), [c1, c2].sort(), "the chat on the current image is not touched");
+			assert.ok(gone.has("sha256:s1") && gone.has("sha256:s2") && gone.has("sha256:p1") && gone.has("sha256:p2"), "the whole chain is gone");
+			assert.ok(r2.reclaimedMb > 4000);
+		}
+		reply = baseReplyForRoutes;
+		// Through the page's routes: the plan, the go-ahead on remove, and cleanup.
+		await view();
+		const callApi = async (method, url, body) => {
+			const req = Readable.from(body === undefined ? [] : [Buffer.from(JSON.stringify(body))]);
+			req.method = method; req.url = url;
+			const res = { status: null, body: "", writeHead(st) { this.status = st; }, end(b) { this.body = b ?? ""; } };
+			await containerRoutes(req, res, new URL(url, "http://x").pathname);
+			return { status: res.status, json: res.body ? JSON.parse(res.body) : null };
+		};
+		const apiPlan = await callApi("GET", "/dashboard/images/cleanup.json");
+		assert.deepEqual([apiPlan.status, apiPlan.json.items.length > 3], [200, true]);
+		const needs = await callApi("POST", "/dashboard/images/remove", { image: "sha256:oldidle" });
+		assert.deepEqual([needs.status, needs.json.error.code], [409, "needs_force"]);
+		assert.equal((await callApi("POST", "/dashboard/images/remove", { image: "sha256:oldidle", force: true })).status, 200);
+		assert.equal((await callApi("POST", "/dashboard/images/cleanup", { select: ["sha256:fresh"] })).json.removed.length, 1);
+		assert.equal((await callApi("POST", "/dashboard/images/cleanup", { select: "nope" })).json.removed.length, 0, "a bad selection selects nothing");
 	}
 	apiKeys.remove(imgKey.id);
 	rmSync(root, { recursive: true, force: true });
@@ -2117,7 +2328,7 @@ assert.equal(isReloadCommand(undefined), false);
 	for (const [path, keys] of [
 		["/dashboard.json", ["sessions", "containers", "disk", "passwordSet"]],
 		["/dashboard/containers.json", ["containers", "disk", "events", "audit", "execAllowed"]],
-		["/dashboard/images.json", ["images", "environments", "hostPiVersion", "job"]],
+		["/dashboard/images.json", ["images", "idleContainers", "states", "dangling", "environments", "hostPiVersion", "job"]],
 		["/dashboard/audit.json", ["audit"]],
 		["/dashboard/settings.json", ["settings"]],
 		["/dashboard/api-keys.json", ["keys", "defaults"]],
@@ -4449,7 +4660,11 @@ assert.equal(isReloadCommand(undefined), false);
 
 	// The Containers view and the Agents snapshot carry the version and its colour.
 	const hostPi = await hostPiVersion();
-	const older = hostPi.replace(/\d+$/, (n) => String(Math.max(0, Number(n) - 1)));
+	// A version that is older than whatever Pi is installed here, whether it ends in .0 or not (1.0.0 -> 0.9.9).
+	const older = (() => {
+		const [major, minor, patch] = hostPi.split(/[.-]/).map((x) => Number(x) || 0);
+		return patch > 0 ? `${major}.${minor}.${patch - 1}` : minor > 0 ? `${major}.${minor - 1}.9` : `${Math.max(0, major - 1)}.9.9`;
+	})();
 	const nameCur = containerName(chatIdHash("pi-current"));
 	const nameOld = containerName(chatIdHash("pi-old"));
 	const nameStopped = containerName(chatIdHash("pi-stopped"));
@@ -4564,8 +4779,8 @@ assert.equal(isReloadCommand(undefined), false);
 	// Links: http(s) and mailto as they are; anchors and known pages become dashboard links; the rest is plain text.
 	assert.equal(linkHref("https://a.b/c?d=1").external, true);
 	assert.equal(linkHref("mailto:x@y.z").href, "mailto:x@y.z");
-	assert.deepEqual(linkHref("#Some Heading", { page: "p" }), { href: "#docs/p/some-heading", external: false });
-	assert.equal(linkHref("README.md#Other Part", { targets: new Map([["README.md", "reference"]]) }).href, "#docs/reference/other-part");
+	assert.deepEqual(linkHref("#Some Heading", { page: "p" }), { href: "#help/docs/p/some-heading", external: false });
+	assert.equal(linkHref("README.md#Other Part", { targets: new Map([["README.md", "reference"]]) }).href, "#help/docs/reference/other-part");
 	for (const bad of ["javascript:alert(1)", "JaVaScRiPt:alert(1)", "data:text/html,<script>", "vbscript:x", "//evil.example/x", "unknown.md", "/etc/passwd", "file:///etc/passwd", " javascript:alert(1)"]) assert.equal(linkHref(bad, { page: "p" }), null, bad);
 	// Hostile input comes out escaped or dropped.
 	for (const hostile of ["<script>alert(1)</script>", "<img src=x onerror=alert(1)>", "[x](javascript:alert(1))", "![x](javascript:alert(1))", "**<svg onload=alert(1)>**", "`</code><script>alert(1)</script>`", "# <script>alert(1)</script>", "| <script> |\n|---|\n| <img onerror=alert(1)> |", "- <iframe src=x></iframe>", "> <script>alert(1)</script>", "```\n</pre><script>alert(1)</script>\n```", "[<script>alert(1)</script>](https://a.b)", "<!-- generated:settings --><script>"]) {
@@ -4596,11 +4811,11 @@ assert.equal(isReloadCommand(undefined), false);
 	// Every internal link and anchor resolves to a page and a heading that exist.
 	const anchorsOf = Object.fromEntries(ids.map((id) => [id, new Set([...rendered[id].html.matchAll(/<h[1-4] id="([^"]*)"/g)].map((m) => m[1]))]));
 	for (const id of ids) {
-		for (const m of rendered[id].html.matchAll(/href="#docs\/([^"\/]+)(?:\/([^"]*))?"/g)) {
+		for (const m of rendered[id].html.matchAll(/href="#help\/docs\/([^"\/]+)(?:\/([^"]*))?"/g)) {
 			assert.ok(anchorsOf[m[1]], `${id}: link to unknown page ${m[1]}`);
 			if (m[2]) assert.ok(anchorsOf[m[1]].has(m[2]), `${id}: link to missing heading ${m[1]}#${m[2]}`);
 		}
-		assert.ok(!/href="(?!#docs\/|https?:|mailto:)/.test(rendered[id].html), `${id}: every link is http(s), mailto or a dashboard link`);
+		assert.ok(!/href="(?!#help\/docs\/|https?:|mailto:)/.test(rendered[id].html), `${id}: every link is http(s), mailto or a dashboard link`);
 	}
 
 	// The generated tables come from the code: every setting, with its real default; no secret; no host path.
@@ -5951,6 +6166,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 
 // Phase 3: templates, clone, export and import.
 {
+	const skillText = (n) => `---\nname: ${n}\ndescription: x\n---\nDo it.\n`;
 	const T = await import("./server.mjs");
 	const { validPath, validateBundle, listTemplates, getTemplate, saveTemplate, deleteTemplate, exportAgent, importBundle, cloneAgent, createFromTemplate, createAgent, deleteAgent, agents, profileOp, agentScope, apiKeys, config } = T;
 	const b64 = (t) => Buffer.from(t).toString("base64");
@@ -5977,7 +6193,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 
 	// The built-in templates are real and every file of them can travel.
 	const listed = listTemplates();
-	assert.deepEqual(listed.filter((t) => t.builtin).map((t) => t.name), ["architect", "coder", "devops", "researcher", "reviewer"]);
+	assert.deepEqual(listed.filter((t) => t.builtin).map((t) => t.name), ["architect", "coder", "devops", "orchestrator", "researcher", "reviewer"]);
 	for (const t of listed) {
 		const full = getTemplate(t.name);
 		assert.ok(t.description.length > 10 && full.files.some((f) => f.path === "AGENTS.md"), `${t.name} has a description and instructions`);
@@ -5986,6 +6202,16 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	}
 	assert.ok(getTemplate("reviewer").files.some((f) => f.path === "skills/review-checklist/SKILL.md"));
 	assert.throws(() => deleteTemplate("architect"), /built-in/);
+
+	// The orchestrator: real instructions, and hand-offs on from the start.
+	const orch = getTemplate("orchestrator");
+	assert.equal(orch.canDelegate, true);
+	assert.equal(listTemplates().find((t) => t.name === "orchestrator").canDelegate, true);
+	assert.deepEqual(listTemplates().filter((t) => t.canDelegate).map((t) => t.name), ["orchestrator"], "only the orchestrator delegates by default");
+	const orchText = Buffer.from(orch.files.find((f) => f.path === "AGENTS.md").data, "base64").toString();
+	assert.ok(orchText.length > 1500 && /piper_agents/.test(orchText) && /piper_delegate/.test(orchText) && /same message/.test(orchText), "the working method is there");
+	assert.equal(validateBundle({ ...base, agent: { name: "o", canDelegate: "yes" } }).agent.canDelegate, false, "only a real true turns it on");
+	assert.equal(validateBundle({ ...base, agent: { name: "o", canDelegate: true } }).agent.canDelegate, true);
 
 	// A fake docker that runs the profile helper over the mounted folder, so the real ops are exercised.
 	const bin = mkdtempSync(join(tmpdir(), "fakedocker3-"));
@@ -6037,7 +6263,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.deepEqual(paths, ["AGENTS.md", "settings.json", "skills/review-checklist/SKILL.md"]);
 	assert.ok(bundle.skipped >= 1, "the links were skipped");
 	assert.equal(JSON.stringify(bundle).includes("do-not-export"), false, "auth.json never travels");
-	assert.deepEqual(Object.keys(bundle.agent).sort(), ["container", "description", "model", "name", "thinking", "workspace"]);
+	assert.deepEqual(Object.keys(bundle.agent).sort(), ["canDelegate", "container", "description", "model", "name", "thinking", "workspace"]);
 
 	// Import into another key: same files, a fresh profile; a hostile bundle writes nothing and leaves no agent.
 	const imported = await importBundle({ keyId: otherKey.id, bundle: JSON.parse(JSON.stringify(bundle)), name: "copy" });
@@ -6065,6 +6291,22 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	await assert.rejects(profileOp(otherScope, { op: "tree.import", files: [{ path: "prompts/big.md", data: b64("x".repeat(5000)) }] }), /quota/);
 	config.PROFILE_MAX_BYTES = 0;
 
+	// An orchestrator made from the template may delegate; export, import and clone keep that.
+	const orchAgent = await createFromTemplate({ keyId: key.id, template: "orchestrator", name: "boss" });
+	assert.equal(orchAgent.agent.canDelegate, true);
+	assert.equal(orchAgent.agent.workspace, "shared");
+	assert.ok(orchAgent.agent.description.length > 20, "it has a description");
+	const orchBundle = await exportAgent(orchAgent.agent.id);
+	assert.equal(orchBundle.agent.canDelegate, true);
+	const orchImported = await importBundle({ keyId: otherKey.id, bundle: JSON.parse(JSON.stringify(orchBundle)), name: "boss-copy" });
+	assert.equal(orchImported.agent.canDelegate, true, "import keeps it");
+	assert.equal((await cloneAgent(orchAgent.agent.id, "boss-two")).agent.canDelegate, true, "clone keeps it");
+	assert.equal(arch.agent.canDelegate, false, "a reviewer does not delegate");
+	await saveTemplate({ fromAgent: orchAgent.agent.id, name: "my-boss" });
+	assert.equal(getTemplate("my-boss").canDelegate, true, "a saved template keeps it");
+	assert.equal((await createFromTemplate({ keyId: key.id, template: "my-boss", name: "boss-three" })).agent.canDelegate, true);
+	deleteTemplate("my-boss");
+
 	// Clone: a new agent of the same key, same profile.
 	const clone = await cloneAgent(arch.agent.id, "rev-two");
 	assert.equal(clone.agent.keyId, key.id);
@@ -6085,6 +6327,32 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.equal(deleteTemplate("my-reviewer"), true);
 	assert.equal(getTemplate("my-reviewer"), null);
 
+	// Looking at and changing templates.
+	const { templateDetail, updateTemplate, duplicateTemplate } = T;
+	const detail = templateDetail("reviewer");
+	assert.equal(detail.builtin, true);
+	assert.ok(detail.files.find((f) => f.path === "AGENTS.md").text.includes("Reviewer"), "text files come with their text");
+	assert.throws(() => templateDetail("nope"), (e) => e.status === 404);
+	assert.throws(() => updateTemplate("reviewer", { description: "x" }), (e) => e.status === 409, "a built-in cannot be changed");
+	const copy = duplicateTemplate("reviewer", "my-rev");
+	assert.deepEqual([copy.builtin, copy.files.length], [false, detail.files.length]);
+	assert.throws(() => duplicateTemplate("reviewer", "my-rev"), (e) => e.status === 409);
+	assert.throws(() => duplicateTemplate("reviewer", "Bad Name"), /lowercase/);
+	const changed = updateTemplate("my-rev", { description: "mine", thinking: "low", workspace: "own", canDelegate: true, files: [{ path: "AGENTS.md", text: "# My reviewer\nBe terse.\n" }, { path: "skills/extra/SKILL.md", text: skillText("extra") }] });
+	assert.deepEqual([changed.description, changed.thinking, changed.workspace, changed.canDelegate], ["mine", "low", "own", true]);
+	assert.deepEqual(changed.files.map((f) => f.path), ["AGENTS.md", "skills/extra/SKILL.md"], "the file list is replaced");
+	assert.throws(() => updateTemplate("my-rev", { files: [{ path: "../x", text: "" }] }), /cannot be used/);
+	assert.throws(() => updateTemplate("my-rev", { files: [{ path: "auth.json", text: "" }] }), /cannot be used/);
+	assert.throws(() => updateTemplate("my-rev", { files: [{ path: "AGENTS.md" }] }), /path and its text/);
+	assert.throws(() => updateTemplate("my-rev", { files: [{ path: "AGENTS.md", text: "a" }, { path: "agents.md", text: "b" }] }), /twice|cannot be used/);
+	config.TEMPLATE_MAX_BYTES = 64 * 1024;
+	assert.throws(() => updateTemplate("my-rev", { files: [{ path: "AGENTS.md", text: "y".repeat(80 * 1024) }] }), /limit/);
+	config.TEMPLATE_MAX_BYTES = 5 * 1024 * 1024;
+	assert.equal(templateDetail("my-rev").files.length, 2, "a refused change changes nothing");
+	const made2 = await createFromTemplate({ keyId: key.id, template: "my-rev", name: "from-edited" });
+	assert.equal(made2.agent.canDelegate, true);
+	assert.match(JSON.stringify(await profileOp(agentScope(key.id, made2.agent.id), { op: "instructions.get" })), /Be terse/, "new agents get the edited text");
+	deleteTemplate("my-rev");
 	for (const a of agents.list().filter((x) => [key.id, otherKey.id].includes(x.keyId))) await deleteAgent(a.id);
 	process.env.PATH = oldPath;
 }
@@ -6112,6 +6380,28 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	config.DELEGATE_ENABLED = false;
 	assert.equal(mayDelegate(rec(arch)), false);
 	assert.deepEqual(colleagues(rec(arch)), []);
+	config.DELEGATE_ENABLED = true;
+
+	// The roster that goes into the system prompt each turn.
+	const { rosterText } = D;
+	assert.equal(rosterText(rec(coder)), "", "an agent that may not delegate gets none");
+	assert.match(rosterText(rec(arch)), /^Your colleagues right now/);
+	assert.match(rosterText(rec(arch)), /- coder: writes code/);
+	assert.ok(!/- arch:|- off:|stranger/.test(rosterText(rec(arch))), "not itself, not a disabled agent, not another key's");
+	mkAgent(k1.record.id, "mute");
+	assert.match(rosterText(rec(arch)), /- mute: \(no description: judge by its name\)/);
+	mkAgent(k1.record.id, "late-arrival", { description: "joined after the orchestrator started" });
+	assert.match(rosterText(rec(arch)), /late-arrival: joined after/, "a new agent is on the very next turn");
+	for (let i = 0; i < 32; i++) mkAgent(k1.record.id, `bulk-${i}`, { description: "x".repeat(400) });
+	const big = rosterText(rec(arch));
+	assert.match(big, /and \d+ more/);
+	assert.ok(big.split("\n").length <= 32 && !/x{201}/.test(big), "capped in length and in lines");
+	for (let i = 0; i < 32; i++) agents.remove(agents.find(k1.record.id, `bulk-${i}`).id);
+	agents.remove(agents.find(k1.record.id, "mute").id);
+	agents.remove(agents.find(k1.record.id, "late-arrival").id);
+	assert.match(rosterText(rec(arch, { delegateChain: [coder.id] })), /none enabled right now/, "alone: a note, not an empty list");
+	config.DELEGATE_ENABLED = false;
+	assert.equal(rosterText(rec(arch)), "");
 	config.DELEGATE_ENABLED = true;
 
 	// A hand-off runs the colleague with its credential, a derived session, and a deeper chain.
@@ -6334,6 +6624,564 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	rmSync(join(root, "linked"), { force: true });
 }
 
+// Dashboard navigation: pages, tabs, and old links.
+{
+	const html = readFileSync(new URL("./dashboard.html", import.meta.url), "utf8");
+	const vm = await import("node:vm");
+	const start = html.indexOf("var PAGES = {");
+	const fn = html.indexOf("function resolveHash(");
+	const end = html.indexOf("\n}\n", fn) + 3;
+	assert.ok(start > 0 && fn > start && end > fn, "the page table is where the test expects it");
+	const ctx = vm.createContext({});
+	vm.runInContext(`${html.slice(start, end)}\nthis.PAGES = PAGES; this.PANES = PANES; this.resolveHash = resolveHash;`, ctx);
+	const { PAGES, PANES, resolveHash } = ctx;
+	const navHtml = html.slice(html.indexOf('<nav id="nav">'), html.indexOf("</nav>"));
+	const navPages = [...navHtml.matchAll(/<a[^>]*href="#([a-z]+)"/g)].map((m) => m[1]);
+	assert.deepEqual([...navPages].sort(), Object.keys(PAGES).sort(), "every nav item is a page and every page is in the nav");
+	assert.equal(new Set(navPages).size, navPages.length, "no page twice in the nav");
+	assert.equal(navPages.length, 14, "fourteen items in the sidebar");
+	assert.deepEqual([...navHtml.matchAll(/class="navgroup">([^<]+)</g)].map((m) => m[1]), ["Monitor", "Build", "Infrastructure", "Admin"]);
+
+	// Every tab shows a pane that exists, and a split pane's sections match the markup.
+	const reached = new Set();
+	for (const [id, page] of Object.entries(PAGES)) {
+		assert.ok(page.title && page.tabs.length, id);
+		const tabIds = page.tabs.map((t) => t.id);
+		assert.equal(new Set(tabIds).size, tabIds.length, `${id}: tab ids are unique`);
+		for (const tab of page.tabs) {
+			assert.ok(PANES.includes(tab.pane), `${id}/${tab.id}: pane ${tab.pane} is a known pane`);
+			assert.ok(html.includes(`id="view-${tab.pane}"`), `${id}/${tab.id}: view-${tab.pane} exists`);
+			assert.ok(tab.subtitle, `${id}/${tab.id} has a subtitle`);
+			if (page.tabs.length > 1) assert.ok(tab.label, `${id}/${tab.id} has a label`);
+			reached.add(tab.pane);
+		}
+	}
+	assert.deepEqual([...reached].sort(), [...PANES].sort(), "every pane can be reached");
+	for (const pane of PANES) {
+		const block = html.slice(html.indexOf(`id="view-${pane}"`), html.indexOf("<!-- /view-", html.indexOf(`id="view-${pane}"`)) + 1);
+		const marked = new Set([...block.matchAll(/<section data-tab="([a-z]+)"/g)].map((m) => m[1]));
+		const wanted = new Set(Object.values(PAGES).flatMap((p) => p.tabs).filter((t) => t.pane === pane && t.sections).map((t) => t.sections));
+		assert.deepEqual([...marked].sort(), [...wanted].sort(), `${pane}: the sections marked data-tab are exactly the ones a tab asks for`);
+		const tabs = Object.values(PAGES).flatMap((p) => p.tabs).filter((t) => t.pane === pane);
+		if (marked.size) assert.ok(tabs.every((t) => t.sections), `${pane}: a split pane's every tab names its sections`);
+	}
+
+	// Links, new and old.
+	const at = (hash) => { const r = resolveHash(hash); return [r.page, r.tab.id, ...r.rest].join("/"); };
+	for (const [hash, want] of Object.entries({
+		"": "overview/overview", "#overview": "overview/overview", "#nonsense": "overview/overview", "#/chats": "chats/chats",
+		"#agents": "agents/agents", "#agents/teams": "agents/teams", "#agents/create": "agents/create", "#agents/teams/x": "agents/teams/x",
+		"#files": "files/files", "#files/profiles": "files/profiles", "#files/profiles/key-1--ab": "files/profiles/key-1--ab",
+		"#containers": "containers/containers", "#containers/terminal/piper-ab": "containers/terminal/piper-ab", "#containers/events": "containers/events",
+		"#settings": "settings/settings", "#settings/containers": "settings/settings/containers", "#apikeys": "apikeys/apikeys",
+		"#help": "help/docs", "#help/about": "help/about", "#help/docs/functions/agents": "help/docs/functions/agents",
+		// links of earlier versions
+		"#endpoints": "agents/agents", "#terminal": "containers/terminal", "#terminal/piper-ab": "containers/terminal/piper-ab",
+		"#profiles": "files/profiles", "#profiles/key-9": "files/profiles/key-9", "#docs": "help/docs", "#docs/overview/x": "help/docs/overview/x", "#about": "help/about",
+		"#agents/not-a-tab": "agents/agents/not-a-tab",
+	})) assert.equal(at(hash), want, JSON.stringify(hash));
+	// The docs renderer's links and the page's own docs links agree.
+	assert.equal(at(linkHref("#Some Heading", { page: "p" }).href), "help/docs/p/some-heading");
+	assert.ok(!/href = '#docs|location\.hash = '#(profiles|terminal)/.test(html), "no code sets an old-style hash");
+	assert.ok(!/sectiontitle/.test(html), "the repeated section title is gone");
+	// The rule that hides other tabs' sections must only reach sections: the API keys page has its own data-tab blocks.
+	assert.match(html, /\.view > section\[data-tab\]:not\(\.tabshown\)/);
+	assert.ok(!/\.view > \[data-tab\]/.test(html), "the tab rule does not match every data-tab element");
+	assert.ok(html.includes('class="pagetabs" id="tabbar"'), "the page tab bar has a class of its own, apart from the existing .tabs bars");
+}
+
+// Phase A (0.7): the extension library and grants.
+{
+	const X = await import("./server.mjs");
+	const { checkedSource, nameFromSource, gitTarget, installEnv, installCommands, looksLikePiPackage, treeBytes, installExtension, updateExtension, removeExtension, extensionJobView, resetExtensionJob, libraryOverview, ExtensionError, listLibrary, listShared, grantedBundles, bundleUsers, createBundle, extensionRoutes, setAccess, extensionsPayload, agents, apiKeys, config, packageDir, containerCreateArgs, piInvocation, containerSignature } = X;
+	const fsm = await import("node:fs");
+	const log = join(TEST_WS, "fake-tools.log");
+	const bin = mkdtempSync(join(tmpdir(), "fakenpm-"));
+	// A fake npm and git: they make what the real ones would, and record how they were called.
+	writeFileSync(join(bin, "npm"), `#!/usr/bin/env bash
+echo "npm $* | HOME=$HOME | ignore=$npm_config_ignore_scripts | secret=\${PIPER_TEST_SECRET:-none}" >> ${log}
+prefix=""; spec=""; args=("$@"); i=0
+while [ $i -lt $# ]; do case "\${args[$i]}" in --prefix) prefix="\${args[$((i+1))]}"; i=$((i+1));; install|--*) ;; *) spec="\${args[$i]}";; esac; i=$((i+1)); done
+name="\${spec%%@[0-9^~]*}"; [ -z "$spec" ] && exit 0
+case "$name" in failing) echo "npm error 404" >&2; exit 1;; esac
+mkdir -p "$prefix/node_modules/$name"
+echo "{\\"name\\":\\"$name\\",\\"version\\":\\"1.2.3\\",\\"keywords\\":[\\"pi-package\\"]}" > "$prefix/node_modules/$name/package.json"
+case "$name" in plainlib) echo "{\\"name\\":\\"$name\\",\\"version\\":\\"1.0.0\\"}" > "$prefix/node_modules/$name/package.json";; esac
+case "$name" in good*|plainlib) mkdir -p "$prefix/node_modules/$name/extensions"; echo "export default () => {};" > "$prefix/node_modules/$name/extensions/x.js";; esac
+case "$name" in plainlib) rm -rf "$prefix/node_modules/$name/extensions"; echo hi > "$prefix/node_modules/$name/readme.txt";; esac
+case "$name" in huge) head -c 3000000 /dev/zero > "$prefix/node_modules/$name/blob";; esac
+echo "{\\"dependencies\\":{\\"$name\\":\\"1.2.3\\"}}" > "$prefix/package.json"
+echo "added 1 package"
+`);
+	writeFileSync(join(bin, "git"), `#!/usr/bin/env bash
+echo "git $* | HOME=$HOME | cfg=$GIT_CONFIG_GLOBAL" >> ${log}
+target="\${@: -1}"; mkdir -p "$target/.git" "$target/skills/demo"
+echo "{\\"name\\":\\"fromgit\\",\\"version\\":\\"0.3.0\\",\\"pi\\":{\\"skills\\":[\\"./skills\\"]}}" > "$target/package.json"
+echo "# demo" > "$target/skills/demo/SKILL.md"
+`);
+	(await import("node:fs")).chmodSync(join(bin, "npm"), 0o755);
+	(await import("node:fs")).chmodSync(join(bin, "git"), 0o755);
+	const oldPath = process.env.PATH;
+	process.env.PATH = `${bin}:${oldPath}`;
+	process.env.PIPER_TEST_SECRET = "gateway-secret-value";
+	mkdirSync(TEST_WS, { recursive: true });
+	const waitJob = async () => { const end = Date.now() + 8000; while (Date.now() < end) { const j = extensionJobView(); if (j && j.state !== "running") return j; await new Promise((r) => setTimeout(r, 20)); } throw new Error("job timed out"); };
+
+	// Sources and names.
+	for (const good of ["npm:good-ext", "npm:@scope/pkg@1.2.3", "git:github.com/o/repo", "git:github.com/o/repo@v1", "https://github.com/o/repo"]) assert.equal(checkedSource(good), good);
+	for (const evil of ["", "./x", "/etc/passwd", "-g", "npm:--x", "npm:a b", "http://github.com/o/r", "git@github.com:o/r", "https://u:p@github.com/o/r", "npm:x;id", "x".repeat(300)]) assert.throws(() => checkedSource(evil), ExtensionError, evil);
+	assert.deepEqual(["npm:@scope/pkg@1.2.3", "npm:good-ext", "https://github.com/o/Repo.git", "git:github.com/o/repo@v1"].map(nameFromSource), ["scope-pkg", "good-ext", "repo", "repo"]);
+	assert.deepEqual(gitTarget("git:github.com/o/repo@v1"), { url: "https://github.com/o/repo", ref: "v1" });
+	assert.deepEqual(gitTarget("https://gitlab.com/g/s/r"), { url: "https://gitlab.com/g/s/r", ref: null });
+
+	// The commands and the environment of a host install.
+	const env = installEnv("/lib/x");
+	assert.deepEqual(Object.keys(env).filter((k) => !/^(PATH|HOME|TMPDIR|LANG|npm_config_|GIT_)/.test(k)), [], "nothing of the gateway's environment is passed on");
+	assert.equal(env.npm_config_ignore_scripts, "true");
+	assert.equal(installEnv("/x", { allowScripts: true }).npm_config_ignore_scripts, "false");
+	const [npmCmd] = installCommands("npm:good-ext", "/lib/.stage");
+	assert.deepEqual(npmCmd.args, ["install", "--prefix", "/lib/.stage", "--ignore-scripts", "--no-audit", "--no-fund", "--omit=dev", "--legacy-peer-deps", "--no-package-lock", "good-ext"]);
+	assert.ok(!installCommands("npm:good-ext", "/s", { allowScripts: true })[0].args.includes("--ignore-scripts"));
+	const [gitCmd] = installCommands("git:github.com/o/r@v1", "/lib/.stage");
+	assert.deepEqual(gitCmd.args.slice(0, 6), ["-c", "core.hooksPath=/dev/null", "-c", "protocol.allow=never", "-c", "protocol.https.allow=always"]);
+	assert.ok(gitCmd.args.includes("--depth") && gitCmd.args.includes("--branch") && gitCmd.args.includes("--"), "shallow, pinned, and the URL cannot be read as a flag");
+	assert.equal(gitCmd.args.at(-2), "https://github.com/o/r");
+
+	// Gates: the switch, the password-less route.
+	config.EXTENSIONS_ENABLED = false;
+	assert.throws(() => installExtension({ source: "npm:good-ext" }), (e) => e.status === 403);
+	config.EXTENSIONS_ENABLED = true;
+	assert.throws(() => installExtension({ source: "../x" }), ExtensionError);
+	assert.throws(() => installExtension({ source: "npm:good-ext", name: "bad name" }), /a name is/);
+
+	// Installing: npm.
+	resetExtensionJob();
+	installExtension({ source: "npm:good-ext" });
+	let done = await waitJob();
+	assert.equal(done.state, "done", done.lines.join("\n"));
+	const entry = listLibrary().find((e) => e.name === "good-ext");
+	assert.deepEqual([entry.entry, entry.version, entry.source, entry.kind], ["node_modules/good-ext", "1.2.3", "npm:good-ext", "package"]);
+	assert.ok(fsm.existsSync(join(TEST_EXT, "good-ext", "node_modules", "good-ext", "extensions", "x.js")));
+	assert.ok(!fsm.readdirSync(TEST_EXT).some((n) => n.startsWith(".staging")), "nothing is left staged");
+	const called = fsm.readFileSync(log, "utf8");
+	assert.match(called, /npm install --prefix .* --ignore-scripts/);
+	assert.match(called, /ignore=true \| secret=none/, "the gateway's environment did not reach npm");
+	assert.ok(!called.includes("gateway-secret-value"));
+	assert.equal(packageDir(entry), join(TEST_EXT, "good-ext", "node_modules/good-ext"));
+	// Installing: git.
+	installExtension({ source: "git:github.com/o/fromgit@v1", name: "fromgit" });
+	done = await waitJob();
+	assert.equal(done.state, "done", done.lines.join("\n"));
+	assert.equal(listLibrary().find((e) => e.name === "fromgit").entry, "src");
+	assert.ok(!fsm.existsSync(join(TEST_EXT, "fromgit", "src", ".git")), "the clone's .git is removed");
+	assert.match(fsm.readFileSync(log, "utf8"), /git -c core\.hooksPath=\/dev\/null .* clone --depth 1 --branch v1 -- https:\/\/github\.com\/o\/fromgit .*\| cfg=\/dev\/null/);
+	// What must not get in.
+	for (const [source, why] of [["npm:plainlib", /not a Pi package/], ["npm:failing", /exited with code 1/]]) {
+		installExtension({ source });
+		done = await waitJob();
+		assert.equal(done.state, "failed", source);
+		assert.match(done.lines.join("\n"), why, source);
+		assert.ok(!listLibrary().some((e) => e.name === nameFromSource(source)), `${source} is not in the library`);
+	}
+	assert.ok(!fsm.readdirSync(TEST_EXT).some((n) => n.startsWith(".")), "failed installs leave nothing behind");
+	config.EXTENSION_MAX_BYTES = 1024 * 1024;
+	installExtension({ source: "npm:huge" });
+	done = await waitJob();
+	assert.equal(done.state, "failed");
+	assert.match(done.lines.join("\n"), /limit/);
+	config.EXTENSION_MAX_BYTES = 200 * 1024 * 1024;
+	// Names: a bundle and an entry cannot share one.
+	mkdirSync(TEST_SHARED, { recursive: true });
+	createBundle("taken-name");
+	assert.throws(() => installExtension({ source: "npm:good-ext2", name: "taken-name" }), (e) => e.status === 409);
+	assert.throws(() => createBundle("good-ext"), /already the name of a library extension/);
+	assert.throws(() => installExtension({ source: "npm:other-thing", name: "good-ext" }), (e) => e.status === 409 && /already installed from/.test(e.message));
+	// Reinstall of the same source (update) swaps in place.
+	updateExtension("good-ext");
+	assert.equal((await waitJob()).state, "done");
+	assert.equal(listLibrary().filter((e) => e.name === "good-ext").length, 1);
+	assert.throws(() => updateExtension("nope"), (e) => e.status === 404);
+	assert.ok(treeBytes(join(TEST_EXT, "good-ext")) > 0);
+	assert.equal(looksLikePiPackage(join(TEST_EXT, "good-ext", "node_modules", "good-ext")), true);
+
+	// Grants: default -> key -> agent, and what each level gets.
+	const mkKey = (name) => { const c = apiKeys.create({ name, expiresAt: 0 }); return c.record ?? c; };
+	const key = mkKey("ext key");
+	const other = mkKey("ext other");
+	const a1 = agents.create({ keyId: key.id, name: "a1" });
+	const a2 = agents.create({ keyId: key.id, name: "a2" });
+	const scopeOf2 = (a) => `${a.keyId}--${a.id}`;
+	const got = (scope) => grantedBundles(scope, { fallback: "taken-name" }).map((b) => b.name);
+	assert.deepEqual(got(key.id), ["taken-name"], "the default");
+	apiKeys.update(key.id, { sharedBundles: "good-ext,fromgit" });
+	assert.deepEqual(got(key.id), ["fromgit", "good-ext"], "a key's list replaces the default");
+	assert.deepEqual(got(scopeOf2(a1)), ["fromgit", "good-ext"], "its agents follow the key");
+	agents.update(a1.id, { sharedBundles: "fromgit" });
+	assert.deepEqual(got(scopeOf2(a1)), ["fromgit"], "an agent's own list wins");
+	assert.deepEqual(got(scopeOf2(a2)), ["fromgit", "good-ext"], "a sibling still follows the key");
+	agents.update(a1.id, { sharedBundles: "" });
+	assert.deepEqual(got(scopeOf2(a1)), [], "none is a list too");
+	agents.update(a1.id, { sharedBundles: "*" });
+	assert.ok(got(scopeOf2(a1)).includes("good-ext") && got(scopeOf2(a1)).includes("taken-name"), "* is everything: bundles and the library");
+	agents.update(a1.id, { sharedBundles: "ghost,fromgit" });
+	assert.deepEqual(got(scopeOf2(a1)), ["fromgit"], "a name that does not exist is ignored");
+	assert.deepEqual(got(other.id), ["taken-name"], "another key keeps the default");
+	assert.deepEqual(bundleUsers("fromgit").map((u) => u.label), ["ext key", "ext key / a1", "ext key / a2"]);
+	assert.deepEqual(bundleUsers("good-ext").map((u) => u.label), ["ext key", "ext key / a2"], "a1 has its own list without it");
+
+	// Mounts: the entry's folder is mounted read-only and Pi is pointed at the package inside it.
+	const mounts = grantedBundles(scopeOf2(a2), { fallback: "" }).filter((b) => b.name === "good-ext");
+	const args = containerCreateArgs({ name: "c", sig: "s", image: "i", workspace: "/w", profileDir: "/p", chatDir: "/c", runDir: "/r", bridgePath: "/b.mjs", bundles: mounts });
+	assert.ok(args.includes(`${join(TEST_EXT, "good-ext")}:${CONTAINER_PATHS.shared}/good-ext:ro`));
+	const inv = piInvocation({ bundles: mounts, env: [] }, {});
+	assert.ok(inv.piArgs.includes(`${CONTAINER_PATHS.shared}/good-ext/node_modules/good-ext`), "-e names the package inside the mounted folder");
+	assert.notEqual(containerSignature({ bundles: [{ name: "x", path: "/p", entry: "a" }] }), containerSignature({ bundles: [{ name: "x", path: "/p", entry: "b" }] }), "a different entry rebuilds the container");
+
+	// Routes: password, install, access, remove.
+	const http = await import("node:http");
+	const srv = http.createServer((req, res) => void extensionRoutes(req, res, new URL(req.url, "http://x").pathname).then((h) => h || (res.writeHead(404), res.end())));
+	await new Promise((r) => srv.listen(0, "127.0.0.1", r));
+	const base = `http://127.0.0.1:${srv.address().port}`;
+	const call = (path, body) => fetch(base + path, { method: body === undefined ? "GET" : "POST", headers: { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+	X.clearPasswordHash();
+	assert.equal((await call("/dashboard/extensions/install", { source: "npm:good-ext3" })).status, 403, "no password, no install");
+	assert.equal((await call("/dashboard/extensions/access", { level: "key", id: key.id, list: "" })).status, 403);
+	const view = await (await call("/dashboard/extensions.json")).json();
+	assert.deepEqual([view.passwordSet, view.library.map((e) => e.name).sort()], [false, ["fromgit", "good-ext"]]);
+	assert.ok(view.keys.find((k) => k.id === key.id).agents.find((a) => a.id === a1.id).effective.includes("fromgit"));
+	X.setPasswordHash(X.hashPassword("a long enough password"));
+	assert.equal((await call("/dashboard/extensions/install", { source: "../x" })).status, 400);
+	assert.equal((await call("/dashboard/extensions/access", { level: "nonsense" })).status, 400);
+	assert.equal((await call("/dashboard/extensions/access", { level: "agent", id: "deadbeef", list: "" })).status, 404);
+	let r = await call("/dashboard/extensions/access", { level: "agent", id: a2.id, list: "fromgit" });
+	assert.equal(r.status, 200);
+	assert.equal(agents.get(a2.id).sharedBundles, "fromgit");
+	r = await call("/dashboard/extensions/access", { level: "agent", id: a2.id, list: "none" });
+	assert.equal(agents.get(a2.id).sharedBundles, "", "none is a list that gives nothing");
+	r = await call("/dashboard/extensions/access", { level: "agent", id: a2.id, list: "" });
+	assert.equal(agents.get(a2.id).sharedBundles, null, "blank follows the key");
+	r = await call("/dashboard/extensions/access", { level: "agent", id: a2.id, list: null });
+	assert.equal(agents.get(a2.id).sharedBundles, null, "null follows the key again");
+	await call("/dashboard/extensions/access", { level: "key", id: key.id, list: "bad name!" }).then((x) => assert.equal(x.status, 400));
+	assert.equal((await call("/dashboard/extensions/access", { level: "default", list: "taken-name,good-ext" })).status, 200);
+	assert.equal(config.SHARED_BUNDLES, "taken-name,good-ext");
+	await call("/dashboard/extensions/access", { level: "default", list: "base" });
+	// Removing something that is granted needs force.
+	assert.equal((await call("/dashboard/extensions/remove", { name: "good-ext" })).status, 409);
+	assert.equal((await call("/dashboard/extensions/remove", { name: "good-ext", force: true })).status, 200);
+	assert.ok(!fsm.existsSync(join(TEST_EXT, "good-ext")));
+	assert.equal((await call("/dashboard/extensions/remove", { name: "good-ext" })).status, 404);
+	assert.deepEqual(got(scopeOf2(a2)), ["fromgit"], "a removed entry is gone from what agents get");
+	X.clearPasswordHash();
+	await new Promise((r2) => srv.close(r2));
+	srv.closeAllConnections?.();
+	for (const a of [a1, a2]) agents.remove(a.id);
+	process.env.PATH = oldPath;
+	delete process.env.PIPER_TEST_SECRET;
+	rmSync(join(TEST_SHARED, "taken-name"), { recursive: true, force: true });
+}
+
+// Phase B (0.7): the agent creation wizard.
+{
+	const W = await import("./server.mjs");
+	const { wizardOptions, planWizard, createFromWizard, agents, apiKeys, profileOp, agentScope, listLibrary, config, deleteAgent } = W;
+	const fsm = await import("node:fs");
+	const bin = mkdtempSync(join(tmpdir(), "fakedocker4-"));
+	const helper = fileURLToPath(new URL("./piper-profile.mjs", import.meta.url));
+	writeFileSync(join(bin, "docker"), `#!/usr/bin/env bash
+dir=""; max=0; args=("$@"); rest=(); i=0
+while [ $i -lt $# ]; do
+  a="\${args[$i]}"
+  case "$a" in
+    -v) v="\${args[$((i+1))]}"; case "$v" in *:/data) dir="\${v%:/data}";; esac;;
+    -e) e="\${args[$((i+1))]}"; case "$e" in PROFILE_MAX_BYTES=*) max="\${e#*=}";; esac;;
+    /opt/piper/profile.mjs) rest=("\${args[@]:$((i+1))}"); break;;
+  esac
+  i=$((i+1))
+done
+[ -z "$dir" ] && exit 1
+cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
+`);
+	fsm.chmodSync(join(bin, "docker"), 0o755);
+	const oldPath = process.env.PATH;
+	process.env.PATH = `${bin}:${oldPath}`;
+	W.clearPasswordHash();
+	const made = apiKeys.create({ name: "wizard key", expiresAt: 0 });
+	const key = made.record ?? made;
+	const skill = (name, d = "does a thing") => `---\nname: ${name}\ndescription: ${d}\n---\nDo it.\n`;
+	// A library entry to grant (a folder the way an install leaves it).
+	mkdirSync(join(TEST_EXT, "wiz-ext", "node_modules", "wiz-ext", "extensions"), { recursive: true });
+	writeFileSync(join(TEST_EXT, "wiz-ext", "node_modules", "wiz-ext", "extensions", "x.js"), "export default () => {};");
+	writeFileSync(join(TEST_EXT, "wiz-ext", "entry.json"), JSON.stringify({ name: "wiz-ext", source: "npm:wiz-ext", version: "1.0.0", entry: "node_modules/wiz-ext" }));
+
+	// What the steps offer.
+	const opts = wizardOptions();
+	assert.ok(opts.keys.some((k) => k.id === key.id && k.usable));
+	const reviewer = opts.templates.find((t) => t.name === "reviewer");
+	assert.ok(reviewer.instructions.includes("Reviewer") && reviewer.skills.map((x) => x.name).includes("review-checklist"));
+	assert.ok(reviewer.skills.find((x) => x.name === "review-checklist").description.length > 10, "the skill's description comes from its header");
+	assert.equal(opts.templates.find((t) => t.name === "orchestrator").canDelegate, true);
+	assert.ok(opts.items.some((i) => i.name === "wiz-ext" && i.kind === "package"));
+	assert.equal(opts.maxPackages, 5);
+
+	// Refusals before anything is made.
+	const base = { keyId: key.id, name: "wiz-one", template: "reviewer" };
+	const refuse = (patch, re) => assert.throws(() => planWizard({ ...base, ...patch }), re, JSON.stringify(patch).slice(0, 80));
+	refuse({ keyId: "nope" }, /choose a key/);
+	refuse({ template: "nope" }, /no template/);
+	refuse({ skills: { exclude: ["not-there"] } }, /no skill "not-there"/);
+	refuse({ instructions: "x".repeat(70 * 1024) }, /limited to 64 KB/);
+	refuse({ skills: { add: [{ name: "../evil", content: skill("x") }] } }, /not a skill name/);
+	refuse({ skills: { add: [{ name: "a b", content: skill("x") }] } }, /not a skill name/);
+	refuse({ skills: { add: [{ name: "review-checklist", content: skill("review-checklist") }] } }, /already a skill/);
+	refuse({ skills: { add: [{ name: "headerless", content: "just text" }] } }, /needs a header/);
+	refuse({ skills: { add: [{ name: "big", content: skill("big") + "x".repeat(70 * 1024) }] } }, /over 64 KB/);
+	refuse({ skills: { add: Array.from({ length: 21 }, (_, i) => ({ name: `s${i}`, content: skill(`s${i}`) })) } }, /at most 20/);
+	refuse({ thinking: "extreme" }, /thinking must be/);
+	refuse({ extensions: "ghost" }, /no extension or bundle called "ghost"/);
+	refuse({ extensions: "wiz-ext" }, (e) => e.status === 403, "granting needs a dashboard password");
+	refuse({ packages: ["npm:x"] }, (e) => e.status === 403, "so does installing");
+	W.setPasswordHash(W.hashPassword("a long enough password"));
+	refuse({ packages: ["./local"] }, /package source/);
+	refuse({ packages: Array(6).fill("npm:x") }, /at most 5/);
+	assert.equal(planWizard({ ...base, extensions: "wiz-ext" }).sharedBundles, "wiz-ext");
+	assert.equal(planWizard({ ...base, extensions: ["wiz-ext"] }).sharedBundles, "wiz-ext");
+	assert.equal(planWizard({ ...base, extensions: "none" }).sharedBundles, "");
+	assert.equal(planWizard({ ...base, extensions: "" }).sharedBundles, null, "blank follows the key");
+	W.clearPasswordHash();
+	const before = agents.listByKey(key.id).length;
+
+	// A full create: template, edited instructions, one skill left out, one added, hand-offs on, limits.
+	const reviewerSkills = reviewer.skills.length;
+	W.setPasswordHash(W.hashPassword("a long enough password"));
+	const created = await createFromWizard({
+		keyId: key.id, name: "wiz-full", description: "reviews things", template: "reviewer", workspace: "own", thinking: "low",
+		instructions: "# Custom\n\nYou are the custom reviewer.\n", skills: { exclude: ["review-checklist"], add: [{ name: "my-skill", content: skill("my-skill", "my own") }] },
+		extensions: "wiz-ext", canDelegate: true, container: { memoryMb: 512 },
+	});
+	const a = created.agent;
+	assert.deepEqual([a.name, a.description, a.workspace, a.thinking, a.canDelegate, a.sharedBundles, a.container?.memoryMb], ["wiz-full", "reviews things", "own", "low", true, "wiz-ext", 512]);
+	const scope = agentScope(key.id, a.id);
+	assert.match(JSON.stringify(await profileOp(scope, { op: "instructions.get" })), /You are the custom reviewer/);
+	const skills = (await profileOp(scope, { op: "skills.list" })).map((x) => x.name);
+	assert.deepEqual(skills, ["my-skill"], "the excluded skill is gone and the added one is there");
+	assert.equal(W.grantedBundles(scope, { fallback: "" }).map((b) => b.name).join(), "wiz-ext", "the grant is in effect");
+	// A blank-template agent with no extras follows its key and has only what was typed.
+	const plain = await createFromWizard({ keyId: key.id, name: "wiz-plain", instructions: "Be brief." });
+	assert.equal(plain.agent.sharedBundles, null);
+	assert.match(JSON.stringify(await profileOp(agentScope(key.id, plain.agent.id), { op: "instructions.get" })), /Be brief/);
+	assert.deepEqual(await profileOp(agentScope(key.id, plain.agent.id), { op: "skills.list" }), []);
+	// Template instructions are kept when none are sent.
+	const kept = await createFromWizard({ keyId: key.id, name: "wiz-kept", template: "coder" });
+	assert.match(JSON.stringify(await profileOp(agentScope(key.id, kept.agent.id), { op: "instructions.get" })), /Coder/);
+	assert.equal(kept.agent.canDelegate, false);
+	// An orchestrator keeps its hand-offs unless told otherwise only via the explicit flag: the wizard's own choice wins.
+	const orch = await createFromWizard({ keyId: key.id, name: "wiz-orch", template: "orchestrator", canDelegate: true });
+	assert.equal(orch.agent.canDelegate, true);
+	// A failure after the agent exists removes it again: a name already taken, and a refused model.
+	await assert.rejects(createFromWizard({ keyId: key.id, name: "wiz-full" }), /already has an agent/);
+	await assert.rejects(createFromWizard({ keyId: key.id, name: "wiz-model", model: "no-such/model" }), /no model/);
+	assert.equal(agents.find(key.id, "wiz-model"), null);
+	await assert.rejects(createFromWizard({ keyId: key.id, name: "wiz-limits", container: { memoryMb: "lots" } }), /memory/);
+	assert.equal(agents.find(key.id, "wiz-limits"), null, "nothing is left behind");
+	assert.equal(agents.listByKey(key.id).length, before + 4);
+	// A new key made with the agent.
+	refuse({ keyId: undefined, newKey: { name: " " } }, /name the new key/);
+	refuse({ keyId: undefined, newKey: { name: "k", expiresAt: "not a date" } }, /not a valid date/);
+	refuse({ keyId: undefined, newKey: { name: "k", expiresAt: 1000 } }, /in the future/);
+	refuse({ keyId: undefined }, /choose a key/);
+	const keysBefore = apiKeys.list().length;
+	const fresh = await createFromWizard({ newKey: { name: "wizard made", expiresAt: Date.now() + 86_400_000 }, name: "wiz-newkey", instructions: "Hi." });
+	assert.match(fresh.newKey.key, /^piper_/, "the secret comes back once");
+	assert.equal(apiKeys.list().length, keysBefore + 1);
+	const madeKey = apiKeys.get(fresh.newKey.id);
+	assert.deepEqual([madeKey.name, fresh.agent.keyId === madeKey.id, W.ApiKeyStore.problem(madeKey)], ["wizard made", true, null]);
+	assert.ok(apiKeys.verify(fresh.newKey.key), "the key works");
+	assert.equal(JSON.stringify(W.apiKeys.get(fresh.newKey.id)).includes(fresh.newKey.key), false, "and is not kept in the clear");
+	await assert.rejects(createFromWizard({ newKey: { name: "doomed" }, name: "wiz-doomed", model: "no-such/model" }), /no model/);
+	assert.equal(apiKeys.list().length, keysBefore + 1, "a failed create does not leave a key behind");
+	await assert.rejects(createFromWizard({ newKey: { name: "doomed2" }, name: "bad name!" }), /lowercase/);
+	assert.equal(apiKeys.list().length, keysBefore + 1);
+	await deleteAgent(fresh.agent.id);
+	apiKeys.remove(fresh.newKey.id);
+	// The page has every step.
+	const html = readFileSync(new URL("./dashboard.html", import.meta.url), "utf8");
+	for (const step of ["wzkey", "wzidentity", "wzinstructions", "wzextensions", "wzlimits", "wzreview"]) assert.ok(html.includes(`'${step}'`), `the wizard has the ${step} step`);
+	for (const a2 of agents.listByKey(key.id)) await deleteAgent(a2.id);
+	rmSync(join(TEST_EXT, "wiz-ext"), { recursive: true, force: true });
+	W.clearPasswordHash();
+	process.env.PATH = oldPath;
+}
+
+// Phase C (0.7): the Playground's backend.
+{
+	const G = await import("./server.mjs");
+	const { playgroundRoutes, playgroundTargets, setAgentTurnRunner, LiveLog, AgentRunError, apiKeys, agents, config, scopedSessionId, credentialFor, sessions, recentAudit } = G;
+	const http = await import("node:http");
+	const mk = (name) => { const c = apiKeys.create({ name, expiresAt: 0 }); return c.record ?? c; };
+	const key = mk("pg key");
+	const agent = agents.create({ keyId: key.id, name: "pg-agent" });
+	agents.update(agent.id, { description: "for the playground" });
+	const off = agents.create({ keyId: key.id, name: "pg-off" });
+	agents.update(off.id, { enabled: false });
+	const revoked = mk("pg revoked");
+	apiKeys.revoke(revoked.id);
+	const srv = http.createServer((req, res) => void playgroundRoutes(req, res, new URL(req.url, "http://x").pathname).then((h) => h || (res.writeHead(404), res.end())));
+	await new Promise((r) => srv.listen(0, "127.0.0.1", r));
+	const base = `http://127.0.0.1:${srv.address().port}/dashboard/playground`;
+	const post = (body, signal) => fetch(`${base}/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), signal });
+	const conv = "conv-1234567890";
+	const good = { keyId: key.id, agentId: agent.id, conversation: conv, message: "hello playground" };
+	const events = async (res) => {
+		const out = [];
+		let buf = "";
+		for await (const chunk of res.body) {
+			buf += new TextDecoder().decode(chunk);
+			let i;
+			while ((i = buf.indexOf("\n\n")) >= 0) {
+				const block = buf.slice(0, i);
+				buf = buf.slice(i + 2);
+				const ev = /^event: (.*)$/m.exec(block)?.[1];
+				const data = /^data: (.*)$/m.exec(block)?.[1];
+				if (ev) out.push([ev, JSON.parse(data)]);
+			}
+		}
+		return out;
+	};
+
+	// Gates.
+	G.clearPasswordHash();
+	assert.equal((await fetch(`${base}/targets.json`)).status, 403, "no password, no playground");
+	assert.equal((await post(good)).status, 403);
+	G.setPasswordHash(G.hashPassword("a long enough password"));
+	config.PLAYGROUND_ENABLED = false;
+	assert.equal((await post(good)).status, 403, "switched off");
+	config.PLAYGROUND_ENABLED = true;
+
+	// Targets: usable keys with their enabled agents and models.
+	const targets = await (await fetch(`${base}/targets.json`)).json();
+	const mine = targets.targets.find((t) => t.keyId === key.id);
+	assert.deepEqual(mine.agents.map((a) => a.name), ["pg-agent"], "a disabled agent is not offered");
+	assert.ok(Array.isArray(mine.models));
+	assert.ok(!targets.targets.some((t) => t.keyId === revoked.id), "a revoked key is not offered");
+
+	// Refusals before the stream.
+	for (const [patch, status] of [[{ message: "  " }, 400], [{ message: "x".repeat(40_000) }, 400], [{ conversation: "short" }, 400], [{ conversation: "../../etc/passwd-x" }, 400], [{ keyId: revoked.id, agentId: null }, 401], [{ keyId: "nope", agentId: null }, 401], [{ agentId: "deadbeef" }, 404], [{ agentId: off.id }, 409]]) {
+		const r = await post({ ...good, ...patch });
+		assert.equal(r.status, status, JSON.stringify(patch).slice(0, 60));
+		assert.match(r.headers.get("content-type"), /json/);
+	}
+
+	// A turn: the session's events come through, then done.
+	let seenCredential = null;
+	let seenSession = null;
+	setAgentTurnRunner(async ({ credential, clientSessionId, prompt, model, signal, onSession }) => {
+		seenCredential = credential;
+		seenSession = { clientSessionId, prompt, model };
+		const live = new LiveLog();
+		live.feed({ type: "message_start", message: { role: "user", content: prompt } });
+		onSession({ live });
+		live.feed({ type: "message_start", message: { role: "assistant" } });
+		live.feed({ type: "message_update", assistantMessageEvent: { type: "thinking_delta", delta: "hmm" } });
+		live.feed({ type: "tool_execution_start", toolCallId: "t1", toolName: "bash", args: { command: "ls" } });
+		live.feed({ type: "tool_execution_end", toolCallId: "t1", isError: false, result: { content: [{ type: "text", text: "a.txt" }] } });
+		live.feed({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "Hello " } });
+		live.feed({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "there" } });
+		return { text: "Hello there", reasoning: "hmm", usage: { total_tokens: 9 }, cost: 0.01 };
+	});
+	let r = await post({ ...good, model: "p/m" });
+	assert.equal(r.status, 200);
+	assert.equal(r.headers.get("content-type"), "text/event-stream; charset=utf-8");
+	let ev = await events(r);
+	assert.deepEqual(ev.map(([e]) => e).filter((e, i, a) => e !== a[i - 1]), ["item", "done"]);
+	const kinds = ev.filter(([e]) => e === "item").map(([, d]) => d.item.kind);
+	assert.ok(kinds.includes("thinking") && kinds.includes("tool") && kinds.includes("assistant") && !kinds.includes("user"), "the user's own message is not echoed");
+	const last = ev.at(-1);
+	assert.deepEqual([last[0], last[1].text, last[1].usage.total_tokens, last[1].cost], ["done", "Hello there", 9, 0.01]);
+	assert.equal(seenCredential.id, key.id);
+	assert.equal(seenCredential.agent.id, agent.id, "it runs as the chosen agent");
+	assert.deepEqual(seenSession, { clientSessionId: `playground:${conv}`, prompt: "hello playground", model: "p/m" });
+	r = await post({ ...good, conversation: conv });
+	await events(r);
+	const audits = recentAudit(200).filter((a) => a.action === "session.playground");
+	assert.equal(audits.length, 1, "a conversation is audited once, however many turns");
+	assert.equal(JSON.stringify(audits).includes("hello playground"), false, "never the message");
+	// Errors mid-stream are events.
+	setAgentTurnRunner(async () => { throw new AgentRunError("daily spend limit reached", 429, "spend_limit_exceeded", "rate_limit_error"); });
+	ev = await events(await post({ ...good, conversation: "conv-errors-0001" }));
+	assert.deepEqual([ev.at(-1)[0], ev.at(-1)[1].status, ev.at(-1)[1].code], ["error", 429, "spend_limit_exceeded"]);
+	setAgentTurnRunner(async () => { throw new Error("boom"); });
+	ev = await events(await post({ ...good, conversation: "conv-errors-0002" }));
+	assert.match(ev.at(-1)[1].message, /could not answer: boom/);
+	// Stop: the client goes away, the turn is aborted.
+	let aborted = null;
+	setAgentTurnRunner(async ({ signal }) => { await new Promise((resolve) => signal.addEventListener("abort", () => { aborted = true; resolve(); })); return { text: "", usage: {}, cost: 0 }; });
+	const controller = new AbortController();
+	const pending = post({ ...good, conversation: "conv-abort-00001" }, controller.signal);
+	const res3 = await pending;
+	controller.abort();
+	await res3.body?.cancel().catch(() => {});
+	const end = Date.now() + 2000;
+	while (!aborted && Date.now() < end) await new Promise((r2) => setTimeout(r2, 20));
+	assert.equal(aborted, true, "stopping aborts the agent's turn");
+	setAgentTurnRunner(null);
+
+	// Ending a conversation closes its session.
+	const credential = credentialFor(key.id, agent.id);
+	const scoped = scopedSessionId(credential, "playground:conv-delete-0001");
+	const opened = sessions.acquire(scoped, credential);
+	opened.record.sessionPromise.catch(() => {});
+	assert.equal(sessions.has(scoped), true);
+	const del = await (await fetch(`${base}/conversation/conv-delete-0001?keyId=${key.id}&agentId=${agent.id}`, { method: "DELETE" })).json();
+	assert.equal(del.ended, true);
+	assert.equal(sessions.has(scoped), false);
+	assert.equal((await (await fetch(`${base}/conversation/conv-delete-0001?keyId=${key.id}&agentId=${agent.id}`, { method: "DELETE" })).json()).ended, false, "nothing to end twice");
+	assert.equal((await fetch(`${base}/conversation/bad%20id?keyId=${key.id}`, { method: "DELETE" })).status, 404, "an id that is not one is not a route");
+	G.clearPasswordHash();
+	await new Promise((r2) => srv.close(r2));
+	srv.closeAllConnections?.();
+	for (const a of [agent, off]) agents.remove(a.id);
+}
+
+// Phase C (0.7): the Playground page: markdown renderer and markup.
+{
+	const html = readFileSync(new URL("./dashboard.html", import.meta.url), "utf8");
+	const vm = await import("node:vm");
+	const start = html.indexOf("function mdInline(text)");
+	const end = html.indexOf("function mdSafeHref(href)");
+	assert.ok(start > 0 && end > start);
+	const ctx = vm.createContext({});
+	vm.runInContext(`${html.slice(start, end)}\nthis.mdParse = mdParse; this.mdInline = mdInline;`, ctx);
+	const parse = (t) => JSON.parse(JSON.stringify(ctx.mdParse(t)));
+	const types = (t) => parse(t).map((b) => b.t);
+	assert.deepEqual(types("# H\n\ntext\n\n- a\n- b\n\n1. x\n2. y\n\n```js\ncode\n```\n\n> q\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n---"), ["h", "p", "ul", "ol", "code", "quote", "table", "hr"]);
+	const code = parse("```py\nprint('<script>alert(1)</script>')\n\n\nx = 1\n```")[0];
+	assert.deepEqual([code.t, code.lang], ["code", "py"]);
+	assert.ok(code.text.includes("<script>") && code.text.includes("\n\n\nx = 1"), "code is kept as it was written, as text");
+	assert.deepEqual(parse("```\nnever closed\nstill code")[0], { t: "code", lang: "", text: "never closed\nstill code" }, "a fence still open while streaming is code");
+	const nested = parse("- a\n  - b\n    - c\n- d")[0];
+	assert.equal(nested.items.length, 2);
+	assert.equal(nested.items[0].sub[0].items[0].sub[0].items[0].c[0].v, "c", "lists nest by indent");
+	assert.equal(parse("3. three\n4. four")[0].t, "ol");
+	const inline = (t) => JSON.parse(JSON.stringify(ctx.mdInline(t)));
+	assert.deepEqual(inline("a **b** c").map((n) => n.t), ["text", "b", "text"]);
+	assert.deepEqual(inline("`x < y` and *it* and ~~gone~~").map((n) => n.t), ["code", "text", "i", "text", "del"]);
+	assert.equal(inline("snake_case_word and 2*3*4")[0].t, "text", "intraword underscores are not emphasis");
+	assert.deepEqual(inline("<img src=x onerror=alert(1)> and <b>bold</b>").map((n) => n.t), ["text"], "html is only ever text");
+	assert.match(inline("[click](javascript:alert(1))")[0].href, /^javascript:/, "the parser keeps the target; rendering refuses it");
+	assert.match(html.slice(html.indexOf("function mdSafeHref"), html.indexOf("function mdInlineNodes")), /\^\(https\?:\\\/\\\/\|mailto:\)/, "only http, https and mailto become links");
+	assert.deepEqual(inline("see https://example.com/a.b, ok").map((n) => n.t), ["text", "a", "text"], "bare links are found and punctuation is left out");
+	assert.equal(inline("see https://example.com/a.b, ok")[1].href, "https://example.com/a.b");
+	assert.equal(types("a | b | c").join(), "p", "a pipe alone is not a table");
+	assert.deepEqual(types("Para one\nstill para one\n\nPara two"), ["p", "p"]);
+	// Model text never goes through innerHTML in the page's chat code, and every id the script uses exists.
+	const chatCode = html.slice(html.indexOf("/* ---- Markdown for the Playground"), html.indexOf("var TEMPLATES = [];"));
+	assert.ok(!/innerHTML|insertAdjacentHTML|document\.write/.test(chatCode), "no innerHTML in the Markdown or Playground code");
+	for (const id of ["pg", "pgside", "pgnew", "pgsearch", "pglist", "pgexport", "pgclear", "pgtarget", "pgmodel", "pgtitle", "pgscroll", "pgmsgs", "pgdown", "pginput", "pgsend", "pgnote", "pgtoggle", "pgfilesbtn", "pgfiles", "pgfrefresh", "pgfcrumb", "pgflist", "pgfnote", "pgmodal", "pgmtitle", "pgmmeta", "pgmbody", "pgmraw", "pgmdl", "pgmclose"]) assert.ok(html.includes(`id="${id}"`), `the Playground has #${id}`);
+	assert.ok(/<a href="#playground"/.test(html.slice(html.indexOf('<nav id="nav">'), html.indexOf('<nav id="nav">') + 200)), "Playground is first in the menu");
+	assert.ok(/localStorage/.test(chatCode) && /try \{/.test(chatCode), "conversations are kept in the browser, guarded");
+}
+
 console.log("nextTurn + images: ok");
 rmSync(TEST_DB, { force: true });
 rmSync(TEST_WS, { recursive: true, force: true });
@@ -6342,4 +7190,5 @@ rmSync(`${TEST_WS}-run`, { recursive: true, force: true });
 rmSync(`${TEST_WS}-chats`, { recursive: true, force: true });
 rmSync(TEST_PROFILES, { recursive: true, force: true });
 rmSync(TEST_SHARED, { recursive: true, force: true });
+rmSync(TEST_EXT, { recursive: true, force: true });
 rmSync(TEST_CONTAINER_PI, { recursive: true, force: true });

@@ -190,6 +190,20 @@ export default async function piperBridge(pi) {
 	// same key, which the gateway decides: the socket is this chat's, so it cannot be used to speak for another.
 	if (process.env.PIPER_DELEGATE === "1") {
 		const reply = (value) => ({ content: [{ type: "text", text: value }], details: {} });
+		// The colleagues are in the system prompt every turn, current as of this turn, so an agent created a minute ago
+		// is used without the model having to ask. A failure adds nothing: it must never block a turn.
+		pi.on("before_agent_start", async (event) => {
+			try {
+				const { roster } = await readJson(await request("/agents"));
+				if (!roster) return;
+				const guidelines = (event.systemPromptOptions.promptGuidelines ??= []);
+				// Replace last turn's list rather than stacking lists.
+				for (let i = guidelines.length - 1; i >= 0; i--) if (guidelines[i].startsWith("Your colleagues right now") || guidelines[i].startsWith("You may hand work to the other agents")) guidelines.splice(i, 1);
+				guidelines.push(roster);
+			} catch {
+				/* no roster this turn */
+			}
+		});
 		pi.registerTool({
 			name: "piper_agents",
 			label: "List colleague agents",

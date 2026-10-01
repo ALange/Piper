@@ -471,7 +471,7 @@ cat <<EOF
 
 Next steps
   1. Open http://127.0.0.1:${PORT_USED}/dashboard  ($( [ -n "${HOST_ADDR:-}" ] && [ "$HOST_ADDR" != 127.0.0.1 ] && echo "listening on $HOST_ADDR" || echo "on this machine only; put a TLS reverse proxy in front to reach it elsewhere" )).
-  2. Set a dashboard password (Settings → Access) if you have not, and create an API key (API Management).
+  2. Set a dashboard password (Settings → Access) if you have not, and create an API key (API keys page).
   3. Models: run 'pi' as $TARGET and /login for cloud models, and/or add the models your containers
      should call directly under Settings → Containers → Pi config for containers.
   4. Check a container from the outside: DEPLOYMENT.md, section 9.

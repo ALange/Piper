@@ -1,0 +1,1 @@
+{ "description": "Coordinates the other agents of this key: splits a request, hands each part to the colleague whose profile fits, and combines the answers.", "thinking": "high", "workspace": "shared", "canDelegate": true }

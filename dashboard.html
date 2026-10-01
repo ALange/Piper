@@ -26,6 +26,18 @@
   .brand b { display:block; font-size:13px; letter-spacing:.02em; }
   .brand span { display:block; color:var(--dim); font-size:10px; }
   nav { padding:8px; }
+  .navgroup { margin:12px 10px 3px; font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); }
+  .navgroup:first-child { margin-top:2px; }
+  .navbadge { margin-left:auto; min-width:16px; padding:0 5px; border-radius:9px; background:#2a3340; color:var(--fg); font-size:10px; text-align:center; letter-spacing:0; line-height:16px; }
+  .navbadge.bad { background:var(--red); color:#0a0a0a; font-weight:700; }
+  nav a.on .navbadge { background:#d8dde4; color:#0a0a0a; }
+  .sectionhead .ctrl { margin-left:auto; }
+  .sectionhead .pagetabs { margin:0; flex:1 1 auto; }
+  .pagetabs { display:flex; flex-wrap:wrap; gap:2px; margin:0 0 14px; border-bottom:1px solid var(--border); }
+  .pagetabs a { padding:7px 14px; color:var(--muted); text-decoration:none; font-size:12px; border-bottom:2px solid transparent; margin-bottom:-1px; cursor:pointer; }
+  .pagetabs a:hover { color:var(--fg); }
+  .pagetabs a.on { color:var(--fg); border-bottom-color:var(--green); }
+  .view > section[data-tab]:not(.tabshown) { display:none !important; }
   nav a { display:flex; align-items:center; gap:9px; padding:8px 10px; margin:1px 0; border-radius:6px;
           color:var(--muted); text-decoration:none; font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
   nav a .ic { width:14px; text-align:center; opacity:.75; }
@@ -72,6 +84,74 @@
   /* panels */
   .grid2 { display:grid; grid-template-columns:1.35fr 1fr; gap:14px; margin-bottom:14px; }
   .grid3 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-bottom:14px; }
+  /* playground */
+  .pg { display:flex; height:calc(100vh - 200px); min-height:440px; border:1px solid var(--border); border-radius:12px; overflow:hidden; background:var(--panel); position:relative; }
+  .pgside { width:250px; flex:0 0 250px; border-right:1px solid var(--border); display:flex; flex-direction:column; background:#0c0c0c; }
+  .pgside .pgnewbtn { margin:10px; padding:9px; border:1px solid var(--border); border-radius:8px; background:#161616; color:var(--fg); cursor:pointer; text-align:left; }
+  .pgside input[type=search] { margin:0 10px 8px; padding:6px 8px; background:#141414; color:var(--fg); border:1px solid var(--border); border-radius:6px; font-family:inherit; font-size:12px; }
+  .pglist { flex:1; overflow:auto; padding:0 6px; }
+  .pgitem { display:flex; align-items:center; border-radius:8px; margin:1px 0; }
+  .pgitem:hover { background:#151515; } .pgitem.on { background:#1d2430; }
+  .pgitemmain { flex:1; min-width:0; padding:7px 9px; cursor:pointer; }
+  .pgitemmain b { display:block; font-weight:500; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pgitemmain span { display:block; color:var(--dim); font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pgitem button { display:none; margin-right:6px; background:none; border:0; color:var(--muted); cursor:pointer; font-size:15px; }
+  .pgitem:hover button { display:block; }
+  .pgfoot { display:flex; gap:6px; padding:8px 10px; border-top:1px solid var(--border); }
+  .pgmain { flex:1; min-width:0; display:flex; flex-direction:column; position:relative; }
+  .pgbar { display:flex; gap:8px; align-items:center; padding:9px 14px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  .pgbar select { max-width:240px; background:#141414; color:var(--fg); border:1px solid var(--border); border-radius:6px; padding:5px 7px; font-family:inherit; font-size:12px; }
+  .pgtitle { color:var(--dim); font-size:11px; margin-left:auto; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:30%; }
+  .pgtoggle { display:none; }
+  .pgscroll { flex:1; overflow:auto; scroll-behavior:smooth; }
+  .pgmsgs { max-width:780px; margin:0 auto; padding:20px 16px 10px; }
+  .pgm { margin:0 0 20px; display:flex; gap:12px; }
+  .pgm.user { justify-content:flex-end; }
+  .pgbubble { background:#243044; border-radius:16px 16px 4px 16px; padding:9px 14px; max-width:82%; white-space:pre-wrap; word-break:break-word; font-size:13px; line-height:1.55; }
+  .pgavatar { width:28px; height:28px; flex:0 0 28px; border-radius:50%; background:#1c3a2c; color:var(--green); display:grid; place-items:center; font-weight:700; font-size:12px; }
+  .pgavatar.big { width:48px; height:48px; font-size:20px; margin:0 auto 12px; }
+  .pgbody { flex:1; min-width:0; font-size:13px; line-height:1.65; }
+  .pgmd p { margin:0 0 10px; } .pgmd ul, .pgmd ol { margin:0 0 10px; padding-left:22px; } .pgmd li { margin:2px 0; }
+  .pgmd h3, .pgmd h4, .pgmd h5, .pgmd h6 { margin:14px 0 6px; } .pgmd blockquote { margin:0 0 10px; padding:2px 12px; border-left:3px solid var(--border); color:var(--muted); }
+  .pgmd code { background:#1a1a1a; padding:1px 5px; border-radius:4px; font-size:12px; } .pgmd a { color:var(--blue); } .pgmd hr { border:0; border-top:1px solid var(--border); }
+  .pgcode { margin:0 0 12px; border:1px solid var(--border); border-radius:8px; overflow:hidden; background:#0b0b0b; }
+  .pgcodebar { display:flex; justify-content:space-between; align-items:center; padding:4px 10px; background:#151515; color:var(--dim); font-size:11px; }
+  .pgcode pre { margin:0; padding:10px 12px; overflow:auto; font-size:12px; line-height:1.5; } .pgcode code { background:none; padding:0; }
+  .pgtable { overflow:auto; margin:0 0 12px; } .pgtable table { border-collapse:collapse; } .pgtable th, .pgtable td { border:1px solid var(--border); padding:4px 10px; }
+  .pgthink, .pgtool { margin:0 0 8px; border:1px solid var(--border-soft); border-radius:8px; padding:5px 10px; color:var(--muted); font-size:12px; }
+  .pgthink summary, .pgtool summary { cursor:pointer; } .pgthink div { margin-top:6px; white-space:pre-wrap; font-style:italic; color:var(--dim); }
+  .pgtool pre { margin:6px 0 0; max-height:180px; overflow:auto; white-space:pre-wrap; color:var(--fg); }
+  .pgtool.error { border-color:#5a2a2a; } .pgtool.running summary { color:var(--amber); }
+  .pgwait { color:var(--dim); } .pgerr { color:var(--red); margin-top:6px; } .pgstopped { color:var(--dim); font-style:italic; }
+  .pgcaret { display:inline-block; width:7px; height:14px; background:var(--fg); vertical-align:text-bottom; animation:pgblink 1s steps(2) infinite; }
+  @keyframes pgblink { 50% { opacity:0; } }
+  .pgfoot2 { display:flex; gap:10px; align-items:center; color:var(--dim); font-size:11px; margin-top:4px; }
+  .pgempty { text-align:center; padding:8vh 20px 20px; color:var(--muted); } .pgempty h2 { color:var(--fg); margin:0 0 6px; } .pgempty.bad { color:var(--red); }
+  .pgchips { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:18px; } .pgchips button { border-radius:16px; padding:7px 14px; }
+  .pgcomposer { padding:8px 16px 12px; } .pgbox { max-width:780px; margin:0 auto; display:flex; gap:8px; align-items:flex-end; border:1px solid var(--border); border-radius:14px; padding:8px; background:#121212; }
+  .pgbox textarea { flex:1; resize:none; border:0; outline:0; background:none; color:var(--fg); font-family:inherit; font-size:13px; line-height:1.5; max-height:200px; }
+  .pgbox button { border-radius:10px; padding:7px 16px; } .pgbox button.stop { background:#3a1f1f; }
+  .pgnote { text-align:center; font-size:11px; color:var(--dim); margin-top:4px; }
+  #pgdown { position:absolute; right:22px; bottom:96px; border-radius:50%; width:32px; height:32px; padding:0; }
+  .pg.withfiles .pgfiles { display:flex; }
+  .pgfiles { display:none; width:270px; flex:0 0 270px; border-left:1px solid var(--border); flex-direction:column; background:#0c0c0c; }
+  .pgfiles header { display:flex; align-items:center; justify-content:space-between; padding:9px 12px; border-bottom:1px solid var(--border); font-size:12px; }
+  .pgcrumb { padding:6px 12px; font-size:11px; color:var(--muted); word-break:break-all; } .pgcrumb a { color:var(--blue); cursor:pointer; }
+  .pgflist { flex:1; overflow:auto; padding:0 6px 8px; }
+  .pgfrow { display:flex; justify-content:space-between; gap:8px; padding:5px 8px; border-radius:6px; cursor:pointer; font-size:12px; }
+  .pgfrow:hover { background:#151515; } .pgfrow span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .pgfrow small { color:var(--dim); flex:none; } .pgfrow.link { cursor:default; color:var(--dim); }
+  #pgfilesbtn.on { background:#2a3340; }
+  #pgmodal { position:fixed; inset:0; background:rgba(0,0,0,.65); z-index:60; display:flex; align-items:center; justify-content:center; padding:20px; }
+  #pgmodal[hidden] { display:none; }
+  .pgmcard { background:var(--panel); border:1px solid var(--border); border-radius:12px; width:min(900px,100%); max-height:88vh; display:flex; flex-direction:column; }
+  .pgmcard header { display:flex; gap:10px; align-items:center; padding:10px 14px; border-bottom:1px solid var(--border); }
+  .pgmcard header b { flex:1; word-break:break-all; font-weight:600; } .pgmcard header span { color:var(--dim); font-size:11px; }
+  #pgmbody { overflow:auto; padding:14px 16px; } .pgpre { margin:0; white-space:pre-wrap; word-break:break-word; font-size:12px; line-height:1.5; } .pgimg { max-width:100%; display:block; margin:0 auto; }
+  @media (max-width: 800px) { .pg.withfiles .pgfiles { position:absolute; z-index:5; right:0; top:0; bottom:0; } }
+  @media (max-width: 800px) {
+    .pgside { position:absolute; z-index:5; top:0; bottom:0; left:0; transform:translateX(-100%); transition:transform .15s; } .pgside.open { transform:none; }
+    .pgtoggle { display:inline-block; } .pgtitle { display:none; }
+  }
   /* live view drawer */
   #livedrawer { position:fixed; top:0; right:0; bottom:0; width:min(640px,100vw); background:var(--panel); border-left:1px solid var(--border);
                 box-shadow:-8px 0 24px rgba(0,0,0,.5); z-index:50; display:flex; flex-direction:column; }
@@ -340,6 +420,19 @@
   tr.clickable:hover { background:#171717; cursor:pointer; }
 
   /* settings tabs */
+  .wzsteps { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 14px; }
+  .wzsteps span { padding:4px 10px; border:1px solid var(--border); border-radius:14px; font-size:11px; color:var(--dim); }
+  .wzsteps span.done { color:var(--muted); cursor:pointer; }
+  .wzsteps span.on { background:var(--fg); color:#0a0a0a; border-color:var(--fg); font-weight:600; }
+  .wzbody label.row { display:flex; gap:10px; align-items:center; margin:0 0 8px; }
+  .wzbody label.row > b { min-width:120px; font-weight:400; color:var(--muted); }
+  .wzbody input[type=text], .wzbody select, .wzbody textarea { background:#141414; color:var(--fg); border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-family:inherit; font-size:12px; }
+  .wzbody textarea { width:100%; box-sizing:border-box; }
+  .wzbody table.review td:first-child { color:var(--muted); width:150px; }
+  .wzcards { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:8px; margin:6px 0 10px; }
+  .wzcard { border:1px solid var(--border); border-radius:8px; padding:9px 10px; cursor:pointer; background:#0f0f0f; }
+  .wzcard.on { border-color:var(--green); background:#10201a; }
+  .wzcard b { display:block; font-size:12px; } .wzcard span { color:var(--muted); font-size:11px; }
   .tabs { display:flex; gap:4px; margin:0 0 16px; border-bottom:1px solid var(--border); }
   .tabs .tab { background:none; border:0; border-bottom:2px solid transparent; border-radius:0;
                color:var(--muted); padding:8px 12px; font-size:11px; letter-spacing:.08em;
@@ -411,22 +504,25 @@
       <div class="glyph">&#9679;</div>
       <div><b>Piper</b><span>Pi agent proxy</span></div>
     </div>
-    <nav>
+    <nav id="nav">
+      <a href="#playground"><span class="ic">&#9998;</span>Playground</a>
+      <div class="navgroup">Monitor</div>
       <a class="on" href="#overview"><span class="ic">&#9638;</span>Overview</a>
-      <a href="#agents"><span class="ic">&#9683;</span>Agents</a>
-      <a href="#containers"><span class="ic">&#9635;</span>Containers</a>
-      <a href="#terminal"><span class="ic">&#9002;</span>Terminal</a>
-      <a href="#files"><span class="ic">&#9776;</span>Files</a>
-      <a href="#endpoints"><span class="ic">&#8644;</span>Endpoints</a>
-      <a href="#jobs"><span class="ic">&#9201;</span>Jobs</a>
-      <a href="#models"><span class="ic">&#9678;</span>Models</a>
+      <a href="#chats"><span class="ic">&#9683;</span>Live chats<span class="navbadge" id="nav-chats-badge" hidden></span></a>
       <a href="#spend"><span class="ic">&#36;</span>Spend</a>
-      <a href="#apikeys"><span class="ic">&#9636;</span>API Management</a>
-      <a href="#profiles"><span class="ic">&#9776;</span>Profiles</a>
       <a href="#audit"><span class="ic">&#9745;</span>Audit</a>
+      <div class="navgroup">Build</div>
+      <a href="#agents"><span class="ic">&#8644;</span>Agents</a>
+      <a href="#extensions"><span class="ic">&#10010;</span>Extensions</a>
+      <a href="#jobs"><span class="ic">&#9201;</span>Jobs</a>
+      <a href="#files"><span class="ic">&#9776;</span>Files &amp; profiles</a>
+      <div class="navgroup">Infrastructure</div>
+      <a href="#containers"><span class="ic">&#9635;</span>Containers<span class="navbadge bad" id="nav-containers-badge" hidden>!</span></a>
+      <a href="#models"><span class="ic">&#9678;</span>Models</a>
+      <div class="navgroup">Admin</div>
+      <a href="#apikeys"><span class="ic">&#9636;</span>API keys</a>
       <a href="#settings"><span class="ic">&#9881;</span>Settings</a>
-      <a href="#docs"><span class="ic">&#9776;</span>Documentation</a>
-      <a href="#about"><span class="ic">&#9432;</span>About</a>
+      <a href="#help"><span class="ic">&#9432;</span>Help</a>
     </nav>
     <div class="sidefoot">
       <div class="statusbox">
@@ -443,7 +539,7 @@
     <p class="sub" id="subtitle">Live Pi agents, their models, and when each one will be reaped</p>
 
     <div class="sectionhead">
-      <h2 id="sectiontitle">Overview</h2>
+      <div class="pagetabs" id="tabbar" hidden></div>
       <div class="ctrl">
         <span>refresh</span>
         <select id="interval">
@@ -539,7 +635,7 @@
     </div><!-- /view-agents -->
 
     <div class="view" id="view-containers">
-      <section class="panel">
+      <section data-tab="containers" class="panel">
         <div class="toolbar">
           <div>
             <h3>Containers</h3>
@@ -558,7 +654,7 @@
         </table>
         <p class="hint" id="ctempty" hidden>No containers yet: one is made when a chat first speaks.</p>
       </section>
-      <section class="panel" id="hostpipanel">
+      <section data-tab="pihost" class="panel" id="hostpipanel">
         <div class="toolbar">
           <div>
             <h3>Pi on this host</h3>
@@ -583,26 +679,29 @@
           </table>
         </div>
       </section>
-      <section class="panel">
+      <section data-tab="images" class="panel">
         <div class="toolbar">
           <div>
             <h3>Images</h3>
             <p class="hint" style="margin:0" id="imgnote">The environments chats run in. <b>Build</b> makes one from its Dockerfile (docker/Dockerfile is <b>full</b>; add more under docker/environments/&lt;name&gt;). A rebuilt image applies to a chat's container the next time it is recreated, and an image is only removed when nothing uses it.</p>
           </div>
-          <button id="imgprune" title="remove the untagged images a rebuild leaves behind">prune old images</button>
+          <button id="imgclean" title="see what can be removed, and choose">clean up…</button>
+          <button id="imgprune" title="remove what is plainly unused: superseded builds and saved states of containers that are gone">quick prune</button>
         </div>
         <table><thead><tr><th>environment</th><th>image</th><th>Pi</th><th class="num">containers behind</th><th></th></tr></thead><tbody id="imgenvs"></tbody></table>
         <h4 style="margin:14px 0 4px;font-size:11px;letter-spacing:.06em;color:var(--dim)">ON THIS MACHINE</h4>
         <table><thead><tr><th>image</th><th>environment</th><th>Pi</th><th class="num">size</th><th>built</th><th>used by</th><th></th></tr></thead><tbody id="imgrows"></tbody></table>
+        <div id="imgplan" class="panel" hidden style="margin-top:12px"></div>
+        <div id="imgextra"></div>
         <pre id="imgjob" class="mdpreview" hidden></pre>
       </section>
-      <section class="panel">
+      <section data-tab="events" class="panel">
         <h3>Run a command</h3>
         <p class="hint" id="ctexecnote">Runs as root inside a running container. It is recorded below.</p>
         <div class="fieldrow"><select id="ctexectarget"></select><input type="text" id="ctexeccmd" placeholder="ls -la /workspace" autocomplete="off" style="flex:1"><button id="ctexecrun">run</button></div>
         <pre id="ctexecout" class="mdpreview" hidden></pre>
       </section>
-      <section class="panel">
+      <section data-tab="events" class="panel">
         <h3>What happened</h3>
         <p class="hint" style="margin:0 0 8px">Containers killed for memory or gone, and what was done here. Newest first.</p>
         <table><thead><tr><th>when</th><th>what</th><th>container</th><th>detail</th></tr></thead><tbody id="ctlog"></tbody></table>
@@ -748,6 +847,84 @@
       </section>
     </div><!-- /view-audit -->
 
+    <div class="view" id="view-playground">
+      <div class="pg" id="pg">
+        <aside class="pgside" id="pgside">
+          <button id="pgnew" class="pgnewbtn">+ New chat</button>
+          <input id="pgsearch" type="search" placeholder="search chats">
+          <div id="pglist" class="pglist"></div>
+          <div class="pgfoot"><button id="pgexport" title="download this chat as Markdown">export</button><button id="pgclear" title="delete every chat kept in this browser">clear all</button></div>
+        </aside>
+        <section class="pgmain">
+          <header class="pgbar">
+            <button id="pgtoggle" class="pgtoggle" title="chats">&#9776;</button>
+            <select id="pgtarget" title="who you are talking to"></select>
+            <select id="pgmodel" title="model for this chat"></select>
+            <span id="pgtitle" class="pgtitle"></span>
+            <button id="pgfilesbtn" title="the workspace of this agent: browse and preview its files">Files</button>
+          </header>
+          <div id="pgscroll" class="pgscroll"><div id="pgmsgs" class="pgmsgs"></div></div>
+          <button id="pgdown" hidden title="jump to the latest">&darr;</button>
+          <footer class="pgcomposer">
+            <div class="pgbox"><textarea id="pginput" rows="1" placeholder="Message the agent…  (Enter sends, Shift+Enter for a new line)"></textarea><button id="pgsend">Send</button></div>
+            <div class="pgnote" id="pgnote">Runs as the chosen key or agent: its limits and spend apply, and it can use its tools. Chats are kept in this browser only.</div>
+          </footer>
+        </section>
+        <aside class="pgfiles" id="pgfiles">
+          <header><b>Workspace</b><button id="pgfrefresh" title="reload the list">refresh</button></header>
+          <div class="pgcrumb" id="pgfcrumb"></div>
+          <div class="pgflist" id="pgflist"></div>
+          <p class="hint small" id="pgfnote" style="padding:0 12px"></p>
+        </aside>
+      </div>
+      <div id="pgmodal" hidden>
+        <div class="pgmcard">
+          <header><b id="pgmtitle"></b><span id="pgmmeta"></span><button id="pgmraw" hidden>show source</button><a id="pgmdl" href="#"><button>download</button></a><button id="pgmclose">close</button></header>
+          <div id="pgmbody"></div>
+        </div>
+      </div>
+    </div><!-- /view-playground -->
+
+    <div class="view" id="view-extensions">
+      <section data-tab="library" class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Extension library</h3>
+            <p class="hint" style="margin:0" id="extnote">Pi packages installed on <b>this host</b> (its npm or git, install scripts off unless you allow them) and kept in one library. They are never run here: a package is mounted read-only into the containers of the keys and agents you give it to (Access tab) and runs there, under their network policy and limits.</p>
+          </div>
+          <button id="extrefresh">refresh</button>
+        </div>
+        <table>
+          <thead><tr><th>extension</th><th>source</th><th>version</th><th class="num">size</th><th>given to</th><th></th></tr></thead>
+          <tbody id="extrows"></tbody>
+        </table>
+        <p class="hint" id="extempty" hidden>No extensions installed yet.</p>
+      </section>
+      <section data-tab="library" class="panel">
+        <h3>Install an extension</h3>
+        <p class="hint">A package from <code>npm:name[@version]</code>, <code>git:host/owner/repo[@ref]</code> or an <code>https://</code> repository. It must be a Pi package (a <code>pi</code> section in package.json, the <code>pi-package</code> keyword, or <code>extensions/</code>, <code>skills/</code> or <code>prompts/</code> folders). Third-party code: install only what you trust. Needs a dashboard password.</p>
+        <div class="keyform">
+          <input id="extsource" placeholder="npm:@scope/pi-tools  or  git:github.com/owner/repo" style="min-width:320px">
+          <input id="extname" placeholder="name (optional)">
+          <label class="ctrl" title="Run the package's install scripts on this host. Off by default: they run as the gateway's user. Needed only for packages that build native code."><input id="extscripts" type="checkbox"> allow install scripts</label>
+          <button id="extinstall">install</button>
+        </div>
+        <p class="passnote" id="extinstnote"></p>
+        <p class="hint" id="extjobtitle" hidden></p>
+        <pre id="extjob" class="mdpreview" hidden></pre>
+      </section>
+      <section data-tab="access" class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Who gets what</h3>
+            <p class="hint" style="margin:0">Three levels, each following the one above unless it has its own list: the <b>default</b> for every key, a <b>key</b> (all its agents), and an <b>agent</b>. Shared bundles and library extensions are given the same way. A change stops the affected live chats; each resumes on its next message with the new set. What an agent finally has, including its own installs, is under Files &amp; profiles &rarr; Profiles.</p>
+          </div>
+        </div>
+        <div class="tablescroll"><table id="extaccess"></table></div>
+        <p class="passnote" id="extaccessnote"></p>
+      </section>
+    </div><!-- /view-extensions -->
+
     <div class="view" id="view-jobs">
       <section class="panel">
         <div class="toolbar">
@@ -807,7 +984,7 @@
     </div><!-- /view-jobs -->
 
     <div class="view" id="view-endpoints">
-      <section class="panel">
+      <section data-tab="agents" class="panel">
         <div class="toolbar">
           <div>
             <h3>Agent endpoints</h3>
@@ -823,7 +1000,7 @@
         </table>
         <p class="hint" id="epempty" hidden>No agent endpoints yet. Create one below.</p>
       </section>
-      <section class="panel" id="teamsec">
+      <section data-tab="teams" class="panel" id="teamsec">
         <div class="toolbar">
           <div>
             <h3>Teams</h3>
@@ -839,25 +1016,38 @@
           <div class="fieldrow"><button id="teamaddstep">add step</button><button id="teamsave">create team</button><button id="teamcancel">close</button><span class="passnote" id="teamnote"></span></div>
         </div>
       </section>
-      <section class="panel" id="epeditor" hidden>
+      <section data-tab="wizard" class="panel" id="wizardsec">
+        <div class="toolbar">
+          <div>
+            <h3>Agent creation wizard</h3>
+            <p class="hint" style="margin:0">Choose a key and a template, name the agent, shape its instructions and skills, pick the extensions it gets and its limits, then review everything before it is created. The Quick create tab does the same in one form.</p>
+          </div>
+        </div>
+        <div id="wzsteps" class="wzsteps"></div>
+        <div id="wzbody" class="wzbody"></div>
+        <div class="fieldrow" style="margin-top:12px"><button id="wzback">back</button><button id="wznext">next</button><span class="passnote" id="wznote"></span></div>
+      </section>
+      <section data-tab="agents" class="panel" id="epeditor" hidden>
         <h3 id="epedtitle">Edit</h3>
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">name</label><input type="text" id="epedname"></div>
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">model</label><input type="text" id="epedmodel" placeholder="provider/model, blank = the default"><select id="epedthink"></select></div>
-        <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">description</label><input type="text" id="epeddesc" placeholder="what it is for: colleagues see this when choosing who to ask" maxlength="300"></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">description</label><input type="text" id="epeddesc" placeholder="what it is for: an orchestrator (or any agent that hands off work) chooses colleagues by this" maxlength="300"></div>
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">hand-offs</label><label class="ctrl" title="Gives this agent two tools: list its colleagues and hand a task to one, then use the answer. Only agents of the same key, bounded in depth; each hand-off is a turn that counts against the key."><input type="checkbox" id="epeddeleg"> may hand work to the other agents of its key</label></div>
         <div style="margin-bottom:8px"><label class="hint" for="epedinstr">instructions (the agent's AGENTS.md: who it is and how it works)</label><textarea id="epedinstr" rows="9" style="width:100%;box-sizing:border-box;background:#141414;color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:12px"></textarea></div>
         <div id="epedctr"></div>
         <div class="fieldrow" style="margin-top:8px"><button id="epedsave">save</button><button id="epedcancel">close</button><span class="hint small" id="epednote"></span></div>
         <p class="hint small" id="epedcurl"></p>
       </section>
-      <section class="panel">
+      <section data-tab="templates" class="panel">
         <div class="toolbar">
           <div>
             <h3>Templates and import</h3>
-            <p class="hint" style="margin:0" id="tplnote">A template is a ready-made profile: instructions, skills and settings. Pick one when creating an agent, or save an existing agent as a template (the <b>save as template</b> button). An agent can also be exported to a file and imported into any key, here or on another gateway.</p>
+            <p class="hint" style="margin:0" id="tplnote">A template is a ready-made profile: instructions, skills and settings. Pick one when creating an agent, or save an existing agent as a template (the <b>save as template</b> button). The <b>orchestrator</b> template turns hand-offs on: it sees every enabled agent of its key, with its description, at the start of each turn, so write a good description on each agent. An agent can also be exported to a file and imported into any key, here or on another gateway.</p>
           </div>
         </div>
         <table><thead><tr><th>template</th><th>about</th><th>files</th><th></th></tr></thead><tbody id="tplrows"></tbody></table>
+        <p class="hint small" id="tplnote2">Click a template to see what it contains, or to change it (your own; copy a built-in one to edit it).</p>
+        <div id="tpldetail" class="panel" hidden style="margin-top:12px"></div>
         <div class="fieldrow" style="margin-top:10px">
           <select id="impkey"></select>
           <input id="impname" placeholder="name (blank: the file's own)">
@@ -867,7 +1057,7 @@
         </div>
         <p class="hint small">A bundle can carry extensions, which are code that runs in the agent&rsquo;s container: import only files you trust. Needs a dashboard password. Environment, mounts, images and network are never part of a bundle.</p>
       </section>
-      <section class="panel">
+      <section data-tab="create" class="panel">
         <h3>Create an agent endpoint</h3>
         <p class="hint">For an existing key. The port is picked for you and kept. Instructions become the agent's AGENTS.md; you can also change its skills and extensions from chat with <code>/skills</code>, or the profile API.</p>
         <div class="keyform">
@@ -1338,8 +1528,11 @@ function render(d) {
   var msgs = [];
   if (ct && !ct.ok) msgs.push(['Chats cannot start. ', ct.problems.join(' \u2014 ')]);
   else if (ct && ct.warnings.length) msgs.push(['Check the containers. ', ct.warnings.join(' \u2014 ')]);
-  if (d.disk && d.disk.low) msgs.push(['Disk is nearly full. ', (d.disk.freeMb / 1024).toFixed(1) + ' GB free on ' + d.disk.path + ' (warning below ' + (d.disk.warnBelowMb / 1024).toFixed(1) + ' GB): chats cannot install or write once it is full. Free space, or prune images on the Containers page.']);
+  if (d.disk && d.disk.low) msgs.push(['Disk is nearly full. ', (d.disk.freeMb / 1024).toFixed(1) + ' GB free on ' + d.disk.path + ' (warning below ' + (d.disk.warnBelowMb / 1024).toFixed(1) + ' GB): chats cannot install or write once it is full. Free space, or prune images (Containers \u2192 Images).']);
   warn.hidden = msgs.length === 0;
+  // Trouble and activity show in the nav, so a page nobody has open still tells.
+  var cb = $('nav-containers-badge'); if (cb) cb.hidden = msgs.length === 0;
+  var lb = $('nav-chats-badge'); if (lb) { lb.hidden = !S.length; lb.textContent = String(S.length); }
   warn.replaceChildren.apply(warn, msgs.flatMap(function (m, i) { return (i ? [el('br')] : []).concat([el('b', m[0]), document.createTextNode(m[1])]); }));
 
   var tbody = $('rows');
@@ -1672,7 +1865,7 @@ function renderKeyTable() {
     // First, so it is visible without scrolling the table: what this key's agents get.
     var contents = el('button', 'contents');
     contents.title = 'skills, extensions and tools this key\u2019s agents get';
-    contents.addEventListener('click', function () { location.hash = '#profiles/key-' + k.id; });
+    contents.addEventListener('click', function () { location.hash = '#files/profiles/key-' + k.id; });
     actions.appendChild(contents);
     if (k.status === 'active') {
       var revoke = el('button', 'revoke');
@@ -2096,7 +2289,7 @@ var SETTING_TABS = [
   { id: 'containers', label: 'Containers', intro: 'Each chat’s agent runs in its own Docker container, with full rights inside it. These settings decide what a container can reach and how much of the machine it may use.' },
   { id: 'jobs', label: 'Jobs', intro: 'Jobs themselves are on the Jobs page. These limits keep unattended runs from costing more than you meant.' },
   { id: 'sessions', label: 'Sessions', intro: 'How long agents live and what they show while they work.' },
-  { id: 'limits', label: 'Usage limits', intro: 'Defaults for every API key. Each key can override them on the API Management page.' },
+  { id: 'limits', label: 'Usage limits', intro: 'Defaults for every API key. Each key can override them on the API keys page.' },
   { id: 'profiles', label: 'Profiles', intro: 'Each API key’s own skills, extensions and settings, and the shared bundles you hand out on top.' },
   { id: 'models', label: 'Models', intro: 'What happens when the model a chat uses fails.' },
   { id: 'audit', label: 'Audit', intro: 'What the audit log records and how long it keeps it. A category that is off is not stored at all. Changes to these settings are always recorded. The log itself is on the Audit page.' },
@@ -2139,9 +2332,11 @@ var LAYOUT = {
   TEAM_MAX_STEPS: { tab: 'sessions', section: 'Hand-offs and teams', label: 'Most steps in a team', unit: 'steps',
     summary: 'A team is a chain of agents on an endpoint of its own.' },
   PACKAGES_ENABLED: { tab: 'containers', section: 'Packages', label: 'Allow packages and MCP servers',
-    summary: 'Install Pi packages and MCP servers into a key\u2019s or agent\u2019s profile from the Profiles page. They run third-party code in the agent\u2019s container, so it needs a dashboard password. Off refuses all of it.' },
+    summary: 'Install Pi packages and MCP servers into a key\u2019s or agent\u2019s profile from Files & profiles \u2192 Profiles. They run third-party code in the agent\u2019s container, so it needs a dashboard password. Off refuses all of it.' },
   LIVE_VIEW_ENABLED: { tab: 'containers', section: 'Live view', label: 'Allow the live view',
     summary: 'Watch a running chat from the Agents page: what is said, thinking and tool calls, with interrupt and a transcript download. Needs a dashboard password; watches are audited, never the content. Off refuses all of it.' },
+  IMAGE_AUTO_PRUNE: { tab: 'containers', section: 'Images', label: 'Tidy unused images automatically',
+    summary: 'After a build and every few hours, remove images nothing uses (superseded builds, saved states of containers that are gone). Never an image in use, and never a container.' },
   JOBS_ENABLED: { tab: 'jobs', section: 'Jobs', label: 'Run jobs',
     summary: 'Scheduled and webhook-started runs of an agent, and asynchronous requests through POST /v1/piper/jobs. Off stops the scheduler and refuses new runs.' },
   JOBS_MAX_PARALLEL: { tab: 'jobs', section: 'Jobs', label: 'Runs at once', unit: 'runs',
@@ -2153,7 +2348,7 @@ var LAYOUT = {
   JOBS_RESULT_DAYS: { tab: 'jobs', section: 'Jobs', label: 'Keep results for', unit: 'days',
     summary: 'Finished runs and their text are deleted after this long.' },
   TERMINAL_ENABLED: { tab: 'containers', section: 'Terminal', label: 'Allow terminals',
-    summary: 'An interactive root shell in a running container, from the Terminal page. Needs a dashboard password; every open and close is audited, never what is typed. Off refuses all of them.' },
+    summary: 'An interactive root shell in a running container, from Containers \u2192 Terminal. Needs a dashboard password; every open and close is audited, never what is typed. Off refuses all of them.' },
   TERMINAL_IDLE_MS: { tab: 'containers', section: 'Terminal', label: 'Close an idle terminal after',
     summary: 'No typing for this long closes the terminal. 0 never does.' },
   TERMINAL_MAX_SESSIONS: { tab: 'containers', section: 'Terminal', label: 'Most terminals at once', unit: 'terminals',
@@ -2197,7 +2392,7 @@ var LAYOUT = {
   PROFILE_ROOT: { tab: 'profiles', section: 'Profiles', label: 'Profiles folder',
     summary: 'Where each key’s profile is stored, mounted at /profile in its chats’ containers.' },
   SHARED_BUNDLES: { tab: 'profiles', section: 'Shared bundles', label: 'Bundles every key gets',
-    summary: 'Comma-separated bundle names, * for all, or empty for none. A key can have its own list on API Management.',
+    summary: 'Comma-separated bundle names, * for all, or empty for none. A key can have its own list on the API keys page.',
     placeholder: 'none' },
   SHARED_ROOT: { tab: 'profiles', section: 'Shared bundles', label: 'Bundles folder',
     summary: 'Each subfolder is a bundle with skills/, extensions/ and prompts/, mounted read-only for the keys that get it.' },
@@ -2213,7 +2408,7 @@ var LAYOUT = {
     when: { key: 'FALLBACK_MODE', values: ['cooldown'], note: 'Only used when staying on the fallback for a cooldown period.' } },
 
   GATEWAY_API_KEY: { tab: 'access', section: 'API and dashboard', label: 'Admin API key',
-    summary: 'A key that opens both the API and the dashboard. Leave empty and use API Management for per-person keys.' },
+    summary: 'A key that opens both the API and the dashboard. Leave empty and use the API keys page for per-person keys.' },
   DASHBOARD_SESSION_MS: { tab: 'access', section: 'API and dashboard', label: 'Stay signed in for',
     summary: 'How long a dashboard sign-in lasts. 0 lasts until the browser closes.' },
   AUDIT_AUTH: { tab: 'audit', section: 'What is recorded', label: 'Dashboard sign-ins',
@@ -2780,23 +2975,58 @@ $('settingdiscard').addEventListener('click', function () { renderSettings(); se
 $('settingsearch').addEventListener('input', applySettingFilter);
 
 /* Views. The nav drives a hash route, so a view is linkable and survives a reload. */
-var VIEWS = {
-  overview: { title:'Gateway Overview', subtitle:'Live Pi agents, their models, and when each one will be reaped', section:'Overview' },
-  agents:   { title:'Agents', subtitle:'Every live Pi agent, with its expiry and a kill control', section:'Agents' },
-  jobs:     { title:'Jobs', subtitle:'Prompts an agent runs on a schedule, by webhook or on request', section:'Jobs' },
-  endpoints: { title:'Endpoints', subtitle:'Named, permanent agents of an API key, each on its own OpenAI-compatible port', section:'Endpoints' },
-  docs:     { title:'Documentation', subtitle:'The administrator\u2019s handbook: architecture, deployment, operation, configuration, API and troubleshooting', section:'Documentation' },
-  about:    { title:'About', subtitle:'Piper, its version, release notes and author', section:'About' },
-  terminal: { title:'Terminal', subtitle:'An interactive root shell inside a running container', section:'Terminal' },
-  files:    { title:'Files', subtitle:'Browse, upload, edit and organise a key\u2019s or an agent\u2019s workspace and profile', section:'Files' },
-  audit:    { title:'Audit', subtitle:'What was done to the gateway and what happened to it, as chosen in Settings \u2192 Audit', section:'Audit' },
-  containers: { title:'Containers', subtitle:'Each chat\u2019s container: how it is doing, and stop, recreate, remove or run a command', section:'Containers' },
-  models:   { title:'Models', subtitle:'Every model this gateway can route to, grouped by provider', section:'Models' },
-  spend:    { title:'Spend', subtitle:'What agents have cost, per model and per day', section:'Spend' },
-  profiles: { title:'Profiles', subtitle:'Per-key skills, extensions and settings, and who can change them', section:'Profiles' },
-  apikeys:  { title:'API Management', subtitle:'Keys for the OpenAI endpoints, their expiry, and what each one has used', section:'API Management' },
-  settings: { title:'Settings', subtitle:'Gateway configuration, stored in SQLite and editable here', section:'Settings' }
+/* Pages and tabs. A nav item is a page; a page has one or more tabs; a tab shows one pane (a `view-<pane>` block) and,
+   for panes that are split, only the sections marked data-tab="<tab>". Panes are the original views, left as they were. */
+var PAGES = {
+  playground: { title:'Playground', tabs:[{ id:'playground', pane:'playground', subtitle:'Chat with an agent, the way a person would. Chats stay in this browser.' }] },
+  overview:   { title:'Gateway Overview', tabs:[{ id:'overview', pane:'overview', subtitle:'Live Pi agents, their models, and when each one will be reaped' }] },
+  chats:      { title:'Live chats', tabs:[{ id:'chats', pane:'agents', subtitle:'Every running chat, with its expiry: watch it live, or kill it' }] },
+  spend:      { title:'Spend', tabs:[{ id:'spend', pane:'spend', subtitle:'What agents have cost, per model, per day and per agent' }] },
+  audit:      { title:'Audit', tabs:[{ id:'audit', pane:'audit', subtitle:'What was done to the gateway and what happened to it, as chosen in Settings \u2192 Audit' }] },
+  agents:     { title:'Agents', tabs:[
+    { id:'agents', label:'Agents', pane:'endpoints', sections:'agents', subtitle:'Named, permanent agents of an API key, each on its own OpenAI-compatible port' },
+    { id:'teams', label:'Teams', pane:'endpoints', sections:'teams', subtitle:'Chains of agents behind an endpoint of their own' },
+    { id:'templates', label:'Templates & import', pane:'endpoints', sections:'templates', subtitle:'Ready-made profiles, and agents exported from this or another gateway' },
+    { id:'create', label:'Quick create', pane:'endpoints', sections:'create', subtitle:'A new agent endpoint for an API key, in one form' },
+    { id:'wizard', label:'Wizard', pane:'endpoints', sections:'wizard', subtitle:'Step by step: key, template, identity, instructions and skills, extensions, limits' }] },
+  extensions: { title:'Extensions', tabs:[
+    { id:'library', label:'Library', pane:'extensions', sections:'library', subtitle:'Pi extensions installed on this host, for granting to keys and agents' },
+    { id:'access', label:'Access', pane:'extensions', sections:'access', subtitle:'Which keys and agents get which extensions and bundles' }] },
+  jobs:       { title:'Jobs', tabs:[{ id:'jobs', pane:'jobs', subtitle:'Prompts an agent runs on a schedule, by webhook or on request' }] },
+  files:      { title:'Files & profiles', tabs:[
+    { id:'files', label:'Files', pane:'files', subtitle:'Browse, upload, edit and organise a key\u2019s or an agent\u2019s workspace, profile and the shared bundles' },
+    { id:'profiles', label:'Profiles & packages', pane:'profiles', subtitle:'Per-key skills, extensions, packages and MCP servers, and who can change them' }] },
+  containers: { title:'Containers', tabs:[
+    { id:'containers', label:'Containers', pane:'containers', sections:'containers', subtitle:'Each chat\u2019s container: how it is doing, and stop, recreate, remove or update' },
+    { id:'terminal', label:'Terminal', pane:'terminal', subtitle:'An interactive root shell inside a running container' },
+    { id:'images', label:'Images', pane:'containers', sections:'images', subtitle:'The environments chats run in, and building them' },
+    { id:'pihost', label:'Pi on this host', pane:'containers', sections:'pihost', subtitle:'The Pi the gateway runs on, and updating it and its extensions' },
+    { id:'events', label:'Events & command', pane:'containers', sections:'events', subtitle:'Run a command in a container, and what happened to containers' }] },
+  models:     { title:'Models', tabs:[{ id:'models', pane:'models', subtitle:'Every model this gateway can route to, grouped by provider' }] },
+  apikeys:    { title:'API keys', tabs:[{ id:'apikeys', pane:'apikeys', subtitle:'Keys for the OpenAI endpoints, their expiry, and what each one has used' }] },
+  settings:   { title:'Settings', tabs:[{ id:'settings', pane:'settings', subtitle:'Gateway configuration, stored in SQLite and editable here' }] },
+  help:       { title:'Help', tabs:[
+    { id:'docs', label:'Documentation', pane:'docs', subtitle:'The administrator\u2019s handbook: architecture, deployment, operation, configuration, API and troubleshooting' },
+    { id:'about', label:'About', pane:'about', subtitle:'Piper, its version, release notes and author' }] }
 };
+var PANES = ['playground', 'overview', 'agents', 'extensions', 'containers', 'terminal', 'files', 'endpoints', 'jobs', 'models', 'spend', 'apikeys', 'profiles', 'audit', 'settings', 'docs', 'about'];
+/* Old links keep working: bookmarks and the docs' own links used the flat view names. */
+var OLD_HASHES = { endpoints: 'agents', terminal: 'containers/terminal', profiles: 'files/profiles', docs: 'help/docs', about: 'help/about' };
+function resolveHash(hash) {
+  var parts = String(hash || '').replace(/^#\/?/, '').split('/');
+  if (!parts[0]) parts = ['overview'];
+  if (!PAGES[parts[0]] && OLD_HASHES[parts[0]]) parts = OLD_HASHES[parts[0]].split('/').concat(parts.slice(1));
+  var page = PAGES[parts[0]] ? parts[0] : 'overview';
+  var def = PAGES[page];
+  var tab = def.tabs[0];
+  var rest = parts.slice(1);
+  // Only a page with several tabs has a tab segment; after it, or after the page alone, comes the pane's own sub-route.
+  if (def.tabs.length > 1) {
+    var named = def.tabs.filter(function (t) { return t.id === parts[1]; })[0];
+    if (named) { tab = named; rest = parts.slice(2); }
+  }
+  return { page: page, tab: tab, rest: rest };
+}
 /* Images: the environments, what is built, and a build's output while it runs. */
 var IMG_TIMER = null;
 function loadImages() {
@@ -2840,19 +3070,31 @@ function renderImages(d) {
     tr.appendChild(cell(i.piVersion ? 'Pi ' + i.piVersion : '-', i.stale ? 'soon' : ''));
     tr.appendChild(cell(i.sizeMb == null ? '-' : (i.sizeMb / 1024).toFixed(2) + ' GB', 'num'));
     tr.appendChild(cell(i.created));
-    var used = [];
-    if (i.isDefault) used.push('default');
-    if (i.containers) used.push(i.containers + ' container(s)');
-    if (i.keys.length) used.push(i.keys.join(', '));
-    tr.appendChild(cell(used.join(' · ') || 'nothing'));
+    tr.appendChild(cell(imgUsedBy(i), i.running || i.isDefault ? '' : (i.idle && i.idle.length ? 'soon' : '')));
     var td = el('td');
     var b = el('button', 'remove');
-    b.disabled = i.isDefault || i.containers > 0 || i.keys.length > 0;
-    b.title = b.disabled ? 'in use' : 'remove this image';
-    b.addEventListener('click', function () { if (confirm('Remove ' + (i.name || i.id) + '?')) imgPost('dashboard/images/remove', { image: i.name || i.id }); });
+    var blocked = i.isDefault || i.keys.length > 0 || i.running > 0 || (i.kept && i.kept.length > 0);
+    b.disabled = blocked;
+    b.title = blocked ? (i.isDefault ? 'the default image' : i.keys.length ? 'a key uses it' : i.running ? 'a container is running from it' : 'a kept container is built on it') : (i.idle && i.idle.length ? 'held by stopped containers: you will be asked' : 'remove this image');
+    b.addEventListener('click', function () { var label = i.name || i.id.replace('sha256:', '').slice(0, 12); if (!(i.idle && i.idle.length) && !confirm('Remove ' + label + '?')) return; imgRemove(i.name || i.id, label); });
     td.appendChild(b); tr.appendChild(td);
     rows.appendChild(tr);
   });
+  var extra = $('imgextra'); extra.replaceChildren();
+  var odd = (d.states || []).concat((d.dangling || []).map(function (x) { return { id: x.id, name: '(untagged, no Piper label) ' + x.id.replace('sha256:', '').slice(0, 12), sizeMb: x.sizeMb, created: x.created, other: true }; }));
+  if (odd.length) {
+    extra.appendChild(el('h4', 'SAVED CONTAINER STATES AND OTHER LEFTOVERS')).style.cssText = 'margin:14px 0 4px;font-size:11px;letter-spacing:.06em;color:var(--dim)';
+    var t2 = el('table'); var h2 = el('tr'); ['image', 'what it is', 'size', ''].forEach(function (h) { h2.appendChild(el('th', h)); }); t2.appendChild(el('thead')).appendChild(h2); var b2 = el('tbody'); t2.appendChild(b2);
+    odd.forEach(function (x) {
+      var tr = el('tr'); tr.appendChild(cell(x.name, 'mono'));
+      tr.appendChild(cell(x.other ? 'an untagged image Piper did not label: a build\u2019s leftover, or another tool\u2019s' : (x.orphan ? 'the saved state of ' + x.container + ', which is gone' : 'the saved state of ' + x.container + ' (in use)'), x.orphan ? 'soon' : ''));
+      tr.appendChild(cell(x.sizeMb == null ? '-' : (x.sizeMb / 1024).toFixed(2) + ' GB', 'num'));
+      var td = el('td'); var rb = el('button', 'remove'); rb.disabled = Boolean(x.name.indexOf('piper-keystate') === 0 && !x.orphan);
+      rb.addEventListener('click', function () { if (confirm('Remove ' + x.name + '?')) imgRemove(x.id, x.name); });
+      td.appendChild(rb); tr.appendChild(td); b2.appendChild(tr);
+    });
+    extra.appendChild(t2);
+  }
   var out = $('imgjob');
   out.hidden = !job;
   if (job) {
@@ -2864,6 +3106,112 @@ function renderImages(d) {
   if ($('view-containers').classList.contains('on')) IMG_TIMER = setInterval(loadImages, running ? 2000 : 8000);
 }
 $('imgprune').addEventListener('click', function () { imgPost('dashboard/images/prune', {}); });
+/* Images: what uses each, removing with a go-ahead, and a clean up that shows its plan first. */
+function imgUsedBy(i) {
+  var used = [];
+  if (i.isDefault) used.push('default');
+  if (i.running) used.push(i.running + ' running');
+  if (i.idle && i.idle.length) used.push(i.idle.length + ' stopped');
+  if (i.kept && i.kept.length) used.push('kept container');
+  if (i.foreign) used.push(i.foreign + ' from another gateway');
+  if (i.keys.length) used.push('key ' + i.keys.join(', '));
+  return used.join(' · ') || 'nothing';
+}
+function imgRemove(ref, label) {
+  var failed = function (e) { $('imgnote').textContent = e.message; };
+  return fetch('dashboard/images/remove', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image: ref }) })
+    .then(function (r) { return r.json().then(function (j) { return { r: r, j: j }; }); })
+    .then(function (x) {
+      if (x.r.ok) { $('imgnote').textContent = x.j.message; return loadImages(); }
+      var err = x.j.error || {};
+      if (err.code === 'needs_force') {
+        if (!confirm(err.message + '\n\nRemove ' + label + ' and those containers?')) return;
+        return fetch('dashboard/images/remove', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image: ref, force: true }) })
+          .then(function (r2) { return r2.json().then(function (j2) { $('imgnote').textContent = r2.ok ? j2.message : ((j2.error && j2.error.message) || 'failed'); return loadImages(); }); });
+      }
+      $('imgnote').textContent = err.message || 'could not remove it';
+    }).catch(failed);
+}
+var IMG_PRESELECT_IDLE = false;
+function imgOpenCleanup() {
+  var box = $('imgplan');
+  box.hidden = false; box.replaceChildren(el('p', 'working out what can go…'));
+  var preIdle = IMG_PRESELECT_IDLE; IMG_PRESELECT_IDLE = false;
+  fetch('dashboard/images/cleanup.json', { cache: 'no-store' }).then(readJson).then(function (plan) {
+    box.replaceChildren();
+    box.appendChild(el('h4', 'Clean up images'));
+    if (!plan.items.length) { box.appendChild(el('p', 'Nothing to clean up: every image is in use or the default.' + (plan.blocked && plan.blocked.length ? ' (' + plan.blocked.map(function (b) { return b.name + ': ' + b.reason; }).join('; ') + ')' : ''))).className = 'hint'; var c0 = el('button', 'close'); c0.addEventListener('click', function () { box.hidden = true; }); box.appendChild(c0); return; }
+    var note = el('p', 'Nothing is removed until you press the button. Never offered: the default image, images a key names, images a container is running from, and images a key’s or agent’s kept container is built on. Removing an image that stopped chat containers hold removes those containers too (what was installed inside them is lost; chats, files and profiles are kept).'); note.className = 'hint'; box.appendChild(note);
+    var tbl = el('table'); var hr = el('tr');
+    ['', 'image', 'why', 'size', 'also removes'].forEach(function (h) { hr.appendChild(el('th', h)); });
+    tbl.appendChild(el('thead')).appendChild(hr); var tb = el('tbody'); tbl.appendChild(tb);
+    var boxes = [];
+    var labels = { safe: 'safe', containers: 'removes containers', idle: 'stopped chat container', rebuild: 'rebuild needed later', other: 'not Piper’s?' };
+    plan.items.forEach(function (it) {
+      var tr = el('tr');
+      var td = el('td'); var cb = el('input'); cb.type = 'checkbox'; cb.checked = it.kind === 'safe' || (preIdle && it.kind === 'idle'); td.appendChild(cb); tr.appendChild(td); boxes.push([it, cb]);
+      var nm = el('td', it.name); nm.className = 'mono'; tr.appendChild(nm);
+      var why = el('td', it.reason); var tag = el('span', ' ' + labels[it.kind]); tag.className = 'badge'; why.appendChild(tag); tr.appendChild(why);
+      tr.appendChild(el('td', it.sizeMb == null ? '-' : (it.sizeMb / 1024).toFixed(2) + ' GB')).className = 'num';
+      tr.appendChild(el('td', it.containers.length ? it.containers.length + ' stopped container(s)' + (it.foreign ? ' (' + it.foreign + ' from another gateway)' : '') : '-'));
+      tb.appendChild(tr);
+    });
+    box.appendChild(tbl);
+    var total = el('p'); total.className = 'hint';
+    var update = function () { var mb = 0, n = 0, withC = 0; boxes.forEach(function (b) { if (b[1].checked) { n++; mb += b[0].sizeMb || 0; if (b[0].containers.length) withC += b[0].containers.length; } }); total.textContent = n + ' selected, about ' + (mb / 1024).toFixed(2) + ' GB' + (withC ? ', and ' + withC + ' stopped container(s) removed with them' : ''); };
+    boxes.forEach(function (b) { b[1].addEventListener('change', update); }); update();
+    box.appendChild(total);
+    var idleCount = plan.items.filter(function (x) { return x.kind === 'idle'; }).length;
+    if (idleCount) {
+      var tip = el('p', idleCount + ' stopped chat container(s) keep old images and saved states alive (each update keeps what a chat installed in a saved copy of the image). Removing a container frees them; the chat itself, its files and profile stay, and it resumes in a fresh container. Sizes of these are upper bounds: layers are shared.'); tip.className = 'hint'; box.appendChild(tip);
+      var pick = el('div'); pick.className = 'fieldrow';
+      [['select the safe ones', function (it) { return it.kind === 'safe'; }], ['select all stopped chat containers too', function (it) { return it.kind === 'safe' || it.kind === 'idle'; }], ['select none', function () { return false; }]].forEach(function (p) {
+        var b = el('button', p[0]); b.addEventListener('click', function () { boxes.forEach(function (x) { x[1].checked = p[1](x[0]); }); update(); }); pick.appendChild(b);
+      });
+      box.appendChild(pick);
+    }
+    if (plan.blocked && plan.blocked.length) {
+      var det = el('details'); det.appendChild(el('summary', plan.blocked.length + ' image(s) not offered, and why'));
+      plan.blocked.forEach(function (b) { var p = el('p', b.name + ' \u2014 ' + b.reason); p.className = 'hint small'; det.appendChild(p); });
+      box.appendChild(det);
+    }
+    var row = el('div'); row.className = 'fieldrow';
+    var go = el('button', 'remove selected');
+    go.addEventListener('click', function () {
+      var chosen = boxes.filter(function (b) { return b[1].checked; }).map(function (b) { return b[0]; });
+      if (!chosen.length) return;
+      var withC = chosen.some(function (x) { return x.containers.length; });
+      if (withC && !confirm('Some of these are held by stopped containers; they will be removed too. Continue?')) return;
+      go.disabled = true;
+      fetch('dashboard/images/cleanup', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ select: chosen.map(function (x) { return x.id; }), withContainers: withC }) })
+        .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); return j; }); })
+        .then(function (r) {
+          // The result stays on screen, with every reason, so nothing fails silently.
+          box.replaceChildren();
+          box.appendChild(el('h4', 'Clean up: result'));
+          var sum = el('p', 'Removed ' + r.removed.length + ' image(s), about ' + (r.reclaimedMb / 1024).toFixed(2) + ' GB.' + (r.failed.length ? ' ' + r.failed.length + ' could not be removed.' : '') + (r.skipped.length ? ' ' + r.skipped.length + ' skipped.' : ''));
+          sum.className = r.failed.length ? 'hint bad' : 'hint'; box.appendChild(sum);
+          var lines = r.removed.map(function (n) { return ['✓ removed', n, '']; }).concat(r.failed.map(function (f) { return ['✗ failed', f.name, f.reason]; })).concat(r.skipped.map(function (f) { return ['– skipped', f.name, f.reason]; }));
+          if (lines.length) {
+            var rt = el('table'); var rb = el('tbody'); rt.appendChild(rb);
+            lines.forEach(function (l) { var tr = el('tr'); tr.appendChild(el('td', l[0])); var n = el('td', l[1]); n.className = 'mono'; tr.appendChild(n); var w = el('td', l[2]); if (l[0].indexOf('failed') >= 0) w.className = 'bad'; tr.appendChild(w); rb.appendChild(tr); });
+            box.appendChild(rt);
+          }
+          if (r.failed.some(function (f) { return /built on it/.test(f.reason); })) {
+            var why = el('p', 'Some images are only kept because stopped chat containers (and their saved states) are built on them. Select those containers too and run it again to free them.'); why.className = 'hint'; box.appendChild(why);
+            var again = el('button', 'select the stopped chat containers and try again'); again.addEventListener('click', function () { IMG_PRESELECT_IDLE = true; imgOpenCleanup(); }); box.appendChild(again); box.appendChild(document.createTextNode(' '));
+          }
+          var ok = el('button', 'close'); ok.addEventListener('click', function () { box.hidden = true; }); box.appendChild(ok);
+          $('imgnote').textContent = 'clean up: ' + r.removed.length + ' removed' + (r.failed.length ? ', ' + r.failed.length + ' failed (see the result below)' : '');
+          return loadImages();
+        }).catch(function (e) { $('imgnote').textContent = e.message; var er = el('p', 'The clean up could not run: ' + e.message); er.className = 'hint bad'; box.insertBefore(er, box.firstChild); go.disabled = false; });
+    });
+    var cancel = el('button', 'cancel'); cancel.addEventListener('click', function () { box.hidden = true; });
+    row.appendChild(go); row.appendChild(cancel); box.appendChild(row);
+  }).catch(function (e) { box.replaceChildren(el('p', 'cannot work it out: ' + e.message)); });
+}
+$('imgclean').addEventListener('click', imgOpenCleanup);
+
 
 
 /* Endpoints: named, permanent agents of a key, each on its own port. */
@@ -3156,7 +3504,7 @@ function renderEndpoints(d) {
   loadTemplates();
   loadTeams();
   $('epcreate').disabled = !$('epkey').options.length;
-  if (!$('epkey').options.length) $('epcreatenote').textContent = 'create an API key first (API Management)';
+  if (!$('epkey').options.length) $('epcreatenote').textContent = 'create an API key first (API keys)';
 }
 
 
@@ -3227,6 +3575,876 @@ $('teamsave').addEventListener('click', function () {
     TEAMS = { teams: j.teams, maxSteps: TEAMS ? TEAMS.maxSteps : 6 }; renderTeams();
   }).catch(function (e) { $('teamnote').textContent = e.message; $('teamnote').className = 'passnote bad'; });
 });
+
+/* ---- extensions: the library on this host, and who gets what ---- */
+var EXT = null;
+var EXT_TIMER = null;
+function loadExtensions() {
+  return fetch('dashboard/extensions.json', { cache: 'no-store' }).then(readJson).then(function (d) { EXT = d; renderExtensions(); if (d.job && d.job.state === 'running') extShowJob(d.job); })
+    .catch(function (e) { $('extnote').textContent = 'cannot load extensions: ' + e.message; });
+}
+function extShowJob(j) {
+  if (!j) return;
+  $('extjobtitle').hidden = $('extjob').hidden = false;
+  $('extjobtitle').textContent = j.title + ' — ' + j.state;
+  $('extjob').textContent = j.lines.join('\n');
+  $('extjob').scrollTop = $('extjob').scrollHeight;
+  clearTimeout(EXT_TIMER);
+  if (j.state === 'running') EXT_TIMER = setTimeout(function () { fetch('dashboard/extensions.json', { cache: 'no-store' }).then(readJson).then(function (d) { EXT = d; extShowJob(d.job); }); }, 1500);
+  else loadExtensions();
+}
+function extPost(action, body) {
+  return epPost('dashboard/extensions/' + action, body || {});
+}
+function renderExtensions() {
+  var body = $('extrows');
+  body.replaceChildren();
+  $('extempty').hidden = EXT.library.length > 0;
+  if (!EXT.enabled) $('extnote').textContent = 'Installing extensions is switched off (Settings → Agent).';
+  EXT.library.forEach(function (e) {
+    var tr = el('tr');
+    var n = el('td', e.name); if (e.scripts) { var b = n.appendChild(el('span', ' scripts')); b.className = 'badge'; b.title = 'installed with install scripts allowed'; }
+    tr.appendChild(n);
+    tr.appendChild(el('td', e.source));
+    tr.appendChild(el('td', e.version || '-'));
+    tr.appendChild(el('td', bytes(e.bytes))).className = 'num';
+    tr.appendChild(el('td', e.usedBy.length ? e.usedBy.join(', ') : 'nobody'));
+    var act = el('td');
+    var up = el('button', 'update'); up.title = 'install it again from the same source';
+    up.addEventListener('click', function () { extPost('update', { name: e.name }).then(function (r) { extShowJob(r.job); }).catch(function (x) { $('extinstnote').textContent = x.message; $('extinstnote').className = 'passnote bad'; }); });
+    var rm = el('button', 'remove');
+    rm.addEventListener('click', function () {
+      var used = e.usedBy.length ? ' It is given to: ' + e.usedBy.join(', ') + '; their chats lose it.' : '';
+      if (!confirm('Remove ' + e.name + ' from the library?' + used)) return;
+      extPost('remove', { name: e.name, force: Boolean(used) }).then(function (d) { EXT = d; renderExtensions(); }).catch(function (x) { $('extinstnote').textContent = x.message; $('extinstnote').className = 'passnote bad'; });
+    });
+    act.appendChild(up); act.appendChild(document.createTextNode(' ')); act.appendChild(rm); tr.appendChild(act);
+    body.appendChild(tr);
+  });
+  renderExtAccess();
+}
+function renderExtAccess() {
+  var t = $('extaccess');
+  t.replaceChildren();
+  var head = el('tr');
+  ['who', 'list'].forEach(function (h) { head.appendChild(el('th', h)); });
+  EXT.items.forEach(function (it) { var th = el('th', it.name); th.title = it.kind === 'package' ? 'a library extension' : 'a shared bundle'; if (it.kind === 'package') th.className = 'pkg'; head.appendChild(th); });
+  head.appendChild(el('th', 'gets now')); head.appendChild(el('th'));
+  t.appendChild(el('thead')).appendChild(head);
+  var body = el('tbody'); t.appendChild(body);
+  function row(label, level, id, list, effective, inheritLabel) {
+    var tr = el('tr');
+    tr.appendChild(el('td', label)).className = level === 'agent' ? 'indent' : '';
+    var mode = el('select');
+    var follow = null;
+    if (level !== 'default') { follow = el('option', 'follows ' + inheritLabel); follow.value = 'follow'; mode.appendChild(follow); }
+    var custom = el('option', 'its own list'); custom.value = 'custom'; mode.appendChild(custom);
+    var own = level === 'default' ? String(list || '') : (list == null ? null : list);
+    var names = own === null ? [] : String(own) === '*' ? EXT.items.map(function (x) { return x.name; }) : String(own).split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+    mode.value = own === null ? 'follow' : 'custom';
+    var mtd = el('td'); mtd.appendChild(mode); tr.appendChild(mtd);
+    var boxes = [];
+    EXT.items.forEach(function (it) {
+      var td = el('td'); td.className = 'num';
+      var c = el('input'); c.type = 'checkbox'; c.checked = names.indexOf(it.name) >= 0; c.disabled = mode.value === 'follow';
+      boxes.push([it.name, c]); td.appendChild(c); tr.appendChild(td);
+    });
+    mode.addEventListener('change', function () { boxes.forEach(function (b) { b[1].disabled = mode.value === 'follow'; }); });
+    tr.appendChild(el('td', effective.length ? effective.join(', ') : 'nothing'));
+    var save = el('button', 'save');
+    save.addEventListener('click', function () {
+      var chosen = boxes.filter(function (b) { return b[1].checked; }).map(function (b) { return b[0]; });
+      var list = mode.value === 'follow' ? '' : (chosen.length ? chosen.join(',') : 'none');
+      $('extaccessnote').textContent = 'saving…'; $('extaccessnote').className = 'passnote';
+      extPost('access', { level: level, id: id, list: list }).then(function (d) { EXT = d; renderExtAccess(); $('extaccessnote').textContent = 'saved: ' + label; })
+        .catch(function (x) { $('extaccessnote').textContent = x.message; $('extaccessnote').className = 'passnote bad'; });
+    });
+    var std = el('td'); std.appendChild(save); tr.appendChild(std);
+    body.appendChild(tr);
+  }
+  var def = EXT.default;
+  row('default for every key', 'default', '', def, EXT.items.filter(function (it) { return def === '*' || String(def).split(',').map(function (x) { return x.trim(); }).indexOf(it.name) >= 0; }).map(function (x) { return x.name; }), '');
+  EXT.keys.forEach(function (k) {
+    row(k.name, 'key', k.id, k.list, k.effective, 'the default');
+    k.agents.forEach(function (a) { row('↳ ' + a.name, 'agent', a.id, a.list, a.effective, 'its key'); });
+  });
+}
+$('extrefresh').addEventListener('click', loadExtensions);
+$('extinstall').addEventListener('click', function () {
+  var note = $('extinstnote');
+  note.className = 'passnote'; note.textContent = 'starting…';
+  extPost('install', { source: $('extsource').value.trim(), name: $('extname').value.trim() || undefined, allowScripts: $('extscripts').checked }).then(function (r) { note.textContent = ''; extShowJob(r.job); })
+    .catch(function (e) { note.textContent = e.message; note.className = 'passnote bad'; });
+});
+
+/* ---- the agent creation wizard ---- */
+var WZ = { opts: null, step: 0, d: null, readContainer: null, done: null, queued: [] };
+var WZ_STEPS = [['wzkey', 'Key & template'], ['wzidentity', 'Identity'], ['wzinstructions', 'Instructions & skills'], ['wzextensions', 'Extensions'], ['wzlimits', 'Limits & hand-offs'], ['wzreview', 'Review']];
+function wzFresh() {
+  return { keyMode: 'existing', newKeyName: '', newKeyExpiry: '30d', keyId: '', template: '', name: '', description: '', model: '', thinking: '', workspace: 'own', instructions: '', exclude: {}, add: [], extMode: 'follow', ext: {}, packages: '', container: null, canDelegate: false };
+}
+function wzStart() {
+  if (!WZ.d) WZ.d = wzFresh();
+  fetch('dashboard/wizard.json', { cache: 'no-store' }).then(readJson).then(function (o) {
+    WZ.opts = o;
+    if (!WZ.d.keyId) { var k = o.keys.filter(function (x) { return x.usable; })[0]; WZ.d.keyId = k ? k.id : ''; if (!k) WZ.d.keyMode = 'new'; }
+    wzRender();
+  }).catch(function (e) { $('wznote').textContent = 'cannot load the wizard: ' + e.message; $('wznote').className = 'passnote bad'; });
+}
+function wzTemplate() { return WZ.opts && WZ.opts.templates.filter(function (t) { return t.name === WZ.d.template; })[0] || null; }
+function wzApplyTemplate(name) {
+  var d = WZ.d; d.template = name; d.exclude = {};
+  var t = wzTemplate();
+  d.description = t ? t.description : ''; d.thinking = t ? (t.thinking || '') : ''; d.workspace = t ? t.workspace : 'own';
+  d.instructions = t ? t.instructions : ''; d.canDelegate = Boolean(t && t.canDelegate);
+}
+function wzField(label, node, hint) {
+  var l = el('label'); l.className = 'row'; l.appendChild(el('b', label)); l.appendChild(node);
+  if (hint) { var h = el('span', hint); h.className = 'hint small'; l.appendChild(h); }
+  return l;
+}
+function wzInput(key, placeholder) {
+  var i = el('input'); i.type = 'text'; i.value = WZ.d[key] || ''; if (placeholder) i.placeholder = placeholder;
+  i.addEventListener('input', function () { WZ.d[key] = i.value; });
+  return i;
+}
+function wzSelect(key, options) {
+  var s = el('select');
+  options.forEach(function (o) { var op = el('option', o[1]); op.value = o[0]; s.appendChild(op); });
+  s.value = WZ.d[key] || ''; s.addEventListener('change', function () { WZ.d[key] = s.value; });
+  return s;
+}
+function wzSnapshotContainer() { if (WZ.readContainer) { WZ.d.container = WZ.readContainer(); WZ.readContainer = null; } }
+function wzRender() {
+  var o = WZ.opts, d = WZ.d, body = $('wzbody');
+  body.replaceChildren();
+  $('wznote').textContent = ''; $('wznote').className = 'passnote';
+  var steps = $('wzsteps'); steps.replaceChildren();
+  WZ_STEPS.forEach(function (s, i) {
+    var chip = el('span', (i + 1) + '. ' + s[1]); chip.className = i === WZ.step ? 'on' : (i < WZ.step ? 'done' : '');
+    if (i < WZ.step && !WZ.done) chip.addEventListener('click', function () { wzSnapshotContainer(); WZ.step = i; wzRender(); });
+    steps.appendChild(chip);
+  });
+  $('wzback').hidden = WZ.step === 0 || Boolean(WZ.done);
+  $('wznext').textContent = WZ.step === WZ_STEPS.length - 1 ? 'create agent' : 'next';
+  $('wznext').hidden = Boolean(WZ.done);
+  if (WZ.done) { wzRenderDone(body); return; }
+  var id = WZ_STEPS[WZ.step][0];
+  if (id === 'wzkey') {
+    body.appendChild(el('p', 'Which key will own the agent, and what should it start from? The agent shares its key’s limits and spend.')).className = 'hint';
+    var usable = o.keys.filter(function (k) { return k.usable; });
+    var modeBox = el('div'); modeBox.className = 'wzcards';
+    [['existing', 'Use an existing key', usable.length ? usable.length + ' usable key' + (usable.length === 1 ? '' : 's') : 'none yet'], ['new', 'Create a new key', 'made together with the agent; shown once at the end']].forEach(function (m) {
+      var c = el('div'); c.className = 'wzcard' + (d.keyMode === m[0] ? ' on' : '');
+      c.appendChild(el('b', m[1])); c.appendChild(el('span', m[2]));
+      if (m[0] === 'existing' && !usable.length) c.style.opacity = '.5';
+      else c.addEventListener('click', function () { d.keyMode = m[0]; wzRender(); });
+      modeBox.appendChild(c);
+    });
+    body.appendChild(modeBox);
+    if (d.keyMode === 'new') {
+      body.appendChild(wzField('new key name', wzInput('newKeyName', 'e.g. laptop, ci, open-webui'), 'who or what will use it'));
+      body.appendChild(wzField('expires', wzSelect('newKeyExpiry', [['', 'never'], ['1d', 'in 1 day'], ['7d', 'in 7 days'], ['30d', 'in 30 days'], ['90d', 'in 90 days'], ['365d', 'in 1 year']])));
+      var np = el('p', 'The key opens this agent’s endpoint and the API. Limits (sessions, daily spend, models) can be set later on the API keys page.'); np.className = 'hint small'; body.appendChild(np);
+    } else {
+      var ks = el('select');
+      usable.forEach(function (k) { var op = el('option', k.name); op.value = k.id; ks.appendChild(op); });
+      ks.value = d.keyId; ks.addEventListener('change', function () { d.keyId = ks.value; });
+      body.appendChild(wzField('key', ks, 'the agent shares this key’s limits and spend'));
+    }
+    var cards = el('div'); cards.className = 'wzcards';
+    [{ name: '', label: 'Blank agent', description: 'Nothing: you write the instructions and pick the skills yourself.', skills: [], canDelegate: false, builtin: true }].concat(o.templates).forEach(function (t) {
+      var c = el('div'); c.className = 'wzcard' + (d.template === t.name ? ' on' : '');
+      c.appendChild(el('b', t.label || t.name + (t.builtin ? '' : ' (yours)')));
+      c.appendChild(el('span', t.description + (t.skills.length ? '  · ' + t.skills.length + ' skill' + (t.skills.length === 1 ? '' : 's') : '') + (t.canDelegate ? '  · hand-offs on' : '')));
+      c.addEventListener('click', function () { wzApplyTemplate(t.name); wzRender(); });
+      cards.appendChild(c);
+    });
+    body.appendChild(cards);
+  } else if (id === 'wzidentity') {
+    body.appendChild(wzField('name', wzInput('name', 'lowercase letters, digits, hyphens'), 'also its endpoint’s name'));
+    body.appendChild(wzField('description', wzInput('description', 'what it is for'), 'colleagues and orchestrators choose agents by this'));
+    var model = wzInput('model', 'provider/model, blank = the default'); model.setAttribute('list', 'wzmodels');
+    body.appendChild(wzField('model', model));
+    var dl = el('datalist'); dl.id = 'wzmodels';
+    function fillModels(m) { (m && m.models ? m.models : []).forEach(function (x) { var op = el('option'); op.value = x.provider + '/' + x.id; dl.appendChild(op); }); }
+    if (MODELS) fillModels(MODELS); else fetch('dashboard/models.json', { cache: 'no-store' }).then(readJson).then(function (m) { MODELS = m; fillModels(m); }).catch(function () {});
+    body.appendChild(dl);
+    body.appendChild(wzField('thinking', wzSelect('thinking', [['', 'default']].concat(o.thinking.map(function (t) { return [t, t]; })))));
+    body.appendChild(wzField('workspace', wzSelect('workspace', [['own', 'its own /workspace'], ['shared', 'shared with the key']]), 'shared: every agent of the key sees the same files'));
+  } else if (id === 'wzinstructions') {
+    var t = wzTemplate();
+    body.appendChild(el('p', 'The instructions become the agent’s AGENTS.md: who it is and how it works.')).className = 'hint';
+    var ta = el('textarea'); ta.rows = 11; ta.value = d.instructions; ta.addEventListener('input', function () { d.instructions = ta.value; });
+    body.appendChild(ta);
+    if (t && t.skills.length) {
+      body.appendChild(el('h4', 'Skills from the template'));
+      t.skills.forEach(function (s) {
+        var l = el('label'); l.className = 'row';
+        var c = el('input'); c.type = 'checkbox'; c.checked = !d.exclude[s.name]; c.addEventListener('change', function () { if (c.checked) delete d.exclude[s.name]; else d.exclude[s.name] = true; });
+        l.appendChild(c); l.appendChild(el('b', s.name)); l.appendChild(el('span', s.description)); body.appendChild(l);
+      });
+    }
+    body.appendChild(el('h4', 'Add a skill'));
+    var sn = el('input'); sn.type = 'text'; sn.placeholder = 'skill name';
+    var sc = el('textarea'); sc.rows = 5; sc.placeholder = '---\nname: my-skill\ndescription: what it is for\n---\nWhat to do...';
+    var sb = el('button', 'add skill');
+    var list = el('div');
+    var showAdded = function () {
+      list.replaceChildren();
+      d.add.forEach(function (s, i) { var r = el('div'); r.appendChild(el('span', '+ ' + s.name + '  ')); var x = el('button', 'remove'); x.addEventListener('click', function () { d.add.splice(i, 1); showAdded(); }); r.appendChild(x); list.appendChild(r); });
+    };
+    sb.addEventListener('click', function () {
+      if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(sn.value.trim())) { $('wznote').textContent = 'a skill name is letters, digits, dots, dashes, underscores'; $('wznote').className = 'passnote bad'; return; }
+      if (!/^---[\s\S]*description:/.test(sc.value)) { $('wznote').textContent = 'the skill needs a header with name and description'; $('wznote').className = 'passnote bad'; return; }
+      d.add.push({ name: sn.value.trim(), content: sc.value }); sn.value = ''; sc.value = ''; $('wznote').textContent = ''; showAdded();
+    });
+    body.appendChild(sn); body.appendChild(sc); body.appendChild(sb); body.appendChild(list); showAdded();
+  } else if (id === 'wzextensions') {
+    body.appendChild(el('p', 'Extensions and bundles this agent gets. By default it follows its key (and the default for every key); give it its own list to choose.')).className = 'hint';
+    var box = el('div');
+    var showItems = function () {
+      box.replaceChildren();
+      if (d.extMode !== 'custom') return;
+      if (!o.items.length) box.appendChild(el('p', 'Nothing to choose from yet: install extensions on the Extensions page, or create bundles under Files & profiles.')).className = 'hint';
+      o.items.forEach(function (it) {
+        var l = el('label'); l.className = 'row';
+        var c = el('input'); c.type = 'checkbox'; c.checked = Boolean(d.ext[it.name]); c.addEventListener('change', function () { d.ext[it.name] = c.checked; });
+        l.appendChild(c); l.appendChild(el('b', it.name)); l.appendChild(el('span', it.kind === 'package' ? 'library extension' + (it.source ? ' · ' + it.source : '') : 'shared bundle')); box.appendChild(l);
+      });
+    };
+    var mode = wzSelect('extMode', [['follow', 'follow its key'], ['custom', 'its own list']]);
+    mode.addEventListener('change', showItems);
+    body.appendChild(wzField('access', mode));
+    body.appendChild(box); showItems();
+    body.appendChild(el('h4', 'Pi packages to install into this agent’s own profile (optional)'));
+    var pk = el('textarea'); pk.rows = 3; pk.placeholder = 'one per line: npm:name, git:host/owner/repo or https://… (up to ' + o.maxPackages + ')'; pk.value = d.packages; pk.addEventListener('input', function () { d.packages = pk.value; });
+    body.appendChild(pk);
+    if (!o.passwordSet) body.appendChild(el('p', 'Granting extensions and installing packages need a dashboard password (Settings → Access).')).className = 'hint bad';
+  } else if (id === 'wzlimits') {
+    body.appendChild(el('p', 'Container limits and network for this agent; blank follows its key, then the defaults.')).className = 'hint';
+    var cbox = el('div'); body.appendChild(cbox);
+    WZ.readContainer = epContainerInputs(cbox, d.container);
+    var dl2 = el('label'); dl2.className = 'row'; var dc = el('input'); dc.type = 'checkbox'; dc.checked = d.canDelegate; dc.addEventListener('change', function () { d.canDelegate = dc.checked; });
+    dl2.appendChild(dc); dl2.appendChild(el('b', 'hand-offs')); dl2.appendChild(el('span', 'may hand work to the other agents of its key (an orchestrator needs this)')); body.appendChild(dl2);
+  } else {
+    wzReview(body);
+  }
+}
+function wzExpiry(v) { var m = /^(\d+)d$/.exec(v || ''); return m ? Date.now() + Number(m[1]) * 86400000 : null; }
+function wzPayload() {
+  var d = WZ.d;
+  var chosen = Object.keys(d.ext).filter(function (k) { return d.ext[k]; });
+  var container = d.container ? Object.keys(d.container).reduce(function (a, k) { if (d.container[k] !== null && d.container[k] !== '') a[k] = d.container[k]; return a; }, {}) : null;
+  return {
+    keyId: d.keyMode === 'new' ? undefined : d.keyId, newKey: d.keyMode === 'new' ? { name: d.newKeyName.trim(), expiresAt: wzExpiry(d.newKeyExpiry) } : undefined, name: d.name.trim(), description: d.description.trim(), template: d.template || undefined, model: d.model.trim() || null, thinking: d.thinking || null, workspace: d.workspace,
+    instructions: d.instructions, skills: { exclude: Object.keys(d.exclude), add: d.add },
+    extensions: d.extMode === 'custom' ? (chosen.length ? chosen.join(',') : 'none') : null,
+    packages: d.packages.split('\n').map(function (x) { return x.trim(); }).filter(Boolean),
+    container: container && Object.keys(container).length ? container : null, canDelegate: d.canDelegate
+  };
+}
+function wzReview(body) {
+  var p = wzPayload(), key = WZ.opts.keys.filter(function (k) { return k.id === p.keyId; })[0];
+  var t = wzTemplate();
+  var kept = t ? t.skills.filter(function (s) { return p.skills.exclude.indexOf(s.name) < 0; }).map(function (s) { return s.name; }) : [];
+  var rows = [
+    ['key', p.newKey ? 'NEW key "' + (p.newKey.name || '(missing name)') + '", ' + (p.newKey.expiresAt ? 'expires ' + new Date(p.newKey.expiresAt).toLocaleDateString() : 'never expires') : (key ? key.name : '(none)')], ['template', p.template || 'blank agent'], ['name', p.name || '(missing)'], ['description', p.description || '(none: colleagues will only see its name)'],
+    ['model', p.model || 'default'], ['thinking', p.thinking || 'default'], ['workspace', p.workspace === 'shared' ? 'shared with the key' : 'its own'],
+    ['instructions', p.instructions.trim() ? p.instructions.trim().split('\n').length + ' lines' : '(none)'],
+    ['skills', kept.concat(p.skills.add.map(function (s) { return s.name + ' (new)'; })).join(', ') || 'none'],
+    ['extensions', p.extensions === null ? 'follows its key' : (p.extensions === 'none' ? 'none' : p.extensions)],
+    ['packages to install', p.packages.length ? p.packages.join(', ') : 'none'], ['limits', p.container ? JSON.stringify(p.container) : 'follow the key'], ['hand-offs', p.canDelegate ? 'on' : 'off']
+  ];
+  var tbl = el('table'); tbl.className = 'review'; var tb = el('tbody'); tbl.appendChild(tb);
+  rows.forEach(function (r) { var tr = el('tr'); tr.appendChild(el('td', r[0])); tr.appendChild(el('td', r[1])); tb.appendChild(tr); });
+  body.appendChild(tbl);
+  var warns = [];
+  if (!p.name) warns.push('the agent needs a name (step 2)');
+  else if (!/^[a-z0-9][a-z0-9-]{0,30}$/.test(p.name)) warns.push('the name must be lowercase letters, digits and hyphens, at most 31');
+  if (!p.description) warns.push('no description: orchestrators and colleagues choose agents by it');
+  warns.forEach(function (w) { var n = el('p', '⚠ ' + w); n.className = 'hint' + (/needs a name|must be/.test(w) ? ' bad' : ''); body.appendChild(n); });
+}
+function wzRenderDone(body) {
+  var a = WZ.done;
+  body.appendChild(el('h4', 'Created: ' + a.name));
+  body.appendChild(el('p', 'Its endpoint: ' + (a.port ? location.protocol + '//' + location.hostname + ':' + a.port + '/v1' : '(starting)') + '. Use the key ' + a.key + '.')).className = 'hint';
+  if (WZ.newKey) {
+    var kb = el('div'); kb.className = 'keyreveal';
+    kb.appendChild(el('code', WZ.newKey.key));
+    var kcopy = el('button', 'copy'); kcopy.addEventListener('click', function () { navigator.clipboard.writeText(WZ.newKey.key).then(function () { kcopy.textContent = 'copied'; }, function () { kcopy.textContent = 'press Ctrl+C'; }); });
+    kb.appendChild(kcopy);
+    var kh = el('p', 'New key "' + WZ.newKey.name + '": copy it now. It was never stored, so this is the only time it can be shown.'); kh.className = 'hint bad';
+    body.appendChild(kh); body.appendChild(kb);
+  }
+  var pre = el('pre'); pre.className = 'mdpreview'; pre.hidden = true; body.appendChild(pre);
+  if (WZ.queued && WZ.queued.length) {
+    body.appendChild(el('p', 'Installing into its profile: ' + WZ.queued.join(', '))).className = 'hint';
+    pre.hidden = false;
+    (function poll() { fetch('dashboard/packages/job.json', { cache: 'no-store' }).then(readJson).then(function (d) { if (d.job) { pre.textContent = d.job.title + ' — ' + d.job.state + '\n' + d.job.lines.join('\n'); pre.scrollTop = pre.scrollHeight; } if ($('view-endpoints').classList.contains('on') && (!d.job || d.job.state === 'running')) setTimeout(poll, 1500); }); })();
+  }
+  var again = el('button', 'create another'); again.addEventListener('click', function () { WZ.done = null; WZ.newKey = null; WZ.d = wzFresh(); WZ.d.keyId = (WZ.opts.keys.filter(function (k) { return k.usable; })[0] || {}).id || ''; WZ.step = 0; wzStart(); });
+  var go = el('button', 'see it in Agents'); go.addEventListener('click', function () { location.hash = '#agents/agents'; });
+  var wrap = el('div'); wrap.className = 'fieldrow'; wrap.appendChild(go); wrap.appendChild(again); body.appendChild(wrap);
+}
+function wzValidate() {
+  var d = WZ.d, id = WZ_STEPS[WZ.step][0];
+  if (id === 'wzkey' && d.keyMode === 'new' && !d.newKeyName.trim()) return 'name the new key';
+  if (id === 'wzkey' && d.keyMode !== 'new' && !d.keyId) return 'choose a key, or create a new one';
+  if (id === 'wzidentity' && !/^[a-z0-9][a-z0-9-]{0,30}$/.test(d.name.trim())) return 'a name is lowercase letters, digits and hyphens, starting with a letter or digit (at most 31)';
+  if (id === 'wzextensions' && d.packages.split('\n').filter(function (x) { return x.trim(); }).length > WZ.opts.maxPackages) return 'at most ' + WZ.opts.maxPackages + ' packages';
+  return '';
+}
+$('wzback').addEventListener('click', function () { wzSnapshotContainer(); if (WZ.step > 0) WZ.step -= 1; wzRender(); });
+$('wznext').addEventListener('click', function () {
+  var problem = wzValidate();
+  if (problem) { $('wznote').textContent = problem; $('wznote').className = 'passnote bad'; return; }
+  wzSnapshotContainer();
+  if (WZ.step < WZ_STEPS.length - 1) { WZ.step += 1; wzRender(); return; }
+  $('wznext').disabled = true; $('wznote').className = 'passnote'; $('wznote').textContent = 'creating… (builds its profile in a container; a few seconds)';
+  epPost('dashboard/agents/wizard', wzPayload()).then(function (j) {
+    EP_DATA = j; renderEndpoints(j); WZ.queued = j.queuedPackages; WZ.newKey = j.newKey || null;
+    WZ.done = j.agents.filter(function (a) { return a.id === j.created; })[0] || { name: WZ.d.name, key: '', port: 0 };
+    wzRender();
+  }).catch(function (e) { $('wznote').textContent = e.message; $('wznote').className = 'passnote bad'; }).then(function () { $('wznext').disabled = false; });
+});
+
+/* ---- Markdown for the Playground: parse to a plain tree, then build DOM nodes (model text is never parsed as HTML) ---- */
+function mdInline(text) {
+  var out = [];
+  var i = 0, buf = '';
+  function flush() { if (buf) { out.push({ t: 'text', v: buf }); buf = ''; } }
+  while (i < text.length) {
+    var c = text[i], rest = text.slice(i), m;
+    if (c === '\\' && i + 1 < text.length && /[\\`*_{}\[\]()#+\-.!~|>]/.test(text[i + 1])) { buf += text[i + 1]; i += 2; continue; }
+    if (c === '`') {
+      m = /^(`+)([\s\S]*?[^`])\1(?!`)/.exec(rest);
+      if (m) { flush(); out.push({ t: 'code', v: m[2].replace(/^ (.*) $/, '$1') }); i += m[0].length; continue; }
+    }
+    if (c === '[') {
+      m = /^\[([^\]]+)\]\(\s*([^)\s]+)(?:\s+"[^"]*")?\s*\)/.exec(rest);
+      if (m) { flush(); out.push({ t: 'a', href: m[2], c: mdInline(m[1]) }); i += m[0].length; continue; }
+    }
+    if (c === '*' || c === '_' || c === '~') {
+      m = (c === '~' ? /^~~([^~]+)~~/ : /^(\*\*|__)(?=\S)([\s\S]*?\S)\1/).exec(rest);
+      if (m) { flush(); out.push({ t: c === '~' ? 'del' : 'b', c: mdInline(c === '~' ? m[1] : m[2]) }); i += m[0].length; continue; }
+      m = /^([*_])(?=\S)([^*_\n]*?\S)\1(?![\w*_])/.exec(rest);
+      if (m && (c === '*' || i === 0 || /\W/.test(text[i - 1]))) { flush(); out.push({ t: 'i', c: mdInline(m[2]) }); i += m[0].length; continue; }
+    }
+    m = /^https?:\/\/[^\s<>)\]]+[^\s<>)\].,;:!?'"]/.exec(rest);
+    if (m && (i === 0 || /[\s(]/.test(text[i - 1]))) { flush(); out.push({ t: 'a', href: m[0], c: [{ t: 'text', v: m[0] }] }); i += m[0].length; continue; }
+    buf += c; i += 1;
+  }
+  flush();
+  return out;
+}
+function mdParse(text) {
+  var lines = String(text).replace(/\r\n?/g, '\n').split('\n');
+  var blocks = [];
+  var i = 0;
+  var listRe = /^(\s*)([-*+]|\d{1,9}[.)])\s+(.*)$/;
+  function isTableSep(l) { return /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l) && l.indexOf('-') >= 0; }
+  function cells(l) { return l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(function (x) { return x.trim(); }); }
+  while (i < lines.length) {
+    var line = lines[i], m;
+    if (!line.trim()) { i++; continue; }
+    if ((m = /^\s*(`{3,}|~{3,})\s*([\w+#.-]*)/.exec(line))) {
+      var fence = m[1], lang = m[2], body = [];
+      i++;
+      while (i < lines.length && !new RegExp('^\\s*' + fence[0] + '{' + fence.length + ',}\\s*$').test(lines[i])) { body.push(lines[i]); i++; }
+      i++;
+      blocks.push({ t: 'code', lang: lang, text: body.join('\n') });
+      continue;
+    }
+    if ((m = /^(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line))) { blocks.push({ t: 'h', n: m[1].length, c: mdInline(m[2]) }); i++; continue; }
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { blocks.push({ t: 'hr' }); i++; continue; }
+    if (/^\s*>/.test(line)) {
+      var q = [];
+      while (i < lines.length && /^\s*>/.test(lines[i])) { q.push(lines[i].replace(/^\s*> ?/, '')); i++; }
+      blocks.push({ t: 'quote', blocks: mdParse(q.join('\n')) });
+      continue;
+    }
+    if (line.indexOf('|') >= 0 && i + 1 < lines.length && isTableSep(lines[i + 1])) {
+      var head = cells(line).map(mdInline), rows = [];
+      i += 2;
+      while (i < lines.length && lines[i].trim() && lines[i].indexOf('|') >= 0) { rows.push(cells(lines[i]).map(mdInline)); i++; }
+      blocks.push({ t: 'table', head: head, rows: rows });
+      continue;
+    }
+    if ((m = listRe.exec(line))) {
+      var root = { t: m[2].length > 1 && /\d/.test(m[2]) ? 'ol' : 'ul', items: [], indent: m[1].length };
+      var stack = [root];
+      while (i < lines.length) {
+        var lm = listRe.exec(lines[i]);
+        if (!lm) {
+          if (lines[i].trim() && /^\s{2,}\S/.test(lines[i]) && stack.length) { var tail = stack[stack.length - 1].items; if (tail.length) tail[tail.length - 1].c = tail[tail.length - 1].c.concat([{ t: 'text', v: ' ' }], mdInline(lines[i].trim())); i++; continue; }
+          break;
+        }
+        var ind = lm[1].length, kind = /\d/.test(lm[2]) ? 'ol' : 'ul';
+        while (stack.length > 1 && ind < stack[stack.length - 1].indent) stack.pop();
+        var top = stack[stack.length - 1];
+        if (ind > top.indent && top.items.length) {
+          var parent = top.items[top.items.length - 1];
+          var sub = { t: kind, items: [], indent: ind };
+          (parent.sub = parent.sub || []).push(sub);
+          stack.push(sub); top = sub;
+        }
+        top.items.push({ c: mdInline(lm[3]), sub: null });
+        i++;
+      }
+      blocks.push(root);
+      continue;
+    }
+    var para = [line];
+    i++;
+    while (i < lines.length && lines[i].trim() && !/^\s*(`{3,}|~{3,}|#{1,6}\s|>|([-*_])(\s*\2){2,}\s*$)/.test(lines[i]) && !listRe.test(lines[i]) && !(lines[i].indexOf('|') >= 0 && i + 1 < lines.length && isTableSep(lines[i + 1]))) { para.push(lines[i]); i++; }
+    blocks.push({ t: 'p', c: mdInline(para.join('\n')) });
+  }
+  return blocks;
+}
+function mdSafeHref(href) { return /^(https?:\/\/|mailto:)/i.test(href) ? href : null; }
+function mdInlineNodes(nodes, parent) {
+  nodes.forEach(function (n) {
+    if (n.t === 'text') {
+      var parts = n.v.split('\n');
+      parts.forEach(function (p, i) { if (i) parent.appendChild(document.createElement('br')); if (p) parent.appendChild(document.createTextNode(p)); });
+    } else if (n.t === 'code') { var c = document.createElement('code'); c.textContent = n.v; parent.appendChild(c); }
+    else if (n.t === 'a') {
+      var href = mdSafeHref(n.href);
+      if (!href) { mdInlineNodes(n.c, parent); return; }
+      var a = document.createElement('a'); a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer'; mdInlineNodes(n.c, a); parent.appendChild(a);
+    } else { var e = document.createElement(n.t === 'b' ? 'strong' : n.t === 'i' ? 'em' : 'del'); mdInlineNodes(n.c, e); parent.appendChild(e); }
+  });
+}
+function mdBlockNodes(blocks, parent) {
+  blocks.forEach(function (b) {
+    var e;
+    if (b.t === 'p') { e = document.createElement('p'); mdInlineNodes(b.c, e); }
+    else if (b.t === 'h') { e = document.createElement('h' + Math.min(6, b.n + 2)); mdInlineNodes(b.c, e); }
+    else if (b.t === 'hr') e = document.createElement('hr');
+    else if (b.t === 'quote') { e = document.createElement('blockquote'); mdBlockNodes(b.blocks, e); }
+    else if (b.t === 'code') {
+      e = document.createElement('div'); e.className = 'pgcode';
+      var bar = document.createElement('div'); bar.className = 'pgcodebar';
+      var lab = document.createElement('span'); lab.textContent = b.lang || 'code'; bar.appendChild(lab);
+      var cp = document.createElement('button'); cp.textContent = 'copy'; cp.setAttribute('data-copy', b.text); bar.appendChild(cp);
+      var pre = document.createElement('pre'); var code = document.createElement('code'); code.textContent = b.text; pre.appendChild(code);
+      e.appendChild(bar); e.appendChild(pre);
+    }
+    else if (b.t === 'ul' || b.t === 'ol') { e = mdListNode(b); }
+    else if (b.t === 'table') {
+      e = document.createElement('div'); e.className = 'pgtable';
+      var t = document.createElement('table'), th = document.createElement('thead'), tr = document.createElement('tr');
+      b.head.forEach(function (h) { var c = document.createElement('th'); mdInlineNodes(h, c); tr.appendChild(c); });
+      th.appendChild(tr); t.appendChild(th);
+      var tb = document.createElement('tbody');
+      b.rows.forEach(function (r) { var rr = document.createElement('tr'); r.forEach(function (x) { var c = document.createElement('td'); mdInlineNodes(x, c); rr.appendChild(c); }); tb.appendChild(rr); });
+      t.appendChild(tb); e.appendChild(t);
+    }
+    if (e) parent.appendChild(e);
+  });
+}
+function mdListNode(list) {
+  var e = document.createElement(list.t);
+  list.items.forEach(function (it) {
+    var li = document.createElement('li'); mdInlineNodes(it.c, li);
+    (it.sub || []).forEach(function (s) { li.appendChild(mdListNode(s)); });
+    e.appendChild(li);
+  });
+  return e;
+}
+function mdRender(text, into) { into.replaceChildren(); mdBlockNodes(mdParse(text), into); return into; }
+
+/* ---- Playground: a chat with an agent. Conversations are kept in this browser only. ---- */
+var PG = { targets: null, convs: [], cur: null, busy: false, ctrl: null, pref: '', started: false, raf: 0 };
+var PG_KEY = 'piper-playground-v1';
+var PG_SUGGEST = ['What can you do? Answer briefly.', 'List the files in /workspace.', 'Summarize your instructions in three bullets.', 'Run a quick check of your tools and tell me what works.'];
+function pgId() { var a = new Uint8Array(12); (window.crypto || window.msCrypto).getRandomValues(a); return Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); }
+function pgLoad() {
+  try { var d = JSON.parse(localStorage.getItem(PG_KEY) || 'null'); PG.convs = d && Array.isArray(d.convs) ? d.convs : []; PG.pref = d && d.pref || ''; PG.cur = d && d.cur || null; } catch (e) { PG.convs = []; }
+}
+function pgSave() {
+  var data;
+  function pack() { return JSON.stringify({ convs: PG.convs, pref: PG.pref, cur: PG.cur }); }
+  try {
+    PG.convs.sort(function (a, b) { return b.updated - a.updated; });
+    if (PG.convs.length > 40) PG.convs.length = 40;
+    data = pack();
+    while (data.length > 3000000 && PG.convs.length > 1) { PG.convs.pop(); data = pack(); }
+    localStorage.setItem(PG_KEY, data);
+  } catch (e) { /* storage unavailable or full: the chat still works, it is just not remembered */ }
+}
+function pgConv() { return PG.convs.filter(function (c) { return c.id === PG.cur; })[0] || null; }
+function pgTargetOf(c) {
+  if (!PG.targets) return null;
+  var k = PG.targets.filter(function (t) { return t.keyId === c.keyId; })[0];
+  if (!k) return null;
+  var a = c.agentId ? k.agents.filter(function (x) { return x.id === c.agentId; })[0] : null;
+  if (c.agentId && !a) return null;
+  return { key: k, agent: a, label: k.key + (a ? ' / ' + a.name : ''), description: a ? a.description : '' };
+}
+function pgNew() {
+  var pref = PG.pref ? PG.pref.split('|') : null;
+  var first = PG.targets && PG.targets[0];
+  var c = { id: pgId(), title: 'New chat', keyId: pref && pref[0] || (first ? first.keyId : ''), agentId: pref && pref[1] || null, model: '', messages: [], updated: Date.now() };
+  var t = pgTargetOf(c);
+  if (!t && first) { c.keyId = first.keyId; c.agentId = first.agents.length ? first.agents[0].id : null; }
+  PG.convs.unshift(c); PG.cur = c.id; pgSave();
+  return c;
+}
+function pgStart() {
+  if (!PG.started) { pgLoad(); PG.started = true; }
+  fetch('dashboard/playground/targets.json', { cache: 'no-store' }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); return j; }); })
+    .then(function (d) {
+      PG.targets = d.targets;
+      if (!PG.convs.length || !pgConv()) { var open = PG.convs.filter(function (c) { return !c.messages.length; })[0]; if (open) PG.cur = open.id; else if (PG.convs.length) PG.cur = PG.convs[0].id; else pgNew(); }
+      pgRender();
+    }).catch(function (e) { PG.targets = null; $('pgmsgs').replaceChildren(pgNotice('The Playground cannot start: ' + e.message)); $('pglist').replaceChildren(); });
+}
+function pgNotice(text) { var d = el('div', text); d.className = 'pgempty bad'; return d; }
+function pgRender() { pgRenderSide(); pgRenderBar(); pgRenderMessages(true); pgfLoad(); }
+function pgRenderSide() {
+  var list = $('pglist'); list.replaceChildren();
+  var q = $('pgsearch').value.trim().toLowerCase();
+  PG.convs.slice().sort(function (a, b) { return b.updated - a.updated; }).filter(function (c) { return !q || c.title.toLowerCase().indexOf(q) >= 0; }).forEach(function (c) {
+    var row = el('div'); row.className = 'pgitem' + (c.id === PG.cur ? ' on' : '');
+    var t = pgTargetOf(c);
+    var main = el('div'); main.className = 'pgitemmain';
+    main.appendChild(el('b', c.title)); main.appendChild(el('span', t ? t.label : '(gone)'));
+    main.addEventListener('click', function () { if (PG.busy) return; PG.cur = c.id; pgSave(); $('pgside').classList.remove('open'); pgRender(); });
+    main.addEventListener('dblclick', function () { var n = prompt('Rename this chat:', c.title); if (n && n.trim()) { c.title = n.trim().slice(0, 80); pgSave(); pgRenderSide(); pgRenderBar(); } });
+    var del = el('button', '×'); del.title = 'delete this chat';
+    del.addEventListener('click', function (e) { e.stopPropagation(); pgDelete(c); });
+    row.appendChild(main); row.appendChild(del); list.appendChild(row);
+  });
+}
+function pgRenderBar() {
+  var c = pgConv(), sel = $('pgtarget'), msel = $('pgmodel');
+  sel.replaceChildren(); msel.replaceChildren();
+  if (!PG.targets || !c) return;
+  PG.targets.forEach(function (k) {
+    var g = el('optgroup'); g.label = k.key;
+    var o0 = el('option', k.key + ' (main endpoint)'); o0.value = k.keyId + '|'; g.appendChild(o0);
+    k.agents.forEach(function (a) { var o = el('option', k.key + ' / ' + a.name); o.value = k.keyId + '|' + a.id; g.appendChild(o); });
+    sel.appendChild(g);
+  });
+  sel.value = c.keyId + '|' + (c.agentId || '');
+  sel.disabled = c.messages.length > 0 || PG.busy;
+  var t = pgTargetOf(c);
+  var d = el('option', 'default model'); d.value = ''; msel.appendChild(d);
+  (t ? t.key.models : []).forEach(function (m) { var o = el('option', m.value); o.value = m.value; msel.appendChild(o); });
+  msel.value = c.model || '';
+  $('pgtitle').textContent = c.title;
+  $('pgsend').textContent = PG.busy ? 'Stop' : 'Send';
+  $('pgsend').className = PG.busy ? 'stop' : '';
+}
+function pgParts(msg, node) {
+  (msg.parts || []).forEach(function (p) {
+    if (p.kind === 'thinking') {
+      var d = el('details'); d.className = 'pgthink'; d.appendChild(el('summary', msg.pending && p === msg.parts[msg.parts.length - 1] ? 'Thinking…' : 'Thought'));
+      var b = el('div', p.text); d.appendChild(b); node.appendChild(d);
+    } else if (p.kind === 'tool') {
+      var td = el('details'); td.className = 'pgtool ' + (p.state || ''); var sm = el('summary', (p.state === 'running' ? '⚙ ' : p.state === 'error' ? '✗ ' : '✓ ') + (p.summary || p.name));
+      td.appendChild(sm);
+      if (p.result) { var pre = el('pre', p.result); td.appendChild(pre); }
+      node.appendChild(td);
+    } else {
+      var md = el('div'); md.className = 'pgmd'; mdRender(p.text || '', md); node.appendChild(md);
+    }
+  });
+}
+function pgBuild(msg, idx, last) {
+  var m = el('div'); m.className = 'pgm ' + msg.role;
+  if (msg.role === 'user') {
+    var b = el('div', msg.text); b.className = 'pgbubble'; m.appendChild(b);
+    return m;
+  }
+  var av = el('div', 'P'); av.className = 'pgavatar'; m.appendChild(av);
+  var body = el('div'); body.className = 'pgbody'; m.appendChild(body);
+  pgParts(msg, body);
+  if (msg.pending && !(msg.parts || []).length) { var th = el('div', 'Thinking…'); th.className = 'pgwait'; body.appendChild(th); }
+  if (msg.pending && (msg.parts || []).length) { var cur = el('span'); cur.className = 'pgcaret'; body.appendChild(cur); }
+  if (msg.error) { var er = el('div', msg.error); er.className = 'pgerr'; body.appendChild(er); }
+  if (msg.stopped) { var st = el('div', 'Stopped.'); st.className = 'pgstopped'; body.appendChild(st); }
+  if (!msg.pending) {
+    var foot = el('div'); foot.className = 'pgfoot2';
+    var texts = (msg.parts || []).filter(function (p) { return p.kind === 'text'; }).map(function (p) { return p.text; }).join('\n\n');
+    if (texts) { var cp = el('button', 'copy'); cp.setAttribute('data-copy', texts); foot.appendChild(cp); }
+    if (last) { var rt = el('button', 'retry'); rt.setAttribute('data-act', 'retry'); rt.title = 'ask the same thing again'; foot.appendChild(rt); }
+    if (msg.usage && msg.usage.total_tokens) foot.appendChild(el('span', tok(msg.usage.total_tokens) + ' tokens' + (msg.cost ? ' · ' + money(msg.cost) : '')));
+    body.appendChild(foot);
+  }
+  return m;
+}
+function pgAtBottom() { var s = $('pgscroll'); return s.scrollHeight - s.scrollTop - s.clientHeight < 80; }
+function pgRenderMessages(toBottom) {
+  var c = pgConv(), box = $('pgmsgs');
+  var stick = toBottom || pgAtBottom();
+  box.replaceChildren();
+  if (!c) return;
+  if (!c.messages.length) { box.appendChild(pgEmpty(c)); return; }
+  c.messages.forEach(function (m, i) { box.appendChild(pgBuild(m, i, i === c.messages.length - 1)); });
+  if (stick) $('pgscroll').scrollTop = $('pgscroll').scrollHeight;
+  $('pgdown').hidden = pgAtBottom();
+}
+function pgEmpty(c) {
+  var t = pgTargetOf(c), e = el('div'); e.className = 'pgempty';
+  if (!t) { e.textContent = 'This chat’s agent no longer exists: start a new chat.'; return e; }
+  var av = el('div', 'P'); av.className = 'pgavatar big'; e.appendChild(av);
+  e.appendChild(el('h2', 'Chat with ' + t.label));
+  if (t.description) e.appendChild(el('p', t.description));
+  var row = el('div'); row.className = 'pgchips';
+  PG_SUGGEST.forEach(function (s) { var b = el('button', s); b.addEventListener('click', function () { pgSend(s); }); row.appendChild(b); });
+  e.appendChild(row);
+  return e;
+}
+function pgFrame() { if (PG.raf) return; PG.raf = requestAnimationFrame(function () { PG.raf = 0; var c = pgConv(); if (!c) return; var stick = pgAtBottom(); var box = $('pgmsgs'); var i = c.messages.length - 1; var node = box.lastChild; if (node && i >= 0) box.replaceChild(pgBuild(c.messages[i], i, true), node); if (stick) $('pgscroll').scrollTop = $('pgscroll').scrollHeight; $('pgdown').hidden = pgAtBottom(); }); }
+function pgApply(msg, item) {
+  var kind = item.kind === 'assistant' ? 'text' : item.kind;
+  var p = (msg.parts || []).filter(function (x) { return x.id === item.id; })[0];
+  if (!p) { p = { kind: kind, id: item.id }; (msg.parts = msg.parts || []).push(p); }
+  if (kind === 'tool') { p.name = item.name; p.summary = item.summary; p.state = item.state; p.result = item.result || ''; }
+  else if (kind === 'text' || kind === 'thinking') p.text = item.text;
+}
+function pgSetBusy(b) { PG.busy = b; $('pginput').disabled = false; $('pgsend').textContent = b ? 'Stop' : 'Send'; $('pgsend').className = b ? 'stop' : ''; $('pgtarget').disabled = b || Boolean(pgConv() && pgConv().messages.length); }
+function pgSend(text) {
+  var c = pgConv();
+  if (!c || PG.busy) return;
+  text = String(text == null ? $('pginput').value : text).trim();
+  if (!text) return;
+  if (!pgTargetOf(c)) { $('pgnote').textContent = 'Pick an agent first.'; return; }
+  $('pgnote').textContent = '';
+  if (!c.messages.length) c.title = text.replace(/\s+/g, ' ').slice(0, 48);
+  c.messages.push({ role: 'user', text: text, ts: Date.now() });
+  var msg = { role: 'assistant', parts: [], pending: true, ts: Date.now() };
+  c.messages.push(msg);
+  c.updated = Date.now();
+  $('pginput').value = ''; pgResize();
+  pgSetBusy(true); pgRenderSide(); pgRenderBar(); pgRenderMessages(true);
+  PG.ctrl = new AbortController();
+  var done = false;
+  fetch('dashboard/playground/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, signal: PG.ctrl.signal, body: JSON.stringify({ keyId: c.keyId, agentId: c.agentId || undefined, conversation: c.id, message: text, model: c.model || undefined }) })
+    .then(function (r) {
+      var type = r.headers.get('content-type') || '';
+      if (!r.ok || type.indexOf('event-stream') < 0) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); });
+      var reader = r.body.getReader(), dec = new TextDecoder(), buf = '';
+      function handle(block) {
+        var ev = /^event: (.*)$/m.exec(block), data = /^data: (.*)$/m.exec(block);
+        if (!ev || !data) return;
+        var d; try { d = JSON.parse(data[1]); } catch (x) { return; }
+        if (ev[1] === 'item') { pgApply(msg, d.item); pgFrame(); }
+        else if (ev[1] === 'done') { done = true; msg.usage = d.usage; msg.cost = d.cost; if (!(msg.parts || []).some(function (p) { return p.kind === 'text' && p.text; }) && d.text) (msg.parts = msg.parts || []).push({ kind: 'text', id: 'final', text: d.text }); }
+        else if (ev[1] === 'error') { done = true; msg.error = d.message; }
+      }
+      function pump() {
+        return reader.read().then(function (x) {
+          if (x.done) return;
+          buf += dec.decode(x.value, { stream: true });
+          var i;
+          while ((i = buf.indexOf('\n\n')) >= 0) { handle(buf.slice(0, i)); buf = buf.slice(i + 2); }
+          return pump();
+        });
+      }
+      return pump();
+    })
+    .catch(function (e) { if (e && e.name === 'AbortError') msg.stopped = true; else msg.error = e.message; })
+    .then(function () {
+      msg.pending = false;
+      if (!done && !msg.stopped && !msg.error) msg.error = 'The connection ended before the agent finished.';
+      c.updated = Date.now(); PG.ctrl = null; pgSetBusy(false); pgSave(); pgRenderSide(); pgRenderBar(); pgRenderMessages(false); pgfLoad();
+      $('pginput').focus();
+    });
+}
+function pgStop() { if (PG.ctrl) PG.ctrl.abort(); }
+function pgDelete(c) {
+  if (PG.busy && c.id === PG.cur) return;
+  if (c.messages.length && !confirm('Delete "' + c.title + '"?')) return;
+  fetch('dashboard/playground/conversation/' + encodeURIComponent(c.id) + '?keyId=' + encodeURIComponent(c.keyId) + (c.agentId ? '&agentId=' + encodeURIComponent(c.agentId) : ''), { method: 'DELETE' }).catch(function () {});
+  PG.convs = PG.convs.filter(function (x) { return x.id !== c.id; });
+  if (PG.cur === c.id) { PG.cur = PG.convs[0] ? PG.convs[0].id : null; if (!PG.cur) pgNew(); }
+  pgSave(); pgRender();
+}
+function pgResize() { var t = $('pginput'); t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 200) + 'px'; }
+function pgExport() {
+  var c = pgConv(); if (!c || !c.messages.length) return;
+  var t = pgTargetOf(c), out = ['# ' + c.title, '', 'With ' + (t ? t.label : 'an agent') + ', ' + new Date(c.updated).toLocaleString(), ''];
+  c.messages.forEach(function (m) {
+    if (m.role === 'user') out.push('## You', '', m.text, '');
+    else out.push('## Agent', '', (m.parts || []).filter(function (p) { return p.kind === 'text'; }).map(function (p) { return p.text; }).join('\n\n') || (m.error ? '(' + m.error + ')' : ''), '');
+  });
+  var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([out.join('\n')], { type: 'text/markdown' })); a.download = 'chat-' + c.title.replace(/[^\w-]+/g, '-').slice(0, 30) + '.md'; document.body.appendChild(a); a.click(); a.remove();
+}
+$('pgnew').addEventListener('click', function () { if (PG.busy) return; var cur = pgConv(); if (cur && !cur.messages.length) { $('pginput').focus(); return; } pgNew(); $('pgside').classList.remove('open'); pgRender(); $('pginput').focus(); });
+$('pgsearch').addEventListener('input', pgRenderSide);
+$('pgtoggle').addEventListener('click', function () { $('pgside').classList.toggle('open'); });
+$('pgtarget').addEventListener('change', function () { var c = pgConv(); if (!c || c.messages.length) return; var v = $('pgtarget').value.split('|'); c.keyId = v[0]; c.agentId = v[1] || null; c.model = ''; PG.pref = $('pgtarget').value; pgSave(); pgRender(); });
+$('pgmodel').addEventListener('change', function () { var c = pgConv(); if (c) { c.model = $('pgmodel').value; pgSave(); } });
+$('pgsend').addEventListener('click', function () { if (PG.busy) pgStop(); else pgSend(); });
+$('pginput').addEventListener('input', pgResize);
+$('pginput').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); if (!PG.busy) pgSend(); } });
+$('pgexport').addEventListener('click', pgExport);
+$('pgclear').addEventListener('click', function () { if (PG.busy || !confirm('Delete every chat kept in this browser?')) return; PG.convs.forEach(function (c) { fetch('dashboard/playground/conversation/' + encodeURIComponent(c.id) + '?keyId=' + encodeURIComponent(c.keyId) + (c.agentId ? '&agentId=' + encodeURIComponent(c.agentId) : ''), { method: 'DELETE' }).catch(function () {}); }); PG.convs = []; PG.cur = null; pgNew(); pgRender(); });
+$('pgdown').addEventListener('click', function () { $('pgscroll').scrollTop = $('pgscroll').scrollHeight; });
+$('pgscroll').addEventListener('scroll', function () { $('pgdown').hidden = pgAtBottom(); });
+$('pgmsgs').addEventListener('click', function (e) {
+  var b = e.target.closest ? e.target.closest('button') : null;
+  if (!b) return;
+  if (b.hasAttribute('data-copy')) { var text = b.getAttribute('data-copy'); (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () { var o = b.textContent; b.textContent = 'copied'; setTimeout(function () { b.textContent = o; }, 1200); }, function () { b.textContent = 'press Ctrl+C'; }); }
+  else if (b.getAttribute('data-act') === 'retry' && !PG.busy) { var c = pgConv(); if (!c || c.messages.length < 2) return; var lastUser = c.messages[c.messages.length - 2]; c.messages.splice(c.messages.length - 2, 2); pgSend(lastUser.text); }
+});
+
+
+/* ---- template details and editing ---- */
+var TPLD = null;
+function tplClose() { TPLD = null; $('tpldetail').hidden = true; $('tpldetail').replaceChildren(); }
+function tplOpen(name) {
+  fetch('dashboard/templates/' + encodeURIComponent(name), { cache: 'no-store' }).then(readJson).then(function (d) {
+    TPLD = d.template; TPLD.sel = TPLD.files.some(function (f) { return f.path === 'AGENTS.md'; }) ? 'AGENTS.md' : (TPLD.files[0] ? TPLD.files[0].path : null); TPLD.dirty = false;
+    tplRender(); $('tpldetail').scrollIntoView({ block: 'nearest' });
+  }).catch(function (e) { $('tplnote2').textContent = e.message; });
+}
+function tplField(label, node) { var l = el('label'); l.className = 'row'; l.appendChild(el('b', label)); l.appendChild(node); return l; }
+function tplRender() {
+  var t = TPLD, box = $('tpldetail');
+  box.hidden = false; box.replaceChildren();
+  var ro = t.builtin;
+  var head = el('div'); head.className = 'toolbar';
+  var title = el('div'); title.appendChild(el('h3', t.name + (ro ? ' (built-in)' : '')));
+  var hint = el('p', ro ? 'Built-in templates are part of Piper and cannot be changed. Copy it to make your own version to edit.' : 'Your template: changes apply to agents created from it from now on; agents already made from it are not touched.'); hint.className = 'hint'; hint.style.margin = '0'; title.appendChild(hint);
+  head.appendChild(title);
+  var tools = el('div');
+  var copy = el('button', ro ? 'copy to edit' : 'duplicate');
+  copy.addEventListener('click', function () {
+    var n = prompt('Name for the copy (lowercase letters, digits, hyphens):', t.name + '-copy'); if (!n) return;
+    epPost('dashboard/templates/' + encodeURIComponent(t.name) + '/copy', { name: n }).then(function (j) { loadTemplates(j.templates); tplOpen(n); $('tplnote2').textContent = 'copied as ' + n; }).catch(function (e) { $('tplnote2').textContent = e.message; });
+  });
+  tools.appendChild(copy); tools.appendChild(document.createTextNode(' '));
+  var close = el('button', 'close'); close.addEventListener('click', tplClose); tools.appendChild(close);
+  head.appendChild(tools); box.appendChild(head);
+  var desc = el('input'); desc.type = 'text'; desc.value = t.description || ''; desc.disabled = ro; desc.style.width = '60%'; desc.addEventListener('input', function () { t.description = desc.value; t.dirty = true; });
+  box.appendChild(tplField('description', desc));
+  var model = el('input'); model.type = 'text'; model.value = t.model || ''; model.placeholder = 'blank = the default'; model.disabled = ro; model.addEventListener('input', function () { t.model = model.value.trim() || null; t.dirty = true; });
+  box.appendChild(tplField('model', model));
+  var th = el('select'); [['', 'default'], ['off', 'off'], ['minimal', 'minimal'], ['low', 'low'], ['medium', 'medium'], ['high', 'high'], ['xhigh', 'xhigh']].forEach(function (o) { var op = el('option', o[1]); op.value = o[0]; th.appendChild(op); });
+  th.value = t.thinking || ''; th.disabled = ro; th.addEventListener('change', function () { t.thinking = th.value || null; t.dirty = true; });
+  box.appendChild(tplField('thinking', th));
+  var ws = el('select'); [['own', 'its own workspace'], ['shared', 'shared with the key']].forEach(function (o) { var op = el('option', o[1]); op.value = o[0]; ws.appendChild(op); });
+  ws.value = t.workspace; ws.disabled = ro; ws.addEventListener('change', function () { t.workspace = ws.value; t.dirty = true; });
+  box.appendChild(tplField('workspace', ws));
+  var dl = el('input'); dl.type = 'checkbox'; dl.checked = Boolean(t.canDelegate); dl.disabled = ro; dl.addEventListener('change', function () { t.canDelegate = dl.checked; t.dirty = true; });
+  var dlw = el('span'); dlw.appendChild(dl); dlw.appendChild(document.createTextNode(' agents made from it may hand work to the other agents of their key'));
+  box.appendChild(tplField('hand-offs', dlw));
+  // files: a list, and the selected file's text
+  var grid = el('div'); grid.style.cssText = 'display:grid;grid-template-columns:230px 1fr;gap:12px;margin-top:10px';
+  var list = el('div'); list.className = 'tpllist';
+  t.files.forEach(function (f) {
+    var row = el('div'); row.className = 'pgitem' + (f.path === t.sel ? ' on' : '');
+    var main = el('div'); main.className = 'pgitemmain'; main.appendChild(el('b', f.path)); main.appendChild(el('span', bytes(f.bytes) + (f.binary ? ' · binary' : '')));
+    main.addEventListener('click', function () { t.sel = f.path; tplRender(); });
+    row.appendChild(main);
+    if (!ro) { var x = el('button', '×'); x.title = 'remove this file'; x.addEventListener('click', function (e) { e.stopPropagation(); if (!confirm('Remove ' + f.path + ' from the template?')) return; t.files = t.files.filter(function (y) { return y !== f; }); if (t.sel === f.path) t.sel = t.files[0] ? t.files[0].path : null; t.dirty = true; tplRender(); }); row.appendChild(x); }
+    list.appendChild(row);
+  });
+  if (!ro) { var add = el('button', 'add file'); add.style.margin = '8px 0 0'; add.addEventListener('click', function () { var p = prompt('Path of the new file, e.g. skills/my-skill/SKILL.md or AGENTS.md'); if (!p) return; p = p.trim().replace(/^\/+/, ''); if (t.files.some(function (f) { return f.path === p; })) { t.sel = p; tplRender(); return; } t.files.push({ path: p, bytes: 0, text: '' }); t.sel = p; t.dirty = true; tplRender(); }); list.appendChild(add); }
+  grid.appendChild(list);
+  var ed = el('div'); var cur = t.files.filter(function (f) { return f.path === t.sel; })[0];
+  if (!cur) ed.appendChild(el('p', 'no files')).className = 'hint';
+  else if (cur.binary) ed.appendChild(el('p', cur.path + ' is a binary file (' + bytes(cur.bytes) + '): it cannot be shown here and is kept as it is.')).className = 'hint';
+  else {
+    var ta = el('textarea'); ta.rows = 18; ta.style.cssText = 'width:100%;box-sizing:border-box;background:#141414;color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:12px'; ta.value = cur.text; ta.readOnly = ro;
+    ta.addEventListener('input', function () { cur.text = ta.value; cur.bytes = new Blob([ta.value]).size; t.dirty = true; });
+    ed.appendChild(el('p', cur.path)).className = 'hint'; ed.appendChild(ta);
+  }
+  grid.appendChild(ed); box.appendChild(grid);
+  if (!ro) {
+    var bar = el('div'); bar.className = 'fieldrow'; bar.style.marginTop = '10px';
+    var save = el('button', 'save changes');
+    save.addEventListener('click', function () {
+      $('tplnote2').textContent = 'saving…';
+      epPost('dashboard/templates/' + encodeURIComponent(t.name), { description: t.description, model: t.model, thinking: t.thinking, workspace: t.workspace, canDelegate: t.canDelegate, files: t.files.map(function (f) { return f.binary ? { path: f.path, keep: true } : { path: f.path, text: f.text }; }) }, 'PATCH')
+        .then(function (j) { loadTemplates(j.templates); var sel = t.sel; TPLD = j.template; TPLD.sel = TPLD.files.some(function (f) { return f.path === sel; }) ? sel : (TPLD.files[0] ? TPLD.files[0].path : null); TPLD.dirty = false; tplRender(); $('tplnote2').textContent = 'saved ' + t.name; })
+        .catch(function (e) { $('tplnote2').textContent = e.message; });
+    });
+    bar.appendChild(save); box.appendChild(bar);
+  }
+}
+
+
+/* ---- Playground: the workspace of whoever you are talking to, with a preview ---- */
+var PGF = { open: false, path: '', entries: null, scope: '' };
+var PGF_IMG = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml', bmp: 'image/bmp', ico: 'image/x-icon' };
+function pgfScope(c) { return c ? 'key-' + c.keyId + (c.agentId ? '--' + c.agentId : '') : ''; }
+function pgfUrl(c, path, query) { return 'dashboard/files/' + encodeURIComponent(pgfScope(c)) + '/' + String(path || '').split('/').filter(Boolean).map(encodeURIComponent).join('/') + '?root=workspace' + (query ? '&' + query : ''); }
+function pgfSay(text, bad) { var n = $('pgfnote'); n.textContent = text || ''; n.className = 'hint small' + (bad ? ' bad' : ''); }
+function pgfLoad() {
+  var c = pgConv();
+  if (!PGF.open || !c) return;
+  if (PGF.scope !== pgfScope(c)) { PGF.scope = pgfScope(c); PGF.path = ''; }
+  fetch(pgfUrl(c, PGF.path, 'as=list'), { cache: 'no-store' }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); return j; }); })
+    .then(function (d) { PGF.entries = d.entries || []; pgfSay(d.truncated ? 'Showing the first ' + PGF.entries.length + ' of ' + d.total + '.' : ''); pgfRender(); })
+    .catch(function (e) { PGF.entries = []; pgfRender(); pgfSay(e.message.indexOf('exist') >= 0 ? 'No files yet.' : e.message, e.message.indexOf('exist') < 0); });
+}
+function pgfRender() {
+  var box = $('pgflist'); box.replaceChildren();
+  var crumb = $('pgfcrumb'); crumb.replaceChildren();
+  function link(label, path) { var a = el('a', label); a.addEventListener('click', function () { PGF.path = path; pgfLoad(); }); return a; }
+  crumb.appendChild(link('workspace', ''));
+  var parts = PGF.path.split('/').filter(Boolean);
+  parts.forEach(function (p, i) { crumb.appendChild(document.createTextNode(' / ')); crumb.appendChild(link(p, parts.slice(0, i + 1).join('/'))); });
+  if (parts.length) { var up = el('div'); up.className = 'pgfrow'; up.appendChild(el('span', '← ..')); up.addEventListener('click', function () { PGF.path = parts.slice(0, -1).join('/'); pgfLoad(); }); box.appendChild(up); }
+  var sorted = (PGF.entries || []).slice().sort(function (a, b) { return (a.type === 'dir' ? 0 : 1) - (b.type === 'dir' ? 0 : 1) || a.name.localeCompare(b.name); });
+  if (!sorted.length && !parts.length) { var e = el('p', 'No files yet. What the agent writes in /workspace appears here.'); e.className = 'hint small'; box.appendChild(e); }
+  sorted.forEach(function (f) {
+    var full = (PGF.path ? PGF.path + '/' : '') + f.name;
+    var row = el('div'); row.className = 'pgfrow ' + f.type;
+    row.appendChild(el('span', (f.type === 'dir' ? '▸ ' : f.type === 'link' ? '⤷ ' : '') + f.name + (f.type === 'dir' ? '/' : '')));
+    if (f.type === 'file') row.appendChild(el('small', bytes(f.bytes)));
+    if (f.type === 'dir') row.addEventListener('click', function () { PGF.path = full; pgfLoad(); });
+    else if (f.type === 'file') row.addEventListener('click', function () { pgfPreview(full, f.bytes); });
+    else row.title = 'a link: never followed';
+    box.appendChild(row);
+  });
+}
+function pgfToggle(on) {
+  PGF.open = on === undefined ? !PGF.open : on;
+  $('pg').classList.toggle('withfiles', PGF.open);
+  $('pgfilesbtn').className = PGF.open ? 'on' : '';
+  if (PGF.open) pgfLoad();
+}
+function pgfClose() { $('pgmodal').hidden = true; $('pgmbody').replaceChildren(); if (PGF.objectUrl) { URL.revokeObjectURL(PGF.objectUrl); PGF.objectUrl = null; } }
+function pgfPreview(path, size) {
+  var c = pgConv(); if (!c) return;
+  var ext = (path.split('.').pop() || '').toLowerCase();
+  $('pgmtitle').textContent = path; $('pgmmeta').textContent = bytes(size);
+  var body = $('pgmbody'); body.replaceChildren(el('p', 'loading…'));
+  $('pgmodal').hidden = false;
+  var dl = $('pgmdl'); dl.href = pgfUrl(c, path); dl.download = path.split('/').pop();
+  var raw = $('pgmraw'); raw.hidden = true;
+  if (PGF_IMG[ext]) {
+    fetch(pgfUrl(c, path)).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); }).then(function (buf) {
+      PGF.objectUrl = URL.createObjectURL(new Blob([buf], { type: PGF_IMG[ext] }));
+      var img = el('img'); img.src = PGF.objectUrl; img.alt = path; img.className = 'pgimg'; body.replaceChildren(img);
+    }).catch(function (e) { body.replaceChildren(el('p', 'cannot show it: ' + e.message)); });
+    return;
+  }
+  fetch(pgfUrl(c, path, 'as=text'), { cache: 'no-store' }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); return j; }); }).then(function (d) {
+    if (d.binary || d.tooBig) { var m = el('p', (d.binary ? 'This is not a text file' : 'This file is too large to preview (' + bytes(d.bytes) + ')') + '. Use download.'); m.className = 'hint'; body.replaceChildren(m); return; }
+    var isMd = ext === 'md' || ext === 'markdown';
+    function show(rendered) {
+      body.replaceChildren();
+      if (rendered) { var md = el('div'); md.className = 'pgmd'; mdRender(d.text, md); body.appendChild(md); }
+      else { var pre = el('pre'); pre.className = 'pgpre'; pre.textContent = d.text; body.appendChild(pre); }
+    }
+    PGF.rendered = isMd; show(isMd);
+    if (isMd) { raw.hidden = false; raw.textContent = 'show source'; raw.onclick = function () { PGF.rendered = !PGF.rendered; raw.textContent = PGF.rendered ? 'show source' : 'show rendered'; show(PGF.rendered); }; }
+  }).catch(function (e) { body.replaceChildren(el('p', 'cannot show it: ' + e.message)); });
+}
+$('pgfilesbtn').addEventListener('click', function () { pgfToggle(); });
+$('pgfrefresh').addEventListener('click', pgfLoad);
+$('pgmclose').addEventListener('click', pgfClose);
+$('pgmodal').addEventListener('click', function (e) { if (e.target === $('pgmodal')) pgfClose(); });
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('pgmodal').hidden) pgfClose(); });
+
 var TEMPLATES = [];
 function loadTemplates(list) {
   var apply = function (l) {
@@ -3235,14 +4453,15 @@ function loadTemplates(list) {
     body.replaceChildren();
     l.forEach(function (t) {
       var tr = el('tr');
-      var n = el('td', t.name); if (t.builtin) n.appendChild(el('span', ' built-in')).className = 'badge';
+      var n = el('td', t.name); n.style.cursor = 'pointer'; if (t.builtin) n.appendChild(el('span', ' built-in')).className = 'badge'; if (t.canDelegate) { var hb = n.appendChild(el('span', ' hand-offs')); hb.className = 'badge'; hb.title = 'agents made from it may hand work to the other agents of their key'; }
       tr.appendChild(n);
       tr.appendChild(el('td', t.description));
       tr.appendChild(el('td', t.files.length));
+      tr.style.cursor = 'pointer'; tr.title = 'click to see the details'; tr.addEventListener('click', function () { tplOpen(t.name); });
       var act = el('td');
       if (!t.builtin) {
         var d = el('button', 'delete');
-        d.addEventListener('click', function () { if (confirm('Delete the template "' + t.name + '"? Agents made from it are not affected.')) epPost('dashboard/templates/' + t.name, undefined, 'DELETE').then(function (j) { loadTemplates(j.templates); }); });
+        d.addEventListener('click', function (ev) { ev.stopPropagation(); if (confirm('Delete the template "' + t.name + '"? Agents made from it are not affected.')) epPost('dashboard/templates/' + t.name, undefined, 'DELETE').then(function (j) { loadTemplates(j.templates); }); });
         act.appendChild(d);
       }
       tr.appendChild(act);
@@ -3626,7 +4845,7 @@ function fbLoadBundles(select) {
 }
 $('fbbundle').addEventListener('change', function () { FB.bundle = $('fbbundle').value; FB.path = ''; fbCloseEditor(true); fbList(); });
 $('fbnewbundle').addEventListener('click', function () {
-  var name = prompt('Name of the new bundle (letters, digits, dots, dashes, underscores). It gets skills/, extensions/ and prompts/ folders. Grant it to keys on the API Management page.');
+  var name = prompt('Name of the new bundle (letters, digits, dots, dashes, underscores). It gets skills/, extensions/ and prompts/ folders. Grant it to keys on the API keys page.');
   if (!name) return;
   epPost('dashboard/bundles', { name: name.trim() }).then(function () { fbLoadBundles(name.trim()); }).catch(function (e) { fbSay(e.message, true); });
 });
@@ -3741,7 +4960,7 @@ function drawDocList(active) {
   box.replaceChildren();
   DOCS.pages.forEach(function (p) {
     var a = el('a', p.title);
-    a.href = '#docs/' + p.id;
+    a.href = '#help/docs/' + p.id;
     a.title = p.summary;
     if (p.id === active) a.className = 'on';
     box.appendChild(a);
@@ -3771,7 +4990,7 @@ function loadDocPage(id, anchor) {
     toc.replaceChildren();
     if (d.headings.length) toc.appendChild(el('h5', 'On this page'));
     d.headings.forEach(function (h) {
-      var a = el('a', h.text); a.href = '#docs/' + id + '/' + h.id; a.className = 'l' + h.level; toc.appendChild(a);
+      var a = el('a', h.text); a.href = '#help/docs/' + id + '/' + h.id; a.className = 'l' + h.level; toc.appendChild(a);
     });
     scrollToDoc(anchor);
   }).catch(function (e) { $('doccontent').textContent = 'cannot load this page: ' + e.message; });
@@ -3788,7 +5007,7 @@ $('docsearch').addEventListener('input', function () {
       box.appendChild(el('h1', d.hits.length ? d.hits.length + ' result' + (d.hits.length === 1 ? '' : 's') + ' for “' + q + '”' : 'Nothing found for “' + q + '”'));
       d.hits.forEach(function (h) {
         var div = el('div'); div.className = 'hit';
-        var a = el('a', h.title + ' › ' + h.heading); a.href = '#docs/' + h.page + (h.anchor ? '/' + h.anchor : '');
+        var a = el('a', h.title + ' › ' + h.heading); a.href = '#help/docs/' + h.page + (h.anchor ? '/' + h.anchor : '');
         a.addEventListener('click', function () { $('docsearch').value = ''; });
         div.appendChild(a); div.appendChild(el('small', h.snippet));
         box.appendChild(div);
@@ -3961,7 +5180,7 @@ $('audauto').addEventListener('change', function () {
   if ($('audauto').checked) AUD.timer = setInterval(function () { loadAudit(true); }, 5000);
 });
 
-/* Updates: one job at a time, started from the Containers, Endpoints and Profiles pages, shown in a panel
+/* Updates: one job at a time, started from Containers, Agents and Files & profiles, shown in a panel
    that stays until closed and is polled while it runs. */
 var UP_TIMER = null;
 function startUpdateJob(url, title, body) {
@@ -4071,7 +5290,7 @@ function renderContainers(d) {
       if (a[0] === 'stop' && c.state !== 'running') b.disabled = true;
       if (a[0] === 'update' && c.status === 'orphan') b.disabled = true;
       if (a[0] === 'terminal') { b.disabled = c.state !== 'running' || !d.execAllowed; b.title = d.execAllowed ? 'a root shell in this container' : d.execNote; }
-      b.addEventListener('click', function () { if (a[0] === 'terminal') location.hash = '#terminal/' + c.name; else if (a[0] === 'update') ctUpdate(c); else ctAct(c.name, a[1], a[0], c.persistent); });
+      b.addEventListener('click', function () { if (a[0] === 'terminal') location.hash = '#containers/terminal/' + c.name; else if (a[0] === 'update') ctUpdate(c); else ctAct(c.name, a[1], a[0], c.persistent); });
       actions.appendChild(b);
       actions.appendChild(document.createTextNode(' '));
     });
@@ -4125,45 +5344,59 @@ $('ctexecrun').addEventListener('click', function () {
 });
 
 function route() {
-  var name = (location.hash || '#overview').replace(/^#\/?/, '');
+  var at = resolveHash(location.hash);
+  var page = at.page, tab = at.tab, rest = at.rest, pane = tab.pane;
+  // An old link is rewritten to its new place without adding a history entry.
+  var want = '#' + [page].concat(PAGES[page].tabs.length > 1 ? [tab.id] : []).concat(rest).join('/');
+  if (location.hash && location.hash !== want && /^#\/?[a-z]/.test(location.hash) && !PAGES[location.hash.replace(/^#\/?/, '').split('/')[0]]) {
+    history.replaceState(null, '', want);
+  }
   // #settings/<tab> opens a settings tab directly.
-  var sub = name.split('/');
-  name = sub[0];
-  if (name === 'settings' && sub[1] && SETTING_TABS.some(function (t) { return t.id === sub[1]; })) {
-    activeSettingTab = sub[1];
+  if (pane === 'settings' && rest[0] && SETTING_TABS.some(function (t) { return t.id === rest[0]; })) {
+    activeSettingTab = rest[0];
     if (SETTINGS) applySettingFilter();
   }
-  if (!VIEWS[name]) name = 'overview';
-  Object.keys(VIEWS).forEach(function (k) {
+  PANES.forEach(function (k) {
     var view = $('view-' + k);
-    if (view) view.classList.toggle('on', k === name);
+    if (view) view.classList.toggle('on', k === pane);
   });
-  Array.prototype.forEach.call(document.querySelectorAll('nav a[href^="#"]'), function (a) {
-    a.classList.toggle('on', a.getAttribute('href') === '#' + name);
+  // A split pane shows only the sections of this tab.
+  Array.prototype.forEach.call(document.querySelectorAll('#view-' + pane + ' > section[data-tab]'), function (sec) {
+    sec.classList.toggle('tabshown', sec.getAttribute('data-tab') === tab.sections);
   });
-  $('title').textContent = VIEWS[name].title;
-  $('subtitle').textContent = VIEWS[name].subtitle;
-  $('sectiontitle').textContent = VIEWS[name].section;
+  Array.prototype.forEach.call(document.querySelectorAll('#nav a[href^="#"]'), function (a) {
+    a.classList.toggle('on', a.getAttribute('href') === '#' + page);
+  });
+  var bar = $('tabbar');
+  bar.hidden = PAGES[page].tabs.length < 2;
+  bar.replaceChildren.apply(bar, PAGES[page].tabs.length < 2 ? [] : PAGES[page].tabs.map(function (t) {
+    var a = el('a', t.label); a.href = '#' + page + '/' + t.id; if (t.id === tab.id) a.className = 'on';
+    return a;
+  }));
+  $('title').textContent = PAGES[page].title;
+  $('subtitle').textContent = tab.subtitle;
   stopContainersPolling();
   stopAuditRefresh();
   stopSpeedRefresh();
-  if (name === 'terminal') startTerminalView(sub[1]);
-  if (name === 'files') startFiles();
-  if (name === 'overview') startSpeed();
-  if (name === 'about') loadAbout();
-  if (name === 'docs') startDocs(sub[1], sub[2]);
-  if (name === 'audit') startAudit();
-  if (name === 'endpoints') loadEndpoints();
-  if (name === 'jobs') loadJobs();
-  if (name === 'containers') { startContainersPolling(); loadHostPi(); }
-  if (name === 'models') ensureModels();
-  if (name === 'spend') ensureSpend(true);
-  if (name === 'apikeys') ensureApiKeys(true);
-  if (name === 'settings') ensureSettings();
-  if (name === 'profiles') {
+  if (pane === 'terminal') startTerminalView(rest[0]);
+  if (pane === 'files') startFiles();
+  if (pane === 'overview') startSpeed();
+  if (pane === 'about') loadAbout();
+  if (pane === 'docs') startDocs(rest[0], rest[1]);
+  if (pane === 'audit') startAudit();
+  if (pane === 'endpoints') { loadEndpoints(); if (tab.id === 'wizard') wzStart(); }
+  if (pane === 'playground') pgStart();
+  if (pane === 'jobs') loadJobs();
+  if (pane === 'extensions') loadExtensions();
+  if (pane === 'containers') { startContainersPolling(); loadHostPi(); }
+  if (pane === 'models') ensureModels();
+  if (pane === 'spend') ensureSpend(true);
+  if (pane === 'apikeys') ensureApiKeys(true);
+  if (pane === 'settings') ensureSettings();
+  if (pane === 'profiles') {
     ensureProfiles();
-    // #profiles/<scope> opens that key's detail, which is how the API keys page links here.
-    if (sub[1]) openProfileDetail(sub[1], true); else closeProfileDetail(true);
+    // #files/profiles/<scope> opens that key's detail, which is how the API keys page links here.
+    if (rest[0]) openProfileDetail(rest[0], true); else closeProfileDetail(true);
   }
 }
 
@@ -4188,7 +5421,7 @@ function renderShared(sh) {
   var tbody = $('sharedrows');
   $('sharedhint').textContent = 'Folders under ' + sh.root + ', each laid out like a Pi package (skills/, extensions/, prompts/), ' +
     'mounted read-only for the keys that get them. Every key gets: ' + (sh.defaultBundles || 'none') +
-    ', unless it has its own list on API Management. Edits reach open chats on their next /reload.';
+    ', unless it has its own list on the API keys page. Edits reach open chats on their next /reload.';
   if (!sh.bundles.length) {
     var tr = el('tr');
     tr.appendChild(cell('no bundles yet - create ' + sh.root + '/base/skills/<skill>/SKILL.md, for example', 'empty')).colSpan = 5;
@@ -4412,7 +5645,7 @@ function renderProfileDetail(d) {
   var refresh = el('button', 'refresh');
   refresh.addEventListener('click', function () { openProfileDetail(d.scope, true); });
   var close = el('button', 'close');
-  close.addEventListener('click', function () { location.hash = '#profiles'; });
+  close.addEventListener('click', function () { location.hash = '#files/profiles'; });
   tools.appendChild(refresh); tools.appendChild(close);
   head.appendChild(tools);
   var parts = [head];
@@ -4647,7 +5880,7 @@ function renderProfileDetail(d) {
 }
 
 function openProfileDetail(scope, fromRoute) {
-  if (!fromRoute && location.hash !== '#profiles/' + scope) { location.hash = '#profiles/' + scope; return; }
+  if (!fromRoute && location.hash !== '#files/profiles/' + scope) { location.hash = '#files/profiles/' + scope; return; }
   DETAIL_SCOPE = scope;
   var box = $('profiledetail');
   box.hidden = false;
