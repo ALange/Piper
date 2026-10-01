@@ -23,7 +23,7 @@ process.env.CONTAINER_PI_DIR = TEST_CONTAINER_PI;
 const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 // Seeded at startup, which is when a validator that reads a not-yet-defined constant would fail.
 process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
-const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, recentAudit: recentAuditRows } = await import("./server.mjs");
+const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, recentAudit: recentAuditRows } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
 
@@ -4119,8 +4119,8 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(await latestPiVersion({ check: true, run: fakeRun({ view: { code: 1, stdout: "", stderr: "offline" } }), npm: fakeNpm }), null);
 	assert.equal(await latestPiVersion({ check: true, run: fakeRun({ view: { code: 0, stdout: "not a version", stderr: "" } }), npm: fakeNpm }), null);
 	resetHostPiCache();
-	assert.deepEqual(await hostExtensions({ run: fakeRun(), packageDir: pkgDir }), ["npm:@scope/ext-one", "npm:@scope/ext-two"], "sources only, blanks dropped");
-	assert.deepEqual(await hostExtensions({ run: async () => { throw new Error("cached"); }, packageDir: pkgDir }), ["npm:@scope/ext-one", "npm:@scope/ext-two"], "and cached");
+	assert.deepEqual(await hostExtensions({ run: fakeRun(), packageDir: pkgDir }), [{ name: "@scope/ext-one", type: "npm", scope: "user", filtered: false, pinned: null }, { name: "@scope/ext-two", type: "npm", scope: "user", filtered: false, pinned: null }], "package names as rows, blanks dropped");
+	assert.deepEqual(await hostExtensions({ run: async () => { throw new Error("cached"); }, packageDir: pkgDir }), [{ name: "@scope/ext-one", type: "npm", scope: "user", filtered: false, pinned: null }, { name: "@scope/ext-two", type: "npm", scope: "user", filtered: false, pinned: null }], "and cached");
 
 	// Updating, through a fake `spawn`: Pi's own commands, from the temp folder, online, one failure not stopping the next.
 	const spawned = [];
@@ -4195,7 +4195,7 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(info.status, 200);
 	for (const key of ["running", "onDisk", "latest", "updateAvailable", "restartNeeded", "packageDir", "manageable", "reason", "extensions", "updateAllowed", "updateNote", "job"]) assert.ok(key in info.json, key);
 	assert.equal(info.json.latest, "0.99.2");
-	assert.deepEqual(info.json.extensions, ["npm:@scope/ext-one", "npm:@scope/ext-two"]);
+	assert.deepEqual(info.json.extensions, [{ name: "@scope/ext-one", type: "npm", scope: "user", filtered: false, pinned: null }, { name: "@scope/ext-two", type: "npm", scope: "user", filtered: false, pinned: null }]);
 	assert.equal(info.json.updateAllowed, false, "no dashboard password: no update");
 	assert.match(info.json.updateNote, /dashboard password/);
 	assert.equal((await call("/dashboard/hostpi/update", { method: "POST", body: {} })).status, 403, "refused until a password is set");
@@ -4284,6 +4284,326 @@ assert.equal(isReloadCommand(undefined), false);
 	await new Promise((r) => server.close(r));
 	config.ACCESS_LOG = accessLog;
 	resetResources();
+}
+
+// Pi versions of containers and agents: read cheaply, cached, coloured against the gateway's own; extensions as rows.
+{
+	const tarOf = (text) => {
+		const body = Buffer.from(text);
+		const header = Buffer.alloc(512);
+		header.write("package.json", 0);
+		header.write(body.length.toString(8).padStart(11, "0"), 124, "ascii");
+		return Buffer.concat([header, body, Buffer.alloc(512 - (body.length % 512 || 512)), Buffer.alloc(1024)]);
+	};
+	const piJson = (v) => JSON.stringify({ name: "@earendil-works/pi-coding-agent", version: v, description: "naïve — unicode" });
+
+	// How a version compares.
+	for (const [version, host, expected] of [["0.99.1", "0.99.1", "current"], ["0.99.0", "0.99.1", "outdated"], ["0.98.9", "0.99.1", "outdated"], ["1.0.0", "0.99.1", "ahead"], ["0.99.2", "0.99.1", "ahead"], ["0.99.1-beta.1", "0.99.1", "outdated"], ["", "0.99.1", "unknown"], ["0.99.1", "", "unknown"], [null, null, "unknown"]]) {
+		assert.equal(piStatus(version, host), expected, `${version} against ${host}`);
+	}
+
+	// Reading a version out of the tar `docker cp` produces.
+	assert.match(firstFileOfTar(tarOf(piJson("0.99.1"))), /"version":"0\.99\.1"/);
+	assert.ok(firstFileOfTar(tarOf(piJson("0.99.1"))).includes("naïve — unicode"), "bytes, not a text decoding, so non-ASCII survives");
+	assert.equal(firstFileOfTar(Buffer.alloc(100)), "");
+	assert.equal(firstFileOfTar(Buffer.alloc(1024)), "", "an empty archive");
+	assert.equal(firstFileOfTar("not a buffer"), "");
+	const seen4 = [];
+	const answering = (handlers) => async (bin, args, opts) => {
+		seen4.push({ args, opts });
+		return (handlers[args[0]] ?? (() => ({ code: 1, stdout: "", stderr: "" })))(args, opts);
+	};
+	setRunner(answering({ cp: () => ({ code: 0, stdout: tarOf(piJson("0.98.0")), stderr: "" }) }));
+	assert.deepEqual(await readPiVersion("c1"), { version: "0.98.0", source: "container" });
+	assert.deepEqual(seen4.map((c) => c.args[0]), ["cp"], "a container that is not running is read without exec");
+	assert.deepEqual(seen4[0].args, ["cp", `c1:${PI_PACKAGE_JSON}`, "-"]);
+	assert.equal(seen4[0].opts.binary, true);
+	seen4.length = 0;
+	setRunner(answering({ exec: () => ({ code: 0, stdout: piJson("0.97.0"), stderr: "" }) }));
+	assert.deepEqual(await readPiVersion("c2"), { version: "0.97.0", source: "container" }, "a Pi installed elsewhere is found through npm in the running container");
+	assert.deepEqual(seen4.map((c) => c.args[0]), ["cp", "exec"]);
+	setRunner(answering({ image: () => ({ code: 0, stdout: "sha256:x|0.96.0\n", stderr: "" }) }));
+	assert.deepEqual(await readPiVersion("c3", { image: "piper-agent" }), { version: "0.96.0", source: "image" }, "nothing readable: the image's label, and it says so");
+	setRunner(answering({}));
+	assert.deepEqual(await readPiVersion("c4", { image: "piper-agent" }), { version: "", source: "none" });
+	assert.deepEqual(await readPiVersion("c5"), { version: "", source: "none" });
+
+	// The cache: answers at once, fills in the background, three at a time, by container id.
+	resetPiVersions();
+	const gates = [];
+	let active = 0;
+	let peak = 0;
+	const read = (name) => new Promise((resolve) => {
+		active++;
+		peak = Math.max(peak, active);
+		gates.push(() => { active--; resolve({ version: `v-${name}`, source: "container" }); });
+	});
+	const items = ["a", "b", "c", "d", "e"].map((n) => ({ name: n, id: `id-${n}`, image: "img" }));
+	const t0 = Date.now();
+	assert.equal(piVersionsFor(items, { read, now: t0 }).size, 0, "nothing is known yet, and it does not wait");
+	await new Promise((r) => setImmediate(r));
+	assert.deepEqual([peak, gates.length, piVersionsPending()], [3, 3, 5], "at most three reads at once, the rest wait");
+	piVersionsFor(items, { read, now: t0 });
+	await new Promise((r) => setImmediate(r));
+	assert.equal(gates.length, 3, "asking again does not queue the same ones twice");
+	while (piVersionsPending() > 0) {
+		gates.splice(0).forEach((g) => g());
+		await new Promise((r) => setTimeout(r, 5));
+	}
+	const got = piVersionsFor(items, { read, now: t0 + 1000 });
+	assert.deepEqual([...got].map(([n, v]) => `${n}=${v.version}`).sort(), ["a=v-a", "b=v-b", "c=v-c", "d=v-d", "e=v-e"]);
+	assert.equal(piVersionsFor([{ name: "a", id: "a-recreated", image: "img" }], { read, now: t0 + 1000 }).size, 0, "a recreated container has a new id: the old figure is not used for it");
+	noteChanged("b");
+	assert.equal(piVersionsFor([items[1]], { read, now: t0 + 1000 }).size, 0, "a change drops its entry");
+	while (piVersionsPending() > 0) {
+		gates.splice(0).forEach((g) => g());
+		await new Promise((r) => setTimeout(r, 5));
+	}
+	assert.equal(piVersionsFor([items[2]], { read, now: t0 + 11 * 60_000 }).size, 0, "an entry is good for ten minutes");
+	while (piVersionsPending() > 0) {
+		gates.splice(0).forEach((g) => g());
+		await new Promise((r) => setTimeout(r, 5));
+	}
+	resetPiVersions();
+	assert.doesNotThrow(() => piVersionsFor([{ name: "z", id: "z", image: "" }], { read: async () => { throw new Error("docker is gone"); } }), "a failing read is left unknown, never thrown");
+	await new Promise((r) => setTimeout(r, 10));
+	resetPiVersions();
+
+	// The Containers view and the Agents snapshot carry the version and its colour.
+	const hostPi = await hostPiVersion();
+	const older = hostPi.replace(/\d+$/, (n) => String(Math.max(0, Number(n) - 1)));
+	const nameCur = containerName(chatIdHash("pi-current"));
+	const nameOld = containerName(chatIdHash("pi-old"));
+	const nameStopped = containerName(chatIdHash("pi-stopped"));
+	const infoOf = (name, running, id) => ({ Name: `/${name}`, Id: id, State: { Running: running, Status: running ? "running" : "exited" }, Image: "sha256:img", Config: { Image: "piper-agent", Labels: { "piper.managed": "1", "piper.key": "" } }, HostConfig: {}, NetworkSettings: { Networks: {} } });
+	const versions = { [nameCur]: hostPi, [nameOld]: older, [nameStopped]: hostPi };
+	setRunner(async (bin, args) => {
+		if (args[0] === "ps") return { code: 0, stdout: [nameCur, nameOld, nameStopped].map((n) => `${n}\t${n === nameStopped ? "exited" : "running"}\t\t`).join("\n"), stderr: "" };
+		if (args[0] === "inspect") return { code: 0, stdout: JSON.stringify([infoOf(nameCur, true, "id-cur"), infoOf(nameOld, true, "id-old"), infoOf(nameStopped, false, "id-stopped")]), stderr: "" };
+		if (args[0] === "cp") return { code: 0, stdout: tarOf(piJson(versions[args[1].split(":")[0]])), stderr: "" };
+		if (args[0] === "stats") return { code: 0, stdout: "", stderr: "" };
+		return { code: 1, stdout: "", stderr: "" };
+	});
+	resetPiVersions();
+	const first = await listContainers();
+	assert.equal(first.hostPiVersion, hostPi, "the page is told what to compare with");
+	assert.ok(first.containers.every((c) => c.piStatus === "unknown" && c.piVersion === null), "the first look does not wait for the reads");
+	await new Promise((r) => setTimeout(r, 30));
+	const second = await listContainers();
+	const by = Object.fromEntries(second.containers.map((c) => [c.name, c]));
+	assert.deepEqual([by[nameCur].piVersion, by[nameCur].piStatus, by[nameCur].piSource], [hostPi, "current", "container"]);
+	assert.deepEqual([by[nameOld].piVersion, by[nameOld].piStatus], [older, "outdated"], "older than the gateway's: red");
+	assert.deepEqual([by[nameStopped].piVersion, by[nameStopped].piStatus], [hostPi, "current"], "a stopped container is read too");
+	// A live agent: the snapshot names its container, and /dashboard.json joins the colour.
+	const { server } = await import("./server.mjs");
+	const accessLog = config.ACCESS_LOG;
+	config.ACCESS_LOG = false;
+	clearPasswordHash();
+	const agentRecord = { id: "pi-agent-session", keyId: null, scopeId: null, container: { name: nameOld } };
+	const realAll = sessions.allRecords.bind(sessions);
+	const realSnapshot = sessions.snapshot.bind(sessions);
+	sessions.snapshot = async () => { const snap = await realSnapshot(); snap.sessions = [{ fingerprint: "abc", container: nameOld, expiresInMs: 1, idleMs: 1, ageMs: 1, inflight: 0, requests: 2, cost: 0, tokens: 0 }, { fingerprint: "def", container: nameCur, expiresInMs: 1, idleMs: 1, ageMs: 1, inflight: 0, requests: 2, cost: 0, tokens: 0 }, { fingerprint: "ghi", container: null, expiresInMs: 1, idleMs: 1, ageMs: 1, inflight: 0, requests: 2, cost: 0, tokens: 0 }]; return snap; };
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	const base = `http://127.0.0.1:${server.address().port}`;
+	await (await fetch(`${base}/dashboard.json`)).json();
+	await new Promise((r) => setTimeout(r, 30));
+	const dash = await (await fetch(`${base}/dashboard.json`)).json();
+	assert.equal(dash.hostPiVersion, hostPi);
+	const bySession = Object.fromEntries(dash.sessions.map((x) => [x.fingerprint, x]));
+	assert.deepEqual([bySession.abc.piVersion, bySession.abc.piStatus], [older, "outdated"]);
+	assert.deepEqual([bySession.def.piVersion, bySession.def.piStatus], [hostPi, "current"]);
+	assert.deepEqual([bySession.ghi.piVersion, bySession.ghi.piStatus], [null, "unknown"], "a session with no container yet is unknown, not an error");
+	sessions.snapshot = realSnapshot;
+	void agentRecord; void realAll;
+	await new Promise((r) => server.close(r));
+	config.ACCESS_LOG = accessLog;
+	resetPiVersions();
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+
+	// `pi list` as table rows: names only, never a folder.
+	const listing = "User packages:\n  git:github.com/zigai/pi-tweaks (filtered)\n    /root/.pi/agent/git/github.com/zigai/pi-tweaks\n  npm:@zigai/pi-footer\n    /root/.pi/agent/npm/node_modules/@zigai/pi-footer\n  npm:pi-lens@1.2.3\n    /root/.pi/agent/npm/node_modules/pi-lens\n  npm:@a/b@2.0.0\n    /y\n  /opt/local-ext\n    /opt/local-ext\n\nProject packages:\n  git:https://github.com/a/b.git@v1\n    /z\n  git@github.com:owner/ssh-repo.git\n    /w\n  weird line here\n";
+	const rows = parsePiList(listing);
+	assert.deepEqual(rows.map((r) => [r.name, r.type, r.scope, r.filtered, r.pinned]), [
+		["zigai/pi-tweaks", "git", "user", true, null],
+		["@zigai/pi-footer", "npm", "user", false, null],
+		["pi-lens", "npm", "user", false, "1.2.3"],
+		["@a/b", "npm", "user", false, "2.0.0"],
+		["local-ext", "local", "user", false, null],
+		["a/b", "git", "project", false, "v1"],
+		["owner/ssh-repo", "git", "project", false, null],
+		["weird line here", "other", "project", false, null],
+	]);
+	assert.ok(!JSON.stringify(rows).includes("/root/") && !JSON.stringify(rows).includes("node_modules"), "no folder ever reaches the API or the page");
+	assert.deepEqual(parsePiList(""), []);
+	assert.deepEqual(parsePiList(undefined), []);
+	assert.deepEqual(parsePiList("No packages installed\n").map((r) => r.type), ["other"], "an odd line is kept, not lost");
+	assert.ok(parsePiList(Array.from({ length: 300 }, (_, i) => `  npm:p${i}\n    /d`).join("\n")).length <= 100, "bounded");
+}
+
+// About and the Documentation handbook: the release notes, the page list, the renderer, the generated tables.
+{
+	const http = await import("node:http");
+	const { server } = await import("./server.mjs");
+	const accessLog = config.ACCESS_LOG;
+	config.ACCESS_LOG = false;
+	const readText = (p) => readFileSync(new URL(p, import.meta.url), "utf8");
+
+	// The changelog and the package: the page's own data.
+	const pkg = JSON.parse(readText("./package.json"));
+	assert.deepEqual(readPackage().author, { name: "Adam Lange", email: "piper@adamlange.pl" });
+	assert.equal(readPackage().version, pkg.version);
+	assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
+	const log = readChangelog();
+	assert.ok(log.length >= 4, "every release is there");
+	assert.equal(log[0].version, pkg.version, "the newest release is the current version");
+	assert.ok(log.every((r, i) => /^\d+\.\d+\.\d+$/.test(r.version) && /^\d{4}-\d{2}-\d{2}$/.test(r.date) && r.sections.length && r.sections.every((x) => x.title && x.items.length)), "each has a date, sections and items");
+	assert.ok(log[0].sections.map((x) => x.title).includes("Added"));
+	assert.ok(log.at(-1).version === "0.1.0");
+	assert.ok(log.every((r, i) => i === 0 || versionNewer(log[i - 1].version, r.version)), "newest first, strictly");
+	assert.deepEqual(parseChangelog("## [1.2.3] - 2026-01-02\n\n### Added\n- one thing that\n  wraps\n- two\n\n### Fixed\n- three\n\n## [1.0.0]\n### Added\n- x\n"), [
+		{ version: "1.2.3", date: "2026-01-02", sections: [{ title: "Added", items: ["one thing that wraps", "two"] }, { title: "Fixed", items: ["three"] }] },
+		{ version: "1.0.0", date: null, sections: [{ title: "Added", items: ["x"] }] },
+	]);
+	assert.deepEqual(parseChangelog("nothing useful here\n- a stray bullet\n"), [], "a garbled file is fewer releases, not an error");
+	assert.deepEqual(parseChangelog(undefined), []);
+	assert.deepEqual(readChangelog("/no/such/dir"), [], "a missing file is an empty changelog");
+	const about = await aboutInfo();
+	assert.equal(about.version, pkg.version);
+	assert.ok(about.installation.node === process.version && about.installation.uptimeSec >= 0 && about.installation.platform);
+
+	// The renderer: every construct, and nothing that can run.
+	const r = (md) => renderMarkdown(md, { page: "p", targets: new Map([["README.md", "reference"], ["other.md", "other"]]) }).html;
+	assert.equal(slugify("Hello, `World`! 2"), "hello-world-2");
+	assert.match(r("# Title\n\nSome **bold**, *em*, `code <b>` and a [link](https://example.com)."), /<h1 id="title">Title<\/h1>\n<p>Some <strong>bold<\/strong>, <em>em<\/em>, <code>code &lt;b&gt;<\/code> and a <a href="https:\/\/example.com" target="_blank" rel="noopener noreferrer">link<\/a>\.<\/p>/);
+	assert.equal(renderMarkdown("## A\n## A\n## A").headings.map((h) => h.id).join(), "a,a-2,a-3", "repeated headings get distinct ids");
+	assert.match(r("- one\n- two\n  - nested\n- three\n\n1. first\n2. second"), /<ul><li>one<\/li><li>two<ul><li>nested<\/li><\/ul><\/li><li>three<\/li><\/ul>\n<ol><li>first<\/li><li>second<\/li><\/ol>/);
+	assert.match(r("```bash\necho <hi> && ls\n```"), /<div class="codebox"><pre><code class="lang-bash">echo &lt;hi&gt; &amp;&amp; ls<\/code><\/pre><\/div>/);
+	assert.match(r("| a | b |\n|---|---|\n| 1 | `x \\| y` |"), /<table><thead><tr><th>a<\/th><th>b<\/th><\/tr><\/thead><tbody><tr><td>1<\/td><td><code>x \| y<\/code><\/td><\/tr><\/tbody><\/table>/);
+	assert.equal(r("> quoted *text*"), "<blockquote><p>quoted <em>text</em></p></blockquote>");
+	assert.match(r("a\n\n---\n\nb"), /<hr>/);
+	assert.match(r("a snake_case_name and 2 * 3 * 4 stay as they are"), /snake_case_name and 2 \* 3 \* 4/);
+	assert.equal(r("![a diagram](docs/x.png)"), "<p>a diagram</p>", "images are dropped, their words kept");
+	// Links: http(s) and mailto as they are; anchors and known pages become dashboard links; the rest is plain text.
+	assert.equal(linkHref("https://a.b/c?d=1").external, true);
+	assert.equal(linkHref("mailto:x@y.z").href, "mailto:x@y.z");
+	assert.deepEqual(linkHref("#Some Heading", { page: "p" }), { href: "#docs/p/some-heading", external: false });
+	assert.equal(linkHref("README.md#Other Part", { targets: new Map([["README.md", "reference"]]) }).href, "#docs/reference/other-part");
+	for (const bad of ["javascript:alert(1)", "JaVaScRiPt:alert(1)", "data:text/html,<script>", "vbscript:x", "//evil.example/x", "unknown.md", "/etc/passwd", "file:///etc/passwd", " javascript:alert(1)"]) assert.equal(linkHref(bad, { page: "p" }), null, bad);
+	// Hostile input comes out escaped or dropped.
+	for (const hostile of ["<script>alert(1)</script>", "<img src=x onerror=alert(1)>", "[x](javascript:alert(1))", "![x](javascript:alert(1))", "**<svg onload=alert(1)>**", "`</code><script>alert(1)</script>`", "# <script>alert(1)</script>", "| <script> |\n|---|\n| <img onerror=alert(1)> |", "- <iframe src=x></iframe>", "> <script>alert(1)</script>", "```\n</pre><script>alert(1)</script>\n```", "[<script>alert(1)</script>](https://a.b)", "<!-- generated:settings --><script>"]) {
+		const html = r(hostile);
+		assert.ok(!/<script|<img|<svg|<iframe|onerror=|onload=|href="javascript/i.test(html.replace(/&lt;[^&]*?&gt;/g, "")), `escaped: ${hostile} -> ${html}`);
+		assert.ok(!/<(script|img|svg|iframe)\b/i.test(html), `no live tag: ${hostile} -> ${html}`);
+	}
+	assert.ok(!/alert/.test(r("[x](javascript:alert(1))") .replace(/^.*?<p>/, "")) || !/href/.test(r("[x](javascript:alert(1))")), "a javascript: link is not a link");
+	assert.equal(r("<!-- a comment\nover lines -->\ntext"), "<p>text</p>", "comments are dropped");
+
+	// The pages.
+	const pages = listPages();
+	const ids = pages.map((p) => p.id);
+	for (const id of ["overview", "functions", "deployment", "operations", "variables", "files", "api", "security", "troubleshooting", "reference"]) assert.ok(ids.includes(id), `page ${id}`);
+	assert.deepEqual(ids.slice(0, 3), ["overview", "functions", "deployment"], "the listed order");
+	assert.equal(pages.find((p) => p.id === "deployment").title, "Deployment guide");
+	assert.equal(pages.find((p) => p.id === "reference").title, "Reference manual");
+	assert.ok(pages.every((p) => p.title && p.summary.length > 20), "every page has a title and a summary");
+	assert.deepEqual(pageIndex().map((p) => p.id), ids);
+	const rendered = Object.fromEntries(ids.map((id) => [id, renderPage(id)]));
+	for (const wiki of ["overview", "functions", "operations", "variables", "files", "api", "security", "troubleshooting"]) {
+		assert.ok(rendered[wiki].html.length > 2500 && rendered[wiki].headings.length >= 4, `${wiki} is a real page`);
+	}
+	assert.equal(renderPage("nope"), null);
+	assert.equal(renderPage("../README"), null);
+	assert.equal(renderPage("overview/../../etc/passwd"), null);
+	assert.equal(renderPage(""), null);
+	// Every internal link and anchor resolves to a page and a heading that exist.
+	const anchorsOf = Object.fromEntries(ids.map((id) => [id, new Set([...rendered[id].html.matchAll(/<h[1-4] id="([^"]*)"/g)].map((m) => m[1]))]));
+	for (const id of ids) {
+		for (const m of rendered[id].html.matchAll(/href="#docs\/([^"\/]+)(?:\/([^"]*))?"/g)) {
+			assert.ok(anchorsOf[m[1]], `${id}: link to unknown page ${m[1]}`);
+			if (m[2]) assert.ok(anchorsOf[m[1]].has(m[2]), `${id}: link to missing heading ${m[1]}#${m[2]}`);
+		}
+		assert.ok(!/href="(?!#docs\/|https?:|mailto:)/.test(rendered[id].html), `${id}: every link is http(s), mailto or a dashboard link`);
+	}
+
+	// The generated tables come from the code: every setting, with its real default; no secret; no host path.
+	const vars = rendered.variables.html;
+	for (const spec of SETTINGS_SPEC) assert.ok(vars.includes(`<code>${spec.key}</code>`), `${spec.key} is in the reference`);
+	assert.ok(vars.includes("<td>yes</td>") && vars.includes("<td>no</td>"), "restart column");
+	const cellOf = (key) => new RegExp(`<tr><td><code>${key}</code></td>(?:<td>.*?</td>){2}`).exec(vars)[0];
+	assert.match(cellOf("MAX_SESSIONS"), /<td>128<\/td>/);
+	assert.match(cellOf("SESSION_IDLE_MS"), /<td>\d+[dhms]<\/td>/);
+	assert.match(cellOf("AUDIT_REQUESTS"), /<td>off<\/td>/);
+	assert.match(cellOf("AUDIT_AUTH"), /<td>on<\/td>/);
+	assert.match(cellOf("GATEWAY_API_KEY"), /none; set from the dashboard/);
+	assert.ok(!vars.includes(GATEWAY_DIR_FOR_TEST), "no path of this installation leaks into the page");
+	assert.ok(vars.includes("&lt;gateway dir&gt;/workspaces"), "folders are written relative to the installation");
+	assert.ok(!/s3cr3t|T0K3N/.test(vars));
+	for (const [key, path] of Object.entries(CONTAINER_PATHS)) {
+		assert.ok(PATH_NOTES[key], `${key} has a description`);
+		assert.ok(rendered.files.html.includes(`<code>${path}</code>`), `${path} is in the files page`);
+	}
+	for (const c of AUDIT_CATEGORIES) assert.ok(rendered.security.html.includes(`<code>${c.id}</code>`), `audit category ${c.id} is documented`);
+	for (const n of [NETWORK, NETWORK_OPEN]) assert.ok(rendered.security.html.includes(n.subnet) && rendered.security.html.includes(n.name));
+	for (const range of ["10.0.0.0/8", "192.168.0.0/16", "169.254.0.0/16"]) assert.ok(rendered.security.html.includes(range));
+	// The command reference is the scripts' own usage text, so every command and flag is in it.
+	const ops = rendered.operations.html;
+	for (const cmd of ["restart", "start", "stop", "status", "logs", "image", "doctor", "backup", "restore"]) assert.ok(readText("./piper.sh").includes(`${cmd}`) && new RegExp(`\\b${cmd}\\b`).test(ops), `piper.sh ${cmd}`);
+	for (const flag of readText("./deploy.sh").split("\n").slice(1, 30).filter((l) => l.startsWith("#")).flatMap((l) => l.match(/--[a-z-]+/g) ?? [])) assert.ok(ops.includes(flag), `deploy.sh ${flag} is in the commands reference`);
+
+	// Search finds the section, not just the page.
+	const hits = searchDocs("iptables");
+	assert.ok(hits.length > 0 && hits.every((h) => h.page && h.heading && h.snippet && ids.includes(h.page)));
+	assert.ok(hits.some((h) => h.page === "security"), "the security page answers a question about the firewall");
+	assert.ok(searchDocs("persistent container").some((h) => h.page === "functions" || h.page === "reference"));
+	assert.deepEqual(searchDocs(""), []);
+	assert.deepEqual(searchDocs("x"), [], "a one-letter query is nothing");
+	assert.deepEqual(searchDocs("zzzzqqqqnotaword"), []);
+	assert.ok(searchDocs("the".repeat(1)).length <= 30, "bounded");
+
+	// Over real sockets: the list, a page, search, About; a bad id is a 404 and never a file.
+	clearPasswordHash();
+	await new Promise((res) => server.listen(0, "127.0.0.1", res));
+	const base = `http://127.0.0.1:${server.address().port}`;
+	const get = async (path) => {
+		const res = await fetch(base + path);
+		return { status: res.status, json: await res.json().catch(() => null), type: res.headers.get("content-type") };
+	};
+	const list = await get("/dashboard/docs.json");
+	assert.equal(list.status, 200);
+	assert.deepEqual(list.json.pages.map((p) => p.id), ids);
+	assert.equal(list.json.version, pkg.version);
+	const page = await get("/dashboard/docs/security.json");
+	assert.deepEqual([page.status, page.json.id, page.json.title], [200, "security", "Security model and hardening"]);
+	assert.ok(page.json.html.includes("<h2") && page.json.headings.every((h) => h.level === 2 || h.level === 3));
+	assert.equal((await get("/dashboard/docs/nope.json")).status, 404);
+	for (const evil of ["/dashboard/docs/..%2f..%2fetc%2fpasswd.json", "/dashboard/docs/%2e%2e%2fREADME.json", "/dashboard/docs/Security.json", "/dashboard/docs/overview.md", "/dashboard/docs/overview/../../gateway.json"]) {
+		const res = await get(evil);
+		assert.ok(res.status === 404 || res.status === 401, `${evil} -> ${res.status}`);
+		assert.ok(!JSON.stringify(res.json).includes("root:"), "no file is ever read from the request");
+	}
+	const found = await get("/dashboard/docs/search.json?q=firewall");
+	assert.ok(found.status === 200 && found.json.hits.length > 0);
+	assert.deepEqual((await get("/dashboard/docs/search.json")).json.hits, []);
+	const ab = await get("/dashboard/about.json");
+	assert.equal(ab.status, 200);
+	assert.deepEqual([ab.json.version, ab.json.author.name, ab.json.author.email, ab.json.license], [pkg.version, "Adam Lange", "piper@adamlange.pl", "Apache-2.0"]);
+	assert.ok(ab.json.changelog.length >= 4 && ab.json.installation.node);
+	// Locked dashboard: no handbook without signing in.
+	setPasswordHash(hashPassword("a long enough password"));
+	assert.equal((await get("/dashboard/docs.json")).status, 401);
+	assert.equal((await get("/dashboard/about.json")).status, 401);
+	clearPasswordHash();
+	await new Promise((res) => server.close(res));
+	config.ACCESS_LOG = accessLog;
+
+	// The words that must not appear anywhere a reader sees: nothing about how Piper was made beyond its author.
+	// Model ids such as claude-haiku-4.5 are names of things Piper talks to, not claims about its making, so they are not counted.
+	const withoutModelIds = (text) => text.replace(/\bclaude-[a-z0-9.-]+/gi, "").replace(/\banthropic\/[a-z0-9.-]+/gi, "");
+	const forbidden = /claude|anthropic|\bAI[- ](generated|assisted|built|written|powered)|generated (by|with) (an? )?(AI|LLM)|co-?authored|built with AI|written by AI|LLM-written|chatgpt|openai's? (codex|assistant) wrote/i;
+	const shipped = ["README.md", "DEPLOYMENT.md", "CHANGELOG.md", "package.json", "LICENSE", "dashboard.html", "deploy.sh", "piper.sh", ...readdirSync(new URL("./docs/", import.meta.url)).filter((n) => n.endsWith(".md")).map((n) => `docs/${n}`), ...readdirSync(new URL("./lib/", import.meta.url)).map((n) => `lib/${n}`)];
+	for (const file of shipped) assert.ok(!forbidden.test(withoutModelIds(readText(`./${file}`))), `${file} says nothing about AI authorship`);
+	assert.ok(!forbidden.test(JSON.stringify(about)), "nor does the About payload");
+	for (const html of Object.values(rendered)) assert.ok(!forbidden.test(withoutModelIds(html.html)));
 }
 
 console.log("nextTurn + images: ok");

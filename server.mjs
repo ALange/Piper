@@ -34,12 +34,16 @@ import http from "node:http";
 import { pathToFileURL } from "node:url";
 import { GATEWAY_DB, config } from "./lib/settings.mjs";
 import { authNote, authRequired, clearSessionCookie, credentialOf, dashboardAuthorized, dashboardHash, isDashboardPath } from "./lib/auth.mjs";
-import { checkEngine, lastEngineStatus } from "./lib/engine.mjs";
-import { diskSummary, engineOptions, migrateToContainers, startDiskWatch, startEventWatch } from "./lib/containers.mjs";
+import { checkEngine, inspectMany, lastEngineStatus } from "./lib/engine.mjs";
+import { diskSummary, engineOptions, hostPiVersion, migrateToContainers, startDiskWatch, startEventWatch } from "./lib/containers.mjs";
 import { reloadModelRuntime } from "./lib/models.mjs";
 import { cors, logAccess, readJson, sendError } from "./lib/http.mjs";
 import { audit, auditOnce, runWithActor } from "./lib/audit.mjs";
 import { resourceSnapshot } from "./lib/resources.mjs";
+import { piVersionsFor } from "./lib/piversions.mjs";
+import { aboutInfo, readPackage } from "./lib/about.mjs";
+import { pageIndex, renderPage, searchDocs } from "./lib/docs.mjs";
+import { piStatus } from "./lib/versions.mjs";
 import { filesRoutes, keyIdForScope, profileAdminRoutes, profileRoutes } from "./lib/profiles.mjs";
 import { sessions, spendReport, startSweeps } from "./lib/sessions.mjs";
 import { chatCompletions, listModels } from "./lib/chat.mjs";
@@ -69,6 +73,10 @@ export * from "./lib/agentservers.mjs";
 export * from "./lib/updates.mjs";
 export * from "./lib/hostpi.mjs";
 export * from "./lib/resources.mjs";
+export * from "./lib/versions.mjs";
+export * from "./lib/piversions.mjs";
+export * from "./lib/about.mjs";
+export * from "./lib/docs.mjs";
 export * from "./lib/dashboard.mjs";
 
 // ------------------------------------------------------------------- server
@@ -140,6 +148,21 @@ async function handle(req, res) {
 		}
 		if (req.method === "POST" && path === "/dashboard/password") return await dashboardSetPassword(req, res);
 		if (path.startsWith("/dashboard/api-keys")) return await apiKeyRoutes(req, res, path);
+		// The Documentation page. Which files can be read comes from the docs folder, never from the request.
+		if (req.method === "GET" && (path === "/dashboard/docs.json" || path === "/dashboard/docs/search.json" || /^\/dashboard\/docs\/[a-z0-9-]+\.json$/.test(path))) {
+			const send = (status, body) => {
+				res.writeHead(status, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+				return res.end(JSON.stringify(body));
+			};
+			if (path === "/dashboard/docs.json") return send(200, { pages: pageIndex(), version: readPackage().version });
+			if (path === "/dashboard/docs/search.json") return send(200, { hits: searchDocs(new URL(req.url, "http://localhost").searchParams.get("q") ?? "") });
+			const page = renderPage(path.slice("/dashboard/docs/".length, -".json".length));
+			return page ? send(200, page) : sendError(res, 404, "No such page", "not_found");
+		}
+		if (req.method === "GET" && path === "/dashboard/about.json") {
+			res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+			return res.end(JSON.stringify(await aboutInfo()));
+		}
 		if (path === "/dashboard/hostpi.json" || path === "/dashboard/hostpi/update") return await hostPiRoutes(req, res, path);
 		if (path === "/dashboard/agents.json" || path === "/dashboard/agents" || path.startsWith("/dashboard/agents/")) return await agentRoutes(req, res, path);
 		const updateMatch = /^\/dashboard\/profiles\/([A-Za-z0-9_-]+)\/update-container$/.exec(path);
@@ -187,6 +210,15 @@ async function handle(req, res) {
 			snapshot.disk = diskSummary();
 			// What the machine, the gateway and the containers are using; never allowed to break the page.
 			snapshot.resources = await resourceSnapshot().catch(() => null);
+			// The Pi version of each live agent's container, from the cache (filled in the background).
+			snapshot.hostPiVersion = await hostPiVersion();
+			const live = await inspectMany([...new Set(snapshot.sessions.map((s) => s.container).filter(Boolean))]);
+			const known = piVersionsFor([...live].map(([name, info]) => ({ name, id: info.Id, image: info.Config?.Image ?? "" })));
+			for (const s of snapshot.sessions) {
+				const v = s.container ? known.get(s.container) : null;
+				s.piVersion = v?.version ?? null;
+				s.piStatus = v ? piStatus(v.version, snapshot.hostPiVersion) : "unknown";
+			}
 			res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
 			return res.end(JSON.stringify(snapshot));
 		}
@@ -257,7 +289,7 @@ if (isMain) {
 	process.on("SIGINT", () => void shutdown("SIGINT"));
 	server.listen(config.PORT, config.HOST, () => {
 		process.stderr.write(
-			`Piper on http://${config.HOST}:${config.PORT}  ` +
+			`Piper ${readPackage().version} on http://${config.HOST}:${config.PORT}  ` +
 				`auth=${authNote()}  ` +
 				`dashboard=${dashboardHash ? "password" : "open"}  ` +
 				`image=${config.CONTAINER_IMAGE}  network=${config.CONTAINER_NETWORK}  ` +

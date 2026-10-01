@@ -4,6 +4,9 @@ This takes a freshly installed Linux machine to a running gateway: what to insta
 as a service, and how to check that a chat's container is really confined. The README explains *why*
 things work the way they do; this file is the *how*.
 
+The dashboard's **Documentation** page is a handbook for running Piper (architecture, operations, every setting, API,
+security, troubleshooting); this file is also in it, as the *Deployment guide*.
+
 It was written against Debian 13 (Docker 26.1, Node 22, `iptables` 1.8 on the nftables backend).
 Other distributions work if they meet the requirements below.
 
