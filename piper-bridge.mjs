@@ -147,9 +147,30 @@ function forward(model, context, options) {
 	return stream;
 }
 
+/**
+ * The model catalogue, tolerating a transient failure to reach the bridge socket right at startup (unlike
+ * every later call in this file, which is wrapped at its own call site, this one runs before anything else
+ * and a plain throw here would take the whole extension down with it: the delegate, schedule and model-switch
+ * tools below too, not just the model providers). A few quick retries, then an empty catalogue rather than
+ * none of it: Pi still loads, with its own directly-configured models and every non-model tool working.
+ */
+async function fetchCatalog(tries = 5, delayMs = 400) {
+	for (let attempt = 1; ; attempt++) {
+		try {
+			return await readJson(await request("/models"));
+		} catch (err) {
+			if (attempt >= tries) {
+				process.stderr.write(`piper-bridge: could not reach the gateway for its model catalogue (${err?.message ?? err}); continuing without its models\n`);
+				return { providers: [] };
+			}
+			await new Promise((r) => setTimeout(r, delayMs));
+		}
+	}
+}
+
 export default async function piperBridge(pi) {
 	if (!SOCKET) return;
-	const catalog = await readJson(await request("/models"));
+	const catalog = await fetchCatalog();
 	for (const provider of catalog.providers) {
 		pi.registerProvider(provider.id, {
 			name: provider.name,

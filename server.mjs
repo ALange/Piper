@@ -88,6 +88,7 @@ export * from "./lib/jobroutes.mjs";
 export * from "./lib/templates.mjs";
 export * from "./lib/wizard.mjs";
 export * from "./lib/bundleroutes.mjs";
+export * from "./lib/packagesource.mjs";
 export * from "./lib/extlib.mjs";
 export * from "./lib/extroutes.mjs";
 export * from "./lib/playground.mjs";

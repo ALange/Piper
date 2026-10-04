@@ -26,7 +26,7 @@ process.env.CONTAINER_PI_DIR = TEST_CONTAINER_PI;
 const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 // Seeded at startup, which is when a validator that reads a not-yet-defined constant would fail.
 process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
-const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, profileScope, ensureProfile, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, recentAudit: recentAuditRows } = await import("./server.mjs");
+const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, recentAudit: recentAuditRows } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
 
@@ -515,6 +515,17 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(derivedSessionId(req(), { messages: [] }), null);
 	assert.equal(derivedSessionId(req(), { messages: [a("hi")] }), null);
 	assert.equal(derivedSessionId(req(), {}), null);
+
+	// An image-only first message still derives a stable id (no text to seed it from otherwise), so a
+	// client that sends images with no explicit session id can still be resumed, not given a fresh
+	// session (and container) on every single request.
+	const img = (url) => ({ messages: [{ role: "user", content: [{ type: "image_url", image_url: { url } }] }] });
+	assert.notEqual(derivedSessionId(req(), img("data:image/png;base64,AAA")), null);
+	assert.equal(derivedSessionId(req(), img("data:image/png;base64,AAA")), derivedSessionId(req(), img("data:image/png;base64,AAA")), "the same image: the same session");
+	assert.notEqual(derivedSessionId(req(), img("data:image/png;base64,AAA")), derivedSessionId(req(), img("data:image/png;base64,BBB")), "a different image: a different session");
+	assert.notEqual(derivedSessionId(req(), img("data:image/png;base64,AAA")), derivedSessionId(req(), conv("q")), "never collides with a text-seeded one");
+	// Text plus an image still seeds on the text, as before (unaffected by the fallback).
+	assert.equal(derivedSessionId(req(), { messages: [{ role: "user", content: [{ type: "text", text: "q" }, { type: "image_url", image_url: { url: "data:image/png;base64,AAA" } }] }] }), derivedSessionId(req(), conv("q")));
 }
 
 // Replaying a transcript at an agent that has no history.
@@ -587,6 +598,51 @@ assert.equal(isReloadCommand(undefined), false);
 		assert.equal(isBlockedAddress(address), false, `${address} is public`);
 	}
 	await assert.rejects(resolveImages(["http://example.com/a.png"]), /ALLOW_IMAGE_URLS/, "URLs are off by default");
+
+	// The actual wiring, not just the blocklist: a literal blocked address is refused before any connection
+	// (no server needed to prove that), and guardedLookup refuses whatever a name resolves to, not just a
+	// literal IP in the URL.
+	await assert.rejects(fetchImage("http://127.0.0.1:1/x", { maxBytes: 1000 }), /refusing to fetch from an internal address/);
+	await assert.rejects(fetchImage("http://[::1]:1/x", { maxBytes: 1000 }), /refusing to fetch from an internal address/);
+	await new Promise((resolve, reject) => guardedLookup("127.0.0.1", {}, (err) => (err ? resolve() : reject(new Error("should have been blocked")))));
+	await new Promise((resolve, reject) =>
+		guardedLookup("127.0.0.1", {}, (err) => (err ? reject(err) : resolve()), () => false), // isBlocked overridden: nothing is internal
+	);
+	await new Promise((resolve, reject) => guardedLookup("8.8.8.8", { all: true }, (err, addrs) => (err ? reject(err) : (assert.deepEqual(addrs, [{ address: "8.8.8.8", family: 4 }]), resolve()))));
+
+	// The real connect-and-stream path (size limit included), against a loopback server: `isBlocked` is
+	// overridden to prove *that* logic works, since every address a test controls is otherwise refused by
+	// design — the blocklist itself is what the assertions just above already covered.
+	{
+		const { createServer } = await import("node:http");
+		const body = Buffer.from("not really a png, just bytes to move");
+		const srv = createServer((req, res) => {
+			if (req.url === "/big") {
+				res.writeHead(200, { "content-type": "image/png" });
+				return res.end(Buffer.alloc(5000));
+			}
+			if (req.url === "/404") return res.writeHead(404), res.end();
+			res.writeHead(200, { "content-type": "image/png" });
+			res.end(body);
+		});
+		await new Promise((r) => srv.listen(0, "127.0.0.1", r));
+		const url = (path) => `http://127.0.0.1:${srv.address().port}${path}`;
+		const never = { isBlocked: () => false };
+		const got = await fetchImage(url("/ok"), { maxBytes: 1_000_000, ...never });
+		assert.deepEqual([got.buffer.equals(body), got.contentType], [true, "image/png"]);
+		await assert.rejects(fetchImage(url("/big"), { maxBytes: 1000, ...never }), /too large/i);
+		await assert.rejects(fetchImage(url("/404"), { maxBytes: 1000, ...never }), /HTTP 404/);
+		await assert.rejects(fetchImage(url("/ok"), { maxBytes: 1000 }), /refusing to fetch from an internal address/, "the real guard, unoverridden, still refuses the same loopback server");
+		await new Promise((r) => srv.close(r));
+	}
+
+	// data: URLs: the mime type, base64 vs percent-encoded, and malformed input.
+	assert.deepEqual(dataUriToImage("data:image/png;base64,QQ=="), { type: "image", data: "QQ==", mimeType: "image/png" });
+	assert.equal(dataUriToImage("data:image/jpeg;base64,/9k=").mimeType, "image/jpeg");
+	assert.equal(dataUriToImage("data:,hi").mimeType, "image/png", "no type at all defaults to png");
+	assert.equal(Buffer.from(dataUriToImage("data:text/plain,hi%20there").data, "base64").toString(), "hi there", "percent-encoded, not base64, is re-encoded");
+	assert.equal(dataUriToImage("not a data url"), null);
+	assert.equal(dataUriToImage("data:text/plain,%zz"), null, "malformed percent-encoding does not throw");
 }
 
 // Every setting the code reads must exist in the spec. A missing entry makes `config.X`
@@ -949,6 +1005,208 @@ assert.equal(isReloadCommand(undefined), false);
 	});
 	const failSession = await new PiRpcSession(failChild).init(2000);
 	await assert.rejects(failSession.setModel({ provider: "x", id: "y" }), /Model not found/);
+
+	// The command timeout and idle watchdog below are both unref'd (so a live one never keeps the real
+	// gateway process open by itself); in this isolated test nothing else is left active to drive Node's
+	// event loop, so a ref'd keep-alive stands in for "a real gateway always has something else running".
+	const keepAlive = setInterval(() => {}, 1000);
+
+	// A command Pi never answers times out (PI_COMMAND_TIMEOUT_MS) instead of hanging forever, and the
+	// session is still usable afterwards: the late answer, if it ever comes, is ignored.
+	config.PI_COMMAND_TIMEOUT_MS = 30;
+	let abortReply = null;
+	const slowAckChild = fakeChild((command, reply) => {
+		if (command.type === "get_state") return reply(ok(command, {}));
+		if (command.type === "abort") abortReply = () => reply(ok(command));
+		// everything else is answered normally
+	});
+	const slowAckSession = await new PiRpcSession(slowAckChild).init(2000);
+	await assert.rejects(slowAckSession.abort(), /did not answer "abort" within 0s/);
+	assert.equal(slowAckSession.alive, true, "a slow command alone does not kill the session");
+	abortReply?.(); // the late answer arrives after the timeout already rejected; must not throw or resurface
+	await new Promise((r) => setTimeout(r, 20));
+	await assert.doesNotReject(slowAckSession.send({ type: "get_state" }), "the session still answers normally afterwards");
+	config.PI_COMMAND_TIMEOUT_MS = 30_000;
+
+	// 0 waits however long it takes (used by init(), which already races its own timeout).
+	const patientChild = fakeChild((command, reply) => setTimeout(() => reply(ok(command, {})), 25));
+	const patientSession = new PiRpcSession(patientChild);
+	await patientSession.send({ type: "get_state" }, 0);
+
+	// Pi gone fully silent while a prompt is waiting on agent_settled is treated as wedged: the prompt
+	// fails, the session is marked dead, and the actual process is killed since it never exited on its own.
+	config.PI_IDLE_TIMEOUT_MS = 30;
+	let killed = false;
+	const wedgedChild = fakeChild((command, reply) => {
+		if (command.type === "get_state") return reply(ok(command, {}));
+		if (command.type === "prompt") {
+			reply(ok(command));
+			reply({ type: "agent_start" });
+			// then nothing, ever: no message_end, no agent_settled
+		}
+	});
+	wedgedChild.kill = () => (killed = true);
+	let wedgedClosed = false;
+	const wedgedSession = await new PiRpcSession(wedgedChild, { onClose: () => (wedgedClosed = true) }).init(2000);
+	await assert.rejects(wedgedSession.prompt("hi"), /stopped responding: no activity for 0s/);
+	assert.equal(wedgedSession.alive, false);
+	assert.equal(wedgedClosed, true);
+	assert.equal(killed, true, "the unresponsive process is force-killed since it never exited by itself");
+	config.PI_IDLE_TIMEOUT_MS = 20 * 60_000;
+
+	// A command in flight when Pi goes silent is also freed, not just a waiting prompt.
+	config.PI_IDLE_TIMEOUT_MS = 30;
+	const silentChild = fakeChild(() => {}); // never answers anything, ever
+	const silentSession = new PiRpcSession(silentChild);
+	await assert.rejects(silentSession.send({ type: "get_state" }), /stopped responding/);
+	config.PI_IDLE_TIMEOUT_MS = 20 * 60_000;
+
+	// 0 turns the idle watchdog off: a waiting prompt is left alone indefinitely. Construct with a short
+	// timeout (so the poll runs fast) then disable it, which proves the check itself is skipped and this
+	// is not just a poll that happened to run too slowly to notice.
+	config.PI_IDLE_TIMEOUT_MS = 10;
+	const unwatchedChild = fakeChild((command, reply) => {
+		if (command.type === "get_state") return reply(ok(command, {}));
+		if (command.type === "prompt") {
+			reply(ok(command));
+			reply({ type: "agent_start" });
+			setTimeout(() => reply({ type: "agent_settled" }), 80);
+		}
+	});
+	const unwatchedSession = await new PiRpcSession(unwatchedChild).init(2000);
+	config.PI_IDLE_TIMEOUT_MS = 0;
+	await unwatchedSession.prompt("hi"); // would have been killed well before 80ms if the watchdog still ran
+	assert.equal(unwatchedSession.alive, true);
+	config.PI_IDLE_TIMEOUT_MS = 20 * 60_000;
+	clearInterval(keepAlive);
+}
+
+// chatCompletions, the real `/v1/chat/completions` handler, over a fully fake Docker and a scripted Pi
+// process (setSessionSpawn): the one place the HTTP-specific code — SSE framing, X-Session-Id, the
+// audio/spend refusal ordering, stream vs non-stream — gets exercised for real, not through
+// setAgentTurnRunner (which replaces this entire path and so never touches any of it).
+{
+	const { EventEmitter } = await import("node:events");
+	const { PassThrough } = await import("node:stream");
+	const { server } = await import("./server.mjs");
+	resetEngineCheck();
+	const priorNetwork = config.CONTAINER_NETWORK;
+	const accessLog = config.ACCESS_LOG;
+	config.CONTAINER_NETWORK = "none";
+	config.ACCESS_LOG = false;
+
+	setRunner(async (bin, args) => {
+		if (bin === "docker" && args[0] === "version") return { code: 0, stdout: "27.0.0", stderr: "" };
+		if (bin === "docker" && args[0] === "inspect") return { code: 1, stdout: "", stderr: "No such object" }; // no container yet: create one
+		if (bin === "docker" && args[0] === "image") return { code: 0, stdout: "sha256:fakeimage|0.99.1", stderr: "" };
+		return { code: 0, stdout: "", stderr: "" }; // create, start, network, iptables: all succeed
+	});
+
+	// Every chat's container is really this: a scripted child speaking Pi's RPC protocol over stdio,
+	// echoing the prompt back so the test can tell the real text made the whole round trip.
+	const fakeChild = () => {
+		const child = new EventEmitter();
+		child.stdout = new PassThrough();
+		child.stderr = new PassThrough();
+		child.exitCode = null;
+		child.signalCode = null;
+		// A real child_process actually dies and fires "exit" when killed; dispose() waits on exactly that
+		// to tear the bridge server down, so a no-op kill() here would leak it (a listening unix socket) forever.
+		child.kill = (signal = "SIGTERM") => {
+			if (child.exitCode !== null || child.signalCode !== null) return true;
+			child.signalCode = signal;
+			setImmediate(() => child.emit("exit", null, signal));
+			return true;
+		};
+		child.stdin = new PassThrough();
+		// dispose() closes stdin first and waits up to 3s before force-killing; exiting right away like a
+		// real Pi shutting down on a closed stdin keeps the test from paying that wait every time.
+		child.stdin.on("end", () => child.exitCode === null && child.signalCode === null && setImmediate(() => child.emit("exit", 0, null)));
+		let buffer = "";
+		child.stdin.on("data", (chunk) => {
+			buffer += chunk;
+			let i;
+			while ((i = buffer.indexOf("\n")) >= 0) {
+				const command = JSON.parse(buffer.slice(0, i));
+				buffer = buffer.slice(i + 1);
+				const reply = (record) => child.stdout.write(`${JSON.stringify(record)}\n`);
+				const ok = (data) => reply({ type: "response", id: command.id, command: command.type, success: true, data });
+				if (command.type === "get_state") ok({ model: { provider: "p", id: "m", input: ["text"] }, isStreaming: false });
+				else if (command.type === "prompt") {
+					const said = String(command.message ?? "");
+					ok();
+					reply({ type: "agent_start" });
+					reply({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: `echo: ${said}` } });
+					reply({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: `echo: ${said}` }] } });
+					setTimeout(() => reply({ type: "agent_settled" }), 10);
+				} else ok();
+			}
+		});
+		return child;
+	};
+	setSessionSpawn(() => fakeChild());
+
+	const { record: key, key: token } = apiKeys.create({ name: "chatCompletions-test", expiresAt: 0 });
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	const base = `http://127.0.0.1:${server.address().port}`;
+	const call = (body, headers = {}) =>
+		fetch(`${base}/v1/chat/completions`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${token}`, ...headers }, body: JSON.stringify(body) });
+
+	// A real, non-streamed turn: the message reaches Pi through the fake container and its answer comes back,
+	// with usage reported.
+	const plain = await call({ messages: [{ role: "user", content: "hello there" }] });
+	assert.equal(plain.status, 200);
+	const plainJson = await plain.json();
+	assert.equal(plainJson.object, "chat.completion");
+	assert.equal(plainJson.choices[0].message.content, "echo: hello there");
+	assert.equal(plainJson.choices[0].finish_reason, "stop");
+	assert.ok(plainJson.usage);
+
+	// Streamed: SSE chunks, role first, content deltas, a final stop chunk, then [DONE].
+	const streamed = await call({ messages: [{ role: "user", content: "stream please" }], stream: true });
+	assert.equal(streamed.status, 200);
+	assert.match(streamed.headers.get("content-type"), /text\/event-stream/);
+	const text = await streamed.text();
+	assert.match(text, /"delta":\{"role":"assistant","content":""\}/, "the role chunk opens the stream");
+	assert.match(text, /"content":"echo: stream please"/);
+	assert.match(text, /"finish_reason":"stop"/);
+	assert.ok(text.trimEnd().endsWith("data: [DONE]"));
+
+	// X-Session-Id: the same id resumes the same chat (one scoped session) across requests.
+	const withId = (body) => call(body, { "x-session-id": "my-own-id" });
+	const first = await withId({ messages: [{ role: "user", content: "first" }] });
+	assert.equal(first.status, 200);
+	const openBefore = sessions.allRecords().length;
+	const second = await withId({ messages: [{ role: "user", content: "first" }, { role: "assistant", content: "echo: first" }, { role: "user", content: "second" }] });
+	assert.equal(second.status, 200);
+	assert.equal(sessions.allRecords().length, openBefore, "the second request resumed the same session rather than opening another");
+	assert.equal((await second.json()).choices[0].message.content, "echo: second", "the newest user message is the prompt sent, not the whole history");
+
+	// Audio is refused before anything is spawned.
+	const audio = await call({ messages: [{ role: "user", content: [{ type: "input_audio", input_audio: { data: "AA==", format: "wav" } }] }] });
+	assert.equal(audio.status, 400);
+	assert.match((await audio.json()).error.message, /Audio input is not supported/);
+
+	// An over-cap key is refused before any container work, even though its container already exists.
+	apiKeys.update(key.id, { dailySpend: 0.01 });
+	recordSpend({ id: `spend-${Math.random()}`, requests: 1, keyId: key.id }, { getSessionStats: () => ({ cost: 0.02, tokens: { input: 1, output: 1, cacheRead: 0, cacheWrite: 0, total: 2 } }), model: { provider: "p", id: "m" } });
+	const overCap = await call({ messages: [{ role: "user", content: "once more" }] });
+	assert.equal(overCap.status, 429);
+	assert.match((await overCap.json()).error.message, /daily spend limit reached/);
+	apiKeys.update(key.id, { dailySpend: null });
+
+	// Each chat opened a real bridge server (a listening unix socket); closing the sessions tears those down
+	// too, or they would outlive this test and keep the process from ever exiting.
+	const openRecords = sessions.allRecords();
+	sessions.closeAll();
+	await Promise.all(openRecords.map((r) => r.stopped ?? Promise.resolve()));
+	setSessionSpawn(null);
+	server.closeAllConnections?.();
+	await new Promise((r) => server.close(r));
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+	config.CONTAINER_NETWORK = priorNetwork;
+	config.ACCESS_LOG = accessLog;
+	resetEngineCheck();
 }
 
 // The bridge socket: owner-only, unknown routes refused, and gone once closed.
@@ -2145,6 +2403,16 @@ assert.equal(isReloadCommand(undefined), false);
 		await assert.rejects(removeImage(l.states[1].name, { hostPi: "0.99.1" }), (e) => e.status === 409 && /still exists/.test(e.message));
 		await assert.rejects(removeImage("sha256:default", { hostPi: "0.99.1" }), (e) => e.status === 409);
 
+		// Force-removing one whose idle container itself refuses to go: the image is not removed either,
+		// and the message names the container, not just docker's own opaque complaint about the image.
+		{
+			const base = reply;
+			reply = (bin, args) => (args[0] === "rm" && args[args.length - 1] === other("far") ? { code: 1, stdout: "", stderr: "Error: cannot remove container: in use" } : base(bin, args));
+			await assert.rejects(removeImage("sha256:foreignimg", { hostPi: "0.99.1", force: true }), (e) => e.status === 409 && e.message.includes(other("far")) && /in use/.test(e.message));
+			assert.ok(!removedI.includes("sha256:foreignimg"), "the image removal is never even attempted");
+			reply = base;
+		}
+
 		// The plan: what is offered, why, and what it costs.
 		await view();
 		const plan = await cleanupPlan({ hostPi: "0.99.1" });
@@ -2497,6 +2765,43 @@ assert.equal(isReloadCommand(undefined), false);
 
 		reset((bin, args) => (args[0] === "inspect" ? { code: 1, stdout: "", stderr: "" } : args[0] === "create" ? { code: 125, stdout: "", stderr: "Unable to find image 'img'" } : { code: 0, stdout: "", stderr: "" }));
 		await assert.rejects(ensureContainer(spec, "img1"), (err) => err instanceof EngineError && err.status === 503 && /Unable to find image/.test(err.message), "an engine failure says what it said");
+	}
+
+	// removeContainer's expectId: a message that resumed the chat in between leaves a *different* container
+	// by the same name (built by a concurrent ensureContainer), which must survive, not be removed.
+	{
+		reset((bin, args) => (args[0] === "inspect" ? { code: 0, stdout: JSON.stringify([{ Id: "old-id" }]), stderr: "" } : { code: 0, stdout: "", stderr: "" }));
+		const matched = await removeContainer("c1", { expectId: "old-id" });
+		assert.equal(matched.skipped, undefined, "the id still matches: removed as normal");
+		assert.deepEqual(calls.map((c) => c[1]), ["inspect", "rm", "rmi"]);
+
+		reset((bin, args) => (args[0] === "inspect" ? { code: 0, stdout: JSON.stringify([{ Id: "new-id" }]), stderr: "" } : { code: 0, stdout: "", stderr: "" }));
+		const skipped = await removeContainer("c1", { expectId: "old-id" });
+		assert.equal(skipped.skipped, "replaced");
+		assert.deepEqual(calls.map((c) => c[1]), ["inspect"], "a mismatch never reaches rm");
+
+		reset((bin, args) => (args[0] === "inspect" ? { code: 1, stdout: "", stderr: "No such object" } : { code: 0, stdout: "", stderr: "" }));
+		await removeContainer("c1", { expectId: "old-id" });
+		assert.deepEqual(calls.map((c) => c[1]), ["inspect", "rm", "rmi"], "gone already: nothing to mismatch against, so the removal still runs (idempotent either way)");
+
+		reset((bin, args) => ({ code: 0, stdout: "", stderr: "" }));
+		await removeContainer("c1");
+		assert.deepEqual(calls.map((c) => c[1]), ["rm", "rmi"], "no expectId: the old behaviour, no inspect first");
+
+		// The check and the removal run inside removeContainer's own per-name lock (the same one ensureContainer
+		// uses to create a replacement), so nothing can build a new container in the gap between them.
+		let concurrent = 0;
+		let overlapped = false;
+		reset((bin, args) => {
+			if (args[0] === "inspect") {
+				concurrent++;
+				if (concurrent > 1) overlapped = true;
+				return new Promise((r) => setTimeout(() => (concurrent--, r({ code: 0, stdout: JSON.stringify([{ Id: "old-id" }]), stderr: "" })), 15));
+			}
+			return { code: 0, stdout: "", stderr: "" };
+		});
+		await Promise.all([removeContainer("c2", { expectId: "old-id" }), removeContainer("c2", { expectId: "old-id" })]);
+		assert.equal(overlapped, false, "two calls for the same name never run their checks at the same time");
 	}
 
 	// iptables is found by its path when the service's PATH lacks the sbin folders, and by name as a last resort.
@@ -3360,6 +3665,17 @@ assert.equal(isReloadCommand(undefined), false);
 		assert.match(await containerAction(stoppedName, "recreate"), /clean one on its next message/);
 		assert.ok(seen.some((c) => c.args[0] === "rm" && c.args.includes(stoppedName)), "recreate removes the container");
 		assert.ok(chatStore.get(stoppedHash), "but keeps the chat, so its conversation continues in the new one");
+		// A message resumes the chat in between containerAction's own first look and the removal that follows:
+		// the container by this name is already a fresh one by the time removeContainer re-checks it inside
+		// its lock, so nothing is removed and the operator is told why, instead of losing it silently.
+		forget();
+		let inspected = 0;
+		reply = (bin, args) =>
+			args[0] === "inspect"
+				? { code: 0, stdout: JSON.stringify([{ Name: `/${stoppedName}`, Id: ++inspected === 1 ? "original" : "resumed-already", State: { Running: true } }]), stderr: "" }
+				: { code: 0, stdout: "", stderr: "" };
+		assert.match(await containerAction(stoppedName, "recreate"), /already gave the chat a clean container; nothing was removed/);
+		assert.ok(!seen.some((c) => c.args[0] === "rm"), "the fresh container is left alone");
 		forget();
 		reply = (bin, args) => (args[0] === "inspect" ? { code: 0, stdout: JSON.stringify([{ Name: `/${stoppedName}`, State: { Running: false } }]), stderr: "" } : { code: 0, stdout: "", stderr: "" });
 		assert.match(await containerAction(stoppedName, "remove"), /chat was ended and its container removed/);
@@ -3625,6 +3941,15 @@ assert.equal(isReloadCommand(undefined), false);
 	await assert.rejects(createAgent({ keyId: OWNER, name: "x", instructions: "y".repeat(65 * 1024) }), /limited to 64 KB/);
 	await assert.rejects(createAgent({ keyId: OWNER, name: "x", container: { memoryMb: "lots" } }), /memory/);
 	assert.equal(agents.list().length, 0, "nothing was made by a refused request");
+
+	// A per-key cap, so a scripted bulk-create cannot exhaust AGENT_PORT_RANGE with no clear reason why.
+	config.AGENT_MAX_PER_KEY = 2;
+	const capA = await createAgent({ keyId: OWNER, name: "cap-a" });
+	const capB = await createAgent({ keyId: OWNER, name: "cap-b" });
+	await assert.rejects(createAgent({ keyId: OWNER, name: "cap-c" }), /already has 2 agent endpoints.*AGENT_MAX_PER_KEY/);
+	await deleteAgent(capA.id);
+	await deleteAgent(capB.id);
+	config.AGENT_MAX_PER_KEY = 50;
 
 	const architect = await createAgent({ keyId: OWNER, name: "architect", workspace: "own", container: { memoryMb: 1024, env: "B=2", persistent: true } });
 	const coder = await createAgent({ keyId: OWNER, name: "coder", workspace: "shared" });
@@ -4250,6 +4575,45 @@ assert.equal(isReloadCommand(undefined), false);
 	const cookie = login.cookie;
 	assert.ok(cookie);
 	assert.ok(!JSON.stringify(queryAudit({ limit: 500 }).rows).includes(PASS) && !JSON.stringify(queryAudit({ limit: 500 }).rows).includes("wrong wrong"), "no password is ever recorded");
+
+	// The brute-force backoff itself: the pure math, then the real 429/Retry-After it drives, and that a
+	// success clears it (this is the dashboard's only defense on an exposed login, so it earns a direct test
+	// rather than relying on the single wrong-password-then-success check above).
+	{
+		loginFails.clear();
+		const ip = "203.0.113.5";
+		for (let i = 1; i <= LOGIN_FREE_TRIES; i++) {
+			assert.equal(noteLoginFailure(ip).until, 0, `attempt ${i} is still free`);
+			assert.equal(loginWaitMs(ip), 0);
+		}
+		const first = noteLoginFailure(ip); // the free tries are used up: this one starts the wait
+		assert.ok(first.until > Date.now(), "the next wait has begun");
+		assert.ok(loginWaitMs(ip) > 1000 && loginWaitMs(ip) <= 2000 + 50, "2^1 seconds, the first time over");
+		const second = noteLoginFailure(ip);
+		assert.ok(second.until - Date.now() > 3000 && second.until - Date.now() <= 4000 + 50, "it doubles");
+		for (let i = 0; i < 20; i++) noteLoginFailure(ip);
+		assert.ok(loginWaitMs(ip) <= LOGIN_MAX_WAIT_MS, "capped, however many times it fails");
+		loginFails.delete(ip);
+
+		// Over real sockets: once past the free tries, even the *correct* password is refused while the wait
+		// is in effect (otherwise the wait would be pointless), with Retry-After telling the client how long.
+		// The free tries, then one more that uses them up and starts the wait: all still 401 (the wait
+		// itself is only checked on the *next* request, against what this one just set).
+		for (let i = 0; i <= LOGIN_FREE_TRIES; i++) assert.equal((await call("/dashboard/login", { body: { password: "nope" } })).status, 401);
+		const blocked = await call("/dashboard/login", { body: { password: "nope" } }); // now blocked before the password is even checked
+		assert.equal(blocked.status, 429);
+		const res2 = await fetch(base + "/dashboard/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ password: PASS }) });
+		assert.equal(res2.status, 429, "the correct password too, while blocked");
+		assert.ok(Number(res2.headers.get("retry-after")) >= 1, "Retry-After says how long");
+		assert.match(rowsOf("auth.login_blocked").at(0)?.detail ?? "", /too many wrong passwords/);
+
+		// A success clears the record (not reachable through the lock above without waiting it out for
+		// real, so cleared directly, the same effect as the wait having expired on its own).
+		loginFails.delete("127.0.0.1");
+		const after = await call("/dashboard/login", { body: { password: PASS } });
+		assert.equal(after.status, 200);
+		assert.equal(loginFails.has("127.0.0.1"), false);
+	}
 
 	// Settings: old -> new; a secret says only that it changed; the audit settings are always recorded.
 	assert.equal((await call("/dashboard/settings", { cookie, body: { settings: { ACCESS_LOG: true } } })).status, 200);
@@ -6163,7 +6527,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 // Unattended runs: delivery to the owner, the previous-report context, auto-disable and the daily cost cap.
 {
 	const J = await import("./server.mjs");
-	const { createJob, updateJob, queueRun, getJob, getRun, listRuns, setJobRunner, takeInbox, inboxNotice, deleteJobsOf, scheduledJobView } = J;
+	const { createJob, updateJob, queueRun, getJob, getRun, listRuns, setJobRunner, takeInbox, inboxNotice, deleteJobsOf, scheduledJobView, tick } = J;
 	const rec = apiKeys.create({ name: "unattended-key" });
 	const key = rec.record ?? rec;
 	const agent = agents.create({ keyId: key.id, name: "watcher" });
@@ -6385,6 +6749,47 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		startKeepAlive(quiet, 0).stop();
 		await new Promise((r) => setTimeout(r, 40));
 		assert.equal(off.length, 0, "0 turns it off");
+	}
+
+	// A job tied to an agent that lost permission, or was switched off, is simply not queued on its due
+	// tick: paused, not run-and-failed, and resumed by itself once the agent or its permission is back.
+	{
+		const view = (id) => scheduledJobView(getJob(id));
+		agents.update(agent.id, { canSchedule: true });
+		const scheduled = createJob({ keyId: key.id, agentId: agent.id, name: "ticker", prompt: "p", origin: "agent", schedule: { kind: "interval", every: 1, unit: "minutes" } }).job;
+		reply = () => ({ text: "ok" });
+		const due = Date.now() + 61_000;
+		assert.equal(tick(due), 1, "runnable: it fires");
+		await waitFor(() => view(scheduled.id).failStreak === 0 && listRuns(scheduled.id)[0]?.status === "ok");
+		const ranAt = listRuns(scheduled.id)[0].id;
+
+		agents.update(agent.id, { canSchedule: false });
+		const nextDue = view(scheduled.id).nextRunAt + 1000;
+		assert.equal(tick(nextDue), 0, "its own scheduling permission was revoked: not queued");
+		assert.equal(view(scheduled.id).enabled, true, "paused, not disabled");
+		assert.equal(listRuns(scheduled.id)[0].id, ranAt, "no new run, no failure recorded");
+		assert.ok(view(scheduled.id).nextRunAt > nextDue, "its schedule still advanced, so it is not due again at once");
+
+		agents.update(agent.id, { canSchedule: true });
+		config.AGENT_JOBS_ENABLED = false;
+		assert.equal(tick(view(scheduled.id).nextRunAt + 1000), 0, "the global switch pauses every agent's schedules");
+		config.AGENT_JOBS_ENABLED = true;
+		assert.equal(tick(view(scheduled.id).nextRunAt + 1000), 1, "permission is back: it fires again, with no catch-up noise");
+		await waitFor(() => listRuns(scheduled.id)[0].id !== ranAt && listRuns(scheduled.id)[0].status === "ok");
+
+		// The agent itself being disabled pauses an operator's job for it too, not just one it made itself.
+		const operatorJob = createJob({ keyId: key.id, agentId: agent.id, name: "operator-ticker", prompt: "p", schedule: { kind: "interval", every: 1, unit: "minutes" } }).job;
+		agents.update(agent.id, { enabled: false });
+		assert.equal(tick(view(operatorJob.id).nextRunAt + 1000), 0, "the agent is off: not queued");
+		assert.equal(listRuns(operatorJob.id).length, 0, "no failed run was ever recorded for it");
+		agents.update(agent.id, { enabled: true });
+		assert.equal(tick(view(operatorJob.id).nextRunAt + 1000), 1, "enabled again: it fires");
+		await waitFor(() => listRuns(operatorJob.id).length === 1);
+
+		// A manual run is unaffected by canSchedule either way (it is not "scheduling"); only tick() pauses.
+		agents.update(agent.id, { canSchedule: false });
+		assert.equal((await runAndWait(scheduled, "manual")).status, "ok");
+		agents.update(agent.id, { canSchedule: true });
 	}
 
 	// Results go when their job does; old seen ones are purged.
@@ -6655,7 +7060,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 // Phase 4: delegation and teams.
 {
 	const D = await import("./server.mjs");
-	const { colleagues, delegatorFor, mayDelegate, setAgentTurnRunner, createTeam, updateTeam, deleteTeam, listTeams, getTeam, runTeam, fillStep, checkedSteps, startTeam, stopTeamServers, listeningTeamPort, agents, apiKeys, config, db } = D;
+	const { colleagues, delegatorFor, mayDelegate, setAgentTurnRunner, createTeam, updateTeam, deleteTeam, deleteTeamsOfKey, listTeams, getTeam, runTeam, fillStep, checkedSteps, startTeam, stopTeamServers, listeningTeamPort, agents, apiKeys, config, db } = D;
 	const mk = (name) => { const c = apiKeys.create({ name, expiresAt: 0 }); return { record: c.record ?? c, token: c.key }; };
 	const k1 = mk("deleg-1");
 	const k2 = mk("deleg-2");
@@ -6902,6 +7307,13 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		if (/FAIL/.test(prompt)) throw new D.AgentRunError("boom", 500);
 		return { text: `${credential.agent.name} says (${prompt.replace(/\s+/g, " ")})`, usage: { total_tokens: 10 }, cost: 0.5, scopedId: "x" };
 	});
+	// A per-key cap, for the same reason an agent endpoint has one: each team opens its own port too.
+	config.TEAM_MAX_PER_KEY = 1;
+	const capTeam = await createTeam({ keyId: k1.record.id, name: "cap-team", steps: [{ agent: "arch", instruction: "{{task}}" }] });
+	await assert.rejects(createTeam({ keyId: k1.record.id, name: "cap-team-2", steps: [{ agent: "arch", instruction: "{{task}}" }] }), /already has 1 teams.*TEAM_MAX_PER_KEY/);
+	await deleteTeam(capTeam.id);
+	config.TEAM_MAX_PER_KEY = 50;
+
 	const team = await createTeam({ keyId: k1.record.id, name: "pipeline", description: "design then code", steps: [{ agent: "arch", instruction: "Design: {{task}}" }, { agent: "coder", instruction: "Implement {{previous}} for {{task}}" }] });
 	assert.equal(team.status, "listening");
 	assert.ok(team.port > 0);
@@ -6942,11 +7354,38 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	const broken = await post({ messages: [{ role: "user", content: "x" }] });
 	assert.equal(broken.status, 409);
 	assert.match((await broken.json()).error.message, /agent was deleted/);
+	// A taken port: the team moves, and says so, exactly like an agent's own port (startAgent).
+	{
+		const http = await import("node:http");
+		const teamPort = listeningTeamPort(team.id);
+		await stopTeamServers();
+		const squatter = http.createServer((req, res) => res.end("x"));
+		await new Promise((r) => squatter.listen(teamPort, "127.0.0.1", r));
+		await startTeam(getTeam(team.id));
+		assert.notEqual(listeningTeamPort(team.id), teamPort, "it could not have its port back");
+		assert.equal(getTeam(team.id).port, listeningTeamPort(team.id), "the new one is stored");
+		assert.ok(recentAuditRows(20).some((r) => r.action === "team.port" && /was taken/.test(r.detail)), "and it is on record");
+		await new Promise((r) => squatter.close(r));
+	}
+
 	await updateTeam(team.id, { enabled: false });
 	await assert.rejects(fetch(`${url}/health`), /fetch failed/);
 	assert.equal(listeningTeamPort(team.id), null);
 	await deleteTeam(team.id);
 	assert.equal(getTeam(team.id), null);
+
+	// deleteTeamsOfKey: one team that can no longer be deleted cleanly (its row is already gone, standing
+	// in for whatever else could make a single deleteTeam reject) does not stop the rest of the key's teams
+	// from going, matching deleteAgentsOfKey's own guard for exactly this reason.
+	{
+		const goodTeam = await createTeam({ keyId: k1.record.id, name: "good", steps: [{ agent: "arch", instruction: "{{task}}" }] });
+		const badTeam = await createTeam({ keyId: k1.record.id, name: "bad", steps: [{ agent: "arch", instruction: "{{task}}" }] });
+		db.prepare("DELETE FROM teams WHERE id = ?").run(badTeam.id); // out from under deleteTeam, so it throws "no such team"
+		await deleteTeamsOfKey(k1.record.id); // must not throw, and must still remove the good one
+		assert.equal(getTeam(goodTeam.id), null, "the good team is still removed");
+		assert.equal(listeningTeamPort(goodTeam.id), null, "and its port with it");
+	}
+
 	setAgentTurnRunner(null);
 	await stopTeamServers();
 }
@@ -7129,10 +7568,25 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.ok(html.includes('class="pagetabs" id="tabbar"'), "the page tab bar has a class of its own, apart from the existing .tabs bars");
 }
 
+// What a package or extension source may look like, checked once and shared by both (lib/packagesource.mjs).
+{
+	const { checkPackageSource } = await import("./server.mjs");
+	for (const good of ["npm:left-pad", "npm:@scope/pkg", "npm:pkg@1.2.3", "npm:@scope/pkg@^1.0.0", "git:github.com/user/repo", "git:github.com/user/repo@v1.2", "https://github.com/user/repo", "https://gitlab.example.com:8443/group/sub/repo@main"]) {
+		assert.deepEqual(checkPackageSource(good), { ok: true, source: good }, good);
+	}
+	for (const evil of ["", "  ", "./local/path", "/etc/passwd", "../x", "-l", "npm:--registry=http://evil", "npm:pkg;rm -rf /", "git:git@github.com:user/repo", "http://github.com/user/repo", "https://user:pw@github.com/user/repo", "file:///etc", "npm:", "x".repeat(300), "https://github.com/../x"]) {
+		const checked = checkPackageSource(evil);
+		assert.equal(checked.ok, false, JSON.stringify(evil));
+		assert.equal(typeof checked.reason, "string");
+	}
+	assert.equal(checkPackageSource("x".repeat(300)).reason, "that package source is too long");
+	assert.equal(checkPackageSource(null).ok, false, "never throws on a strange input");
+}
+
 // Phase A (0.7): the extension library and grants.
 {
 	const X = await import("./server.mjs");
-	const { checkedSource, nameFromSource, gitTarget, installEnv, installCommands, looksLikePiPackage, treeBytes, installExtension, updateExtension, removeExtension, extensionJobView, resetExtensionJob, libraryOverview, ExtensionError, listLibrary, listShared, grantedBundles, bundleUsers, createBundle, extensionRoutes, setAccess, extensionsPayload, agents, apiKeys, config, packageDir, containerCreateArgs, piInvocation, containerSignature } = X;
+	const { checkedSource, nameFromSource, gitTarget, installEnv, installCommands, looksLikePiPackage, treeBytes, installExtension, updateExtension, removeExtension, extensionJobView, resetExtensionJob, libraryOverview, ExtensionError, listLibrary, listShared, grantedBundles, bundleUsers, createBundle, extensionRoutes, setAccess, extensionsPayload, agents, apiKeys, config, packageDir, containerCreateArgs, piInvocation, containerSignature, installInto } = X;
 	const fsm = await import("node:fs");
 	const log = join(TEST_WS, "fake-tools.log");
 	const bin = mkdtempSync(join(tmpdir(), "fakenpm-"));
@@ -7207,6 +7661,34 @@ echo "# demo" > "$target/skills/demo/SKILL.md"
 	assert.match(called, /ignore=true \| secret=none/, "the gateway's environment did not reach npm");
 	assert.ok(!called.includes("gateway-secret-value"));
 	assert.equal(packageDir(entry), join(TEST_EXT, "good-ext", "node_modules/good-ext"));
+
+	// A hung install is told apart from one that genuinely failed: both end up SIGKILLed, but only the
+	// timeout is reported as "timed out" rather than a bare, misleading exit code.
+	{
+		const { EventEmitter } = await import("node:events");
+		const { PassThrough } = await import("node:stream");
+		const hungSpawn = () => {
+			const child = new EventEmitter();
+			child.stdout = new PassThrough();
+			child.stderr = new PassThrough();
+			child.kill = (signal) => void setImmediate(() => child.emit("close", signal === "SIGKILL" ? 137 : 1));
+			return child;
+		};
+		await assert.rejects(installInto("x", "npm:good-ext", { spawnFn: hungSpawn, timeoutMs: 20 }), /npm timed out after 0 minutes/, "the timeout, not a bare exit code, is reported");
+
+		// The same exit code from something else entirely (the host killing it for memory, say) is not
+		// mistaken for this timeout: only the timer actually firing sets it.
+		const killedForMemory = () => {
+			const child = new EventEmitter();
+			child.stdout = new PassThrough();
+			child.stderr = new PassThrough();
+			child.kill = () => {};
+			setImmediate(() => child.emit("close", 137));
+			return child;
+		};
+		await assert.rejects(installInto("x", "npm:good-ext", { spawnFn: killedForMemory, timeoutMs: 60_000 }), /npm exited with code 137/);
+	}
+
 	// Installing: git.
 	installExtension({ source: "git:github.com/o/fromgit@v1", name: "fromgit" });
 	done = await waitJob();
@@ -7323,7 +7805,7 @@ echo "# demo" > "$target/skills/demo/SKILL.md"
 // Phase B (0.7): the agent creation wizard.
 {
 	const W = await import("./server.mjs");
-	const { wizardOptions, planWizard, createFromWizard, agents, apiKeys, profileOp, agentScope, listLibrary, config, deleteAgent } = W;
+	const { wizardOptions, planWizard, createFromWizard, agents, apiKeys, profileOp, agentScope, listLibrary, config, deleteAgent, installInOrder, PackageError } = W;
 	const fsm = await import("node:fs");
 	const bin = mkdtempSync(join(tmpdir(), "fakedocker4-"));
 	const helper = fileURLToPath(new URL("./piper-profile.mjs", import.meta.url));
@@ -7443,6 +7925,30 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.equal(apiKeys.list().length, keysBefore + 1);
 	await deleteAgent(fresh.agent.id);
 	apiKeys.remove(fresh.newKey.id);
+
+	// installInOrder: a package job already running elsewhere (the tracker is global, not per scope) is
+	// waited out rather than silently dropped, and a package that genuinely fails is recorded, not just
+	// swallowed, so the response's "queued" never quietly meant "actually, no".
+	{
+		const tried = [];
+		let busyFor = 2;
+		const install = (scope, source) => {
+			tried.push(source);
+			if (source === "npm:flaky" && busyFor-- > 0) throw new PackageError("another package job is running; wait for it to finish", 409);
+			if (source === "npm:bad") throw new PackageError("that is not a package source", 400);
+		};
+		await installInOrder("key-x", ["npm:flaky", "npm:bad", "npm:good"], { install, waitMs: 5 });
+		assert.deepEqual(tried, ["npm:flaky", "npm:flaky", "npm:flaky", "npm:bad", "npm:good"], "the busy one is retried in place, not skipped or reordered");
+		const rows = recentAuditRows(10);
+		assert.ok(rows.some((r) => r.action === "agent.package_failed" && r.target === "key-x" && /npm:bad.*not a package source/.test(r.detail)), "the genuine failure is on record");
+		assert.ok(!rows.some((r) => r.action === "agent.package_failed" && /npm:flaky/.test(r.detail)), "the busy one, once it succeeds, is not recorded as a failure");
+
+		// Given up on (busy for longer than the retry budget), it is recorded too, not silently dropped.
+		busyFor = 999;
+		await installInOrder("key-y", ["npm:flaky"], { install, waitMs: 1 });
+		assert.ok(recentAuditRows(5).some((r) => r.action === "agent.package_failed" && r.target === "key-y" && /npm:flaky/.test(r.detail)));
+	}
+
 	// The page has every step.
 	const html = readFileSync(new URL("./dashboard.html", import.meta.url), "utf8");
 	for (const step of ["wzkey", "wzidentity", "wzinstructions", "wzextensions", "wzlimits", "wzreview"]) assert.ok(html.includes(`'${step}'`), `the wizard has the ${step} step`);
@@ -7619,6 +8125,103 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	for (const id of ["pg", "pgside", "pgnew", "pgsearch", "pglist", "pgexport", "pgclear", "pgtarget", "pgmodel", "pgtitle", "pgscroll", "pgmsgs", "pgdown", "pginput", "pgsend", "pgnote", "pgtoggle", "pgfilesbtn", "pgfiles", "pgfrefresh", "pgfcrumb", "pgflist", "pgfnote", "pgmodal", "pgmtitle", "pgmmeta", "pgmbody", "pgmraw", "pgmdl", "pgmclose"]) assert.ok(html.includes(`id="${id}"`), `the Playground has #${id}`);
 	assert.ok(/<a href="#playground"/.test(html.slice(html.indexOf('<nav id="nav">'), html.indexOf('<nav id="nav">') + 200)), "Playground is first in the menu");
 	assert.ok(/localStorage/.test(chatCode) && /try \{/.test(chatCode), "conversations are kept in the browser, guarded");
+}
+
+// The workspace file API: /v1/piper/files (a key's own, upload/list/download/delete, over the gateway's
+// socket) and /dashboard/files (the operator's browser: list, text edit, mkdir, move, delete). Both run the
+// real profile helper, so a fake `docker` on PATH execs the real helper script over the mounted folder —
+// the same technique the profile/template tests above use — rather than mocking the helper's own logic away.
+{
+	const { server } = await import("./server.mjs");
+	const bin = mkdtempSync(join(tmpdir(), "fakedocker-files-"));
+	const helper = fileURLToPath(new URL("./piper-profile.mjs", import.meta.url));
+	writeFileSync(join(bin, "docker"), `#!/usr/bin/env bash
+dir=""; max=0; args=("$@"); rest=(); i=0
+while [ $i -lt $# ]; do
+  a="\${args[$i]}"
+  case "$a" in
+    -v) v="\${args[$((i+1))]}"; case "$v" in *:/data) dir="\${v%:/data}";; esac;;
+    -e) e="\${args[$((i+1))]}"; case "$e" in PROFILE_MAX_BYTES=*) max="\${e#*=}";; esac;;
+    /opt/piper/profile.mjs) rest=("\${args[@]:$((i+1))}"); break;;
+  esac
+  i=$((i+1))
+done
+[ -z "$dir" ] && exit 1
+cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
+`);
+	(await import("node:fs")).chmodSync(join(bin, "docker"), 0o755);
+	const oldPath = process.env.PATH;
+	process.env.PATH = `${bin}:${oldPath}`;
+	const accessLog = config.ACCESS_LOG;
+	config.ACCESS_LOG = false;
+
+	const made = apiKeys.create({ name: "files-api-test", expiresAt: 0 });
+	const key = made.record ?? made;
+	const token = made.key;
+	ensureWorkspace(key.id); // the folder the helper will mount
+
+	await new Promise((r) => server.listen(0, "127.0.0.1", r));
+	const base = `http://127.0.0.1:${server.address().port}`;
+	const call = (path, { method = "GET", body, headers = {} } = {}) =>
+		fetch(`${base}${path}`, { method, headers: { authorization: `Bearer ${token}`, ...headers }, body });
+
+	// Upload, list, download (the real bytes back), delete.
+	const content = "hello from a real file\n".repeat(50);
+	const up = await call("/v1/piper/files/notes/hello.txt", { method: "PUT", body: content });
+	assert.equal(up.status, 200);
+	const listed = await (await call("/v1/piper/files/notes/")).json();
+	assert.deepEqual(listed.entries.map((e) => e.name), ["hello.txt"]);
+	const down = await call("/v1/piper/files/notes/hello.txt");
+	assert.equal(down.status, 200);
+	assert.equal(down.headers.get("content-disposition"), "attachment; filename*=UTF-8''hello.txt");
+	assert.equal(await down.text(), content, "the real bytes, round-tripped through the real helper");
+	const del = await (await call("/v1/piper/files/notes/hello.txt", { method: "DELETE" })).json();
+	assert.ok(del.ok !== false);
+	assert.equal((await call("/v1/piper/files/notes/hello.txt")).status, 404, "gone");
+
+	// A folder named without a trailing slash is listed, not refused (filesRoutes' own fallback).
+	await call("/v1/piper/files/sub/a.txt", { method: "PUT", body: "x" });
+	const asFolder = await (await call("/v1/piper/files/sub")).json();
+	assert.deepEqual(asFolder.entries.map((e) => e.name), ["a.txt"]);
+
+	// Quota: a key's workspace over WORKSPACE_MAX_BYTES refuses more (423), read and delete still work.
+	const quotaKey = apiKeys.create({ name: "files-quota-test", expiresAt: 0 });
+	const qToken = quotaKey.key;
+	ensureWorkspace((quotaKey.record ?? quotaKey).id);
+	const qCall = (path, opts) => fetch(`${base}${path}`, { ...opts, headers: { authorization: `Bearer ${qToken}`, ...(opts?.headers ?? {}) } });
+	await qCall("/v1/piper/files/a.txt", { method: "PUT", body: "x".repeat(100) });
+	const oldQuota = config.WORKSPACE_MAX_BYTES;
+	config.WORKSPACE_MAX_BYTES = 150;
+	const overQuota = await qCall("/v1/piper/files/b.txt", { method: "PUT", body: "y".repeat(100) });
+	assert.equal(overQuota.status, 413, "the quota, not just FILE_UPLOAD_MAX_BYTES, is enforced");
+	assert.equal((await qCall("/v1/piper/files/a.txt")).status, 200, "reading still works over quota");
+	assert.equal((await qCall("/v1/piper/files/a.txt", { method: "DELETE" })).status, 200, "and deleting, to make room");
+	config.WORKSPACE_MAX_BYTES = oldQuota;
+
+	// The dashboard's own browser: list, a text edit (with the conflict check), mkdir, move, delete.
+	clearPasswordHash();
+	const scope = scopeOf(key.id);
+	const dash = (path, opts) => fetch(`${base}/dashboard/files/${scope}${path}`, opts);
+	assert.equal((await dash("/sub/")).status, 200, "no password set: open");
+	const list1 = await (await dash("/sub/")).json();
+	assert.equal(list1.entries[0].name, "a.txt");
+	await dash("/notes?op=mkdir", { method: "POST", headers: { "content-type": "application/json" } });
+	const asText1 = await (await dash("/sub/a.txt?as=text")).json();
+	assert.equal(asText1.text, "x");
+	const saved = await dash("/sub/a.txt?as=text", { method: "PUT", body: JSON.stringify({ text: "x-edited", expectModified: asText1.modified }), headers: { "content-type": "application/json" } });
+	assert.equal(saved.status, 200);
+	const conflict = await dash("/sub/a.txt?as=text", { method: "PUT", body: JSON.stringify({ text: "stale write", expectModified: asText1.modified }), headers: { "content-type": "application/json" } });
+	assert.equal(conflict.status, 409, "a save over a file that changed meanwhile is a conflict");
+	const moved = await dash("/sub/a.txt?op=move", { method: "POST", body: JSON.stringify({ to: "notes/moved.txt" }), headers: { "content-type": "application/json" } });
+	assert.equal(moved.status, 200);
+	assert.equal((await dash("/notes/moved.txt?as=text")).status, 200);
+	assert.equal((await dash("/notes/moved.txt", { method: "DELETE" })).status, 200);
+	assert.equal((await dash("/notes/moved.txt?as=text")).status, 400, "gone (a refused op, not a 404, is this helper's own convention)");
+
+	server.closeAllConnections?.();
+	await new Promise((r) => server.close(r));
+	config.ACCESS_LOG = accessLog;
+	process.env.PATH = oldPath;
 }
 
 console.log("nextTurn + images: ok");
