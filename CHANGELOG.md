@@ -2,6 +2,108 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Scheduled tasks reach their owner.** A job has a `notify` setting (never, changes, always). A finished run is put in an
+  inbox that the next reply of a chat of that key and agent shows at the top, once, and is sent to the alert webhook
+  (`JOBS_NOTIFY_ALERTS`). With `changes` nothing is sent when the task answers `NO_CHANGE` or repeats its last report.
+  Schedules an agent makes for itself default to `changes`; the operator's jobs to `never`.
+- **Previous-run context.** A new session mode, `memory`, starts every run fresh but shows it its last three real reports, so
+  a recurring check can compare without a conversation that grows forever. It is the default for an agent's own schedules.
+- **Guards for unattended runs.** A job whose scheduled runs fail `JOBS_MAX_FAILURES` times in a row (default 3) is switched
+  off and the owner is told; turning it on again resets the count. A job has a 24-hour spend cap (`AGENT_JOBS_DAILY_COST`,
+  default $1, for schedules agents made; settable per job by the operator): over it, scheduled runs are skipped and the owner is
+  told once. The Jobs page has the new fields.
+
+### Added
+- **Live progress of hand-offs.** While an agent waits for a colleague, what the colleague does appears in the waiting
+  agent's reasoning stream (Open WebUI's "Thinking"): `[coder] ▸ started: …`, each tool it runs (`▸ bash: …`), failures,
+  the first line of each message it writes (`› …`), a sign of life when it is quiet for 20 s, and `✓ done in 42s` or
+  `✗ stopped: …`. A colleague's own colleagues are indented under it. `DELEGATE_PROGRESS` chooses off, tools or full
+  (default); it works for every client because it uses the reasoning field, and also in jobs and the Playground.
+
+- **Colleague messages in the reply.** With `DELEGATE_MESSAGES` = chat (the default), each finished message a colleague writes
+  while the agent waits appears in the reply as `(coder): …`, and a colleague's own colleague as `(coder › tester): …`;
+  tool calls stay in the reasoning stream. `thinking` keeps only the first line of each message in the reasoning, `off` shows
+  none. Jobs and hand-offs never put them in their result. Each agent can override the setting for itself (Endpoints → edit →
+  *colleague messages*); blank follows the setting.
+
+### Fixed
+- **Colleagues dying before they could report.** A streamed reply sent nothing while the agent waited on a colleague (or any
+  long tool), so a proxy or client such as Open WebUI timed the idle connection out; the dropped connection aborted the
+  orchestrator's turn and, with it, the colleague's. Streamed replies now send an invisible SSE comment every
+  `STREAM_KEEPALIVE_MS` (15 s; 0 turns it off). A hand-off that fails now tells the caller what the colleague had written so
+  far, what happened to its container (killed for memory, gone), and that its conversation is kept so it can be asked to
+  continue, instead of only "it took too long".
+- **A wedged Pi could pin a chat's session forever.** Only starting a container raced against a timeout; every later
+  command (a prompt, an abort, a model switch) waited however long Pi took, with no backstop, so a stalled Pi (not
+  crashed, just silent) never freed the session for reaping or for the key's session cap. `PI_COMMAND_TIMEOUT_MS`
+  bounds one command's round trip, `PI_IDLE_TIMEOUT_MS` ends a turn that goes fully silent while something still
+  waits on it, and `SPAWN_TIMEOUT_MS` is now a setting instead of fixed in code.
+- **A container "recreate" or "remove" could race a message that resumed the same chat.** Stopping the old container
+  and removing it were two separate steps; a message arriving in between could build and start a fresh container
+  under the same name before the removal ran, which then destroyed it. `removeContainer` now checks the container's
+  id is still the one it meant to remove, inside the same lock a concurrent rebuild uses, and skips the removal
+  (telling the operator why) rather than destroying what was just resumed.
+- **A schedule outlived the permission that made it.** Turning off an agent's own scheduling permission, the
+  `AGENT_JOBS_ENABLED` switch, or the agent itself did not stop its jobs: they kept firing (or kept failing and
+  eventually auto-disabling themselves, with the noise that makes). Such a job is now simply not queued on its due
+  tick, and resumes on schedule, with no backlog, once the agent or its permission is back.
+- **A hung `npm install` or `git clone` reported as a plain failure.** The extension library's host install killed a
+  command that ran too long but then reported it the same as one that genuinely failed (`npm exited with code 1`),
+  with no sign it was a timeout. It now says so (`npm timed out after 10 minutes`), and only when the timeout itself
+  is what ended it — a coincidental matching exit code (the host killing it for memory, say) is not mistaken for one.
+
+### Changed
+- **One shared job tracker, instead of four copies.** The image build, host/container update, extension and package
+  install jobs each kept their own copy of the same "one at a time" guard and log-trimming logic, which had already
+  drifted (one kept 200 lines of log, the others 300). Both are now one small shared helper (`lib/jobtracker.mjs`);
+  every job keeps 300 lines.
+- **One shared package-source check**, instead of two copies that had already drifted in wording (`lib/packagesource.mjs`),
+  used by both the extension library and a key's or agent's own Pi packages.
+
+### Fixed (continued)
+- **Force-removing an image whose stopped container refused to go** removed the image anyway, discarding the
+  container-removal failure. It now stops and names the container, the same way the Containers page's own cleanup
+  already did (the two had drifted).
+- **Deleting a key could stick partway** if one of its teams failed to delete cleanly (its own agents and jobs
+  already gone). `deleteTeamsOfKey` now tolerates one bad team the same way `deleteAgentsOfKey` already does.
+- **A team's port being taken on restart was silent.** An agent's own port being taken raises an alert and an
+  audit row, so a client with the old address learns to update it; a team's equivalent fallback did the same
+  thing with neither. It now matches.
+- **A wizard package install could be silently dropped.** The package job tracker is global, not per agent, so
+  two agents created around the same time (or an operator installing a package elsewhere) could make the
+  wizard's own install find the tracker busy — and it gave up with no log, no audit, while still reporting the
+  package as queued. It now waits the busy job out, and a genuine failure is recorded, not swallowed.
+- **A transient failure to reach the bridge socket at container start disabled a chat's model providers and
+  its delegate, schedule and model-switch tools for the container's whole life**, with no retry. The one call
+  this could happen to (fetching the model catalogue, before anything else loads) now retries a few times and,
+  failing that, continues with an empty catalogue instead of taking the rest of the extension down with it.
+- **A client that sends only images, with no explicit session id, got a brand-new session (and container) on
+  every single request** — nothing to derive a stable id from. An image-only first message now seeds one from
+  the image itself.
+
+### Added (continued)
+- **`AGENT_MAX_PER_KEY` / `TEAM_MAX_PER_KEY`** (both default 50): a cap on agent endpoints and teams per key,
+  matching every sibling resource (jobs, schedules, delegation depth, team steps). Each endpoint opens its own
+  port from `AGENT_PORT_RANGE`, which had no guard against a scripted bulk-create exhausting it.
+
+### Changed (continued)
+- Dashboard JSON responses across the API-key, agent, container and host-Pi routes, the bundle/package routes
+  and the file-browser routes now go through one shared `sendJson(res, status, value, {noStore})` instead of
+  each repeating the same three lines (one copy, in `lib/profiles.mjs`, had already drifted into its own
+  same-shaped `sendJsonHttp` function). An unused `node:path` import was also removed from `lib/http.mjs`.
+
+### Testing
+- Direct coverage added for several things that previously had none: `chatCompletions` itself (streamed and
+  non-streamed, `X-Session-Id` resumption, audio rejection, the spend-cap ordering) over a real HTTP request
+  against a fully scripted container; the dashboard's brute-force login backoff (not just one wrong password);
+  the SSRF guard's actual wiring (`fetchImage`/`guardedLookup`), not only the address blocklist; and the
+  workspace file API (`/v1/piper/files`) and the dashboard's file browser (list, text edit with its conflict
+  check, mkdir, move, delete, upload/download/delete, the workspace quota), both run against the real profile
+  helper script rather than mocked away.
+
 ## [0.7.0] - 2026-10-01
 
 ### Added
