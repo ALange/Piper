@@ -91,7 +91,7 @@ strip: between them they name most problems. The log is `journalctl -u piper` (s
 | "You have no colleagues…" | No other enabled agent on the key, or all are already in the chain | Create or enable agents on the same key |
 | "hand-offs may be chained N deep" | `DELEGATE_MAX_DEPTH` | Do the part yourself, or raise the limit |
 | "… could not do it: daily spend limit reached" | The key's cap (hand-offs spend the key's money) | Raise the cap |
-| "… took too long" | `DELEGATE_TIMEOUT_MS` | Raise it, or give a smaller task |
+| "… ran out of time" | `DELEGATE_TIMEOUT_MS` | Raise it, or give a smaller task |
 | A team answers 409 "agent was deleted" | A step's agent no longer exists | Edit the team: delete and recreate with current agents |
 | A team answers 500 "step 2 of 3 (coder) failed: …" | That agent's turn failed; the message says why | Fix that agent (model, limits), or try the agent directly |
 | Follow-ups to a team forget earlier work | No session id sent, so each request is a new conversation | Send `X-Session-Id` |

@@ -35,7 +35,12 @@ function request(path, body, signal) {
 async function readJson(response) {
 	let text = "";
 	for await (const chunk of response) text += chunk;
-	const data = JSON.parse(text);
+	let data;
+	try {
+		data = JSON.parse(text);
+	} catch {
+		throw new Error(`the gateway answered with invalid JSON (HTTP ${response.statusCode})`);
+	}
 	if (response.statusCode !== 200) throw new Error(data?.error ?? `bridge answered HTTP ${response.statusCode}`);
 	return data;
 }
@@ -142,9 +147,30 @@ function forward(model, context, options) {
 	return stream;
 }
 
+/**
+ * The model catalogue, tolerating a transient failure to reach the bridge socket right at startup (unlike
+ * every later call in this file, which is wrapped at its own call site, this one runs before anything else
+ * and a plain throw here would take the whole extension down with it: the delegate, schedule and model-switch
+ * tools below too, not just the model providers). A few quick retries, then an empty catalogue rather than
+ * none of it: Pi still loads, with its own directly-configured models and every non-model tool working.
+ */
+async function fetchCatalog(tries = 5, delayMs = 400) {
+	for (let attempt = 1; ; attempt++) {
+		try {
+			return await readJson(await request("/models"));
+		} catch (err) {
+			if (attempt >= tries) {
+				process.stderr.write(`piper-bridge: could not reach the gateway for its model catalogue (${err?.message ?? err}); continuing without its models\n`);
+				return { providers: [] };
+			}
+			await new Promise((r) => setTimeout(r, delayMs));
+		}
+	}
+}
+
 export default async function piperBridge(pi) {
 	if (!SOCKET) return;
-	const catalog = await readJson(await request("/models"));
+	const catalog = await fetchCatalog();
 	for (const provider of catalog.providers) {
 		pi.registerProvider(provider.id, {
 			name: provider.name,
@@ -241,6 +267,110 @@ export default async function piperBridge(pi) {
 					return reply(answer.text);
 				} catch (err) {
 					return reply(`Delegation failed: ${err?.message ?? err}`);
+				}
+			},
+		});
+	}
+
+	// Schedules: an agent may book a recurring task on the gateway. The job lives on the server, so it runs on its
+	// schedule even when this chat's container is stopped; each run starts the container again. Only the agent's own
+	// schedules, and it cannot set a completion webhook (that stays the operator's).
+	if (process.env.PIPER_SCHEDULE === "1") {
+		const reply = (value) => ({ content: [{ type: "text", text: value }], details: {} });
+		const when = (s) => {
+			if (!s) return "unknown";
+			if (s.kind === "interval") return `every ${s.every} ${s.unit}`;
+			if (s.kind === "daily") return `every day at ${s.at}`;
+			if (s.kind === "weekly") return `on weekdays ${(s.days ?? []).join(",")} at ${s.at}`;
+			if (s.kind === "once") return `once at ${new Date(s.at).toISOString()}`;
+			return String(s.kind ?? "manual");
+		};
+		pi.registerTool({
+			name: "piper_schedule",
+			label: "Schedule a recurring task",
+			description:
+				"Book a task to run again later on the gateway, even after this chat ends or its container is stopped: the server starts the container again to run it. " +
+				"Use it when the user asks you to check, watch or repeat something every so often, daily or at a set time. The prompt is what you will be asked each run, so write it as a self-contained instruction. " +
+				"Forms of schedule: {kind:'interval', every:<whole number>, unit:'minutes'|'hours'} (at most 7 days), {kind:'daily', at:'HH:MM'}, {kind:'weekly', days:[0-6, 0 is Sunday], at:'HH:MM'}, {kind:'once', at:'<ISO date and time>'}. Times are the gateway's local time. " +
+				"Each run starts fresh but is shown your last few reports, so compare with them. With the default notify ('changes') the owner is told only when you have something new: if nothing changed since your last report, reply with exactly NO_CHANGE. " +
+				"Results are shown to the user at the top of their next reply in this agent's chat. A task that fails several times in a row is switched off automatically.",
+			promptSnippet: "Book a recurring task that runs on the gateway",
+			parameters: {
+				type: "object",
+				properties: {
+					name: { type: "string", description: "A short name for the task." },
+					prompt: { type: "string", description: "What to do each time it runs, as a complete instruction." },
+					schedule: {
+						type: "object",
+						description: 'When to run it, e.g. {"kind":"interval","every":6,"unit":"hours"} or {"kind":"daily","at":"07:30"}.',
+						properties: {
+							kind: { type: "string", description: "interval, daily, weekly, once or manual." },
+							every: { type: "number", description: "With interval: how many minutes or hours between runs." },
+							unit: { type: "string", description: "With interval: minutes or hours." },
+							at: { type: "string", description: "With daily or weekly: HH:MM. With once: an ISO date and time." },
+							days: { type: "array", items: { type: "number" }, description: "With weekly: weekdays, 0 is Sunday." },
+						},
+						required: ["kind"],
+					},
+					session_mode: { type: "string", description: "memory (default) starts each run fresh but shows it your last reports; continue keeps one growing conversation; fresh starts with no memory at all." },
+					notify: { type: "string", description: "changes (default): tell the owner only when the report differs from the last one; always: tell them every run; never: keep results on the gateway only." },
+					timeout_ms: { type: "number", description: "How long one run may take, in milliseconds. Leave out for the default (10 minutes)." },
+				},
+				required: ["name", "prompt", "schedule"],
+			},
+			async execute(_toolCallId, params) {
+				try {
+					const answer = await readJson(await request("/schedule", { name: params?.name, prompt: params?.prompt, schedule: params?.schedule, sessionMode: params?.session_mode, notify: params?.notify, timeoutMs: params?.timeout_ms }));
+					const s = answer.schedule;
+					return reply(`Scheduled "${s.name}" (id ${s.id}): ${when(s.schedule)}${s.nextRunAt ? `, next run ${new Date(s.nextRunAt).toISOString()}` : ""}. It runs on the gateway, so it will run even if this chat is idle.`);
+				} catch (err) {
+					return reply(`Could not schedule it: ${err?.message ?? err}`);
+				}
+			},
+		});
+		pi.registerTool({
+			name: "piper_schedules",
+			label: "List schedules",
+			description: "List the recurring tasks you have booked, with their ids and when each runs next.",
+			promptSnippet: "List the recurring tasks you booked",
+			parameters: { type: "object", properties: {} },
+			async execute() {
+				try {
+					const { schedules } = await readJson(await request("/schedule"));
+					if (!schedules.length) return reply("You have no scheduled tasks.");
+					return reply(schedules.map((s) => `- ${s.id} "${s.name}": ${when(s.schedule)}, ${s.enabled ? "on" : `off${s.disabledReason ? ` (${s.disabledReason})` : ""}`}${s.nextRunAt ? `, next ${new Date(s.nextRunAt).toISOString()}` : ""}${s.last ? `, last run ${s.last.status}${s.last.preview ? `: ${String(s.last.preview).replace(/\s+/g, " ")}` : ""}` : ""}`).join("\n"));
+				} catch (err) {
+					return reply(`Could not list them: ${err?.message ?? err}`);
+				}
+			},
+		});
+		pi.registerTool({
+			name: "piper_unschedule",
+			label: "Remove a schedule",
+			description: "Remove one of your scheduled tasks, by its id, so it stops running.",
+			promptSnippet: "Remove a scheduled task you booked",
+			parameters: { type: "object", properties: { id: { type: "string", description: "The schedule's id, from piper_schedules." } }, required: ["id"] },
+			async execute(_toolCallId, params) {
+				try {
+					await readJson(await request("/schedule/remove", { id: String(params?.id ?? "") }));
+					return reply(`Removed schedule ${params?.id}.`);
+				} catch (err) {
+					return reply(`Could not remove it: ${err?.message ?? err}`);
+				}
+			},
+		});
+		pi.registerTool({
+			name: "piper_run_schedule",
+			label: "Run a schedule now",
+			description: "Start one of your scheduled tasks immediately, without waiting for its next time.",
+			promptSnippet: "Run a scheduled task now",
+			parameters: { type: "object", properties: { id: { type: "string", description: "The schedule's id, from piper_schedules." } }, required: ["id"] },
+			async execute(_toolCallId, params) {
+				try {
+					const { run } = await readJson(await request("/schedule/run", { id: String(params?.id ?? "") }));
+					return reply(`Started schedule ${params?.id} now (run ${run.id}, ${run.status}).`);
+				} catch (err) {
+					return reply(`Could not start it: ${err?.message ?? err}`);
 				}
 			},
 		});

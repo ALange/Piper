@@ -964,7 +964,9 @@
           <span id="jobdays" hidden></span>
         </div>
         <div class="keyform" style="margin-top:8px">
-          <select id="jobmode" title="continue: one conversation, so the agent remembers earlier runs. fresh: a new conversation each time."><option value="fresh">fresh conversation each run</option><option value="continue">continue one conversation</option></select>
+          <select id="jobmode" title="continue: one conversation, so the agent remembers earlier runs. fresh: a new conversation each time."><option value="fresh">fresh conversation each run</option><option value="continue">continue one conversation</option><option value="memory">fresh, shown its last reports</option></select>
+          <select id="jobnotify" title="What a finished run tells the owner: in the next chat reply of this key/agent, and on the alert webhook. changes: only when the report differs (the agent answers NO_CHANGE when nothing is new)."><option value="never">tell nobody</option><option value="changes">tell on change</option><option value="always">tell every run</option></select>
+          <input id="jobcap" type="number" min="0" step="0.1" placeholder="cap" style="width:90px" title="most dollars this job may spend in 24 hours; 0 none; blank is the default (agent-made schedules: Settings → Jobs)"> <span class="hint small">$ per day</span>
           <input id="jobtimeout" type="number" min="1" max="120" value="10" style="width:90px" title="minutes before the run is stopped"> <span class="hint small">minutes at most</span>
           <input id="jobhook" placeholder="webhook URL for the result (optional)">
           <label class="ctrl"><input id="jobon" type="checkbox" checked> enabled</label>
@@ -1033,6 +1035,8 @@
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">model</label><input type="text" id="epedmodel" placeholder="provider/model, blank = the default"><select id="epedthink"></select></div>
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">description</label><input type="text" id="epeddesc" placeholder="what it is for: an orchestrator (or any agent that hands off work) chooses colleagues by this" maxlength="300"></div>
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">hand-offs</label><label class="ctrl" title="Gives this agent two tools: list its colleagues and hand a task to one, then use the answer. Only agents of the same key, bounded in depth; each hand-off is a turn that counts against the key."><input type="checkbox" id="epeddeleg"> may hand work to the other agents of its key</label></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px" for="epedmsgs">colleague messages</label><select id="epedmsgs" title="How this agent shows what its colleagues write while it waits for them. Follow the setting uses Settings → Agent → DELEGATE_MESSAGES."><option value="">follow the setting</option><option value="chat">in the reply, as (name): message</option><option value="thinking">first line only, in the reasoning</option><option value="off">not shown</option></select></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">schedules</label><label class="ctrl" title="Gives this agent tools to create, list, run and remove its own recurring tasks. A task lives on the gateway, so it runs on its schedule even when this agent's container is stopped; each run starts the container again. Needs AGENT_JOBS_ENABLED. Turning this off, or disabling the agent, pauses its schedules rather than deleting them; they resume by themselves once it is back on."><input type="checkbox" id="epedsched"> may schedule recurring tasks for itself</label></div>
         <div style="margin-bottom:8px"><label class="hint" for="epedinstr">instructions (the agent's AGENTS.md: who it is and how it works)</label><textarea id="epedinstr" rows="9" style="width:100%;box-sizing:border-box;background:#141414;color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:12px"></textarea></div>
         <div id="epedctr"></div>
         <div class="fieldrow" style="margin-top:8px"><button id="epedsave">save</button><button id="epedcancel">close</button><span class="hint small" id="epednote"></span></div>
@@ -3280,7 +3284,9 @@ function renderJobs() {
     tr.appendChild(el('td', j.scheduleText));
     tr.appendChild(el('td', j.enabled ? when(j.nextRunAt) : '-'));
     tr.appendChild(jobStatusCell(j));
-    tr.appendChild(el('td', j.enabled ? 'yes' : 'no'));
+    var on = el('td', j.enabled ? 'yes' : 'no');
+    if (j.disabledReason) { on.title = j.disabledReason; on.appendChild(el('span', ' stopped')).className = 'badge'; }
+    tr.appendChild(on);
     var act = el('td');
     [['run', 'run now'], ['runs', 'history'], ['edit', 'edit'], ['del', 'delete']].forEach(function (a) {
       var b = el('button', a[1]); b.setAttribute('data-job', j.id); b.setAttribute('data-act', a[0]);
@@ -3332,6 +3338,8 @@ function openJobForm(job) {
     $('jobdays').appendChild(l);
   });
   $('jobmode').value = job ? job.sessionMode : 'fresh';
+  $('jobnotify').value = job ? job.notify : 'never';
+  $('jobcap').value = job && job.dailyCostCap !== null ? job.dailyCostCap : '';
   $('jobtimeout').value = job ? Math.round(job.timeoutMs / 60000) || 1 : 10;
   $('jobhook').value = job && job.webhookUrl || '';
   $('jobon').checked = job ? job.enabled : true;
@@ -3412,7 +3420,7 @@ $('jobdetailclose').addEventListener('click', function () { JOB_OPEN = null; $('
 $('jobkind').addEventListener('change', jobKindFields);
 $('jobkey').addEventListener('change', jobAgents);
 $('jobsave').addEventListener('click', function () {
-  var body = { name: $('jobname').value.trim(), prompt: $('jobprompt').value, model: $('jobmodel').value.trim() || null, agentId: $('jobagent').value || null, schedule: jobSchedule(), sessionMode: $('jobmode').value, timeoutMs: String(Number($('jobtimeout').value) * 60000), webhookUrl: $('jobhook').value.trim(), enabled: $('jobon').checked };
+  var body = { name: $('jobname').value.trim(), prompt: $('jobprompt').value, model: $('jobmodel').value.trim() || null, agentId: $('jobagent').value || null, schedule: jobSchedule(), sessionMode: $('jobmode').value, notify: $('jobnotify').value, dailyCostCap: $('jobcap').value === '' ? null : Number($('jobcap').value), timeoutMs: String(Number($('jobtimeout').value) * 60000), webhookUrl: $('jobhook').value.trim(), enabled: $('jobon').checked };
   var p;
   if (JOB_EDIT) p = epPost('dashboard/jobs/' + JOB_EDIT, body, 'PATCH');
   else { body.keyId = $('jobkey').value; p = epPost('dashboard/jobs', body); }
@@ -4514,6 +4522,8 @@ function openEndpointEditor(a) {
   $('epedname').value = a.name;
   $('epeddesc').value = a.description || '';
   $('epeddeleg').checked = Boolean(a.canDelegate);
+  $('epedmsgs').value = a.delegateMessages || '';
+  $('epedsched').checked = Boolean(a.canSchedule);
   $('epedmodel').value = a.model || '';
   epFill($('epedthink'), EP_THINK, 'thinking: default');
   $('epedthink').value = a.thinking || '';
@@ -4529,7 +4539,7 @@ function openEndpointEditor(a) {
 }
 $('epedsave').addEventListener('click', function () {
   if (!EP_EDIT) return;
-  var body = { description: $('epeddesc').value.trim(), canDelegate: $('epeddeleg').checked, name: $('epedname').value.trim(), model: $('epedmodel').value.trim() || null, thinking: $('epedthink').value || null, container: epReadEdit() };
+  var body = { description: $('epeddesc').value.trim(), canDelegate: $('epeddeleg').checked, delegateMessages: $('epedmsgs').value || null, canSchedule: $('epedsched').checked, name: $('epedname').value.trim(), model: $('epedmodel').value.trim() || null, thinking: $('epedthink').value || null, container: epReadEdit() };
   if (!$('epedinstr').disabled) body.instructions = $('epedinstr').value;
   $('epedsave').disabled = true; $('epednote').textContent = 'saving…';
   epPost('dashboard/agents/' + EP_EDIT, body).then(function (j) { EP_DATA = j; renderEndpoints(j); $('epednote').textContent = 'saved. New chats use the new instructions and model; running chats pick the instructions up when they next start.'; })
