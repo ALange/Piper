@@ -2,6 +2,41 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Scheduled tasks reach their owner.** A job has a `notify` setting (never, changes, always). A finished run is put in an
+  inbox that the next reply of a chat of that key and agent shows at the top, once, and is sent to the alert webhook
+  (`JOBS_NOTIFY_ALERTS`). With `changes` nothing is sent when the task answers `NO_CHANGE` or repeats its last report.
+  Schedules an agent makes for itself default to `changes`; the operator's jobs to `never`.
+- **Previous-run context.** A new session mode, `memory`, starts every run fresh but shows it its last three real reports, so
+  a recurring check can compare without a conversation that grows forever. It is the default for an agent's own schedules.
+- **Guards for unattended runs.** A job whose scheduled runs fail `JOBS_MAX_FAILURES` times in a row (default 3) is switched
+  off and the owner is told; turning it on again resets the count. A job has a 24-hour spend cap (`AGENT_JOBS_DAILY_COST`,
+  default $1, for schedules agents made; settable per job by the operator): over it, scheduled runs are skipped and the owner is
+  told once. The Jobs page has the new fields.
+
+### Added
+- **Live progress of hand-offs.** While an agent waits for a colleague, what the colleague does appears in the waiting
+  agent's reasoning stream (Open WebUI's "Thinking"): `[coder] ▸ started: …`, each tool it runs (`▸ bash: …`), failures,
+  the first line of each message it writes (`› …`), a sign of life when it is quiet for 20 s, and `✓ done in 42s` or
+  `✗ stopped: …`. A colleague's own colleagues are indented under it. `DELEGATE_PROGRESS` chooses off, tools or full
+  (default); it works for every client because it uses the reasoning field, and also in jobs and the Playground.
+
+- **Colleague messages in the reply.** With `DELEGATE_MESSAGES` = chat (the default), each finished message a colleague writes
+  while the agent waits appears in the reply as `(coder): …`, and a colleague's own colleague as `(coder › tester): …`;
+  tool calls stay in the reasoning stream. `thinking` keeps only the first line of each message in the reasoning, `off` shows
+  none. Jobs and hand-offs never put them in their result. Each agent can override the setting for itself (Endpoints → edit →
+  *colleague messages*); blank follows the setting.
+
+### Fixed
+- **Colleagues dying before they could report.** A streamed reply sent nothing while the agent waited on a colleague (or any
+  long tool), so a proxy or client such as Open WebUI timed the idle connection out; the dropped connection aborted the
+  orchestrator's turn and, with it, the colleague's. Streamed replies now send an invisible SSE comment every
+  `STREAM_KEEPALIVE_MS` (15 s; 0 turns it off). A hand-off that fails now tells the caller what the colleague had written so
+  far, what happened to its container (killed for memory, gone), and that its conversation is kept so it can be asked to
+  continue, instead of only "it took too long".
+
 ## [0.7.0] - 2026-10-01
 
 ### Added

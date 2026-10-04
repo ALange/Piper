@@ -131,7 +131,7 @@ the other agent with its own instructions, skills, files and container, run with
 apply and the cost is the key's. Colleagues are only the **enabled agents of the same key**: never itself, never anyone
 already waiting in the chain (a call back would never be answered), and the chain is at most `DELEGATE_MAX_DEPTH` deep. A
 colleague keeps its conversation across the calls of one chat. If the caller is stopped (interrupt, kill), so is the
-colleague's turn; a hand-off that takes longer than `DELEGATE_TIMEOUT_MS` is stopped and the caller told. Each hand-off is
+colleague's turn; a hand-off that takes longer than `DELEGATE_TIMEOUT_MS` is stopped and the caller told (with what the colleague had written so far). While it works, its messages appear in the caller's reply as `(name): message` (`DELEGATE_MESSAGES`: chat, thinking, off; each agent can override it in its Endpoints editor) and its tool calls in the reasoning stream (`DELEGATE_PROGRESS`: off, tools, full). Each hand-off is
 a `runtime.delegate` audit row and a note in the live view.
 
 ### The orchestrator template
@@ -203,8 +203,19 @@ runs) or start fresh each time. With a **webhook URL** the finished run is POSTe
 `X-Piper-Signature` header (`t=<seconds>,v1=<hex>`: HMAC-SHA256 of `<seconds>.<body>` with the job's signing secret,
 shown once); a failed delivery is retried once and the outcome is written on the run.
 
+**Unattended runs.** Three things make a job safe to leave running:
+
+- **Results reach you.** *Tell* is never, on change or every run. A result waits in an inbox and is shown at the top of the
+  next reply of a chat of that key and agent (once), and goes to the alert webhook too. On change, a task that answers
+  `NO_CHANGE`, or repeats its last report, is not delivered; failures always are (unless never).
+- **Memory.** The *fresh, shown its last reports* mode starts every run clean but puts the last three real reports in front of
+  the task, so it can compare. It is the default for schedules an agent makes for itself (with *tell on change*).
+- **Guards.** After `JOBS_MAX_FAILURES` scheduled runs in a row fail, the job is switched off (the row says why) and you are
+  told; turning it on again resets the count. A job over its 24-hour **spend cap** skips scheduled runs (you are told once);
+  manual runs ignore it. Schedules agents make get `AGENT_JOBS_DAILY_COST` unless you set a cap on the job (0 for none).
+
 Settings (Settings → Jobs): `JOBS_ENABLED`, `JOBS_MAX_PARALLEL`, `JOBS_MIN_INTERVAL_MS`, `JOBS_MAX_PER_KEY`,
-`JOBS_RESULT_DAYS`.
+`JOBS_RESULT_DAYS`, `JOBS_MAX_FAILURES`, `JOBS_NOTIFY_ALERTS`, `AGENT_JOBS_DAILY_COST`.
 
 ## Files & profiles
 

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import http from "node:http";
 import { existsSync, lstatSync, mkdirSync, mkdtempSync, statSync, readdirSync, readFileSync, rmSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir, homedir } from "node:os";
 import { dirname, join, relative } from "node:path";
@@ -6101,6 +6102,300 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	J.stopJobs();
 }
 
+// Phase 2: agent-created schedules (the server side of the bridge's scheduling tools).
+{
+	const { maySchedule, schedulerFor, getJob, createJob, deleteJobsOf } = await import("./server.mjs");
+	const rec = apiKeys.create({ name: "sched-agent-key" });
+	const key = rec.record ?? rec;
+	const agent = agents.create({ keyId: key.id, name: "ticker" });
+	const otherAgent = agents.create({ keyId: key.id, name: "other" });
+	const record = { keyId: key.id, agentId: agent.id, delegateChain: [], delegateDepth: 0 };
+	config.AGENT_JOBS_ENABLED = true;
+	config.AGENT_JOBS_MAX_PER_AGENT = 10;
+
+	assert.equal(maySchedule(record), false, "off until the agent's own switch is on");
+	agents.update(agent.id, { canSchedule: true });
+	agents.update(otherAgent.id, { canSchedule: true });
+	assert.equal(maySchedule(record), true);
+
+	const sched = schedulerFor(record);
+	assert.equal(sched.list().length, 0);
+	const made = sched.create({ name: "check", prompt: "check the thing", schedule: { kind: "interval", every: 6, unit: "hours" } });
+	assert.match(made.id, /^j[0-9a-f]{12}$/);
+	assert.equal(made.sessionMode, "memory", "a recurring task starts fresh but is shown its last reports");
+	assert.equal(made.notify, "changes", "and tells its owner only when something changed");
+	assert.equal(made.scheduleText, "every 6 hours");
+	assert.equal(getJob(made.id).origin, "agent", "it is marked as the agent's own");
+	// Every schedule kind is accepted, and a one-off too.
+	sched.create({ name: "daily", prompt: "p", schedule: { kind: "daily", at: "07:30" } });
+	sched.create({ name: "once", prompt: "p", schedule: { kind: "once", at: Date.now() + 3_600_000 } });
+	assert.equal(sched.list().length, 3);
+
+	// An operator's job for the same agent is neither listed nor removable through the tool.
+	const operatorJob = createJob({ keyId: key.id, agentId: agent.id, name: "operator", prompt: "p" }).job;
+	assert.equal(sched.list().length, 3, "only the agent's own schedules are listed");
+	assert.throws(() => sched.remove({ id: operatorJob.id }), /no such schedule/);
+	assert.throws(() => sched.run({ id: operatorJob.id }), /no such schedule/);
+
+	// Another agent of the same key cannot touch them either.
+	const otherSched = schedulerFor({ keyId: key.id, agentId: otherAgent.id });
+	const theirs = otherSched.create({ name: "theirs", prompt: "p", schedule: { kind: "manual" } });
+	assert.throws(() => sched.remove({ id: theirs.id }), /no such schedule/);
+	assert.throws(() => otherSched.remove({ id: made.id }), /no such schedule/);
+
+	// The per-agent cap counts the agent's own schedules, not the operator's.
+	config.AGENT_JOBS_MAX_PER_AGENT = 3;
+	assert.throws(() => sched.create({ name: "over", prompt: "p", schedule: { kind: "weekly", days: [1], at: "06:00" } }), /the most it may have/);
+
+	// The global switch is a kill switch for every agent.
+	config.AGENT_JOBS_ENABLED = false;
+	assert.equal(maySchedule(record), false);
+	assert.throws(() => sched.list(), /may not create schedules/);
+	assert.throws(() => schedulerFor(record), /may not create schedules/);
+	config.AGENT_JOBS_ENABLED = true;
+
+	assert.ok(deleteJobsOf({ keyId: key.id }) >= 4);
+	agents.remove(agent.id);
+	agents.remove(otherAgent.id);
+	config.AGENT_JOBS_MAX_PER_AGENT = 10;
+}
+
+// Unattended runs: delivery to the owner, the previous-report context, auto-disable and the daily cost cap.
+{
+	const J = await import("./server.mjs");
+	const { createJob, updateJob, queueRun, getJob, getRun, listRuns, setJobRunner, takeInbox, inboxNotice, deleteJobsOf, scheduledJobView } = J;
+	const rec = apiKeys.create({ name: "unattended-key" });
+	const key = rec.record ?? rec;
+	const agent = agents.create({ keyId: key.id, name: "watcher" });
+	const waitFor = async (fn, ms = 3000) => { const end = Date.now() + ms; while (Date.now() < end) { const v = fn(); if (v) return v; await new Promise((r) => setTimeout(r, 15)); } throw new Error("timed out waiting"); };
+	const prompts = [];
+	let reply = () => ({ text: "x", cost: 0 });
+	setJobRunner(async ({ prompt }) => {
+		prompts.push(prompt);
+		const r = await reply(prompt);
+		return { text: r.text, usage: { total_tokens: 1 }, cost: r.cost ?? 0, scopedId: "s" };
+	});
+	const runAndWait = async (job, trigger = "manual") => {
+		const run = queueRun(job.id, trigger);
+		await waitFor(() => !["queued", "running"].includes(getRun(run.id).status));
+		return getRun(run.id);
+	};
+	// The alert webhook receives results too.
+	const received = [];
+	const hook = http.createServer((req, res) => { let b = ""; req.on("data", (d) => (b += d)); req.on("end", () => { received.push(JSON.parse(b)); res.end("ok"); }); });
+	await new Promise((r) => hook.listen(0, "127.0.0.1", r));
+	const hookUrl = `http://127.0.0.1:${hook.address().port}/`;
+
+	// Notify "changes": a new report is delivered, the same one and a NO_CHANGE reply are not.
+	const watch = createJob({ keyId: key.id, agentId: agent.id, name: "price", prompt: "check the price", sessionMode: "memory", notify: "changes" }).job;
+	assert.equal(watch.notify, "changes");
+	reply = () => ({ text: "price is 10" });
+	await runAndWait(watch);
+	assert.match(prompts[0], /first one/, "the first run says there are no earlier reports");
+	assert.match(prompts[0], /exactly NO_CHANGE/, "a job that notifies on change is told how to say nothing changed");
+	assert.ok(prompts[0].endsWith("Task:\ncheck the price"));
+	let inbox = takeInbox(key.id, agent.id);
+	assert.equal(inbox.length, 1);
+	assert.equal(inbox[0].text, "price is 10");
+	assert.equal(takeInbox(key.id, agent.id).length, 0, "taken once");
+	reply = () => ({ text: "price is 10" });
+	await runAndWait(watch);
+	assert.match(prompts[1], /report of .*\n.*price is 10/s, "the earlier report is shown to the next run");
+	assert.equal(takeInbox(key.id, agent.id).length, 0, "the same report is not delivered again");
+	reply = () => ({ text: "NO_CHANGE" });
+	await runAndWait(watch);
+	assert.equal(takeInbox(key.id, agent.id).length, 0, "NO_CHANGE is not delivered");
+	reply = () => ({ text: "price is 12" });
+	await runAndWait(watch);
+	assert.match(prompts[3], /price is 10/);
+	assert.doesNotMatch(prompts[3], /NO_CHANGE\s*---/, "a NO_CHANGE reply is not offered as an earlier report");
+	inbox = takeInbox(key.id, agent.id);
+	assert.deepEqual(inbox.map((i) => i.text), ["price is 12"]);
+	assert.match(inboxNotice(inbox), /^\[scheduled: price · .*\]\nprice is 12$/);
+	assert.equal(takeInbox(key.id, null).length, 0, "the key's own chats do not get the agent's results");
+	assert.equal(takeInbox(null, agent.id).length, 0);
+
+	// "always" and "never"; failures are told unless "never".
+	const loud = createJob({ keyId: key.id, agentId: agent.id, name: "loud", prompt: "p", notify: "always" }).job;
+	const quiet = createJob({ keyId: key.id, agentId: agent.id, name: "quiet", prompt: "p" }).job;
+	assert.equal(quiet.notify, "never", "an operator's job is quiet unless asked");
+	reply = () => ({ text: "same" });
+	await runAndWait(loud); await runAndWait(loud); await runAndWait(quiet);
+	assert.equal(takeInbox(key.id, agent.id).length, 2, "always tells every run, never none");
+	reply = () => { throw new Error("boom"); };
+	await runAndWait(loud); await runAndWait(quiet);
+	inbox = takeInbox(key.id, agent.id);
+	assert.deepEqual(inbox.map((i) => i.title), ["loud: error"]);
+	assert.throws(() => createJob({ keyId: key.id, name: "x", prompt: "p", notify: "sometimes" }), /notify is never/);
+	assert.throws(() => createJob({ keyId: key.id, name: "x", prompt: "p", dailyCostCap: -1 }), /cost cap/);
+
+	// The alert webhook gets the result as well.
+	config.ALERT_WEBHOOK_URL = hookUrl;
+	reply = () => ({ text: "price is 99" });
+	await runAndWait(watch);
+	await waitFor(() => received.length === 1);
+	assert.match(received[0].message, /price\nprice is 99/);
+	assert.equal(received[0].details.job, watch.id);
+	config.JOBS_NOTIFY_ALERTS = false;
+	reply = () => ({ text: "price is 100" });
+	await runAndWait(watch);
+	await new Promise((r) => setTimeout(r, 100));
+	assert.equal(received.length, 1, "switched off: nothing is sent");
+	config.JOBS_NOTIFY_ALERTS = true;
+	takeInbox(key.id, agent.id);
+
+	// A job whose scheduled runs keep failing is switched off, and the owner is told even if the job is quiet.
+	config.JOBS_MAX_FAILURES = 2;
+	reply = () => { throw new Error("tool is broken"); };
+	const flaky = createJob({ keyId: key.id, agentId: agent.id, name: "flaky", prompt: "p", schedule: { kind: "interval", every: 1, unit: "hours" } }).job;
+	await runAndWait(flaky);
+	await runAndWait(flaky);
+	assert.equal(getJob(flaky.id).enabled, 1, "manual failures do not count");
+	assert.equal(getJob(flaky.id).fail_streak, 0);
+	await runAndWait(flaky, "schedule");
+	assert.equal(getJob(flaky.id).enabled, 1);
+	reply = () => ({ text: "fine" });
+	await runAndWait(flaky, "schedule");
+	assert.equal(getJob(flaky.id).fail_streak, 0, "a success starts the count over");
+	reply = () => { throw new Error("tool is broken"); };
+	await runAndWait(flaky, "schedule");
+	await runAndWait(flaky, "schedule");
+	const off = scheduledJobView(getJob(flaky.id));
+	assert.equal(off.enabled, false);
+	assert.equal(off.nextRunAt, null);
+	assert.match(off.disabledReason, /2 scheduled runs in a row failed .*tool is broken/);
+	inbox = takeInbox(key.id, agent.id);
+	assert.deepEqual(inbox.map((i) => i.title), ["flaky: switched off"]);
+	await waitFor(() => received.some((r) => /switched off/.test(r.message)));
+	const on = updateJob(flaky.id, { enabled: true }).job;
+	assert.equal(on.enabled, true);
+	assert.equal(on.failStreak, 0, "turning it on again resets the count");
+	assert.equal(on.disabledReason, null);
+	assert.ok(on.nextRunAt > Date.now());
+	config.ALERT_WEBHOOK_URL = "";
+	// 0 never switches a job off.
+	config.JOBS_MAX_FAILURES = 0;
+	for (let i = 0; i < 3; i++) await runAndWait(flaky, "schedule");
+	assert.equal(getJob(flaky.id).enabled, 1);
+	config.JOBS_MAX_FAILURES = 3;
+
+	// The daily cost cap skips scheduled runs once, tells the owner once, and never blocks a manual run.
+	const spendy = createJob({ keyId: key.id, agentId: agent.id, name: "spendy", prompt: "p", dailyCostCap: 0.05, schedule: { kind: "interval", every: 1, unit: "hours" } }).job;
+	assert.equal(spendy.dailyCostCap, 0.05);
+	reply = () => ({ text: "ok", cost: 0.03 });
+	assert.equal((await runAndWait(spendy, "schedule")).status, "ok");
+	assert.equal((await runAndWait(spendy, "schedule")).status, "ok");
+	const capped = await runAndWait(spendy, "schedule");
+	assert.equal(capped.status, "skipped");
+	assert.match(capped.error, /daily cost cap reached: \$0\.06 spent .* \$0\.05/);
+	await runAndWait(spendy, "schedule");
+	assert.equal(takeInbox(key.id, agent.id).filter((i) => /cost cap/.test(i.title)).length, 1, "told once, not at every tick");
+	assert.equal(getJob(spendy.id).fail_streak, 0, "a cap skip is not a failure");
+	assert.equal((await runAndWait(spendy, "manual")).status, "ok", "a manual run is the owner's decision");
+	updateJob(spendy.id, { dailyCostCap: 0 });
+	assert.equal((await runAndWait(spendy, "schedule")).status, "ok", "0 is no cap");
+	// A schedule an agent made gets the default cap; an operator's job has none.
+	config.AGENT_JOBS_DAILY_COST = 0.04;
+	const own = createJob({ keyId: key.id, agentId: agent.id, name: "own", prompt: "p", origin: "agent" }).job;
+	assert.equal(own.effectiveCostCap, 0.04);
+	assert.equal(own.dailyCostCap, null);
+	assert.equal(scheduledJobView(getJob(spendy.id)).effectiveCostCap, 0);
+	assert.equal(createJob({ keyId: key.id, name: "plain", prompt: "p" }).job.effectiveCostCap, 0);
+	config.AGENT_JOBS_DAILY_COST = 1;
+
+	// A chat shows waiting results at the top of its reply, once; a run of a job does not take them.
+	{
+		const { runPrompt } = await import("./server.mjs");
+		J.startJobs();
+		const fake = () => {
+			let handler = null;
+			return {
+				model: null,
+				subscribe: (fn) => ((handler = fn), () => {}),
+				prompt: async () => {
+					handler({ type: "message_start", message: { role: "assistant" } });
+					handler({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "Hello." } });
+					handler({ type: "message_end", message: { role: "assistant" } });
+				},
+				getLastAssistantText: () => "",
+			};
+		};
+		const chat = () => ({ keyId: key.id, agentId: agent.id, inflight: 0, queue: Promise.resolve(), sessionPromise: Promise.resolve(fake()) });
+		reply = () => ({ text: "price is 7" });
+		await runAndWait(watch);
+		const quietTurn = await runPrompt(chat(), "hi", { inbox: false });
+		assert.equal(quietTurn.text, "Hello.", "a hand-off or job turn leaves the inbox alone");
+		const shown = await runPrompt(chat(), "hi");
+		assert.match(shown.text, /^\[scheduled: price · .*\]\nprice is 7\n\nHello\.$/, "the result comes first, then the answer, with one blank line between");
+		assert.equal((await runPrompt(chat(), "hi")).text, "Hello.", "shown once");
+		// A colleague's progress lines reach the caller's reasoning stream during the turn, and the sink is gone after it.
+		const waiting = chat();
+		const session = await waiting.sessionPromise;
+		const plainPrompt = session.prompt;
+		session.prompt = async (...a) => {
+			waiting.progress("[coder] ▸ bash: ls");
+			waiting.progress("[coder] ✓ done in 2s");
+			return plainPrompt(...a);
+		};
+		const thoughts = [];
+		const withProgress = await runPrompt(waiting, "hi", { inbox: false, onThinking: (d) => thoughts.push(d) });
+		assert.equal(thoughts.join(""), "[coder] ▸ bash: ls\n[coder] ✓ done in 2s\n");
+		assert.equal(withProgress.reasoning, "[coder] ▸ bash: ls\n[coder] ✓ done in 2s\n", "and in the reasoning returned for a non-streamed reply");
+		assert.equal(waiting.progress, null, "the sink is cleared when the turn ends");
+		// A colleague's messages come into the reply as "(name): message", set apart from the agent's own words.
+		const speaking = chat();
+		const speakingSession = await speaking.sessionPromise;
+		const speakingPrompt = speakingSession.prompt;
+		speakingSession.prompt = async function () {
+			speaking.say(["coder"], "I found it.");
+			speaking.say(["coder", "tester"], "Tests pass.");
+			return speakingPrompt();
+		};
+		const spoke = await runPrompt(speaking, "hi", { inbox: false });
+		assert.equal(spoke.text, "(coder): I found it.\n\n(coder › tester): Tests pass.\n\nHello.");
+		assert.equal(speaking.say, null);
+		const silent = chat();
+		const silentSession = await silent.sessionPromise;
+		const silentPrompt = silentSession.prompt;
+		silentSession.prompt = async function () { assert.equal(silent.say, null, "a job or hand-off turn shows none"); return silentPrompt(); };
+		assert.equal((await runPrompt(silent, "hi", { inbox: false, colleagues: false })).text, "Hello.");
+		// A colleague forwards to its caller instead of showing in its own stream.
+		const forwarded = [];
+		const nested = chat();
+		nested.progressUp = (l) => forwarded.push(l);
+		(await nested.sessionPromise).prompt = async function () { nested.progress("  [tester] ▸ bash: pytest"); };
+		await runPrompt(nested, "hi", { inbox: false });
+		assert.deepEqual(forwarded, ["  [tester] ▸ bash: pytest"]);
+		J.stopJobs();
+	}
+
+	// A streamed reply that stays silent sends comment lines so a proxy or client does not drop it.
+	{
+		const { startKeepAlive } = await import("./server.mjs");
+		const written = [];
+		const res = Object.assign(new (await import("node:events")).EventEmitter(), { writableEnded: false, write: (t) => written.push(t) });
+		const beat = startKeepAlive(res, 20);
+		await new Promise((r) => setTimeout(r, 110));
+		beat.stop();
+		const count = written.length;
+		assert.ok(count >= 3 && written.every((t) => t === ": keep-alive\n\n"), `comment lines only (${count})`);
+		await new Promise((r) => setTimeout(r, 60));
+		assert.equal(written.length, count, "stopped");
+		const off = []; const quiet = Object.assign(new (await import("node:events")).EventEmitter(), { writableEnded: false, write: (t) => off.push(t) });
+		startKeepAlive(quiet, 0).stop();
+		await new Promise((r) => setTimeout(r, 40));
+		assert.equal(off.length, 0, "0 turns it off");
+	}
+
+	// Results go when their job does; old seen ones are purged.
+	assert.ok(db.prepare("SELECT COUNT(*) AS n FROM job_inbox WHERE job_id = ?").get(flaky.id).n >= 0);
+	deleteJobsOf({ keyId: key.id });
+	assert.equal(db.prepare("SELECT COUNT(*) AS n FROM job_inbox WHERE key_id = ?").get(key.id).n, 0);
+	setJobRunner(null);
+	await new Promise((r) => hook.close(r));
+	agents.remove(agent.id);
+}
+
 // Phase 2: jobs over HTTP.
 {
 	const { server, setJobRunner, apiKeys, createJob, newTrigger, getRun, stopJobs } = await import("./server.mjs");
@@ -6439,8 +6734,152 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	setTimeout(() => ac.abort(), 30);
 	await assert.rejects(pending, /the caller stopped/);
 	config.DELEGATE_TIMEOUT_MS = 40;
-	await assert.rejects(d.delegate("coder", "slow"), /took too long/);
+	await assert.rejects(d.delegate("coder", "slow"), /ran out of time \(the limit is 40ms|ran out of time \(the limit is 0/);
+	// What the colleague had written, and what happened to its container, come back with the failure instead of being lost.
+	const noted = { notices: ["a process was killed for using too much memory"] };
+	setAgentTurnRunner(async ({ signal, onDelta, onSession }) => {
+		onSession(noted);
+		onDelta("step 1 done: found 3 functions. ");
+		onDelta("step 2: scanning");
+		await new Promise((res, rej) => signal.addEventListener("abort", () => rej(new Error("aborted"))));
+	});
+	await assert.rejects(d.delegate("coder", "long job"), (e) => /ran out of time/.test(e.message) && /What happened to its container: a process was killed for using too much memory/.test(e.message) && /step 1 done: found 3 functions\. step 2: scanning/.test(e.message) && /call it again and ask it to continue/.test(e.message));
+	assert.equal(noted.notices.length, 0, "the notice is said once, to the caller");
 	config.DELEGATE_TIMEOUT_MS = 600000;
+	// While the caller waits, what the colleague does is reported into the caller's stream.
+	{
+		const { LiveLog, followColleague } = await import("./server.mjs");
+		const lines = [];
+		const watcher = rec(arch, { progress: (l) => lines.push(l) });
+		config.DELEGATE_MESSAGES = "thinking";
+		setAgentTurnRunner(async ({ onSession, onDelta }) => {
+			const live = new LiveLog();
+			onSession({ live, notices: [] });
+			live.feed({ type: "message_start", message: { role: "assistant" } });
+			live.feed({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "Let me look at the binary.\nSecond line is not shown." } });
+			live.feed({ type: "tool_execution_start", toolCallId: "t1", toolName: "bash", args: { command: "file /work/a.out" } });
+			live.feed({ type: "tool_execution_end", toolCallId: "t1", isError: false, result: { content: "ELF" } });
+			live.feed({ type: "tool_execution_start", toolCallId: "t2", toolName: "bash", args: { command: "nope" } });
+			live.feed({ type: "tool_execution_end", toolCallId: "t2", isError: true, result: { content: "not found" } });
+			live.feed({ type: "message_start", message: { role: "assistant" } });
+			live.feed({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "It is a 64-bit ELF." } });
+			onDelta("It is a 64-bit ELF.");
+			return { text: "It is a 64-bit ELF.", usage: { total_tokens: 1 }, cost: 0, scopedId: "x" };
+		});
+		assert.equal(await delegatorFor(watcher).delegate("coder", "what is a.out?"), "It is a 64-bit ELF.");
+		assert.deepEqual(lines.map((l) => l.replace(/ in \d+(ms|s)$/, " in N")), [
+			"[coder] ▸ started: what is a.out?",
+			"[coder] › Let me look at the binary.",
+			"[coder] ▸ bash: file /work/a.out",
+			"[coder] ▸ bash: nope",
+			"[coder] ✗ bash failed",
+			"[coder] › It is a 64-bit ELF.",
+			"[coder] ✓ done in N",
+		]);
+		// "tools" leaves out the messages; "off" says nothing at all.
+		config.DELEGATE_PROGRESS = "tools";
+		lines.length = 0;
+		await delegatorFor(watcher).delegate("coder", "again");
+		assert.ok(lines.length >= 5 && lines.every((l) => !l.includes("›")), "no message text in tools mode");
+		config.DELEGATE_PROGRESS = "off";
+		lines.length = 0;
+		await delegatorFor(watcher).delegate("coder", "again");
+		assert.deepEqual(lines, []);
+		config.DELEGATE_PROGRESS = "full";
+		// Messages in the reply: the whole of each finished message, as "(name): …"; tool calls stay in the reasoning.
+		config.DELEGATE_MESSAGES = "chat";
+		const said = [];
+		const spoken = rec(arch, { progress: (l) => lines.push(l), say: (chain, m) => said.push([chain, m]) });
+		const talker = async ({ onSession }) => {
+			const live = new LiveLog();
+			onSession({ live, notices: [] });
+			live.feed({ type: "message_start", message: { role: "assistant" } });
+			live.feed({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "Looking at it.\nTwo lines." } });
+			live.feed({ type: "tool_execution_start", toolCallId: "t1", toolName: "bash", args: { command: "ls" } });
+			live.feed({ type: "tool_execution_end", toolCallId: "t1", isError: false, result: { content: "x" } });
+			live.feed({ type: "message_start", message: { role: "assistant" } });
+			live.feed({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "All done." } });
+			return { text: "All done.", usage: { total_tokens: 1 }, cost: 0, scopedId: "x" };
+		};
+		setAgentTurnRunner(talker);
+		lines.length = 0;
+		await delegatorFor(spoken).delegate("coder", "go");
+		assert.deepEqual(said, [[["coder"], "Looking at it.\nTwo lines."], [["coder"], "All done."]], "whole messages, in order, as they finish");
+		assert.ok(lines.some((l) => l === "[coder] ▸ bash: ls") && lines.every((l) => !l.includes("›") && !l.includes("Looking")), "tool calls in the reasoning, message text not");
+		// Even with progress off the messages still show; with messages off they do not.
+		config.DELEGATE_PROGRESS = "off";
+		said.length = 0; lines.length = 0;
+		await delegatorFor(spoken).delegate("coder", "go");
+		assert.equal(said.length, 2);
+		assert.deepEqual(lines, []);
+		config.DELEGATE_MESSAGES = "off";
+		said.length = 0;
+		await delegatorFor(spoken).delegate("coder", "go");
+		assert.deepEqual(said, []);
+		config.DELEGATE_PROGRESS = "full";
+		config.DELEGATE_MESSAGES = "chat";
+		// A long message is cut; a colleague's own colleague is named in the chain.
+		setAgentTurnRunner(async ({ onSession }) => {
+			const live = new LiveLog();
+			const inner = { live, notices: [] };
+			onSession(inner);
+			live.feed({ type: "message_start", message: { role: "assistant" } });
+			live.feed({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "z".repeat(5000) } });
+			inner.sayUp(["tester"], "tests pass");
+			return { text: "ok", usage: { total_tokens: 1 }, cost: 0, scopedId: "x" };
+		});
+		said.length = 0;
+		await delegatorFor(spoken).delegate("coder", "go");
+		assert.deepEqual(said[0], [["coder", "tester"], "tests pass"]);
+		assert.ok(said[1][1].length === 3001 && said[1][1].endsWith("…"));
+		// The agent's own choice beats the setting; blank follows it.
+		setAgentTurnRunner(talker);
+		for (const [own, global, expected] of [["off", "chat", 0], ["chat", "off", 2], [null, "chat", 2], [null, "off", 0], ["thinking", "chat", 0]]) {
+			agents.update(arch.id, { delegateMessages: own });
+			config.DELEGATE_MESSAGES = global;
+			said.length = 0;
+			await delegatorFor(spoken).delegate("coder", "go");
+			assert.equal(said.length, expected, `agent ${own}, setting ${global}`);
+		}
+		assert.throws(() => agents.update(arch.id, { delegateMessages: "loud" }), /one of: chat, thinking, off/);
+		assert.equal(agents.get(arch.id).delegateMessages, "thinking");
+		await assert.rejects(D.updateAgent(arch.id, { delegateMessages: "loud" }), /one of: chat, thinking, off/);
+		await D.updateAgent(arch.id, { delegateMessages: "" });
+		assert.equal(agents.get(arch.id).delegateMessages, null, "blank follows the setting again");
+		assert.equal(D.agentView(agents.get(arch.id)).delegateMessages, null);
+		config.DELEGATE_MESSAGES = "thinking";
+		// A colleague's own hand-offs report up through it, indented; a failure is named.
+		setAgentTurnRunner(async ({ onSession, signal }) => {
+			const inner = { live: new LiveLog(), notices: [] };
+			onSession(inner);
+			inner.progress?.("  [tester] ▸ bash: pytest");
+			assert.equal(typeof inner.progressUp, "function", "the colleague reports upward");
+			inner.progressUp("  [tester] ▸ bash: pytest");
+			throw new D.AgentRunError("daily spend limit reached", 429, "spend_limit_exceeded", "rate_limit_error");
+		});
+		lines.length = 0;
+		await assert.rejects(delegatorFor(watcher).delegate("coder", "x"), /daily spend limit/);
+		assert.deepEqual(lines, ["[coder] ▸ started: x", "  [tester] ▸ bash: pytest", "[coder] ✗ stopped: daily spend limit reached"]);
+		// A quiet colleague gets a sign of life, and stopping the follower ends it.
+		const quiet = [];
+		const log = new LiveLog();
+		let t = 0;
+		const f = followColleague(log, (l) => quiet.push(l), "[slow]", "full", { beatMs: 40, now: () => t });
+		t = 100;
+		await new Promise((r) => setTimeout(r, 1100));
+		f.stop();
+		assert.ok(quiet.some((l) => /^\[slow\] … still working \(/.test(l)), "a quiet colleague shows a sign of life");
+		const after = quiet.length;
+		await new Promise((r) => setTimeout(r, 1100));
+		assert.equal(quiet.length, after, "stopped");
+		assert.deepEqual(((o) => (followColleague(null, () => o.push("x"), "[x]", "full").stop(), o))([]), [], "no live log, nothing to follow");
+	}
+	config.DELEGATE_MESSAGES = "chat";
+	setAgentTurnRunner(async ({ credential, clientSessionId, prompt, signal }) => {
+		seen.push({ credential, clientSessionId, prompt });
+		if (hold) await new Promise((res, rej) => signal.addEventListener("abort", () => rej(new Error("aborted"))));
+		return { text: `done: ${prompt}`, usage: { total_tokens: 5 }, cost: 0.01, scopedId: "x" };
+	});
 	hold = null;
 	// A refusal inside the colleague's turn reaches the caller in words.
 	setAgentTurnRunner(async () => { throw new D.AgentRunError("daily spend limit reached", 429, "spend_limit_exceeded", "rate_limit_error"); });

@@ -94,6 +94,7 @@ export * from "./lib/playground.mjs";
 export * from "./lib/pipackages.mjs";
 export * from "./lib/teams.mjs";
 export * from "./lib/delegate.mjs";
+export * from "./lib/agentschedule.mjs";
 export * from "./lib/agents.mjs";
 export * from "./lib/agentservers.mjs";
 export * from "./lib/updates.mjs";
