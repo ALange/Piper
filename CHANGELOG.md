@@ -5,6 +5,20 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 ## [Unreleased]
 
 ### Added
+- **Knowledge base, with RSS as its first source.** The gateway polls RSS/Atom feeds you add, and for every
+  new entry has a real agent of yours (your choice of model, memory, extensions and skills) fetch the article
+  and extract it clean — no ads, navigation or sponsored sections — into title, text, a short summary and
+  tags. Every chat can then search and read it through two new tools, `piper_knowledge_search` and
+  `piper_knowledge_read` — read and search only, never write or delete, so an agent can draw on it without
+  being able to corrupt it. A feed's first poll only seeds its current entries; nothing is extracted until
+  something genuinely new shows up, so adding a feed never backfills a history you did not ask for. The
+  storage itself (`knowledge_entries`, keyed by a source type and reference) is source-agnostic by design —
+  RSS is the first producer, not the only one planned. A new **Knowledge** page manages feeds (add, edit,
+  pull now, delete) on its Feeds tab, and every entry (view, retry a failed one, delete, clear a whole
+  source) on its Entries tab. `KNOWLEDGE_ENABLED`/`RSS_ENABLED` are separate switches on purpose, so new
+  extraction can be paused without losing agents' ability to read what is already there; `RSS_MAX_FEEDS`,
+  `RSS_MAX_PARALLEL_EXTRACTIONS`, `RSS_EXTRACT_TIMEOUT_MS`, `RSS_MAX_ARTICLE_BYTES`, `RSS_DEFAULT_AGENT` and
+  `KNOWLEDGE_RETENTION_DAYS` round out the Settings → Knowledge group.
 - **Agent memory.** A chat can remember durable notes across its own chats and containers, through three new
   tools: `piper_remember` (write or update a note), `piper_recall` (read one back by name), `piper_memories`
   (list or search notes, newest first). Never read or written through the container's own filesystem — every

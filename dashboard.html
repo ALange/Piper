@@ -518,6 +518,7 @@
       <a href="#extensions"><span class="ic">&#10010;</span>Extensions</a>
       <a href="#jobs"><span class="ic">&#9201;</span>Jobs</a>
       <a href="#memory"><span class="ic">&#8734;</span>Memory</a>
+      <a href="#knowledge"><span class="ic">&#9737;</span>Knowledge</a>
       <a href="#files"><span class="ic">&#9776;</span>Files &amp; profiles</a>
       <div class="navgroup">Infrastructure</div>
       <a href="#containers"><span class="ic">&#9635;</span>Containers<span class="navbadge bad" id="nav-containers-badge" hidden>!</span></a>
@@ -1014,6 +1015,56 @@
         <p class="hint" id="memnoteempty" hidden>No notes.</p>
       </section>
     </div><!-- /view-memory -->
+
+    <div class="view" id="view-knowledge">
+      <section data-tab="feeds" class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>RSS feeds</h3>
+            <p class="hint" style="margin:0" id="rssnote">Each feed is polled on its own interval; a new entry is handed to its agent (model, memory, extensions, skills &mdash; whatever you gave it) to fetch the article and extract it clean. A feed&rsquo;s first poll only seeds its current entries; nothing is extracted until something newer shows up.</p>
+          </div>
+          <button id="rssrefresh">refresh</button>
+          <button id="rssnew">new feed</button>
+        </div>
+        <table>
+          <thead><tr><th>feed</th><th>agent</th><th class="num">interval</th><th>state</th><th>last polled</th><th></th></tr></thead>
+          <tbody id="rssrows"></tbody>
+        </table>
+        <p class="hint" id="rssempty" hidden>No feeds yet.</p>
+      </section>
+      <section data-tab="feeds" class="panel" id="rssform" hidden>
+        <h3 id="rssformtitle">New feed</h3>
+        <div class="keyform">
+          <input id="rssname" placeholder="name">
+          <input id="rssurl" placeholder="https://example.com/feed" style="min-width:280px">
+          <select id="rssagent"></select>
+          <input id="rssinterval" type="number" min="1" value="30" style="width:80px"> <span class="hint small">minutes</span>
+          <label class="ctrl"><input id="rsson" type="checkbox" checked> enabled</label>
+        </div>
+        <div class="fieldrow" style="margin-top:8px"><button id="rsssave">save</button><button id="rsscancel">close</button><span class="passnote" id="rssformnote"></span></div>
+      </section>
+      <section data-tab="entries" class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Knowledge entries</h3>
+            <p class="hint" style="margin:0">Everything any producer (RSS today) has put in the knowledge base. Agents can search and read a <code>done</code> entry (<code>piper_knowledge_search</code>/<code>piper_knowledge_read</code>) &mdash; never write or delete, that is here only.</p>
+          </div>
+          <select id="kesource"></select>
+          <button id="kerefresh">refresh</button>
+          <button id="keclear" title="clear every entry of the selected source">clear source&hellip;</button>
+        </div>
+        <table>
+          <thead><tr><th>source</th><th>title</th><th>status</th><th>published</th><th>fetched</th><th></th></tr></thead>
+          <tbody id="kerows"></tbody>
+        </table>
+        <p class="hint" id="keempty" hidden>No entries yet.</p>
+      </section>
+      <section data-tab="entries" class="panel" id="kedetail" hidden>
+        <div class="toolbar"><h3 id="kedetailtitle">Entry</h3><div><button id="keretry" hidden>retry</button><button id="kedelete">delete</button><button id="kedetailclose">close</button></div></div>
+        <p class="hint" id="kedetailmeta"></p>
+        <pre id="kedetailtext" style="white-space:pre-wrap;max-height:420px;overflow:auto;background:#0c0c0c;border:1px solid var(--border);border-radius:8px;padding:10px"></pre>
+      </section>
+    </div><!-- /view-knowledge -->
 
     <div class="view" id="view-endpoints">
       <section data-tab="agents" class="panel">
@@ -2348,6 +2399,7 @@ var SETTING_TABS = [
   { id: 'audit', label: 'Audit', intro: 'What the audit log records and how long it keeps it. A category that is off is not stored at all. Changes to these settings are always recorded. The log itself is on the Audit page.' },
   { id: 'access', label: 'Access', intro: 'Who may use the API and the dashboard, and what the gateway will fetch for them.' },
   { id: 'server', label: 'Server', intro: 'Listening address, request limits, logging and Pi itself. Most of these need a restart.' },
+  { id: 'knowledge', label: 'Knowledge', intro: 'What every agent may search and read (the Knowledge page), and RSS, the first thing that feeds it.' },
   { id: 'other', label: 'Other', intro: 'Settings this page does not have a place for yet.' }
 ];
 
@@ -2391,6 +2443,19 @@ var LAYOUT = {
   MEMORY_MAX_NAME_BYTES: { tab: 'sessions', section: 'Memory', label: 'Longest note name', unit: 'bytes' },
   MEMORY_MAX_VALUE_BYTES: { tab: 'sessions', section: 'Memory', label: 'Longest note', unit: 'bytes' },
   MEMORY_LOOKUP_LIMIT: { tab: 'sessions', section: 'Memory', label: 'Most notes one search returns', unit: 'notes' },
+  KNOWLEDGE_ENABLED: { tab: 'knowledge', section: 'Knowledge', label: 'Allow the knowledge base',
+    summary: 'Every chat may search and read it (piper_knowledge_search, piper_knowledge_read) — read and search only, never write or delete. Off removes the tools; what is stored is kept.' },
+  KNOWLEDGE_LOOKUP_LIMIT: { tab: 'knowledge', section: 'Knowledge', label: 'Most entries one search returns', unit: 'entries' },
+  KNOWLEDGE_RETENTION_DAYS: { tab: 'knowledge', section: 'Knowledge', label: 'Keep entries for', unit: 'days' },
+  RSS_ENABLED: { tab: 'knowledge', section: 'RSS feeds', label: 'Poll feeds and extract articles',
+    summary: 'Off stops polling and extraction; it does not affect whether agents can read what is already there (Allow the knowledge base, above).' },
+  RSS_POLL_MIN_INTERVAL_MS: { tab: 'knowledge', section: 'RSS feeds', label: 'Least time between two polls of one feed' },
+  RSS_MAX_FEEDS: { tab: 'knowledge', section: 'RSS feeds', label: 'Most feeds', unit: 'feeds' },
+  RSS_MAX_PARALLEL_EXTRACTIONS: { tab: 'knowledge', section: 'RSS feeds', label: 'Articles fetched at once', unit: 'articles' },
+  RSS_EXTRACT_TIMEOUT_MS: { tab: 'knowledge', section: 'RSS feeds', label: 'Longest one article may take' },
+  RSS_DEFAULT_AGENT: { tab: 'knowledge', section: 'RSS feeds', label: 'Default extracting agent',
+    summary: 'The agent id (Agent endpoints) that fetches and cleans a feed’s articles when the feed names none of its own. It needs a way to fetch a web page — give it that extension like any other agent.', placeholder: 'none: a feed must name its own' },
+  RSS_MAX_ARTICLE_BYTES: { tab: 'knowledge', section: 'RSS feeds', label: 'Most one article may hold', unit: 'bytes' },
   PACKAGES_ENABLED: { tab: 'containers', section: 'Packages', label: 'Allow packages and MCP servers',
     summary: 'Install Pi packages and MCP servers into a key\u2019s or agent\u2019s profile from Files & profiles \u2192 Profiles. They run third-party code in the agent\u2019s container, so it needs a dashboard password. Off refuses all of it.' },
   LIVE_VIEW_ENABLED: { tab: 'containers', section: 'Live view', label: 'Allow the live view',
@@ -3054,6 +3119,9 @@ var PAGES = {
     { id:'access', label:'Access', pane:'extensions', sections:'access', subtitle:'Which keys and agents get which extensions and bundles' }] },
   jobs:       { title:'Jobs', tabs:[{ id:'jobs', pane:'jobs', subtitle:'Prompts an agent runs on a schedule, by webhook or on request' }] },
   memory:     { title:'Memory', tabs:[{ id:'memory', pane:'memory', subtitle:'Notes a key’s or an agent’s chats remember, across chats and containers' }] },
+  knowledge:  { title:'Knowledge', tabs:[
+    { id:'feeds', label:'Feeds', pane:'knowledge', sections:'feeds', subtitle:'RSS feeds polled for new articles, and the agent that extracts each one' },
+    { id:'entries', label:'Entries', pane:'knowledge', sections:'entries', subtitle:'Everything in the knowledge base agents can search and read (piper_knowledge_search/piper_knowledge_read)' }] },
   files:      { title:'Files & profiles', tabs:[
     { id:'files', label:'Files', pane:'files', subtitle:'Browse, upload, edit and organise a key\u2019s or an agent\u2019s workspace, profile and the shared bundles' },
     { id:'profiles', label:'Profiles & packages', pane:'profiles', subtitle:'Per-key skills, extensions, packages and MCP servers, and who can change them' }] },
@@ -3070,7 +3138,7 @@ var PAGES = {
     { id:'docs', label:'Documentation', pane:'docs', subtitle:'The administrator\u2019s handbook: architecture, deployment, operation, configuration, API and troubleshooting' },
     { id:'about', label:'About', pane:'about', subtitle:'Piper, its version, release notes and author' }] }
 };
-var PANES = ['playground', 'overview', 'agents', 'extensions', 'containers', 'terminal', 'files', 'endpoints', 'jobs', 'memory', 'models', 'spend', 'apikeys', 'profiles', 'audit', 'settings', 'docs', 'about'];
+var PANES = ['playground', 'overview', 'agents', 'extensions', 'containers', 'terminal', 'files', 'endpoints', 'jobs', 'memory', 'knowledge', 'models', 'spend', 'apikeys', 'profiles', 'audit', 'settings', 'docs', 'about'];
 /* Old links keep working: bookmarks and the docs' own links used the flat view names. */
 var OLD_HASHES = { endpoints: 'agents', terminal: 'containers/terminal', profiles: 'files/profiles', docs: 'help/docs', about: 'help/about' };
 function resolveHash(hash) {
@@ -3574,6 +3642,144 @@ $('memclear').addEventListener('click', function () {
   var m = MEMORY.filter(function (x) { return x.scope === MEM_OPEN; })[0];
   if (!confirm('Clear all notes of ' + (m ? m.label : MEM_OPEN) + '? This cannot be undone.')) return;
   epPost('dashboard/memory/' + encodeURIComponent(MEM_OPEN), undefined, 'DELETE').then(function () { $('memdetailclose').click(); loadMemory(); });
+});
+
+/* ---- knowledge: RSS feeds (the Feeds tab) and the generic knowledge base (the Entries tab) ---- */
+var FEEDS = null;
+var FEED_AGENTS = null;
+var FEED_EDIT = null;
+function loadFeeds() {
+  return Promise.all([fetch('dashboard/rss.json', { cache: 'no-store' }).then(readJson), fetch('dashboard/agents.json', { cache: 'no-store' }).then(readJson)])
+    .then(function (r) { FEEDS = r[0].feeds; FEED_AGENTS = r[1].agents; renderFeeds(); })
+    .catch(function (e) { $('rssnote').textContent = 'cannot load feeds: ' + e.message; });
+}
+function renderFeeds() {
+  var body = $('rssrows');
+  body.replaceChildren();
+  $('rssempty').hidden = FEEDS.length > 0;
+  FEEDS.forEach(function (f) {
+    var tr = el('tr');
+    tr.appendChild(el('td', f.name));
+    var agent = (FEED_AGENTS || []).filter(function (a) { return a.id === f.agentId; })[0];
+    tr.appendChild(el('td', agent ? agent.name : (f.agentId || '(default agent)')));
+    tr.appendChild(el('td', Math.round(f.intervalMs / 60000) + 'm')).className = 'num';
+    var st = el('td', !f.enabled ? 'off' : f.lastError ? 'error' : 'on');
+    st.className = !f.enabled ? '' : f.lastError ? 'bad' : 'ok';
+    if (f.lastError) st.title = f.lastError;
+    tr.appendChild(st);
+    tr.appendChild(el('td', f.lastPolledAt ? new Date(f.lastPolledAt).toLocaleString() : 'never'));
+    var act = el('td');
+    var pull = el('button', 'pull now'); pull.addEventListener('click', function () {
+      pull.disabled = true;
+      epPost('dashboard/rss/' + f.id + '/pull').then(loadFeeds).catch(function (e) { alert(e.message); pull.disabled = false; });
+    });
+    var edit = el('button', 'edit'); edit.addEventListener('click', function () { openFeedForm(f); });
+    var del = el('button', 'delete'); del.addEventListener('click', function () {
+      if (!confirm('Delete feed "' + f.name + '"? Its already-extracted entries stay in the knowledge base.')) return;
+      epPost('dashboard/rss/' + f.id, undefined, 'DELETE').then(loadFeeds);
+    });
+    act.appendChild(pull); act.appendChild(document.createTextNode(' ')); act.appendChild(edit); act.appendChild(document.createTextNode(' ')); act.appendChild(del);
+    tr.appendChild(act);
+    body.appendChild(tr);
+  });
+}
+function openFeedForm(f) {
+  FEED_EDIT = f ? f.id : null;
+  $('rssformtitle').textContent = f ? 'Edit feed' : 'New feed';
+  $('rssform').hidden = false;
+  $('rssname').value = f ? f.name : '';
+  $('rssurl').value = f ? f.url : '';
+  $('rssagent').replaceChildren(el('option', '(RSS_DEFAULT_AGENT)'));
+  (FEED_AGENTS || []).forEach(function (a) { var o = el('option', a.name + (a.key ? ' (' + a.key + ')' : '')); o.value = a.id; $('rssagent').appendChild(o); });
+  $('rssagent').value = (f && f.agentId) || '';
+  $('rssinterval').value = f ? Math.round(f.intervalMs / 60000) : 30;
+  $('rsson').checked = f ? Boolean(f.enabled) : true;
+  $('rssformnote').textContent = '';
+  $('rssform').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+$('rssnew').addEventListener('click', function () { openFeedForm(null); });
+$('rsscancel').addEventListener('click', function () { $('rssform').hidden = true; });
+$('rssrefresh').addEventListener('click', loadFeeds);
+$('rsssave').addEventListener('click', function () {
+  var body = { name: $('rssname').value.trim(), url: $('rssurl').value.trim(), agentId: $('rssagent').value || null, intervalMs: Number($('rssinterval').value) * 60000, enabled: $('rsson').checked };
+  var p = FEED_EDIT ? epPost('dashboard/rss/' + FEED_EDIT, body, 'PATCH') : epPost('dashboard/rss', body);
+  p.then(function () { $('rssform').hidden = true; loadFeeds(); }).catch(function (e) { $('rssformnote').textContent = e.message; });
+});
+
+var KENTRIES = null;
+var KSOURCES = null;
+var KE_OPEN = null;
+function loadKnowledgeSources() {
+  return fetch('dashboard/knowledge.json', { cache: 'no-store' }).then(readJson).then(function (d) {
+    KSOURCES = d.sources;
+    var sel = $('kesource'); var cur = sel.value;
+    var all = el('option', 'all sources'); all.value = '';
+    sel.replaceChildren(all);
+    KSOURCES.forEach(function (s) {
+      var o = el('option', s.sourceType + ': ' + (s.sourceRef || '(none)') + ' (' + s.entries + ')');
+      o.value = s.sourceType + '/' + (s.sourceRef || '-');
+      sel.appendChild(o);
+    });
+    sel.value = cur;
+  });
+}
+function loadKnowledgeEntries() {
+  return loadKnowledgeSources().then(function () {
+    var sel = $('kesource').value;
+    if (sel) return fetch('dashboard/knowledge/' + sel, { cache: 'no-store' }).then(readJson).then(function (d) { KENTRIES = d.entries; renderKnowledgeEntries(); });
+    return Promise.all((KSOURCES || []).map(function (s) {
+      return fetch('dashboard/knowledge/' + s.sourceType + '/' + (s.sourceRef || '-'), { cache: 'no-store' }).then(readJson).then(function (d) { return d.entries; });
+    })).then(function (lists) {
+      KENTRIES = [].concat.apply([], lists).sort(function (a, b) { return b.createdAt - a.createdAt; });
+      renderKnowledgeEntries();
+    });
+  }).catch(function (e) { $('keempty').hidden = false; $('keempty').textContent = 'cannot load entries: ' + e.message; });
+}
+function renderKnowledgeEntries() {
+  var body = $('kerows');
+  body.replaceChildren();
+  $('keempty').hidden = (KENTRIES || []).length > 0;
+  (KENTRIES || []).forEach(function (e) {
+    var tr = el('tr');
+    tr.appendChild(el('td', e.sourceType + '/' + (e.sourceRef || '(none)')));
+    tr.appendChild(el('td', e.title || '(untitled)'));
+    var st = el('td', e.status); st.className = e.status === 'done' ? 'ok' : e.status === 'failed' ? 'bad' : '';
+    tr.appendChild(st);
+    tr.appendChild(el('td', e.publishedAt ? new Date(e.publishedAt).toLocaleString() : ''));
+    tr.appendChild(el('td', e.fetchedAt ? new Date(e.fetchedAt).toLocaleString() : ''));
+    var act = el('td');
+    var view = el('button', 'view'); view.addEventListener('click', function () { openEntryDetail(e); });
+    act.appendChild(view);
+    tr.appendChild(act);
+    body.appendChild(tr);
+  });
+}
+function openEntryDetail(e) {
+  KE_OPEN = e;
+  $('kedetail').hidden = false;
+  $('kedetailtitle').textContent = e.title || '(untitled)';
+  $('kedetailmeta').textContent = [e.sourceType + '/' + (e.sourceRef || '(none)'), e.status, e.url || ''].filter(Boolean).join(' · ') + (e.tags && e.tags.length ? ' · tags: ' + e.tags.join(', ') : '');
+  $('kedetailtext').textContent = (e.error ? 'error: ' + e.error + '\n\n' : '') + (e.summary ? e.summary + '\n\n' : '') + (e.text || '');
+  $('keretry').hidden = e.status !== 'failed';
+  $('kedetail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+$('kedetailclose').addEventListener('click', function () { KE_OPEN = null; $('kedetail').hidden = true; });
+$('kerefresh').addEventListener('click', loadKnowledgeEntries);
+$('kesource').addEventListener('change', loadKnowledgeEntries);
+$('keretry').addEventListener('click', function () {
+  if (!KE_OPEN) return;
+  epPost('dashboard/rss/entries/' + KE_OPEN.id + '/retry').then(function () { $('kedetailclose').click(); loadKnowledgeEntries(); }).catch(function (e) { alert(e.message); });
+});
+$('kedelete').addEventListener('click', function () {
+  if (!KE_OPEN) return;
+  if (!confirm('Delete this entry?')) return;
+  epPost('dashboard/knowledge/' + KE_OPEN.sourceType + '/' + (KE_OPEN.sourceRef || '-') + '/' + KE_OPEN.id, undefined, 'DELETE').then(function () { $('kedetailclose').click(); loadKnowledgeEntries(); });
+});
+$('keclear').addEventListener('click', function () {
+  var sel = $('kesource').value;
+  if (!sel) { alert('pick a source first'); return; }
+  if (!confirm('Clear every entry of ' + sel + '? This cannot be undone.')) return;
+  epPost('dashboard/knowledge/' + sel, undefined, 'DELETE').then(loadKnowledgeEntries);
 });
 
 function epUrl(a) { return location.protocol + '//' + location.hostname + ':' + a.port + '/v1'; }
@@ -5664,6 +5870,7 @@ function route() {
   if (pane === 'playground') pgStart();
   if (pane === 'jobs') loadJobs();
   if (pane === 'memory') loadMemory();
+  if (pane === 'knowledge') { loadFeeds(); loadKnowledgeEntries(); }
   if (pane === 'extensions') loadExtensions();
   if (pane === 'containers') { startContainersPolling(); loadHostPi(); }
   if (pane === 'models') ensureModels();

@@ -26,7 +26,7 @@ process.env.CONTAINER_PI_DIR = TEST_CONTAINER_PI;
 const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 // Seeded at startup, which is when a validator that reads a not-yet-defined constant would fail.
 process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
-const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, memoryScopeOf, mayRemember, memoryFor, memoryOverview, memoryEntries, deleteMemoryEntry, clearMemory, deleteMemoryOf, memoryDashboardRoutes, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, recentAudit: recentAuditRows } = await import("./server.mjs");
+const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, memoryScopeOf, mayRemember, memoryFor, memoryOverview, memoryEntries, deleteMemoryEntry, clearMemory, deleteMemoryOf, memoryDashboardRoutes, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, mayLookupKnowledge, knowledgeFor, addEntry, getByKey, getEntry, sourceSeen, overview: knowledgeOverview, entriesOf, removeEntry, clearSource, purgeOld, knowledgeDashboardRoutes, RssError, SOURCE_TYPE, getFeed, listFeeds, createFeed, updateFeed, removeFeed, parseFeedXml, forcePoll, rssTick, parseExtraction, setExtractionRunner, rssPump, retryEntry, startFeeds, stopFeeds, rssDashboardRoutes, recentAudit: recentAuditRows } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
 
@@ -1399,6 +1399,236 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(memoryEntries(ckey.id).length, 1, "the key's own memory is untouched by deleting one agent");
 	assert.equal(deleteMemoryOf({ keyId: ckey.id }), 1, "and is removed when the key itself goes");
 	apiKeys.remove(ckey.id);
+}
+
+// Knowledge base: the generic store, RSS as its one producer today, the read-only bridge tools and
+// the dashboard's routes for both.
+{
+	const krec = (extra) => ({ keyId: "know-key-1", agentId: null, scopeId: "know-key-1", ...extra });
+	config.KNOWLEDGE_ENABLED = true;
+	config.RSS_ENABLED = true;
+
+	// parseFeedXml: RSS 2.0 (with CDATA and entities), Atom, and a feed with no guid at all.
+	const rss = `<rss><channel>
+		<item><title><![CDATA[Has &amp; Entities]]></title><link>https://example.test/a</link><guid>guid-a</guid><pubDate>Mon, 01 Jan 2024 00:00:00 GMT</pubDate></item>
+		<item><title>No Guid</title><link>https://example.test/b</link></item>
+	</channel></rss>`;
+	const parsed = parseFeedXml(rss);
+	assert.deepEqual(parsed.map((e) => e.title), ["Has & Entities", "No Guid"]);
+	assert.equal(parsed[0].guid, "guid-a");
+	assert.equal(parsed[1].guid, "https://example.test/b", "no guid falls back to the link");
+	assert.equal(parsed[0].publishedAt, Date.parse("Mon, 01 Jan 2024 00:00:00 GMT"));
+	const atom = `<feed><entry><title>Atom Title</title><link href="https://example.test/atom-1"/><id>atom-1</id><updated>2024-01-02T00:00:00Z</updated></entry></feed>`;
+	const parsedAtom = parseFeedXml(atom);
+	assert.deepEqual(parsedAtom, [{ guid: "atom-1", url: "https://example.test/atom-1", title: "Atom Title", publishedAt: Date.parse("2024-01-02T00:00:00Z") }]);
+	assert.deepEqual(parseFeedXml("<rss><channel></channel></rss>"), []);
+
+	// The generic store: upsert on (sourceType, sourceRef, guid), the dashboard's views, cleanup.
+	clearSource("test", "s1");
+	addEntry({ sourceType: "test", sourceRef: "s1", guid: "g1", url: "https://x.test/1", title: "One", text: "body one", summary: "sum one", tags: ["a", "b"], status: "done" });
+	const e1 = getByKey("test", "s1", "g1");
+	assert.deepEqual([e1.title, e1.text, e1.tags, e1.status], ["One", "body one", ["a", "b"], "done"]);
+	addEntry({ sourceType: "test", sourceRef: "s1", guid: "g1", url: "https://x.test/1", title: "One (updated)", text: "body one v2", status: "done" });
+	assert.equal(getByKey("test", "s1", "g1").title, "One (updated)", "same key replaces, not duplicates");
+	assert.equal(sourceSeen("test", "s1"), true);
+	assert.equal(sourceSeen("test", "never-seen"), false);
+	addEntry({ sourceType: "test", sourceRef: "s1", guid: "g2", url: "https://x.test/2", title: "Two", text: "body two", status: "pending" });
+	assert.deepEqual(entriesOf("test", "s1").map((e) => e.guid).sort(), ["g1", "g2"]);
+	assert.ok(knowledgeOverview().some((s) => s.sourceType === "test" && s.sourceRef === "s1" && s.entries === 2));
+	assert.equal(removeEntry(getByKey("test", "s1", "g2").id), true);
+	assert.equal(entriesOf("test", "s1").length, 1);
+	assert.equal(clearSource("test", "s1"), 1);
+	assert.equal(entriesOf("test", "s1").length, 0);
+	addEntry({ sourceType: "test", sourceRef: "s1", guid: "gold", title: "Old", text: "x", status: "done" });
+	db.prepare("UPDATE knowledge_entries SET created_at = ? WHERE source_type = 'test' AND source_ref = 's1'").run(Date.now() - 200 * 86_400_000);
+	config.KNOWLEDGE_RETENTION_DAYS = 90;
+	assert.equal(purgeOld(), 1, "older than KNOWLEDGE_RETENTION_DAYS is forgotten");
+	config.KNOWLEDGE_RETENTION_DAYS = 0;
+	addEntry({ sourceType: "test", sourceRef: "s1", guid: "forever", title: "Forever", text: "x", status: "done" });
+	db.prepare("UPDATE knowledge_entries SET created_at = 1 WHERE source_type = 'test' AND source_ref = 's1'").run();
+	assert.equal(purgeOld(), 0, "0 keeps everything");
+	config.KNOWLEDGE_RETENTION_DAYS = 90;
+	clearSource("test", "s1");
+
+	// The agent-facing half: search/read, status-gated, available to any chat with a scope.
+	assert.equal(mayLookupKnowledge(krec()), true);
+	assert.equal(mayLookupKnowledge({ keyId: null, scopeId: null }), false);
+	config.KNOWLEDGE_ENABLED = false;
+	assert.equal(mayLookupKnowledge(krec()), false);
+	config.KNOWLEDGE_ENABLED = true;
+	clearSource("test", "know");
+	addEntry({ sourceType: "test", sourceRef: "know", guid: "done-1", title: "Reactor Meltdown", text: "Full text about a reactor.", summary: "A reactor had a problem.", tags: ["energy"], status: "done" });
+	addEntry({ sourceType: "test", sourceRef: "know", guid: "pending-1", title: "Still Cooking", text: "half text", status: "pending" });
+	const kn = knowledgeFor(krec());
+	const hits = kn.search({ query: "reactor" });
+	assert.equal(hits.length, 1);
+	assert.deepEqual([hits[0].title, hits[0].summary, hits[0].source], ["Reactor Meltdown", "A reactor had a problem.", "test"]);
+	assert.equal(kn.search({ query: "still cooking" }).length, 0, "a pending entry is not findable");
+	const got = kn.read({ id: hits[0].id });
+	assert.equal(got.text, "Full text about a reactor.");
+	assert.throws(() => kn.read({ id: getByKey("test", "know", "pending-1").id }), /no entry called/, "a pending entry is not readable either");
+	config.KNOWLEDGE_ENABLED = false;
+	assert.throws(() => kn.search({}), /may not use the knowledge base/);
+	assert.throws(() => kn.read({ id: hits[0].id }), /may not use the knowledge base/);
+	config.KNOWLEDGE_ENABLED = true;
+	clearSource("test", "know");
+
+	// The bridge routes: present only when `knowledge` is passed to startBridge.
+	{
+		const dir = mkdtempSync(join("/tmp", "pb-know-"));
+		const http2 = await import("node:http");
+		const post = (socketPath, path, body) =>
+			new Promise((resolve, reject) => {
+				const req = http2.request({ socketPath, path, method: "POST", agent: false }, (res) => {
+					let data = "";
+					res.on("data", (c) => (data += c));
+					res.on("end", () => resolve({ status: res.statusCode, body: JSON.parse(data) }));
+				});
+				req.on("error", reject);
+				req.end(JSON.stringify(body ?? {}));
+			});
+		addEntry({ sourceType: "test", sourceRef: "bridge", guid: "b1", title: "Bridged", text: "bridged text", summary: "s", status: "done" });
+		const socketPath = join(dir, "with.sock");
+		const withKnowledge = await startBridge(socketPath, newMeter(), { knowledge: knowledgeFor(krec()) });
+		const found = await post(socketPath, "/knowledge/search", { query: "bridged" });
+		assert.equal(found.status, 200);
+		assert.equal(found.body.entries[0].title, "Bridged");
+		const read1 = await post(socketPath, "/knowledge/read", { id: found.body.entries[0].id });
+		assert.equal(read1.body.entry.text, "bridged text");
+		withKnowledge.close();
+
+		const socketPath2 = join(dir, "without.sock");
+		const noKnowledge = await startBridge(socketPath2, newMeter(), {});
+		assert.equal((await post(socketPath2, "/knowledge/search", { query: "x" })).status, 403);
+		assert.equal((await post(socketPath2, "/knowledge/read", { id: 1 })).status, 403);
+		noKnowledge.close();
+		rmSync(dir, { recursive: true, force: true });
+		clearSource("test", "bridge");
+	}
+
+	// RSS feeds: CRUD, validation, the feed cap.
+	const kkey = apiKeys.create({ name: "rss-test" });
+	const rkey = kkey.record ?? kkey;
+	const extractor = await createAgent({ keyId: rkey.id, name: "rss-extractor" });
+	assert.throws(() => createFeed({ name: "bad", url: "not a url" }), /not a URL/);
+	assert.throws(() => createFeed({ name: "bad", url: "ftp://x.test/feed" }), /http or https/);
+	config.RSS_POLL_MIN_INTERVAL_MS = 60_000;
+	assert.throws(() => createFeed({ name: "too fast", url: "https://feed.test/fast", intervalMs: 1_000 }), /RSS_POLL_MIN_INTERVAL_MS/, "an interval under the floor is refused, not silently floored");
+	const feed = createFeed({ name: "Test Feed", url: "https://feed.test/one", agentId: extractor.id, intervalMs: 60_000 });
+	assert.equal(feed.intervalMs, 60_000);
+	assert.throws(() => createFeed({ name: "bad agent", url: "https://feed.test/two", agentId: "no-such-agent" }), (e) => e.status === 404);
+	assert.equal(updateFeed(feed.id, { name: "Renamed" }).name, "Renamed");
+	assert.throws(() => updateFeed("no-such-feed", { name: "x" }), (e) => e.status === 404);
+	config.RSS_MAX_FEEDS = listFeeds().length;
+	assert.throws(() => createFeed({ name: "over cap", url: "https://feed.test/three" }), (e) => e.status === 409);
+	config.RSS_MAX_FEEDS = 100;
+
+	// The backfill rule: a feed's first poll seeds entries as 'skipped' (never queued); its next poll
+	// queues only what is genuinely new.
+	const xmlOne = (items) => `<rss><channel>${items.map((it) => `<item><title>${it.t}</title><link>${it.u}</link><guid>${it.g}</guid></item>`).join("")}</channel></rss>`;
+	const fakeFetch = (xml) => async () => ({ ok: true, status: 200, arrayBuffer: async () => Buffer.from(xml, "utf8") });
+	await forcePoll(feed.id, { fetchFn: fakeFetch(xmlOne([{ t: "A", u: "https://feed.test/a", g: "ga" }, { t: "B", u: "https://feed.test/b", g: "gb" }])) });
+	assert.deepEqual(entriesOf(SOURCE_TYPE, feed.id).map((e) => e.status), ["skipped", "skipped"]);
+	await forcePoll(feed.id, { fetchFn: fakeFetch(xmlOne([{ t: "A", u: "https://feed.test/a", g: "ga" }, { t: "B", u: "https://feed.test/b", g: "gb" }, { t: "C", u: "https://feed.test/c", g: "gc" }])) });
+	const afterSecond = entriesOf(SOURCE_TYPE, feed.id);
+	assert.equal(afterSecond.length, 3);
+	assert.equal(afterSecond.find((e) => e.guid === "gc").status, "pending", "only the new one is queued");
+	assert.equal(getFeed(feed.id).lastError, null);
+
+	// Extraction: a whole agent turn per pending entry, strict JSON, the AgentRunError/timeout mapping.
+	assert.deepEqual(parseExtraction('{"title":"T","text":"Body","summary":"S","tags":["x"]}'), { title: "T", text: "Body", summary: "S", tags: ["x"] });
+	assert.deepEqual(parseExtraction('```json\n{"title":"T","text":"Body"}\n```'), { title: "T", text: "Body", summary: "", tags: [] });
+	assert.throws(() => parseExtraction("not json at all"), /was not JSON/);
+	assert.throws(() => parseExtraction("[1,2,3]"), /was not a JSON object/);
+	assert.throws(() => parseExtraction('{"title":"","text":""}'), /no title or text/);
+
+	const waitForEntry = async (guid, pred, ms = 3000, sourceRef = feed.id) => {
+		const end = Date.now() + ms;
+		for (;;) {
+			const e = getByKey(SOURCE_TYPE, sourceRef, guid);
+			if (e && pred(e)) return e;
+			if (Date.now() > end) throw new Error(`timed out waiting on ${guid}`);
+			await new Promise((r) => setTimeout(r, 15));
+		}
+	};
+	setExtractionRunner(async ({ prompt }) => ({ text: JSON.stringify({ title: "C, extracted", text: "The full clean article.", summary: "Short summary.", tags: ["news"] }), usage: { total_tokens: 5 }, cost: 0, scopedId: "x" }));
+	rssPump();
+	const doneC = await waitForEntry("gc", (e) => e.status === "done");
+	assert.deepEqual([doneC.title, doneC.text, doneC.summary, doneC.tags], ["C, extracted", "The full clean article.", "Short summary.", ["news"]]);
+
+	const { AgentRunError: KAgentRunError } = await import("./server.mjs");
+	setExtractionRunner(async () => {
+		throw new KAgentRunError("daily spend limit reached", 429, "spend_limit_exceeded", "rate_limit_error");
+	});
+	await forcePoll(feed.id, { fetchFn: fakeFetch(xmlOne([{ t: "D", u: "https://feed.test/d", g: "gd" }])) });
+	rssPump();
+	const failedD = await waitForEntry("gd", (e) => e.status === "failed");
+	assert.equal(failedD.error, "daily spend limit reached");
+
+	config.RSS_EXTRACT_TIMEOUT_MS = 80;
+	setExtractionRunner(({ signal }) => new Promise((_, reject) => signal.addEventListener("abort", () => reject(new Error("aborted")))));
+	await forcePoll(feed.id, { fetchFn: fakeFetch(xmlOne([{ t: "E", u: "https://feed.test/e", g: "ge" }])) });
+	rssPump();
+	const timedOutE = await waitForEntry("ge", (e) => e.status === "failed");
+	assert.match(timedOutE.error, /no answer within/);
+	config.RSS_EXTRACT_TIMEOUT_MS = 5 * 60_000;
+
+	// retryEntry: a failed row goes back to pending and gets another pass.
+	setExtractionRunner(async () => ({ text: JSON.stringify({ title: "D, extracted", text: "Recovered text." }), usage: { total_tokens: 1 }, cost: 0, scopedId: "x" }));
+	assert.equal(retryEntry(failedD.id), true);
+	const recoveredD = await waitForEntry("gd", (e) => e.status === "done");
+	assert.equal(recoveredD.text, "Recovered text.");
+	assert.throws(() => retryEntry(999_999_999), (e) => e.status === 404);
+
+	// A feed with no agent and no RSS_DEFAULT_AGENT names the problem, not a crash.
+	config.RSS_DEFAULT_AGENT = "";
+	const orphanFeed = createFeed({ name: "Orphan", url: "https://feed.test/orphan" });
+	await forcePoll(orphanFeed.id, { fetchFn: fakeFetch(xmlOne([{ t: "Seed", u: "https://feed.test/seed", g: "gseed" }])) });
+	await forcePoll(orphanFeed.id, { fetchFn: fakeFetch(xmlOne([{ t: "Seed", u: "https://feed.test/seed", g: "gseed" }, { t: "F", u: "https://feed.test/f", g: "gf" }])) });
+	rssPump();
+	const orphanedF = await waitForEntry("gf", (e) => e.status === "failed", 3000, orphanFeed.id);
+	assert.match(orphanedF.error, /no extracting agent/);
+	setExtractionRunner(null);
+
+	// The dashboard's own routes: Entries (generic) and Feeds (RSS-specific).
+	{
+		const httpd = await import("node:http");
+		const srv = httpd.createServer((req, res) => {
+			if (req.url.startsWith("/dashboard/knowledge")) return knowledgeDashboardRoutes(req, res, req.url);
+			return rssDashboardRoutes(req, res, req.url);
+		});
+		await new Promise((r) => srv.listen(0, "127.0.0.1", r));
+		const base = `http://127.0.0.1:${srv.address().port}`;
+		const call = (path, opts) => fetch(base + path, opts).then((r) => r.json().then((json) => ({ status: r.status, json })));
+
+		const sources = await call("/dashboard/knowledge.json");
+		assert.ok(sources.json.sources.some((s) => s.sourceType === SOURCE_TYPE && s.sourceRef === feed.id));
+		const sourceEntries = await call(`/dashboard/knowledge/${SOURCE_TYPE}/${feed.id}`);
+		assert.ok(sourceEntries.json.entries.some((e) => e.guid === "gc"));
+		const oneEntry = sourceEntries.json.entries.find((e) => e.guid === "gc");
+		const detail = await call(`/dashboard/knowledge/${SOURCE_TYPE}/${feed.id}/${oneEntry.id}`);
+		assert.equal(detail.json.entry.text, "The full clean article.");
+		const deleted = await call(`/dashboard/knowledge/${SOURCE_TYPE}/${feed.id}/${oneEntry.id}`, { method: "DELETE" });
+		assert.deepEqual(deleted.json, { deleted: true });
+		assert.equal((await call(`/dashboard/knowledge/${SOURCE_TYPE}/${feed.id}`)).json.entries.some((e) => e.id === oneEntry.id), false);
+		const clearedSource = await call(`/dashboard/knowledge/${SOURCE_TYPE}/${feed.id}`, { method: "DELETE" });
+		assert.ok(clearedSource.json.cleared > 0);
+
+		const feedsList = await call("/dashboard/rss.json");
+		assert.ok(feedsList.json.feeds.some((f) => f.id === feed.id));
+		const created = await call("/dashboard/rss", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "Via Dashboard", url: "https://feed.test/dashboard" }) });
+		assert.equal(created.status, 201);
+		const patched = await call(`/dashboard/rss/${created.json.feed.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ enabled: false }) });
+		assert.equal(patched.json.feed.enabled, false);
+		const removed = await call(`/dashboard/rss/${created.json.feed.id}`, { method: "DELETE" });
+		assert.deepEqual(removed.json, { deleted: true });
+		await new Promise((r) => srv.close(r));
+	}
+
+	removeFeed(feed.id);
+	removeFeed(orphanFeed.id);
+	await deleteAgent(extractor.id);
+	apiKeys.remove(rkey.id);
 }
 
 // ---------------------------------------------------------------- profile control
@@ -7689,7 +7919,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	const navPages = [...navHtml.matchAll(/<a[^>]*href="#([a-z]+)"/g)].map((m) => m[1]);
 	assert.deepEqual([...navPages].sort(), Object.keys(PAGES).sort(), "every nav item is a page and every page is in the nav");
 	assert.equal(new Set(navPages).size, navPages.length, "no page twice in the nav");
-	assert.equal(navPages.length, 15, "fifteen items in the sidebar");
+	assert.equal(navPages.length, 16, "sixteen items in the sidebar");
 	assert.deepEqual([...navHtml.matchAll(/class="navgroup">([^<]+)</g)].map((m) => m[1]), ["Monitor", "Build", "Infrastructure", "Admin"]);
 
 	// Every tab shows a pane that exists, and a split pane's sections match the markup.

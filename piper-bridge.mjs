@@ -439,6 +439,43 @@ export default async function piperBridge(pi) {
 		});
 	}
 
+	// The knowledge base: read and search only, available to every chat, not gated per agent — it is
+	// something to draw on, not a capability like hand-offs. Never write or delete from here.
+	if (process.env.PIPER_KNOWLEDGE === "1") {
+		const reply = (value) => ({ content: [{ type: "text", text: value }], details: {} });
+		pi.registerTool({
+			name: "piper_knowledge_search",
+			label: "Search the knowledge base",
+			description: "Search what has been gathered into the knowledge base (RSS articles today, more later) by title, summary, tags and content. Leave the query out to see the newest entries.",
+			promptSnippet: "Search the knowledge base",
+			parameters: { type: "object", properties: { query: { type: "string", description: "A word or phrase to search for. Leave out to list the newest entries." } } },
+			async execute(_toolCallId, params) {
+				try {
+					const { entries } = await readJson(await request("/knowledge/search", { query: params?.query }));
+					if (!entries.length) return reply(params?.query ? `Nothing matches "${params.query}".` : "The knowledge base is empty.");
+					return reply(entries.map((e) => `- #${e.id} ${e.title}${e.publishedAt ? ` (${new Date(e.publishedAt).toLocaleDateString()})` : ""}: ${e.summary || e.preview || ""}${e.tags && e.tags.length ? ` [${e.tags.join(", ")}]` : ""}`).join("\n"));
+				} catch (err) {
+					return reply(`Could not search: ${err?.message ?? err}`);
+				}
+			},
+		});
+		pi.registerTool({
+			name: "piper_knowledge_read",
+			label: "Read a knowledge base entry",
+			description: "Read one entry's full text, by its id from piper_knowledge_search.",
+			promptSnippet: "Read a knowledge base entry by id",
+			parameters: { type: "object", properties: { id: { type: "number", description: "The entry's id, from piper_knowledge_search." } }, required: ["id"] },
+			async execute(_toolCallId, params) {
+				try {
+					const { entry } = await readJson(await request("/knowledge/read", { id: params?.id }));
+					return reply(`${entry.title}\n\n${entry.text}`);
+				} catch (err) {
+					return reply(`Could not read that: ${err?.message ?? err}`);
+				}
+			},
+		});
+	}
+
 	// A new chat starts on the operator's current default model, unless the key's profile names its
 	// own. The gateway sets PIPER_DEFAULT_MODEL only for new chats; a resumed one keeps its model.
 	const defaultModel = process.env.PIPER_DEFAULT_MODEL;

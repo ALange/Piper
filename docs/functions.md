@@ -244,6 +244,41 @@ search returns, so a broad query cannot dump a whole memory into context at once
 Settings (Settings → Sessions → Memory): `AGENT_MEMORY_ENABLED`, `MEMORY_MAX_ENTRIES`, `MEMORY_MAX_NAME_BYTES`,
 `MEMORY_MAX_VALUE_BYTES`, `MEMORY_LOOKUP_LIMIT`.
 
+## Knowledge base
+
+Entries every chat can search and read, through two tools — `piper_knowledge_search {query}` and
+`piper_knowledge_read {id}` — read and search only, the same "never through the agent" shape as Memory: an
+agent can draw on it, but writing and deleting stay the operator's, on the Knowledge page. The store itself
+(`knowledge_entries`, keyed by a source type and reference) is source-agnostic; RSS is the first thing that
+fills it, not the only one planned.
+
+**RSS, the first source.** The gateway polls each feed you add on its own interval, using its own `http(s)`
+fetch — only the *feed XML* is fetched by the gateway itself. A feed's first poll ever only seeds its current
+entries, marked `skipped`: known, but never extracted, so adding a feed never backfills a history you did not
+ask for. From the next poll on, a genuinely new entry (by the feed's own guid) is queued, and a real agent you
+named for that feed (or `RSS_DEFAULT_AGENT` when it names none) runs a whole turn: fetch the article page
+itself — with whatever fetch tool that agent has, inside its own container — and extract it clean, no ads,
+navigation or sponsored sections, replying with one strict JSON object (title, text, summary, tags). A reply
+that is not valid JSON, or is missing a title or text, is kept as a `failed` entry with the reason, not a
+crash — **retry** it from the Knowledge page once it is fixed (a different model, a working fetch tool, and
+so on).
+
+**Management (Knowledge page).** **Feeds** tab: add, edit (name, URL, agent, interval, enabled), **pull now**
+(polls regardless of schedule), delete. **Entries** tab: every entry (source, title, status, published,
+fetched), a detail view (full text, summary, tags), **retry** a failed one, delete, or clear a whole source.
+
+**Guards.** `RSS_POLL_MIN_INTERVAL_MS` floors how often any one feed may be polled; `RSS_MAX_FEEDS` caps how
+many feeds exist at once; `RSS_MAX_PARALLEL_EXTRACTIONS` caps concurrent extraction turns;
+`RSS_EXTRACT_TIMEOUT_MS` stops a stuck one; `RSS_MAX_ARTICLE_BYTES` caps one article's stored text (cut, not
+refused — it is the pipeline's own output). `KNOWLEDGE_LOOKUP_LIMIT` caps how many entries one search
+returns; `KNOWLEDGE_RETENTION_DAYS` forgets entries older than that (0 keeps everything). `KNOWLEDGE_ENABLED`
+and `RSS_ENABLED` are separate switches on purpose: turning off RSS pauses new extraction without taking the
+tools away from agents reading what is already there.
+
+Settings (Settings → Knowledge): `KNOWLEDGE_ENABLED`, `KNOWLEDGE_LOOKUP_LIMIT`, `KNOWLEDGE_RETENTION_DAYS`,
+`RSS_ENABLED`, `RSS_POLL_MIN_INTERVAL_MS`, `RSS_MAX_FEEDS`, `RSS_MAX_PARALLEL_EXTRACTIONS`,
+`RSS_EXTRACT_TIMEOUT_MS`, `RSS_DEFAULT_AGENT`, `RSS_MAX_ARTICLE_BYTES`.
+
 ## Files & profiles
 
 Browse the **workspace** (what the agents see at `/workspace`) or the **profile** (skills, extensions, `AGENTS.md`,

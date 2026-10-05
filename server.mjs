@@ -54,7 +54,10 @@ import { extensionRoutes } from "./lib/extroutes.mjs";
 import { playgroundRoutes } from "./lib/playground.mjs";
 import { jobApiRoutes, jobDashboardRoutes, triggerRoute } from "./lib/jobroutes.mjs";
 import { memoryDashboardRoutes } from "./lib/memoryroutes.mjs";
+import { knowledgeDashboardRoutes } from "./lib/knowledgeroutes.mjs";
+import { rssDashboardRoutes } from "./lib/rssroutes.mjs";
 import { startJobs, stopJobs } from "./lib/jobs.mjs";
+import { startFeeds, stopFeeds } from "./lib/rssfeeds.mjs";
 import { startImageHousekeeping } from "./lib/images.mjs";
 import { startTeamServers, stopTeamServers } from "./lib/teams.mjs";
 import { dashboardFilesRoutes, filesRoutes, keyIdForScope, profileAdminRoutes, profileRoutes } from "./lib/profiles.mjs";
@@ -88,6 +91,14 @@ export * from "./lib/jobs.mjs";
 export * from "./lib/jobroutes.mjs";
 export * from "./lib/memoryroutes.mjs";
 export * from "./lib/agentmemory.mjs";
+export * from "./lib/knowledge.mjs";
+export * from "./lib/knowledgeroutes.mjs";
+// Not `export *`: tick/pump collide in name (not meaning) with lib/jobs.mjs's own scheduler functions.
+export {
+	RssError, SOURCE_TYPE, getFeed, listFeeds, createFeed, updateFeed, removeFeed, parseFeedXml, forcePoll,
+	tick as rssTick, parseExtraction, setExtractionRunner, pump as rssPump, retryEntry, startFeeds, stopFeeds,
+} from "./lib/rssfeeds.mjs";
+export * from "./lib/rssroutes.mjs";
 export * from "./lib/templates.mjs";
 export * from "./lib/wizard.mjs";
 export * from "./lib/bundleroutes.mjs";
@@ -283,6 +294,8 @@ async function handle(req, res) {
 		}
 		if (path === "/dashboard/jobs.json" || path === "/dashboard/jobs" || path.startsWith("/dashboard/jobs/")) return await jobDashboardRoutes(req, res, path);
 		if (path === "/dashboard/memory.json" || path.startsWith("/dashboard/memory/")) return await memoryDashboardRoutes(req, res, path);
+		if (path === "/dashboard/knowledge.json" || path.startsWith("/dashboard/knowledge/")) return await knowledgeDashboardRoutes(req, res, path);
+		if (path === "/dashboard/rss.json" || path === "/dashboard/rss" || path.startsWith("/dashboard/rss/")) return await rssDashboardRoutes(req, res, path);
 		if (path === "/dashboard/container-pi" || path === "/dashboard/containers/recheck") return await containerPiRoutes(req, res, path);
 		if (path === "/dashboard/containers.json" || path.startsWith("/dashboard/containers/") || path === "/dashboard/audit.json" || path === "/dashboard/audit.csv" || path === "/dashboard/updates.json" || path === "/dashboard/alerts/test" || path === "/dashboard/images.json" || path.startsWith("/dashboard/images/")) return await containerRoutes(req, res, path);
 		if (req.method === "POST" && path === "/dashboard/kill-all") {
@@ -342,6 +355,7 @@ if (isMain) {
 		process.stderr.write(`${signal}: hibernating ${sessions.size} chat(s)\n`);
 		server.close();
 		stopJobs();
+		stopFeeds();
 		void stopAgentServers();
 		void stopTeamServers();
 		closeAllTerminals();
@@ -369,6 +383,7 @@ if (isMain) {
 				if (status.ok) process.stderr.write(`containers: docker ${status.engine.version}, image ${config.CONTAINER_IMAGE} (Pi ${status.image.piVersion || "?"}), network ${status.network.mode}${status.firewall.allowed.length ? `, allowed: ${status.firewall.allowed.map((a) => a.endpoint).join(" ")}` : ""}\n`);
 				startSweeps();
 				startJobs();
+				startFeeds();
 				startImageHousekeeping();
 				startEventWatch();
 				startDiskWatch();
@@ -377,6 +392,7 @@ if (isMain) {
 			() => {
 				startSweeps();
 				startJobs();
+				startFeeds();
 				void startAgentServers().then(() => startTeamServers());
 			},
 		);
