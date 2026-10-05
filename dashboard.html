@@ -993,14 +993,29 @@
             <p class="hint" style="margin:0" id="epnote">A named, permanent Pi agent of an API key with a port of its own: point any OpenAI client at its URL with the key it belongs to. Each has its own instructions, skills, model and container (kept between chats), so one key can front an architect, a coder and a researcher. Spend, session and model limits stay on the key.</p>
           </div>
           <button id="eprefresh">refresh</button>
+          <button id="epbulkbtn" disabled title="select one or more agents below first">bulk update&hellip;</button>
         </div>
         <table>
           <thead><tr>
+            <th><input type="checkbox" id="epselall" title="select all"></th>
             <th>agent</th><th>key</th><th>endpoint</th><th>state</th><th>workspace</th><th>model</th><th class="num">chats</th><th class="num" title="what this agent has spent today, closed and running sessions">today</th><th></th>
           </tr></thead>
           <tbody id="eprows"></tbody>
         </table>
         <p class="hint" id="epempty" hidden>No agent endpoints yet. Create one below.</p>
+      </section>
+      <section data-tab="agents" class="panel" id="epbulkeditor" hidden>
+        <h3 id="epbulktitle">Bulk update</h3>
+        <p class="hint" style="margin:0 0 8px">Only the fields you tick below are changed; everything else is left alone, on every selected agent. A container change rebuilds each one's container, keeping what is installed in it, same as editing one at a time.</p>
+        <div class="fieldrow" style="margin-bottom:8px"><label class="ctrl"><input type="checkbox" id="epbulkon-model"> model</label><input type="text" id="epbulkmodel" placeholder="provider/model, blank = the default"><select id="epbulkthink"></select></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label class="ctrl"><input type="checkbox" id="epbulkon-deleg"> hand-offs</label><select id="epbulkdeleg"><option value="1">may hand work to the other agents of its key</option><option value="0">off</option></select></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label class="ctrl"><input type="checkbox" id="epbulkon-msgs"> colleague messages</label><select id="epbulkmsgs"><option value="">follow the setting</option><option value="chat">in the reply, as (name): message</option><option value="thinking">first line only, in the reasoning</option><option value="off">not shown</option></select></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label class="ctrl"><input type="checkbox" id="epbulkon-sched"> schedules</label><select id="epbulksched"><option value="1">may schedule recurring tasks for itself</option><option value="0">off</option></select></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label class="ctrl"><input type="checkbox" id="epbulkon-enabled"> on/off</label><select id="epbulkenabled"><option value="1">enabled</option><option value="0">disabled</option></select></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label class="ctrl"><input type="checkbox" id="epbulkon-ctr"> container limits</label></div>
+        <div id="epbulkctr" style="margin-left:26px"></div>
+        <div class="fieldrow" style="margin-top:8px"><button id="epbulksave">apply</button><button id="epbulkcancel">close</button><span class="hint small" id="epbulknote"></span></div>
+        <div id="epbulkresults" class="hint small" style="margin-top:6px"></div>
       </section>
       <section data-tab="teams" class="panel" id="teamsec">
         <div class="toolbar">
@@ -3221,6 +3236,7 @@ $('imgclean').addEventListener('click', imgOpenCleanup);
 /* Endpoints: named, permanent agents of a key, each on its own port. */
 var EP_DATA = null;
 var EP_EDIT = null;
+var EP_SELECTED = {};
 var EP_FIELDS = [['memoryMb', 'memory (MB)'], ['cpus', 'cpu cores'], ['pids', 'processes'], ['network', 'network'], ['image', 'image'], ['mounts', 'extra mounts'], ['env', 'extra env']];
 var EP_THINK = ['', 'off', 'minimal', 'low', 'medium', 'high', 'xhigh'];
 function epFill(select, list, label) {
@@ -3466,8 +3482,15 @@ function renderEndpoints(d) {
   var tbody = $('eprows');
   tbody.replaceChildren();
   $('epempty').hidden = d.agents.length > 0;
+  var stillThere = {};
   d.agents.forEach(function (a) {
     var tr = el('tr');
+    stillThere[a.id] = true;
+    var selCell = el('td');
+    var sel = el('input'); sel.type = 'checkbox'; sel.checked = Boolean(EP_SELECTED[a.id]);
+    sel.addEventListener('change', function () { if (sel.checked) EP_SELECTED[a.id] = true; else delete EP_SELECTED[a.id]; epUpdateBulkButton(); });
+    selCell.appendChild(sel);
+    tr.appendChild(selCell);
     tr.appendChild(cell(a.name, 'mono'));
     tr.appendChild(cell(a.key));
     var urlCell = el('td'); urlCell.className = 'mono';
@@ -3502,6 +3525,8 @@ function renderEndpoints(d) {
     tr.appendChild(actions);
     tbody.appendChild(tr);
   });
+  Object.keys(EP_SELECTED).forEach(function (id) { if (!stillThere[id]) delete EP_SELECTED[id]; });
+  epUpdateBulkButton();
   // The create form: usable keys only, and the range the ports come from.
   var keep = $('epkey').value;
   $('epkey').replaceChildren();
@@ -4547,6 +4572,72 @@ $('epedsave').addEventListener('click', function () {
     .then(function () { $('epedsave').disabled = false; });
 });
 $('epedcancel').addEventListener('click', function () { $('epeditor').hidden = true; EP_EDIT = null; });
+function epSelectedIds() { return Object.keys(EP_SELECTED); }
+function epUpdateBulkButton() {
+  var n = epSelectedIds().length;
+  $('epbulkbtn').disabled = !n;
+  $('epbulkbtn').textContent = n ? 'bulk update… (' + n + ' selected)' : 'bulk update…';
+  var all = EP_DATA && EP_DATA.agents.length > 0 && EP_DATA.agents.every(function (a) { return EP_SELECTED[a.id]; });
+  $('epselall').checked = Boolean(all);
+}
+$('epselall').addEventListener('change', function () {
+  if (!EP_DATA) return;
+  EP_DATA.agents.forEach(function (a) { if ($('epselall').checked) EP_SELECTED[a.id] = true; else delete EP_SELECTED[a.id]; });
+  renderEndpoints(EP_DATA);
+});
+var epReadBulkCtr = null;
+$('epbulkbtn').addEventListener('click', function () {
+  if (!epSelectedIds().length) return;
+  $('epbulktitle').textContent = 'Bulk update (' + epSelectedIds().length + ' agent' + (epSelectedIds().length === 1 ? '' : 's') + ')';
+  ['model', 'deleg', 'msgs', 'sched', 'enabled', 'ctr'].forEach(function (f) { $('epbulkon-' + f).checked = false; });
+  $('epbulkmodel').value = '';
+  epFill($('epbulkthink'), EP_THINK, 'thinking: default');
+  $('epbulkthink').value = '';
+  $('epbulkdeleg').value = '1';
+  $('epbulkmsgs').value = '';
+  $('epbulksched').value = '1';
+  $('epbulkenabled').value = '1';
+  epReadBulkCtr = epContainerInputs($('epbulkctr'), null);
+  $('epbulkctr').insertBefore(el('p', 'Blank follows the key, then the defaults, same as one at a time.'), $('epbulkctr').firstChild).className = 'hint small';
+  $('epbulknote').textContent = '';
+  $('epbulkresults').replaceChildren();
+  $('epbulkeditor').hidden = false;
+  $('epbulkeditor').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+});
+$('epbulkcancel').addEventListener('click', function () { $('epbulkeditor').hidden = true; });
+$('epbulksave').addEventListener('click', function () {
+  var ids = epSelectedIds();
+  if (!ids.length) return;
+  var body = {};
+  if ($('epbulkon-model').checked) { body.model = $('epbulkmodel').value.trim() || null; body.thinking = $('epbulkthink').value || null; }
+  if ($('epbulkon-deleg').checked) body.canDelegate = $('epbulkdeleg').value === '1';
+  if ($('epbulkon-msgs').checked) body.delegateMessages = $('epbulkmsgs').value || null;
+  if ($('epbulkon-sched').checked) body.canSchedule = $('epbulksched').value === '1';
+  if ($('epbulkon-ctr').checked) body.container = epReadBulkCtr();
+  var setEnabled = $('epbulkon-enabled').checked ? $('epbulkenabled').value === '1' : null;
+  if (!Object.keys(body).length && setEnabled === null) { $('epbulknote').textContent = 'tick at least one field to change'; return; }
+  var names = {};
+  (EP_DATA ? EP_DATA.agents : []).forEach(function (a) { names[a.id] = a.name; });
+  $('epbulksave').disabled = true;
+  $('epbulknote').textContent = 'applying to ' + ids.length + ' agent(s)…';
+  $('epbulkresults').replaceChildren();
+  // One at a time: a container change rebuilds it, and running them all at once would pile that up.
+  var ok = 0; var failed = [];
+  ids.reduce(function (chain, id) {
+    return chain.then(function () {
+      $('epbulknote').textContent = 'applying to ' + (names[id] || id) + '… (' + (ok + failed.length + 1) + ' of ' + ids.length + ')';
+      var p = Object.keys(body).length ? epPost('dashboard/agents/' + id, body).then(function (j) { EP_DATA = j; }) : Promise.resolve();
+      if (setEnabled !== null) p = p.then(function () { return epPost('dashboard/agents/' + id + '/' + (setEnabled ? 'enable' : 'disable'), {}).then(function (j) { EP_DATA = j; }); });
+      return p.then(function () { ok++; }).catch(function (e) { failed.push((names[id] || id) + ': ' + e.message); });
+    });
+  }, Promise.resolve()).then(function () {
+    renderEndpoints(EP_DATA);
+    $('epbulknote').textContent = ok + ' of ' + ids.length + ' updated' + (failed.length ? ', ' + failed.length + ' failed (see below)' : '.');
+    $('epbulkresults').replaceChildren();
+    failed.forEach(function (msg) { var p = el('p', msg); p.className = 'bad'; p.style.margin = '2px 0'; $('epbulkresults').appendChild(p); });
+    $('epbulksave').disabled = false;
+  });
+});
 var epReadCreate = epContainerInputs($('epctr'), null);
 epFill($('epthink'), EP_THINK, 'thinking: default');
 $('epcreate').addEventListener('click', function () {
