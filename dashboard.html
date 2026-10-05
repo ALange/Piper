@@ -54,7 +54,7 @@
   /* main */
   /* min-width:0 lets main shrink to the space beside the sidebar; without it, a wide table or a
      long tool list stretches main and the whole page scrolls sideways. */
-  main { flex:1; min-width:0; padding:26px 30px 40px; max-width:1600px; }
+  main { flex:1; min-width:0; padding:26px 30px 40px; max-width:2200px; }
   h1 { font-size:26px; margin:0 0 4px; letter-spacing:-.01em; }
   .sub { color:var(--muted); margin:0 0 26px; font-size:12px; }
   .sectionhead { display:flex; align-items:center; justify-content:space-between; margin:0 0 14px; }
@@ -168,7 +168,9 @@
   .li.tool { color:var(--muted); }
   .li.tool.error { border-color:#5a2a2a; }
   .li.tool pre { margin:6px 0 0; max-height:160px; overflow:auto; color:var(--fg); white-space:pre-wrap; }
-  .panel { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:14px 15px 15px; }
+  /* overflow-x:auto so a wide table (many columns, long button lists) scrolls within its own panel
+     instead of spilling past its border; max-width keeps a lone cell from stretching the whole panel. */
+  .panel { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:14px 15px 15px; overflow-x:auto; max-width:100%; }
   .panel h3 { font-size:11px; margin:0 0 3px; text-transform:uppercase; letter-spacing:.1em; color:#cfd3d7; }
   .panel .hint { color:var(--dim); font-size:11px; margin:0 0 14px; }
   .empty { color:var(--dim); padding:26px 4px; text-align:center; font-size:11px; }
@@ -893,12 +895,14 @@
             <p class="hint" style="margin:0" id="extnote">Pi packages installed on <b>this host</b> (its npm or git, install scripts off unless you allow them) and kept in one library. They are never run here: a package is mounted read-only into the containers of the keys and agents you give it to (Access tab) and runs there, under their network policy and limits.</p>
           </div>
           <button id="extrefresh">refresh</button>
+          <button id="extbulkbtn" disabled title="select one or more extensions below first">bulk update&hellip;</button>
         </div>
         <table>
-          <thead><tr><th>extension</th><th>source</th><th>version</th><th class="num">size</th><th>given to</th><th></th></tr></thead>
+          <thead><tr><th><input type="checkbox" id="extselall" title="select all"></th><th>extension</th><th>source</th><th>version</th><th class="num">size</th><th>given to</th><th></th></tr></thead>
           <tbody id="extrows"></tbody>
         </table>
         <p class="hint" id="extempty" hidden>No extensions installed yet.</p>
+        <div id="extbulkresults"></div>
       </section>
       <section data-tab="library" class="panel">
         <h3>Install an extension</h3>
@@ -993,14 +997,29 @@
             <p class="hint" style="margin:0" id="epnote">A named, permanent Pi agent of an API key with a port of its own: point any OpenAI client at its URL with the key it belongs to. Each has its own instructions, skills, model and container (kept between chats), so one key can front an architect, a coder and a researcher. Spend, session and model limits stay on the key.</p>
           </div>
           <button id="eprefresh">refresh</button>
+          <button id="epbulkbtn" disabled title="select one or more agents below first">bulk update&hellip;</button>
         </div>
         <table>
           <thead><tr>
+            <th><input type="checkbox" id="epselall" title="select all"></th>
             <th>agent</th><th>key</th><th>endpoint</th><th>state</th><th>workspace</th><th>model</th><th class="num">chats</th><th class="num" title="what this agent has spent today, closed and running sessions">today</th><th></th>
           </tr></thead>
           <tbody id="eprows"></tbody>
         </table>
         <p class="hint" id="epempty" hidden>No agent endpoints yet. Create one below.</p>
+      </section>
+      <section data-tab="agents" class="panel" id="epbulkeditor" hidden>
+        <h3 id="epbulktitle">Bulk update</h3>
+        <p class="hint" style="margin:0 0 8px">Only the fields you tick below are changed; everything else is left alone, on every selected agent. A container change rebuilds each one's container, keeping what is installed in it, same as editing one at a time.</p>
+        <div class="fieldrow" style="margin-bottom:8px"><label class="ctrl"><input type="checkbox" id="epbulkon-model"> model</label><input type="text" id="epbulkmodel" placeholder="provider/model, blank = the default"><select id="epbulkthink"></select></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label class="ctrl"><input type="checkbox" id="epbulkon-deleg"> hand-offs</label><select id="epbulkdeleg"><option value="1">may hand work to the other agents of its key</option><option value="0">off</option></select></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label class="ctrl"><input type="checkbox" id="epbulkon-msgs"> colleague messages</label><select id="epbulkmsgs"><option value="">follow the setting</option><option value="chat">in the reply, as (name): message</option><option value="thinking">first line only, in the reasoning</option><option value="off">not shown</option></select></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label class="ctrl"><input type="checkbox" id="epbulkon-sched"> schedules</label><select id="epbulksched"><option value="1">may schedule recurring tasks for itself</option><option value="0">off</option></select></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label class="ctrl"><input type="checkbox" id="epbulkon-enabled"> on/off</label><select id="epbulkenabled"><option value="1">enabled</option><option value="0">disabled</option></select></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label class="ctrl"><input type="checkbox" id="epbulkon-ctr"> container limits</label></div>
+        <div id="epbulkctr" style="margin-left:26px"></div>
+        <div class="fieldrow" style="margin-top:8px"><button id="epbulksave">apply</button><button id="epbulkcancel">close</button><span class="hint small" id="epbulknote"></span></div>
+        <div id="epbulkresults" class="hint small" style="margin-top:6px"></div>
       </section>
       <section data-tab="teams" class="panel" id="teamsec">
         <div class="toolbar">
@@ -3221,6 +3240,7 @@ $('imgclean').addEventListener('click', imgOpenCleanup);
 /* Endpoints: named, permanent agents of a key, each on its own port. */
 var EP_DATA = null;
 var EP_EDIT = null;
+var EP_SELECTED = {};
 var EP_FIELDS = [['memoryMb', 'memory (MB)'], ['cpus', 'cpu cores'], ['pids', 'processes'], ['network', 'network'], ['image', 'image'], ['mounts', 'extra mounts'], ['env', 'extra env']];
 var EP_THINK = ['', 'off', 'minimal', 'low', 'medium', 'high', 'xhigh'];
 function epFill(select, list, label) {
@@ -3466,8 +3486,15 @@ function renderEndpoints(d) {
   var tbody = $('eprows');
   tbody.replaceChildren();
   $('epempty').hidden = d.agents.length > 0;
+  var stillThere = {};
   d.agents.forEach(function (a) {
     var tr = el('tr');
+    stillThere[a.id] = true;
+    var selCell = el('td');
+    var sel = el('input'); sel.type = 'checkbox'; sel.checked = Boolean(EP_SELECTED[a.id]);
+    sel.addEventListener('change', function () { if (sel.checked) EP_SELECTED[a.id] = true; else delete EP_SELECTED[a.id]; epUpdateBulkButton(); });
+    selCell.appendChild(sel);
+    tr.appendChild(selCell);
     tr.appendChild(cell(a.name, 'mono'));
     tr.appendChild(cell(a.key));
     var urlCell = el('td'); urlCell.className = 'mono';
@@ -3502,6 +3529,8 @@ function renderEndpoints(d) {
     tr.appendChild(actions);
     tbody.appendChild(tr);
   });
+  Object.keys(EP_SELECTED).forEach(function (id) { if (!stillThere[id]) delete EP_SELECTED[id]; });
+  epUpdateBulkButton();
   // The create form: usable keys only, and the range the ports come from.
   var keep = $('epkey').value;
   $('epkey').replaceChildren();
@@ -3587,6 +3616,8 @@ $('teamsave').addEventListener('click', function () {
 /* ---- extensions: the library on this host, and who gets what ---- */
 var EXT = null;
 var EXT_TIMER = null;
+var EXT_SELECTED = {};
+var EXT_BULK_BUSY = false;
 function loadExtensions() {
   return fetch('dashboard/extensions.json', { cache: 'no-store' }).then(readJson).then(function (d) { EXT = d; renderExtensions(); if (d.job && d.job.state === 'running') extShowJob(d.job); })
     .catch(function (e) { $('extnote').textContent = 'cannot load extensions: ' + e.message; });
@@ -3609,8 +3640,15 @@ function renderExtensions() {
   body.replaceChildren();
   $('extempty').hidden = EXT.library.length > 0;
   if (!EXT.enabled) $('extnote').textContent = 'Installing extensions is switched off (Settings → Agent).';
+  var stillThere = {};
   EXT.library.forEach(function (e) {
     var tr = el('tr');
+    stillThere[e.name] = true;
+    var selCell = el('td');
+    var sel = el('input'); sel.type = 'checkbox'; sel.checked = Boolean(EXT_SELECTED[e.name]); sel.disabled = EXT_BULK_BUSY;
+    sel.addEventListener('change', function () { if (sel.checked) EXT_SELECTED[e.name] = true; else delete EXT_SELECTED[e.name]; extUpdateBulkButton(); });
+    selCell.appendChild(sel);
+    tr.appendChild(selCell);
     var n = el('td', e.name); if (e.scripts) { var b = n.appendChild(el('span', ' scripts')); b.className = 'badge'; b.title = 'installed with install scripts allowed'; }
     tr.appendChild(n);
     tr.appendChild(el('td', e.source));
@@ -3618,9 +3656,9 @@ function renderExtensions() {
     tr.appendChild(el('td', bytes(e.bytes))).className = 'num';
     tr.appendChild(el('td', e.usedBy.length ? e.usedBy.join(', ') : 'nobody'));
     var act = el('td');
-    var up = el('button', 'update'); up.title = 'install it again from the same source';
+    var up = el('button', 'update'); up.title = 'install it again from the same source'; up.disabled = EXT_BULK_BUSY;
     up.addEventListener('click', function () { extPost('update', { name: e.name }).then(function (r) { extShowJob(r.job); }).catch(function (x) { $('extinstnote').textContent = x.message; $('extinstnote').className = 'passnote bad'; }); });
-    var rm = el('button', 'remove');
+    var rm = el('button', 'remove'); rm.disabled = EXT_BULK_BUSY;
     rm.addEventListener('click', function () {
       var used = e.usedBy.length ? ' It is given to: ' + e.usedBy.join(', ') + '; their chats lose it.' : '';
       if (!confirm('Remove ' + e.name + ' from the library?' + used)) return;
@@ -3629,8 +3667,66 @@ function renderExtensions() {
     act.appendChild(up); act.appendChild(document.createTextNode(' ')); act.appendChild(rm); tr.appendChild(act);
     body.appendChild(tr);
   });
+  Object.keys(EXT_SELECTED).forEach(function (name) { if (!stillThere[name]) delete EXT_SELECTED[name]; });
+  extUpdateBulkButton();
   renderExtAccess();
 }
+function extUpdateBulkButton() {
+  var n = Object.keys(EXT_SELECTED).length;
+  $('extbulkbtn').disabled = !n || EXT_BULK_BUSY;
+  $('extbulkbtn').textContent = n ? 'bulk update… (' + n + ' selected)' : 'bulk update…';
+  var all = EXT && EXT.library.length > 0 && EXT.library.every(function (e) { return EXT_SELECTED[e.name]; });
+  $('extselall').checked = Boolean(all);
+  $('extselall').disabled = EXT_BULK_BUSY;
+}
+$('extselall').addEventListener('change', function () {
+  if (!EXT) return;
+  EXT.library.forEach(function (e) { if ($('extselall').checked) EXT_SELECTED[e.name] = true; else delete EXT_SELECTED[e.name]; });
+  renderExtensions();
+});
+/* One name at a time, waiting for the host's single job slot (shared with every other install here) to
+   actually finish before starting the next, rather than firing them all and racing 409s against it. */
+function extPollUntilDone() {
+  return new Promise(function (resolve) {
+    (function tick() {
+      fetch('dashboard/extensions.json', { cache: 'no-store' }).then(readJson).then(function (d) {
+        EXT = d;
+        if (d.job) {
+          $('extjobtitle').hidden = $('extjob').hidden = false;
+          $('extjobtitle').textContent = d.job.title + ' — ' + d.job.state;
+          $('extjob').textContent = d.job.lines.join('\n');
+          $('extjob').scrollTop = $('extjob').scrollHeight;
+        }
+        if (d.job && d.job.state === 'running') setTimeout(tick, 700);
+        else resolve(d.job);
+      }).catch(function () { setTimeout(tick, 1000); });
+    })();
+  });
+}
+$('extbulkbtn').addEventListener('click', function () {
+  var names = Object.keys(EXT_SELECTED);
+  if (!names.length || EXT_BULK_BUSY) return;
+  if (!confirm('Update ' + names.length + ' extension(s), each reinstalled from its own source? Only one install runs at a time on this host, so later ones wait their turn.')) return;
+  EXT_BULK_BUSY = true;
+  renderExtensions();
+  $('extbulkresults').replaceChildren();
+  var ok = 0; var failed = [];
+  names.reduce(function (chain, name) {
+    return chain.then(function () {
+      $('extnote').textContent = 'updating ' + name + '… (' + (ok + failed.length + 1) + ' of ' + names.length + ')';
+      return extPost('update', { name: name }).then(function (r) { return extPollUntilDone(); }).then(function (job) {
+        if (job && job.state === 'failed') failed.push(name + ': ' + (job.lines[job.lines.length - 1] || 'failed'));
+        else ok++;
+      }).catch(function (e) { failed.push(name + ': ' + e.message); });
+    });
+  }, Promise.resolve()).then(function () {
+    EXT_BULK_BUSY = false;
+    EXT_SELECTED = {};
+    loadExtensions();
+    $('extnote').textContent = ok + ' of ' + names.length + ' updated' + (failed.length ? ', ' + failed.length + ' failed (see below).' : '.');
+    failed.forEach(function (msg) { var p = el('p', msg); p.className = 'bad hint small'; p.style.margin = '2px 0'; $('extbulkresults').appendChild(p); });
+  });
+});
 function renderExtAccess() {
   var t = $('extaccess');
   t.replaceChildren();
@@ -4547,6 +4643,72 @@ $('epedsave').addEventListener('click', function () {
     .then(function () { $('epedsave').disabled = false; });
 });
 $('epedcancel').addEventListener('click', function () { $('epeditor').hidden = true; EP_EDIT = null; });
+function epSelectedIds() { return Object.keys(EP_SELECTED); }
+function epUpdateBulkButton() {
+  var n = epSelectedIds().length;
+  $('epbulkbtn').disabled = !n;
+  $('epbulkbtn').textContent = n ? 'bulk update… (' + n + ' selected)' : 'bulk update…';
+  var all = EP_DATA && EP_DATA.agents.length > 0 && EP_DATA.agents.every(function (a) { return EP_SELECTED[a.id]; });
+  $('epselall').checked = Boolean(all);
+}
+$('epselall').addEventListener('change', function () {
+  if (!EP_DATA) return;
+  EP_DATA.agents.forEach(function (a) { if ($('epselall').checked) EP_SELECTED[a.id] = true; else delete EP_SELECTED[a.id]; });
+  renderEndpoints(EP_DATA);
+});
+var epReadBulkCtr = null;
+$('epbulkbtn').addEventListener('click', function () {
+  if (!epSelectedIds().length) return;
+  $('epbulktitle').textContent = 'Bulk update (' + epSelectedIds().length + ' agent' + (epSelectedIds().length === 1 ? '' : 's') + ')';
+  ['model', 'deleg', 'msgs', 'sched', 'enabled', 'ctr'].forEach(function (f) { $('epbulkon-' + f).checked = false; });
+  $('epbulkmodel').value = '';
+  epFill($('epbulkthink'), EP_THINK, 'thinking: default');
+  $('epbulkthink').value = '';
+  $('epbulkdeleg').value = '1';
+  $('epbulkmsgs').value = '';
+  $('epbulksched').value = '1';
+  $('epbulkenabled').value = '1';
+  epReadBulkCtr = epContainerInputs($('epbulkctr'), null);
+  $('epbulkctr').insertBefore(el('p', 'Blank follows the key, then the defaults, same as one at a time.'), $('epbulkctr').firstChild).className = 'hint small';
+  $('epbulknote').textContent = '';
+  $('epbulkresults').replaceChildren();
+  $('epbulkeditor').hidden = false;
+  $('epbulkeditor').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+});
+$('epbulkcancel').addEventListener('click', function () { $('epbulkeditor').hidden = true; });
+$('epbulksave').addEventListener('click', function () {
+  var ids = epSelectedIds();
+  if (!ids.length) return;
+  var body = {};
+  if ($('epbulkon-model').checked) { body.model = $('epbulkmodel').value.trim() || null; body.thinking = $('epbulkthink').value || null; }
+  if ($('epbulkon-deleg').checked) body.canDelegate = $('epbulkdeleg').value === '1';
+  if ($('epbulkon-msgs').checked) body.delegateMessages = $('epbulkmsgs').value || null;
+  if ($('epbulkon-sched').checked) body.canSchedule = $('epbulksched').value === '1';
+  if ($('epbulkon-ctr').checked) body.container = epReadBulkCtr();
+  var setEnabled = $('epbulkon-enabled').checked ? $('epbulkenabled').value === '1' : null;
+  if (!Object.keys(body).length && setEnabled === null) { $('epbulknote').textContent = 'tick at least one field to change'; return; }
+  var names = {};
+  (EP_DATA ? EP_DATA.agents : []).forEach(function (a) { names[a.id] = a.name; });
+  $('epbulksave').disabled = true;
+  $('epbulknote').textContent = 'applying to ' + ids.length + ' agent(s)…';
+  $('epbulkresults').replaceChildren();
+  // One at a time: a container change rebuilds it, and running them all at once would pile that up.
+  var ok = 0; var failed = [];
+  ids.reduce(function (chain, id) {
+    return chain.then(function () {
+      $('epbulknote').textContent = 'applying to ' + (names[id] || id) + '… (' + (ok + failed.length + 1) + ' of ' + ids.length + ')';
+      var p = Object.keys(body).length ? epPost('dashboard/agents/' + id, body).then(function (j) { EP_DATA = j; }) : Promise.resolve();
+      if (setEnabled !== null) p = p.then(function () { return epPost('dashboard/agents/' + id + '/' + (setEnabled ? 'enable' : 'disable'), {}).then(function (j) { EP_DATA = j; }); });
+      return p.then(function () { ok++; }).catch(function (e) { failed.push((names[id] || id) + ': ' + e.message); });
+    });
+  }, Promise.resolve()).then(function () {
+    renderEndpoints(EP_DATA);
+    $('epbulknote').textContent = ok + ' of ' + ids.length + ' updated' + (failed.length ? ', ' + failed.length + ' failed (see below)' : '.');
+    $('epbulkresults').replaceChildren();
+    failed.forEach(function (msg) { var p = el('p', msg); p.className = 'bad'; p.style.margin = '2px 0'; $('epbulkresults').appendChild(p); });
+    $('epbulksave').disabled = false;
+  });
+});
 var epReadCreate = epContainerInputs($('epctr'), null);
 epFill($('epthink'), EP_THINK, 'thinking: default');
 $('epcreate').addEventListener('click', function () {

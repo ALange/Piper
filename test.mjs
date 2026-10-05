@@ -1195,6 +1195,19 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.match((await overCap.json()).error.message, /daily spend limit reached/);
 	apiKeys.update(key.id, { dailySpend: null });
 
+	// A granted extension whose entry.json survived but whose actual package folder did not (by hand, a
+	// partial restore, a reinstall that never finished) does not take the whole container down: it is left
+	// out of that run, once, with the chat told so, rather than Pi refusing to start over one missing path.
+	mkdirSync(join(TEST_EXT, "missing-pkg"), { recursive: true });
+	writeFileSync(join(TEST_EXT, "missing-pkg", "entry.json"), JSON.stringify({ name: "missing-pkg", source: "npm:missing-pkg", version: "1.0.0", entry: "node_modules/missing-pkg" }));
+	apiKeys.update(key.id, { sharedBundles: "missing-pkg" });
+	const withMissing = await call({ messages: [{ role: "user", content: "hi" }] }, { "x-session-id": "needs-missing-ext" });
+	assert.equal(withMissing.status, 200, "the chat still starts");
+	const withMissingText = (await withMissing.json()).choices[0].message.content;
+	assert.match(withMissingText, /^\[container: an extension this chat was granted could not be found on the host and was left out: missing-pkg\. Reinstall or remove it on Extensions\.\]\n\necho: hi$/);
+	apiKeys.update(key.id, { sharedBundles: null });
+	rmSync(join(TEST_EXT, "missing-pkg"), { recursive: true, force: true });
+
 	// Each chat opened a real bridge server (a listening unix socket); closing the sessions tears those down
 	// too, or they would outlive this test and keep the process from ever exiting.
 	const openRecords = sessions.allRecords();
