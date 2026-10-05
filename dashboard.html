@@ -517,6 +517,7 @@
       <a href="#agents"><span class="ic">&#8644;</span>Agents</a>
       <a href="#extensions"><span class="ic">&#10010;</span>Extensions</a>
       <a href="#jobs"><span class="ic">&#9201;</span>Jobs</a>
+      <a href="#memory"><span class="ic">&#8734;</span>Memory</a>
       <a href="#files"><span class="ic">&#9776;</span>Files &amp; profiles</a>
       <div class="navgroup">Infrastructure</div>
       <a href="#containers"><span class="ic">&#9635;</span>Containers<span class="navbadge bad" id="nav-containers-badge" hidden>!</span></a>
@@ -989,6 +990,31 @@
       </section>
     </div><!-- /view-jobs -->
 
+    <div class="view" id="view-memory">
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Memory</h3>
+            <p class="hint" style="margin:0">Notes a chat remembers (<code>piper_remember</code>/<code>piper_recall</code>/<code>piper_memories</code>), kept until cleared here. A key&rsquo;s own chats all share one memory; a named agent&rsquo;s is its own, or its key&rsquo;s, chosen when it was created (Endpoints &rarr; create). The agent can write and read notes but not delete them &mdash; that is here only.</p>
+          </div>
+          <button id="memrefresh">refresh</button>
+        </div>
+        <table>
+          <thead><tr><th>memory</th><th class="num">notes</th><th class="num">size</th><th class="num">last updated</th><th></th></tr></thead>
+          <tbody id="memrows"></tbody>
+        </table>
+        <p class="hint" id="memempty" hidden>No memory yet: nothing has been remembered.</p>
+      </section>
+      <section class="panel" id="memdetail" hidden>
+        <div class="toolbar"><h3 id="memdetailtitle">Notes</h3><div><button id="memclear">clear all</button><button id="memdetailclose">close</button></div></div>
+        <table>
+          <thead><tr><th>name</th><th>value</th><th class="num">updated</th><th></th></tr></thead>
+          <tbody id="memnoterows"></tbody>
+        </table>
+        <p class="hint" id="memnoteempty" hidden>No notes.</p>
+      </section>
+    </div><!-- /view-memory -->
+
     <div class="view" id="view-endpoints">
       <section data-tab="agents" class="panel">
         <div class="toolbar">
@@ -1090,6 +1116,10 @@
           <select id="epws" title="own: a separate /workspace for this agent. shared: the key's existing workspace, so the agents of the key see the same files.">
             <option value="own">own workspace</option>
             <option value="shared">shared with the key</option>
+          </select>
+          <select id="epmemory" title="own: this agent's notes (piper_remember/piper_recall/piper_memories) are its own. shared: folded into its key's, so the key's own chats and this agent read and write the same notes. Fixed once created, like the workspace choice.">
+            <option value="own">own memory</option>
+            <option value="shared">memory shared with the key</option>
           </select>
           <input id="epmodel" placeholder="model (optional)">
           <select id="epthink"></select>
@@ -2354,6 +2384,13 @@ var LAYOUT = {
     summary: 'After this the calling agent is told it timed out and the colleague\u2019s turn is stopped.' },
   TEAM_MAX_STEPS: { tab: 'sessions', section: 'Hand-offs and teams', label: 'Most steps in a team', unit: 'steps',
     summary: 'A team is a chain of agents on an endpoint of its own.' },
+  AGENT_MEMORY_ENABLED: { tab: 'sessions', section: 'Memory', label: 'Allow memory',
+    summary: 'Notes a chat remembers across its own chats and containers (piper_remember/piper_recall/piper_memories). Off removes the tools and refuses every call; notes already written are kept. See the Memory page.' },
+  MEMORY_MAX_ENTRIES: { tab: 'sessions', section: 'Memory', label: 'Most notes per memory', unit: 'notes',
+    summary: 'A new name over this is refused; updating an existing one is always allowed. Clear old notes from the Memory page.' },
+  MEMORY_MAX_NAME_BYTES: { tab: 'sessions', section: 'Memory', label: 'Longest note name', unit: 'bytes' },
+  MEMORY_MAX_VALUE_BYTES: { tab: 'sessions', section: 'Memory', label: 'Longest note', unit: 'bytes' },
+  MEMORY_LOOKUP_LIMIT: { tab: 'sessions', section: 'Memory', label: 'Most notes one search returns', unit: 'notes' },
   PACKAGES_ENABLED: { tab: 'containers', section: 'Packages', label: 'Allow packages and MCP servers',
     summary: 'Install Pi packages and MCP servers into a key\u2019s or agent\u2019s profile from Files & profiles \u2192 Profiles. They run third-party code in the agent\u2019s container, so it needs a dashboard password. Off refuses all of it.' },
   LIVE_VIEW_ENABLED: { tab: 'containers', section: 'Live view', label: 'Allow the live view',
@@ -3016,6 +3053,7 @@ var PAGES = {
     { id:'library', label:'Library', pane:'extensions', sections:'library', subtitle:'Pi extensions installed on this host, for granting to keys and agents' },
     { id:'access', label:'Access', pane:'extensions', sections:'access', subtitle:'Which keys and agents get which extensions and bundles' }] },
   jobs:       { title:'Jobs', tabs:[{ id:'jobs', pane:'jobs', subtitle:'Prompts an agent runs on a schedule, by webhook or on request' }] },
+  memory:     { title:'Memory', tabs:[{ id:'memory', pane:'memory', subtitle:'Notes a key’s or an agent’s chats remember, across chats and containers' }] },
   files:      { title:'Files & profiles', tabs:[
     { id:'files', label:'Files', pane:'files', subtitle:'Browse, upload, edit and organise a key\u2019s or an agent\u2019s workspace, profile and the shared bundles' },
     { id:'profiles', label:'Profiles & packages', pane:'profiles', subtitle:'Per-key skills, extensions, packages and MCP servers, and who can change them' }] },
@@ -3032,7 +3070,7 @@ var PAGES = {
     { id:'docs', label:'Documentation', pane:'docs', subtitle:'The administrator\u2019s handbook: architecture, deployment, operation, configuration, API and troubleshooting' },
     { id:'about', label:'About', pane:'about', subtitle:'Piper, its version, release notes and author' }] }
 };
-var PANES = ['playground', 'overview', 'agents', 'extensions', 'containers', 'terminal', 'files', 'endpoints', 'jobs', 'models', 'spend', 'apikeys', 'profiles', 'audit', 'settings', 'docs', 'about'];
+var PANES = ['playground', 'overview', 'agents', 'extensions', 'containers', 'terminal', 'files', 'endpoints', 'jobs', 'memory', 'models', 'spend', 'apikeys', 'profiles', 'audit', 'settings', 'docs', 'about'];
 /* Old links keep working: bookmarks and the docs' own links used the flat view names. */
 var OLD_HASHES = { endpoints: 'agents', terminal: 'containers/terminal', profiles: 'files/profiles', docs: 'help/docs', about: 'help/about' };
 function resolveHash(hash) {
@@ -3472,6 +3510,71 @@ $('jobruns').addEventListener('click', function (e) {
   });
 });
 setInterval(function () { if (JOB_OPEN && !document.hidden && location.hash === '#jobs') loadJobRuns(JOB_OPEN); }, 5000);
+
+/* ---- memory: notes a key's or an agent's chats remember ---- */
+var MEMORY = null;
+var MEM_OPEN = null;
+function loadMemory() {
+  return fetch('dashboard/memory.json', { cache: 'no-store' }).then(readJson).then(function (d) { MEMORY = d.scopes; renderMemory(); if (MEM_OPEN) loadMemoryDetail(MEM_OPEN); })
+    .catch(function (e) { $('memempty').hidden = false; $('memempty').textContent = 'cannot load memory: ' + e.message; });
+}
+function renderMemory() {
+  var body = $('memrows');
+  body.replaceChildren();
+  $('memempty').hidden = MEMORY.length > 0;
+  MEMORY.forEach(function (m) {
+    var tr = el('tr');
+    var n = el('td', m.label); n.className = 'mono'; tr.appendChild(n);
+    tr.appendChild(el('td', String(m.entries))).className = 'num';
+    tr.appendChild(el('td', bytes(m.bytes))).className = 'num';
+    tr.appendChild(el('td', new Date(m.updatedAt).toLocaleString())).className = 'num';
+    var act = el('td');
+    var view = el('button', 'view'); view.addEventListener('click', function () { openMemoryDetail(m.scope, m.label); });
+    var clear = el('button', 'clear'); clear.addEventListener('click', function () {
+      if (!confirm('Clear all ' + m.entries + ' note(s) of ' + m.label + '? This cannot be undone.')) return;
+      epPost('dashboard/memory/' + encodeURIComponent(m.scope), undefined, 'DELETE').then(function () { if (MEM_OPEN === m.scope) $('memdetailclose').click(); loadMemory(); });
+    });
+    act.appendChild(view); act.appendChild(document.createTextNode(' ')); act.appendChild(clear);
+    tr.appendChild(act);
+    body.appendChild(tr);
+  });
+}
+function openMemoryDetail(scope, label) {
+  MEM_OPEN = scope;
+  $('memdetailtitle').textContent = 'Notes: ' + (label || scope);
+  $('memdetail').hidden = false;
+  loadMemoryDetail(scope);
+  $('memdetail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function loadMemoryDetail(scope) {
+  return fetch('dashboard/memory/' + encodeURIComponent(scope), { cache: 'no-store' }).then(readJson).then(function (d) {
+    var body = $('memnoterows');
+    body.replaceChildren();
+    $('memnoteempty').hidden = d.entries.length > 0;
+    d.entries.forEach(function (n) {
+      var tr = el('tr');
+      tr.appendChild(el('td', n.name)).className = 'mono';
+      var v = el('td', n.value.length > 200 ? n.value.slice(0, 200) + '…' : n.value); v.className = 'wrap'; v.title = n.value; tr.appendChild(v);
+      tr.appendChild(el('td', new Date(n.updatedAt).toLocaleString())).className = 'num';
+      var act = el('td');
+      var del = el('button', 'delete'); del.addEventListener('click', function () {
+        if (!confirm('Delete the note "' + n.name + '"?')) return;
+        epPost('dashboard/memory/' + encodeURIComponent(scope) + '/delete', { name: n.name }).then(function () { loadMemoryDetail(scope); loadMemory(); });
+      });
+      act.appendChild(del);
+      tr.appendChild(act);
+      body.appendChild(tr);
+    });
+  }).catch(function (e) { $('memdetailtitle').textContent = 'Notes: cannot load (' + e.message + ')'; });
+}
+$('memrefresh').addEventListener('click', loadMemory);
+$('memdetailclose').addEventListener('click', function () { MEM_OPEN = null; $('memdetail').hidden = true; });
+$('memclear').addEventListener('click', function () {
+  if (!MEM_OPEN) return;
+  var m = MEMORY.filter(function (x) { return x.scope === MEM_OPEN; })[0];
+  if (!confirm('Clear all notes of ' + (m ? m.label : MEM_OPEN) + '? This cannot be undone.')) return;
+  epPost('dashboard/memory/' + encodeURIComponent(MEM_OPEN), undefined, 'DELETE').then(function () { $('memdetailclose').click(); loadMemory(); });
+});
 
 function epUrl(a) { return location.protocol + '//' + location.hostname + ':' + a.port + '/v1'; }
 function epPost(url, body, method) {
@@ -4719,9 +4822,10 @@ $('epcreate').addEventListener('click', function () {
   (fromTemplate ? epPost('dashboard/agents/from-template', {
     keyId: $('epkey').value, name: $('epname').value.trim(), template: fromTemplate,
     workspace: $('epws').dataset.touched ? $('epws').value : undefined,
+    memoryMode: $('epmemory').value,
     model: $('epmodel').value.trim() || undefined, thinking: $('epthink').value || undefined
   }) : epPost('dashboard/agents', {
-    keyId: $('epkey').value, name: $('epname').value.trim(), workspace: $('epws').value,
+    keyId: $('epkey').value, name: $('epname').value.trim(), workspace: $('epws').value, memoryMode: $('epmemory').value,
     model: $('epmodel').value.trim() || null, thinking: $('epthink').value || null,
     instructions: $('epinstr').value, container: epReadCreate()
   })).then(function (j) {
@@ -5559,6 +5663,7 @@ function route() {
   if (pane === 'endpoints') { loadEndpoints(); if (tab.id === 'wizard') wzStart(); }
   if (pane === 'playground') pgStart();
   if (pane === 'jobs') loadJobs();
+  if (pane === 'memory') loadMemory();
   if (pane === 'extensions') loadExtensions();
   if (pane === 'containers') { startContainersPolling(); loadHostPi(); }
   if (pane === 'models') ensureModels();

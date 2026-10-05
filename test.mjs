@@ -26,7 +26,7 @@ process.env.CONTAINER_PI_DIR = TEST_CONTAINER_PI;
 const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 // Seeded at startup, which is when a validator that reads a not-yet-defined constant would fail.
 process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
-const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, recentAudit: recentAuditRows } = await import("./server.mjs");
+const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, memoryScopeOf, mayRemember, memoryFor, memoryOverview, memoryEntries, deleteMemoryEntry, clearMemory, deleteMemoryOf, memoryDashboardRoutes, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, recentAudit: recentAuditRows } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
 
@@ -1242,6 +1242,163 @@ assert.equal(isReloadCommand(undefined), false);
 	bridge.close();
 	assert.equal(existsSync(socketPath), false);
 	rmSync(dir, { recursive: true, force: true });
+}
+
+// Agent memory: scope resolution, the write/read/lookup round trip and its caps, the bridge routes,
+// the dashboard's view of it, and cleanup when an agent or a key is deleted.
+{
+	const rec = (extra) => ({ keyId: "mem-key-1", agentId: null, scopeId: "mem-key-1", ...extra });
+	config.AGENT_MEMORY_ENABLED = true;
+
+	// Scope: a key's own chats, and a named agent's own or shared, resolve the way workspaceScopeOf does.
+	assert.equal(memoryScopeOf("mem-key-1"), "mem-key-1", "a plain key's own scope: itself");
+	const ownAgent = agents.create({ keyId: "mem-key-1", name: "own-mem" });
+	assert.equal(agents.get(ownAgent.id).memoryMode, "own", "the default");
+	assert.equal(memoryScopeOf(agentScope("mem-key-1", ownAgent.id)), agentScope("mem-key-1", ownAgent.id));
+	const sharedAgent = agents.create({ keyId: "mem-key-1", name: "shared-mem", memoryMode: "shared" });
+	assert.equal(memoryScopeOf(agentScope("mem-key-1", sharedAgent.id)), "mem-key-1", "folds into its key's");
+	assert.throws(() => agents.create({ keyId: "mem-key-1", name: "bad-mem", memoryMode: "sometimes" }), /memory must be one of/);
+	agents.remove(ownAgent.id);
+	agents.remove(sharedAgent.id);
+
+	// mayRemember: the one global switch, and nothing to scope to is nothing to remember in.
+	assert.equal(mayRemember(rec()), true);
+	config.AGENT_MEMORY_ENABLED = false;
+	assert.equal(mayRemember(rec()), false);
+	config.AGENT_MEMORY_ENABLED = true;
+	assert.equal(mayRemember({ keyId: null, scopeId: null }), false);
+
+	// write/read/lookup, bound to one record's scope.
+	const mem = memoryFor(rec());
+	assert.deepEqual(mem.write({ name: "deploy-steps", value: "1. build 2. push 3. restart" }), { name: "deploy-steps", updated: false });
+	assert.equal(mem.read({ name: "deploy-steps" }).value, "1. build 2. push 3. restart");
+	assert.deepEqual(mem.write({ name: "deploy-steps", value: "just: deploy.sh" }), { name: "deploy-steps", updated: true }, "writing the same name again replaces it");
+	assert.equal(mem.read({ name: "deploy-steps" }).value, "just: deploy.sh");
+	assert.throws(() => mem.read({ name: "no-such-note" }), /no note called/);
+	assert.throws(() => mem.write({ name: "", value: "x" }), /name a note/);
+	assert.throws(() => mem.write({ name: "x", value: "  " }), /nothing to remember/);
+	mem.write({ name: "user-preferences", value: "prefers terse answers" });
+	const all = mem.lookup({});
+	assert.deepEqual(all.map((n) => n.name), ["user-preferences", "deploy-steps"], "newest first");
+	assert.deepEqual(mem.lookup({ query: "terse" }).map((n) => n.name), ["user-preferences"]);
+	assert.deepEqual(mem.lookup({ query: "DEPLOY" }).map((n) => n.name), ["deploy-steps"], "case-insensitive, and matches the value too");
+	assert.equal(mem.lookup({ query: "nothing matches this" }).length, 0);
+	const long = "x".repeat(500);
+	mem.write({ name: "long-one", value: long });
+	assert.equal(mem.lookup({ query: "long-one" })[0].preview.length, 161, "previews are capped, with an ellipsis");
+	clearMemory("mem-key-1");
+
+	// Caps: a brand new name over the limit is refused; updating an existing one never is.
+	config.MEMORY_MAX_ENTRIES = 2;
+	mem.write({ name: "a", value: "1" });
+	mem.write({ name: "b", value: "2" });
+	assert.throws(() => mem.write({ name: "c", value: "3" }), /already has 2 notes.*MEMORY_MAX_ENTRIES/);
+	assert.doesNotThrow(() => mem.write({ name: "a", value: "updated" }), "updating an existing one is always allowed");
+	config.MEMORY_MAX_ENTRIES = 200;
+	config.MEMORY_MAX_NAME_BYTES = 4;
+	assert.throws(() => mem.write({ name: "toolong", value: "x" }), /MEMORY_MAX_NAME_BYTES/);
+	config.MEMORY_MAX_NAME_BYTES = 100;
+	config.MEMORY_MAX_VALUE_BYTES = 4;
+	assert.throws(() => mem.write({ name: "x", value: "toolong" }), /MEMORY_MAX_VALUE_BYTES/);
+	config.MEMORY_MAX_VALUE_BYTES = 4000;
+	config.MEMORY_LOOKUP_LIMIT = 1;
+	assert.equal(mem.lookup({}).length, 1, "the lookup limit");
+	config.MEMORY_LOOKUP_LIMIT = 20;
+	clearMemory("mem-key-1");
+
+	// Scopes never cross: another key's (or agent's) memory is a different store entirely.
+	const other = memoryFor(rec({ keyId: "mem-key-2", scopeId: "mem-key-2" }));
+	other.write({ name: "deploy-steps", value: "a different key's note" });
+	assert.throws(() => mem.read({ name: "deploy-steps" }), /no note called/, "mem-key-1 never had this note back");
+	clearMemory("mem-key-2");
+
+	// Disabled: every call refuses, with existing notes untouched (checked once re-enabled).
+	mem.write({ name: "kept", value: "still here" });
+	config.AGENT_MEMORY_ENABLED = false;
+	assert.throws(() => mem.write({ name: "x", value: "y" }), /may not use memory/);
+	assert.throws(() => mem.read({ name: "kept" }), /may not use memory/);
+	assert.throws(() => mem.lookup({}), /may not use memory/);
+	config.AGENT_MEMORY_ENABLED = true;
+	assert.equal(mem.read({ name: "kept" }).value, "still here");
+	clearMemory("mem-key-1");
+
+	// The bridge routes: bound to the socket's own record, 403 when memory is not passed at all.
+	{
+		const dir = mkdtempSync(join("/tmp", "pb-mem-"));
+		const http = await import("node:http");
+		const post = (socketPath, path, body) =>
+			new Promise((resolve, reject) => {
+				const req = http.request({ socketPath, path, method: "POST", agent: false }, (res) => {
+					let data = "";
+					res.on("data", (c) => (data += c));
+					res.on("end", () => resolve({ status: res.statusCode, body: JSON.parse(data) }));
+				});
+				req.on("error", reject);
+				req.end(JSON.stringify(body ?? {}));
+			});
+		const socketPath = join(dir, "with.sock");
+		const post1 = (path, body) => post(socketPath, path, body);
+		const withMemory = await startBridge(socketPath, newMeter(), { memory: memoryFor(rec()) });
+		const wrote = await post1("/memory/write", { name: "n", value: "v" });
+		assert.deepEqual(wrote, { status: 200, body: { note: { name: "n", updated: false } } });
+		const read = await post1("/memory/read", { name: "n" });
+		assert.equal(read.status, 200);
+		assert.deepEqual([read.body.note.name, read.body.note.value, typeof read.body.note.updatedAt], ["n", "v", "number"]);
+		assert.deepEqual((await post1("/memory/lookup", {})).body.notes.map((x) => x.name), ["n"]);
+		withMemory.close();
+		clearMemory("mem-key-1");
+
+		const socketPath2 = join(dir, "without.sock");
+		const post2 = (path, body) => post(socketPath2, path, body);
+		const noMemory = await startBridge(socketPath2, newMeter(), {});
+		assert.equal((await post2("/memory/write", { name: "n", value: "v" })).status, 403);
+		assert.equal((await post2("/memory/read", { name: "n" })).status, 403);
+		assert.equal((await post2("/memory/lookup", {})).status, 403);
+		noMemory.close();
+		rmSync(dir, { recursive: true, force: true });
+	}
+
+	// The dashboard's own view: every scope with notes, one scope's notes, delete one, clear all. Driven
+	// over a real socket (memoryDashboardRoutes reads its body as a stream, like every other route here).
+	{
+		memoryFor(rec()).write({ name: "a", value: "1" });
+		memoryFor(rec()).write({ name: "b", value: "2" });
+		memoryFor(rec({ keyId: "mem-key-2", scopeId: "mem-key-2" })).write({ name: "c", value: "3" });
+		const http = await import("node:http");
+		const srv = http.createServer((req, res) => memoryDashboardRoutes(req, res, req.url));
+		await new Promise((r) => srv.listen(0, "127.0.0.1", r));
+		const base = `http://127.0.0.1:${srv.address().port}`;
+		const call = (path, opts) => fetch(base + path, opts).then((r) => r.json().then((json) => ({ status: r.status, json })));
+
+		const list = await call("/dashboard/memory.json");
+		assert.ok(list.json.scopes.some((s) => s.scope === "mem-key-1" && s.entries === 2 && s.label) && list.json.scopes.some((s) => s.scope === "mem-key-2" && s.entries === 1));
+		const view = await call("/dashboard/memory/mem-key-1");
+		assert.deepEqual(view.json.entries.map((e) => e.name).sort(), ["a", "b"]);
+		const del = await call("/dashboard/memory/mem-key-1/delete", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "a" }) });
+		assert.deepEqual(del.json, { deleted: true });
+		assert.equal((await call("/dashboard/memory/mem-key-1/delete", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "a" }) })).json.deleted, false, "already gone");
+		assert.deepEqual((await call("/dashboard/memory/mem-key-1")).json.entries.map((e) => e.name), ["b"]);
+		const cleared = await call("/dashboard/memory/mem-key-1", { method: "DELETE" });
+		assert.deepEqual(cleared.json, { cleared: 1 });
+		assert.equal((await call("/dashboard/memory/mem-key-1")).json.entries.length, 0);
+		assert.ok(recentAuditRows(10).some((r) => r.action === "memory.delete") && recentAuditRows(10).some((r) => r.action === "memory.clear"));
+		await new Promise((r) => srv.close(r));
+		clearMemory("mem-key-2");
+	}
+
+	// Cleanup: deleting an agent removes its own memory; deleting a key removes its own and every agent's.
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+	const cleanupKey = apiKeys.create({ name: "mem-cleanup-test" });
+	const ckey = cleanupKey.record ?? cleanupKey;
+	const madeAgent = await createAgent({ keyId: ckey.id, name: "mem-agent" });
+	memoryFor({ keyId: ckey.id, scopeId: agentScope(ckey.id, madeAgent.id) }).write({ name: "n", value: "v" });
+	memoryFor({ keyId: ckey.id, scopeId: ckey.id }).write({ name: "n", value: "v" });
+	assert.equal(memoryEntries(agentScope(ckey.id, madeAgent.id)).length, 1);
+	await deleteAgent(madeAgent.id);
+	assert.equal(memoryEntries(agentScope(ckey.id, madeAgent.id)).length, 0, "the agent's own memory went with it");
+	assert.equal(memoryEntries(ckey.id).length, 1, "the key's own memory is untouched by deleting one agent");
+	assert.equal(deleteMemoryOf({ keyId: ckey.id }), 1, "and is removed when the key itself goes");
+	apiKeys.remove(ckey.id);
 }
 
 // ---------------------------------------------------------------- profile control
@@ -2735,6 +2892,8 @@ assert.equal(isReloadCommand(undefined), false);
 		const resumed = piInvocation({ ...spec }, { resume: true, defaultModel: { model: "p/m", thinking: null } });
 		assert.ok(resumed.piArgs.includes("--continue"), "a resumed chat continues its session");
 		assert.equal(resumed.env.PIPER_DEFAULT_MODEL, undefined, "and keeps the model it was on");
+		assert.equal(piInvocation({ ...spec }, {}).env.PIPER_MEMORY, undefined, "off unless asked for");
+		assert.equal(piInvocation({ ...spec }, { remember: true }).env.PIPER_MEMORY, "1");
 	}
 
 	// The profile helper is the strict one: it protects the gateway, not the agent.
@@ -7530,7 +7689,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	const navPages = [...navHtml.matchAll(/<a[^>]*href="#([a-z]+)"/g)].map((m) => m[1]);
 	assert.deepEqual([...navPages].sort(), Object.keys(PAGES).sort(), "every nav item is a page and every page is in the nav");
 	assert.equal(new Set(navPages).size, navPages.length, "no page twice in the nav");
-	assert.equal(navPages.length, 14, "fourteen items in the sidebar");
+	assert.equal(navPages.length, 15, "fifteen items in the sidebar");
 	assert.deepEqual([...navHtml.matchAll(/class="navgroup">([^<]+)</g)].map((m) => m[1]), ["Monitor", "Build", "Infrastructure", "Admin"]);
 
 	// Every tab shows a pane that exists, and a split pane's sections match the markup.

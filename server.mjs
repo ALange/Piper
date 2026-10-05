@@ -53,6 +53,7 @@ import { bundleRoutes, packageRoutes } from "./lib/bundleroutes.mjs";
 import { extensionRoutes } from "./lib/extroutes.mjs";
 import { playgroundRoutes } from "./lib/playground.mjs";
 import { jobApiRoutes, jobDashboardRoutes, triggerRoute } from "./lib/jobroutes.mjs";
+import { memoryDashboardRoutes } from "./lib/memoryroutes.mjs";
 import { startJobs, stopJobs } from "./lib/jobs.mjs";
 import { startImageHousekeeping } from "./lib/images.mjs";
 import { startTeamServers, stopTeamServers } from "./lib/teams.mjs";
@@ -85,6 +86,8 @@ export * from "./lib/agentrun.mjs";
 export * from "./lib/liveroutes.mjs";
 export * from "./lib/jobs.mjs";
 export * from "./lib/jobroutes.mjs";
+export * from "./lib/memoryroutes.mjs";
+export * from "./lib/agentmemory.mjs";
 export * from "./lib/templates.mjs";
 export * from "./lib/wizard.mjs";
 export * from "./lib/bundleroutes.mjs";
@@ -279,6 +282,7 @@ async function handle(req, res) {
 			return res.end(JSON.stringify({ closed }));
 		}
 		if (path === "/dashboard/jobs.json" || path === "/dashboard/jobs" || path.startsWith("/dashboard/jobs/")) return await jobDashboardRoutes(req, res, path);
+		if (path === "/dashboard/memory.json" || path.startsWith("/dashboard/memory/")) return await memoryDashboardRoutes(req, res, path);
 		if (path === "/dashboard/container-pi" || path === "/dashboard/containers/recheck") return await containerPiRoutes(req, res, path);
 		if (path === "/dashboard/containers.json" || path.startsWith("/dashboard/containers/") || path === "/dashboard/audit.json" || path === "/dashboard/audit.csv" || path === "/dashboard/updates.json" || path === "/dashboard/alerts/test" || path === "/dashboard/images.json" || path.startsWith("/dashboard/images/")) return await containerRoutes(req, res, path);
 		if (req.method === "POST" && path === "/dashboard/kill-all") {

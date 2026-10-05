@@ -4,6 +4,18 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 
 ## [Unreleased]
 
+### Added
+- **Agent memory.** A chat can remember durable notes across its own chats and containers, through three new
+  tools: `piper_remember` (write or update a note), `piper_recall` (read one back by name), `piper_memories`
+  (list or search notes, newest first). Never read or written through the container's own filesystem — every
+  call crosses the bridge, and only the gateway itself ever touches the data. A key's own chats always share
+  one memory; a named agent's does too, either its own or (chosen when the agent is created, fixed afterward
+  like its workspace mode) folded into its key's. The agent can write and read but not delete — a new Memory
+  page lists every scope with notes (count, size, last updated), and lets the operator view, delete one, or
+  clear a whole scope. `AGENT_MEMORY_ENABLED` (on by default) is the one switch; `MEMORY_MAX_ENTRIES`,
+  `MEMORY_MAX_NAME_BYTES`, `MEMORY_MAX_VALUE_BYTES` and `MEMORY_LOOKUP_LIMIT` keep one memory bounded. Deleting
+  an agent or a key removes its memory with it.
+
 ### Fixed
 - **One missing extension took a whole chat's container down.** A shared bundle or library extension that
   was granted but whose folder is no longer actually on the host (removed by hand, a restore that missed it,

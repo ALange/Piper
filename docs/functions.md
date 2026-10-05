@@ -217,6 +217,33 @@ shown once); a failed delivery is retried once and the outcome is written on the
 Settings (Settings → Jobs): `JOBS_ENABLED`, `JOBS_MAX_PARALLEL`, `JOBS_MIN_INTERVAL_MS`, `JOBS_MAX_PER_KEY`,
 `JOBS_RESULT_DAYS`, `JOBS_MAX_FAILURES`, `JOBS_NOTIFY_ALERTS`, `AGENT_JOBS_DAILY_COST`.
 
+## Memory
+
+Durable notes a chat remembers across its own chats and containers, through three tools (`piper_remember`,
+`piper_recall`, `piper_memories`) — never through the container's own filesystem, so there is nothing for an
+agent to plant that would matter: every call crosses the bridge and the gateway itself is the only thing that
+ever reads or writes the data.
+
+**Scope.** A key's own chats always share one memory. A named agent's does too — its own, or (chosen when it is
+created, fixed afterward, the same as its workspace mode) folded into its key's, so the agent and the key's own
+chats read and write the same notes. There is no per-chat memory: that would defeat the point.
+
+**The agent's tools.** `piper_remember {name, value}` writes or updates a note (writing the same name again
+replaces it); `piper_recall {name}` reads one back by its exact name; `piper_memories {query}` lists notes
+newest first, or searches their names and values for a word or phrase. The agent can write and read; it cannot
+delete — that stays the operator's, on the Memory page, so one chat cannot quietly erase what another wrote.
+
+**Management (Settings → Memory page).** Every scope that has notes, with its count and size; open one to see
+its notes, delete a note, or clear all of them. A cleared or deleted note is gone for good.
+
+**Guards.** `MEMORY_MAX_ENTRIES` caps notes per memory — a *new* name over it is refused, but updating an
+existing one is always allowed, so an agent is never stuck; only the operator clears room. `MEMORY_MAX_NAME_BYTES`
+and `MEMORY_MAX_VALUE_BYTES` cap one note's name and content. `MEMORY_LOOKUP_LIMIT` caps how many notes one
+search returns, so a broad query cannot dump a whole memory into context at once.
+
+Settings (Settings → Sessions → Memory): `AGENT_MEMORY_ENABLED`, `MEMORY_MAX_ENTRIES`, `MEMORY_MAX_NAME_BYTES`,
+`MEMORY_MAX_VALUE_BYTES`, `MEMORY_LOOKUP_LIMIT`.
+
 ## Files & profiles
 
 Browse the **workspace** (what the agents see at `/workspace`) or the **profile** (skills, extensions, `AGENTS.md`,

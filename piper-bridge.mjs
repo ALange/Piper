@@ -376,6 +376,69 @@ export default async function piperBridge(pi) {
 		});
 	}
 
+	// Memory: notes that outlive this one chat. A key's own chats all share one memory, and so does a
+	// named agent's — its own, or its key's, chosen when the agent was made. Never read or written
+	// through this container's own filesystem: every call crosses the bridge, bound to this chat's
+	// scope by the gateway, so a tool call can never name another key's or agent's memory.
+	if (process.env.PIPER_MEMORY === "1") {
+		const reply = (value) => ({ content: [{ type: "text", text: value }], details: {} });
+		pi.registerTool({
+			name: "piper_remember",
+			label: "Remember a note",
+			description:
+				"Write (or update) a durable note under a short name, so it survives after this chat ends. Shared with every other chat of the same key or agent, so something you learn in one conversation is there in the next. " +
+				"Use a short, specific name you (or a future chat) would think to look up again, e.g. \"deploy-steps\" or \"user-preferences\"; writing the same name again replaces it.",
+			promptSnippet: "Remember a note for later",
+			parameters: {
+				type: "object",
+				properties: {
+					name: { type: "string", description: "A short, specific name for the note. Writing it again replaces the old value." },
+					value: { type: "string", description: "What to remember." },
+				},
+				required: ["name", "value"],
+			},
+			async execute(_toolCallId, params) {
+				try {
+					const { note } = await readJson(await request("/memory/write", { name: params?.name, value: params?.value }));
+					return reply(`${note.updated ? "Updated" : "Remembered"} "${note.name}".`);
+				} catch (err) {
+					return reply(`Could not remember that: ${err?.message ?? err}`);
+				}
+			},
+		});
+		pi.registerTool({
+			name: "piper_recall",
+			label: "Recall a note",
+			description: "Read back a note by its exact name. Use piper_memories first if you do not already know the name.",
+			promptSnippet: "Recall a note by name",
+			parameters: { type: "object", properties: { name: { type: "string", description: "The note's exact name, from piper_memories." } }, required: ["name"] },
+			async execute(_toolCallId, params) {
+				try {
+					const { note } = await readJson(await request("/memory/read", { name: params?.name }));
+					return reply(note.value);
+				} catch (err) {
+					return reply(`Could not recall that: ${err?.message ?? err}`);
+				}
+			},
+		});
+		pi.registerTool({
+			name: "piper_memories",
+			label: "Search notes",
+			description: "List your notes, newest first, or search their names and content for a word or phrase. Leave the query out to see everything (up to the limit).",
+			promptSnippet: "List or search your remembered notes",
+			parameters: { type: "object", properties: { query: { type: "string", description: "A word or phrase to search for. Leave out to list everything." } } },
+			async execute(_toolCallId, params) {
+				try {
+					const { notes } = await readJson(await request("/memory/lookup", { query: params?.query }));
+					if (!notes.length) return reply(params?.query ? `No notes match "${params.query}".` : "You have no notes yet.");
+					return reply(notes.map((n) => `- ${n.name} (${new Date(n.updatedAt).toLocaleString()}): ${n.preview}`).join("\n"));
+				} catch (err) {
+					return reply(`Could not search notes: ${err?.message ?? err}`);
+				}
+			},
+		});
+	}
+
 	// A new chat starts on the operator's current default model, unless the key's profile names its
 	// own. The gateway sets PIPER_DEFAULT_MODEL only for new chats; a resumed one keeps its model.
 	const defaultModel = process.env.PIPER_DEFAULT_MODEL;
