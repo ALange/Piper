@@ -54,7 +54,7 @@
   /* main */
   /* min-width:0 lets main shrink to the space beside the sidebar; without it, a wide table or a
      long tool list stretches main and the whole page scrolls sideways. */
-  main { flex:1; min-width:0; padding:26px 30px 40px; max-width:1600px; }
+  main { flex:1; min-width:0; padding:26px 30px 40px; max-width:2200px; }
   h1 { font-size:26px; margin:0 0 4px; letter-spacing:-.01em; }
   .sub { color:var(--muted); margin:0 0 26px; font-size:12px; }
   .sectionhead { display:flex; align-items:center; justify-content:space-between; margin:0 0 14px; }
@@ -168,7 +168,9 @@
   .li.tool { color:var(--muted); }
   .li.tool.error { border-color:#5a2a2a; }
   .li.tool pre { margin:6px 0 0; max-height:160px; overflow:auto; color:var(--fg); white-space:pre-wrap; }
-  .panel { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:14px 15px 15px; }
+  /* overflow-x:auto so a wide table (many columns, long button lists) scrolls within its own panel
+     instead of spilling past its border; max-width keeps a lone cell from stretching the whole panel. */
+  .panel { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:14px 15px 15px; overflow-x:auto; max-width:100%; }
   .panel h3 { font-size:11px; margin:0 0 3px; text-transform:uppercase; letter-spacing:.1em; color:#cfd3d7; }
   .panel .hint { color:var(--dim); font-size:11px; margin:0 0 14px; }
   .empty { color:var(--dim); padding:26px 4px; text-align:center; font-size:11px; }
