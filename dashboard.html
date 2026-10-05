@@ -3755,15 +3755,17 @@ function loadKnowledgeEntries() {
 }
 function keVisible() {
   var q = ($('kesearch').value || '').trim().toLowerCase();
-  return (KENTRIES || []).filter(function (e) { return !q || (e.title || '').toLowerCase().indexOf(q) >= 0; });
+  // 'skipped' is a feed's pre-existing backlog from before it was added here — never extracted, nothing to
+  // read or act on, so it never shows up in this list at all (it is still counted on the Feeds tab).
+  return (KENTRIES || []).filter(function (e) { return e.status !== 'skipped' && (!q || (e.title || '').toLowerCase().indexOf(q) >= 0); });
 }
 function renderKnowledgeEntries() {
   var body = $('kerows');
   body.replaceChildren();
   var visible = keVisible();
   $('keempty').hidden = visible.length > 0;
-  if ((KENTRIES || []).length > 0 && !visible.length) { $('keempty').hidden = false; $('keempty').textContent = 'No entries match "' + $('kesearch').value + '".'; }
-  else $('keempty').textContent = 'No entries yet.';
+  var q = ($('kesearch').value || '').trim();
+  $('keempty').textContent = q ? 'No entries match "' + q + '".' : (KENTRIES || []).length ? 'Nothing fresh yet — only skipped (backfilled) entries so far.' : 'No entries yet.';
   var stillThere = {};
   visible.forEach(function (e) {
     stillThere[e.id] = true;
