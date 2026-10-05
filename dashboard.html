@@ -1066,6 +1066,20 @@
         <p class="hint" id="kedetailmeta"></p>
         <pre id="kedetailtext" style="white-space:pre-wrap;max-height:420px;overflow:auto;background:#0c0c0c;border:1px solid var(--border);border-radius:8px;padding:10px"></pre>
       </section>
+      <section data-tab="log" class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Knowledge log</h3>
+            <p class="hint" style="margin:0">Every feed poll, extraction (success, blocked or failed) and operator action (add, edit, delete, clear a source), newest first. This is the audit log, filtered to Knowledge and RSS actions.</p>
+          </div>
+          <button id="kelogrefresh">refresh</button>
+        </div>
+        <table>
+          <thead><tr><th>when</th><th>action</th><th>target</th><th>detail</th><th>by</th></tr></thead>
+          <tbody id="kelogrows"></tbody>
+        </table>
+        <p class="hint" id="kelogempty" hidden>Nothing logged yet.</p>
+      </section>
     </div><!-- /view-knowledge -->
 
     <div class="view" id="view-endpoints">
@@ -3123,7 +3137,8 @@ var PAGES = {
   memory:     { title:'Memory', tabs:[{ id:'memory', pane:'memory', subtitle:'Notes a key’s or an agent’s chats remember, across chats and containers' }] },
   knowledge:  { title:'Knowledge', tabs:[
     { id:'feeds', label:'Feeds', pane:'knowledge', sections:'feeds', subtitle:'RSS feeds polled for new articles, and the agent that extracts each one' },
-    { id:'entries', label:'Entries', pane:'knowledge', sections:'entries', subtitle:'Everything in the knowledge base agents can search and read (piper_knowledge_search/piper_knowledge_read)' }] },
+    { id:'entries', label:'Entries', pane:'knowledge', sections:'entries', subtitle:'Everything in the knowledge base agents can search and read (piper_knowledge_search/piper_knowledge_read)' },
+    { id:'log', label:'Log', pane:'knowledge', sections:'log', subtitle:'Polls, extractions and operator actions, newest first' }] },
   files:      { title:'Files & profiles', tabs:[
     { id:'files', label:'Files', pane:'files', subtitle:'Browse, upload, edit and organise a key\u2019s or an agent\u2019s workspace, profile and the shared bundles' },
     { id:'profiles', label:'Profiles & packages', pane:'profiles', subtitle:'Per-key skills, extensions, packages and MCP servers, and who can change them' }] },
@@ -3840,6 +3855,26 @@ $('keclear').addEventListener('click', function () {
   if (!confirm('Clear every entry of ' + sel + '? This cannot be undone.')) return;
   epPost('dashboard/knowledge/' + sel, undefined, 'DELETE').then(loadKnowledgeEntries);
 });
+
+function loadKnowledgeLog() {
+  return fetch('dashboard/knowledge/log.json', { cache: 'no-store' }).then(readJson).then(function (d) { renderKnowledgeLog(d.entries); })
+    .catch(function (e) { $('kelogempty').hidden = false; $('kelogempty').textContent = 'cannot load the log: ' + e.message; });
+}
+function renderKnowledgeLog(rows) {
+  var body = $('kelogrows');
+  body.replaceChildren();
+  $('kelogempty').hidden = (rows || []).length > 0;
+  (rows || []).forEach(function (r) {
+    var tr = el('tr');
+    tr.appendChild(el('td', new Date(r.ts).toLocaleString()));
+    tr.appendChild(el('td', r.action));
+    tr.appendChild(el('td', r.target || ''));
+    var d = el('td', r.detail || ''); d.className = 'wrap'; tr.appendChild(d);
+    tr.appendChild(el('td', r.actor || ''));
+    body.appendChild(tr);
+  });
+}
+$('kelogrefresh').addEventListener('click', loadKnowledgeLog);
 
 function epUrl(a) { return location.protocol + '//' + location.hostname + ':' + a.port + '/v1'; }
 function epPost(url, body, method) {
@@ -5929,7 +5964,7 @@ function route() {
   if (pane === 'playground') pgStart();
   if (pane === 'jobs') loadJobs();
   if (pane === 'memory') loadMemory();
-  if (pane === 'knowledge') { loadFeeds(); loadKnowledgeEntries(); }
+  if (pane === 'knowledge') { loadFeeds(); loadKnowledgeEntries(); loadKnowledgeLog(); }
   if (pane === 'extensions') loadExtensions();
   if (pane === 'containers') { startContainersPolling(); loadHostPi(); }
   if (pane === 'models') ensureModels();

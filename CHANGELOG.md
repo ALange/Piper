@@ -24,7 +24,10 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   same agent gets one more try in the same turn — the Wayback Machine, a search for the same report
   elsewhere, or whatever its tools allow — before the entry is marked **blocked** (a status distinct from a
   plain failure) instead of giving up on the first try; `RSS_AUTO_UNBLOCK` (on by default) is the switch. The
-  Entries tab can search by title, and select and delete entries one at a time or in bulk.
+  Entries tab can search by title, and select and delete entries one at a time or in bulk; it no longer shows
+  a feed's skipped (backfilled) entries, since there is nothing to read or act on there. A new **Log** tab
+  lists every poll, extraction and operator action (newest first) — the audit log, filtered to Knowledge and
+  RSS actions.
 - **Agent memory.** A chat can remember durable notes across its own chats and containers, through three new
   tools: `piper_remember` (write or update a note), `piper_recall` (read one back by name), `piper_memories`
   (list or search notes, newest first). Never read or written through the container's own filesystem — every

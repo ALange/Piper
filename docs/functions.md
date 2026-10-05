@@ -276,7 +276,9 @@ switch; off marks it `blocked` on the first such reply instead of trying again.
 (polls regardless of schedule), delete; each row shows when it was last polled and its last article's own
 outcome (success, blocked or failed, with when). **Entries** tab: every entry (source, title, status,
 published, fetched), a detail view (full text, summary, tags), **retry** a failed or blocked one, delete, or
-clear a whole source.
+clear a whole source; a skipped (backfilled) entry never shows here, since there is nothing to read or act on
+— search by title, and select and delete one or several at once. **Log** tab: every poll, extraction and
+operator action, newest first — the audit log, filtered to Knowledge and RSS actions.
 
 **Guards.** `RSS_POLL_MIN_INTERVAL_MS` floors how often any one feed may be polled; `RSS_MAX_FEEDS` caps how
 many feeds exist at once; `RSS_MAX_PARALLEL_EXTRACTIONS` caps concurrent extraction turns;
