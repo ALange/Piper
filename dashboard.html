@@ -895,12 +895,14 @@
             <p class="hint" style="margin:0" id="extnote">Pi packages installed on <b>this host</b> (its npm or git, install scripts off unless you allow them) and kept in one library. They are never run here: a package is mounted read-only into the containers of the keys and agents you give it to (Access tab) and runs there, under their network policy and limits.</p>
           </div>
           <button id="extrefresh">refresh</button>
+          <button id="extbulkbtn" disabled title="select one or more extensions below first">bulk update&hellip;</button>
         </div>
         <table>
-          <thead><tr><th>extension</th><th>source</th><th>version</th><th class="num">size</th><th>given to</th><th></th></tr></thead>
+          <thead><tr><th><input type="checkbox" id="extselall" title="select all"></th><th>extension</th><th>source</th><th>version</th><th class="num">size</th><th>given to</th><th></th></tr></thead>
           <tbody id="extrows"></tbody>
         </table>
         <p class="hint" id="extempty" hidden>No extensions installed yet.</p>
+        <div id="extbulkresults"></div>
       </section>
       <section data-tab="library" class="panel">
         <h3>Install an extension</h3>
@@ -3614,6 +3616,8 @@ $('teamsave').addEventListener('click', function () {
 /* ---- extensions: the library on this host, and who gets what ---- */
 var EXT = null;
 var EXT_TIMER = null;
+var EXT_SELECTED = {};
+var EXT_BULK_BUSY = false;
 function loadExtensions() {
   return fetch('dashboard/extensions.json', { cache: 'no-store' }).then(readJson).then(function (d) { EXT = d; renderExtensions(); if (d.job && d.job.state === 'running') extShowJob(d.job); })
     .catch(function (e) { $('extnote').textContent = 'cannot load extensions: ' + e.message; });
@@ -3636,8 +3640,15 @@ function renderExtensions() {
   body.replaceChildren();
   $('extempty').hidden = EXT.library.length > 0;
   if (!EXT.enabled) $('extnote').textContent = 'Installing extensions is switched off (Settings → Agent).';
+  var stillThere = {};
   EXT.library.forEach(function (e) {
     var tr = el('tr');
+    stillThere[e.name] = true;
+    var selCell = el('td');
+    var sel = el('input'); sel.type = 'checkbox'; sel.checked = Boolean(EXT_SELECTED[e.name]); sel.disabled = EXT_BULK_BUSY;
+    sel.addEventListener('change', function () { if (sel.checked) EXT_SELECTED[e.name] = true; else delete EXT_SELECTED[e.name]; extUpdateBulkButton(); });
+    selCell.appendChild(sel);
+    tr.appendChild(selCell);
     var n = el('td', e.name); if (e.scripts) { var b = n.appendChild(el('span', ' scripts')); b.className = 'badge'; b.title = 'installed with install scripts allowed'; }
     tr.appendChild(n);
     tr.appendChild(el('td', e.source));
@@ -3645,9 +3656,9 @@ function renderExtensions() {
     tr.appendChild(el('td', bytes(e.bytes))).className = 'num';
     tr.appendChild(el('td', e.usedBy.length ? e.usedBy.join(', ') : 'nobody'));
     var act = el('td');
-    var up = el('button', 'update'); up.title = 'install it again from the same source';
+    var up = el('button', 'update'); up.title = 'install it again from the same source'; up.disabled = EXT_BULK_BUSY;
     up.addEventListener('click', function () { extPost('update', { name: e.name }).then(function (r) { extShowJob(r.job); }).catch(function (x) { $('extinstnote').textContent = x.message; $('extinstnote').className = 'passnote bad'; }); });
-    var rm = el('button', 'remove');
+    var rm = el('button', 'remove'); rm.disabled = EXT_BULK_BUSY;
     rm.addEventListener('click', function () {
       var used = e.usedBy.length ? ' It is given to: ' + e.usedBy.join(', ') + '; their chats lose it.' : '';
       if (!confirm('Remove ' + e.name + ' from the library?' + used)) return;
@@ -3656,8 +3667,66 @@ function renderExtensions() {
     act.appendChild(up); act.appendChild(document.createTextNode(' ')); act.appendChild(rm); tr.appendChild(act);
     body.appendChild(tr);
   });
+  Object.keys(EXT_SELECTED).forEach(function (name) { if (!stillThere[name]) delete EXT_SELECTED[name]; });
+  extUpdateBulkButton();
   renderExtAccess();
 }
+function extUpdateBulkButton() {
+  var n = Object.keys(EXT_SELECTED).length;
+  $('extbulkbtn').disabled = !n || EXT_BULK_BUSY;
+  $('extbulkbtn').textContent = n ? 'bulk update… (' + n + ' selected)' : 'bulk update…';
+  var all = EXT && EXT.library.length > 0 && EXT.library.every(function (e) { return EXT_SELECTED[e.name]; });
+  $('extselall').checked = Boolean(all);
+  $('extselall').disabled = EXT_BULK_BUSY;
+}
+$('extselall').addEventListener('change', function () {
+  if (!EXT) return;
+  EXT.library.forEach(function (e) { if ($('extselall').checked) EXT_SELECTED[e.name] = true; else delete EXT_SELECTED[e.name]; });
+  renderExtensions();
+});
+/* One name at a time, waiting for the host's single job slot (shared with every other install here) to
+   actually finish before starting the next, rather than firing them all and racing 409s against it. */
+function extPollUntilDone() {
+  return new Promise(function (resolve) {
+    (function tick() {
+      fetch('dashboard/extensions.json', { cache: 'no-store' }).then(readJson).then(function (d) {
+        EXT = d;
+        if (d.job) {
+          $('extjobtitle').hidden = $('extjob').hidden = false;
+          $('extjobtitle').textContent = d.job.title + ' — ' + d.job.state;
+          $('extjob').textContent = d.job.lines.join('\n');
+          $('extjob').scrollTop = $('extjob').scrollHeight;
+        }
+        if (d.job && d.job.state === 'running') setTimeout(tick, 700);
+        else resolve(d.job);
+      }).catch(function () { setTimeout(tick, 1000); });
+    })();
+  });
+}
+$('extbulkbtn').addEventListener('click', function () {
+  var names = Object.keys(EXT_SELECTED);
+  if (!names.length || EXT_BULK_BUSY) return;
+  if (!confirm('Update ' + names.length + ' extension(s), each reinstalled from its own source? Only one install runs at a time on this host, so later ones wait their turn.')) return;
+  EXT_BULK_BUSY = true;
+  renderExtensions();
+  $('extbulkresults').replaceChildren();
+  var ok = 0; var failed = [];
+  names.reduce(function (chain, name) {
+    return chain.then(function () {
+      $('extnote').textContent = 'updating ' + name + '… (' + (ok + failed.length + 1) + ' of ' + names.length + ')';
+      return extPost('update', { name: name }).then(function (r) { return extPollUntilDone(); }).then(function (job) {
+        if (job && job.state === 'failed') failed.push(name + ': ' + (job.lines[job.lines.length - 1] || 'failed'));
+        else ok++;
+      }).catch(function (e) { failed.push(name + ': ' + e.message); });
+    });
+  }, Promise.resolve()).then(function () {
+    EXT_BULK_BUSY = false;
+    EXT_SELECTED = {};
+    loadExtensions();
+    $('extnote').textContent = ok + ' of ' + names.length + ' updated' + (failed.length ? ', ' + failed.length + ' failed (see below).' : '.');
+    failed.forEach(function (msg) { var p = el('p', msg); p.className = 'bad hint small'; p.style.margin = '2px 0'; $('extbulkresults').appendChild(p); });
+  });
+});
 function renderExtAccess() {
   var t = $('extaccess');
   t.replaceChildren();
