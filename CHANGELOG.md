@@ -4,6 +4,15 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 
 ## [Unreleased]
 
+### Fixed
+- **One missing extension took a whole chat's container down.** A shared bundle or library extension that
+  was granted but whose folder is no longer actually on the host (removed by hand, a restore that missed it,
+  a reinstall that never finished) was still mounted and pointed to; Pi refuses to start at all when even one
+  of its `-e` extension paths does not exist, so the chat failed outright with "the chat's container failed
+  to start". It is now left out of that run instead, the chat is told once ("an extension this chat was
+  granted could not be found on the host and was left out: `<name>`. Reinstall or remove it on Extensions."),
+  and it mounts again on its own the moment the extension is back.
+
 ### Added
 - **Scheduled tasks reach their owner.** A job has a `notify` setting (never, changes, always). A finished run is put in an
   inbox that the next reply of a chat of that key and agent shows at the top, once, and is sent to the alert webhook
