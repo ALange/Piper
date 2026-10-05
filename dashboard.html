@@ -1021,13 +1021,13 @@
         <div class="toolbar">
           <div>
             <h3>RSS feeds</h3>
-            <p class="hint" style="margin:0" id="rssnote">Each feed is polled on its own interval; a new entry is handed to its agent (model, memory, extensions, skills &mdash; whatever you gave it) to fetch the article and extract it clean. A feed&rsquo;s first poll only seeds its current entries; nothing is extracted until something newer shows up.</p>
+            <p class="hint" style="margin:0" id="rssnote">Each feed is polled on its own interval; a new entry is handed to its agent (model, memory, extensions, skills &mdash; whatever you gave it) to fetch the article and extract it clean. A feed&rsquo;s first poll only seeds its current entries; nothing is extracted until something newer shows up. If a site seems to be blocking the fetch, the agent gets one more try at finding the same article another way before an entry is marked <b>blocked</b> (Settings &rarr; Knowledge &rarr; RSS_AUTO_UNBLOCK).</p>
           </div>
           <button id="rssrefresh">refresh</button>
           <button id="rssnew">new feed</button>
         </div>
         <table>
-          <thead><tr><th>feed</th><th>agent</th><th class="num">interval</th><th>state</th><th>last polled</th><th></th></tr></thead>
+          <thead><tr><th>feed</th><th>agent</th><th class="num">interval</th><th>state</th><th>last polled</th><th>last article</th><th></th></tr></thead>
           <tbody id="rssrows"></tbody>
         </table>
         <p class="hint" id="rssempty" hidden>No feeds yet.</p>
@@ -3653,6 +3653,13 @@ function loadFeeds() {
     .then(function (r) { FEEDS = r[0].feeds; FEED_AGENTS = r[1].agents; renderFeeds(); })
     .catch(function (e) { $('rssnote').textContent = 'cannot load feeds: ' + e.message; });
 }
+var ENTRY_STATUS = { done: ['success', 'ok'], blocked: ['blocked', 'busy'], failed: ['failed', 'bad'], pending: ['pending', ''], extracting: ['extracting', 'busy'], skipped: ['skipped', ''] };
+function entryStatusCell(status) {
+  var s = ENTRY_STATUS[status] || [status, ''];
+  var td = el('td', s[0]);
+  td.className = s[1];
+  return td;
+}
 function renderFeeds() {
   var body = $('rssrows');
   body.replaceChildren();
@@ -3668,6 +3675,14 @@ function renderFeeds() {
     if (f.lastError) st.title = f.lastError;
     tr.appendChild(st);
     tr.appendChild(el('td', f.lastPolledAt ? new Date(f.lastPolledAt).toLocaleString() : 'never'));
+    if (f.lastEntryStatus) {
+      var lastTd = entryStatusCell(f.lastEntryStatus);
+      lastTd.textContent += f.lastEntryAt ? ' · ' + new Date(f.lastEntryAt).toLocaleString() : '';
+      if (f.lastEntryError) lastTd.title = f.lastEntryError;
+      tr.appendChild(lastTd);
+    } else {
+      tr.appendChild(el('td', 'none yet'));
+    }
     var act = el('td');
     var pull = el('button', 'pull now'); pull.addEventListener('click', function () {
       pull.disabled = true;
@@ -3743,8 +3758,7 @@ function renderKnowledgeEntries() {
     var tr = el('tr');
     tr.appendChild(el('td', e.sourceType + '/' + (e.sourceRef || '(none)')));
     tr.appendChild(el('td', e.title || '(untitled)'));
-    var st = el('td', e.status); st.className = e.status === 'done' ? 'ok' : e.status === 'failed' ? 'bad' : '';
-    tr.appendChild(st);
+    tr.appendChild(entryStatusCell(e.status));
     tr.appendChild(el('td', e.publishedAt ? new Date(e.publishedAt).toLocaleString() : ''));
     tr.appendChild(el('td', e.fetchedAt ? new Date(e.fetchedAt).toLocaleString() : ''));
     var act = el('td');
@@ -3760,7 +3774,7 @@ function openEntryDetail(e) {
   $('kedetailtitle').textContent = e.title || '(untitled)';
   $('kedetailmeta').textContent = [e.sourceType + '/' + (e.sourceRef || '(none)'), e.status, e.url || ''].filter(Boolean).join(' · ') + (e.tags && e.tags.length ? ' · tags: ' + e.tags.join(', ') : '');
   $('kedetailtext').textContent = (e.error ? 'error: ' + e.error + '\n\n' : '') + (e.summary ? e.summary + '\n\n' : '') + (e.text || '');
-  $('keretry').hidden = e.status !== 'failed';
+  $('keretry').hidden = e.status !== 'failed' && e.status !== 'blocked';
   $('kedetail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 $('kedetailclose').addEventListener('click', function () { KE_OPEN = null; $('kedetail').hidden = true; });

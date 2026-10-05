@@ -96,7 +96,7 @@ export * from "./lib/knowledgeroutes.mjs";
 // Not `export *`: tick/pump collide in name (not meaning) with lib/jobs.mjs's own scheduler functions.
 export {
 	RssError, SOURCE_TYPE, getFeed, listFeeds, createFeed, updateFeed, removeFeed, parseFeedXml, forcePoll,
-	tick as rssTick, parseExtraction, setExtractionRunner, pump as rssPump, retryEntry, startFeeds, stopFeeds,
+	tick as rssTick, parseExtraction, looksBlocked, parseUnblockReply, setExtractionRunner, pump as rssPump, retryEntry, startFeeds, stopFeeds,
 } from "./lib/rssfeeds.mjs";
 export * from "./lib/rssroutes.mjs";
 export * from "./lib/templates.mjs";

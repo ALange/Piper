@@ -259,24 +259,36 @@ ask for. From the next poll on, a genuinely new entry (by the feed's own guid) i
 named for that feed (or `RSS_DEFAULT_AGENT` when it names none) runs a whole turn: fetch the article page
 itself — with whatever fetch tool that agent has, inside its own container — and extract it clean, no ads,
 navigation or sponsored sections, replying with one strict JSON object (title, text, summary, tags). A reply
-that is not valid JSON, or is missing a title or text, is kept as a `failed` entry with the reason, not a
-crash — **retry** it from the Knowledge page once it is fixed (a different model, a working fetch tool, and
-so on).
+that is not valid JSON, or is missing a title or text, is kept as a `failed` entry with the reason — including
+what the agent actually said, so a retry has something to go on — not a crash. **retry** it from the
+Knowledge page once it is fixed (a different model, a working fetch tool, and so on).
+
+**Blocked, not just failed.** Some sites refuse automated fetches outright (a 403, Cloudflare, a CAPTCHA).
+When a reply that failed to parse also reads like one of those (a small, deliberately heuristic check — it
+only decides whether to spend one more turn, never whether the entry is kept), the same agent, in the same
+session, gets one more try at the same article before giving up: the Wayback Machine, a search for the same
+headline reported elsewhere, or whatever else its tools allow. If that works, the entry is `done` as normal.
+If not, it is marked `blocked` — a status distinct from a plain `failed`, since the cause is the site, not
+the agent or the pipeline — with the agent's own reason kept. `RSS_AUTO_UNBLOCK` (on by default) is the
+switch; off marks it `blocked` on the first such reply instead of trying again.
 
 **Management (Knowledge page).** **Feeds** tab: add, edit (name, URL, agent, interval, enabled), **pull now**
-(polls regardless of schedule), delete. **Entries** tab: every entry (source, title, status, published,
-fetched), a detail view (full text, summary, tags), **retry** a failed one, delete, or clear a whole source.
+(polls regardless of schedule), delete; each row shows when it was last polled and its last article's own
+outcome (success, blocked or failed, with when). **Entries** tab: every entry (source, title, status,
+published, fetched), a detail view (full text, summary, tags), **retry** a failed or blocked one, delete, or
+clear a whole source.
 
 **Guards.** `RSS_POLL_MIN_INTERVAL_MS` floors how often any one feed may be polled; `RSS_MAX_FEEDS` caps how
 many feeds exist at once; `RSS_MAX_PARALLEL_EXTRACTIONS` caps concurrent extraction turns;
-`RSS_EXTRACT_TIMEOUT_MS` stops a stuck one; `RSS_MAX_ARTICLE_BYTES` caps one article's stored text (cut, not
-refused — it is the pipeline's own output). `KNOWLEDGE_LOOKUP_LIMIT` caps how many entries one search
-returns; `KNOWLEDGE_RETENTION_DAYS` forgets entries older than that (0 keeps everything). `KNOWLEDGE_ENABLED`
-and `RSS_ENABLED` are separate switches on purpose: turning off RSS pauses new extraction without taking the
-tools away from agents reading what is already there.
+`RSS_EXTRACT_TIMEOUT_MS` stops a stuck one (covering both tries, when `RSS_AUTO_UNBLOCK` uses its second);
+`RSS_MAX_ARTICLE_BYTES` caps one article's stored text (cut, not refused — it is the pipeline's own output).
+`KNOWLEDGE_LOOKUP_LIMIT` caps how many entries one search returns; `KNOWLEDGE_RETENTION_DAYS` forgets entries
+older than that (0 keeps everything). `KNOWLEDGE_ENABLED` and `RSS_ENABLED` are separate switches on purpose:
+turning off RSS pauses new extraction without taking the tools away from agents reading what is already
+there.
 
 Settings (Settings → Knowledge): `KNOWLEDGE_ENABLED`, `KNOWLEDGE_LOOKUP_LIMIT`, `KNOWLEDGE_RETENTION_DAYS`,
-`RSS_ENABLED`, `RSS_POLL_MIN_INTERVAL_MS`, `RSS_MAX_FEEDS`, `RSS_MAX_PARALLEL_EXTRACTIONS`,
+`RSS_ENABLED`, `RSS_POLL_MIN_INTERVAL_MS`, `RSS_MAX_FEEDS`, `RSS_MAX_PARALLEL_EXTRACTIONS`, `RSS_AUTO_UNBLOCK`,
 `RSS_EXTRACT_TIMEOUT_MS`, `RSS_DEFAULT_AGENT`, `RSS_MAX_ARTICLE_BYTES`.
 
 ## Files & profiles
