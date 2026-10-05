@@ -1049,12 +1049,14 @@
             <h3>Knowledge entries</h3>
             <p class="hint" style="margin:0">Everything any producer (RSS today) has put in the knowledge base. Agents can search and read a <code>done</code> entry (<code>piper_knowledge_search</code>/<code>piper_knowledge_read</code>) &mdash; never write or delete, that is here only.</p>
           </div>
+          <input id="kesearch" placeholder="search by title" style="min-width:200px">
           <select id="kesource"></select>
           <button id="kerefresh">refresh</button>
+          <button id="kebulkdelete" disabled title="select one or more entries below first">delete selected&hellip;</button>
           <button id="keclear" title="clear every entry of the selected source">clear source&hellip;</button>
         </div>
         <table>
-          <thead><tr><th>source</th><th>title</th><th>status</th><th>published</th><th>fetched</th><th></th></tr></thead>
+          <thead><tr><th><input type="checkbox" id="keselall" title="select all"></th><th>source</th><th>title</th><th>status</th><th>published</th><th>fetched</th><th></th></tr></thead>
           <tbody id="kerows"></tbody>
         </table>
         <p class="hint" id="keempty" hidden>No entries yet.</p>
@@ -3724,6 +3726,7 @@ $('rsssave').addEventListener('click', function () {
 var KENTRIES = null;
 var KSOURCES = null;
 var KE_OPEN = null;
+var KE_SELECTED = {};
 function loadKnowledgeSources() {
   return fetch('dashboard/knowledge.json', { cache: 'no-store' }).then(readJson).then(function (d) {
     KSOURCES = d.sources;
@@ -3750,12 +3753,26 @@ function loadKnowledgeEntries() {
     });
   }).catch(function (e) { $('keempty').hidden = false; $('keempty').textContent = 'cannot load entries: ' + e.message; });
 }
+function keVisible() {
+  var q = ($('kesearch').value || '').trim().toLowerCase();
+  return (KENTRIES || []).filter(function (e) { return !q || (e.title || '').toLowerCase().indexOf(q) >= 0; });
+}
 function renderKnowledgeEntries() {
   var body = $('kerows');
   body.replaceChildren();
-  $('keempty').hidden = (KENTRIES || []).length > 0;
-  (KENTRIES || []).forEach(function (e) {
+  var visible = keVisible();
+  $('keempty').hidden = visible.length > 0;
+  if ((KENTRIES || []).length > 0 && !visible.length) { $('keempty').hidden = false; $('keempty').textContent = 'No entries match "' + $('kesearch').value + '".'; }
+  else $('keempty').textContent = 'No entries yet.';
+  var stillThere = {};
+  visible.forEach(function (e) {
+    stillThere[e.id] = true;
     var tr = el('tr');
+    var selCell = el('td');
+    var cb = el('input'); cb.type = 'checkbox'; cb.checked = Boolean(KE_SELECTED[e.id]);
+    cb.addEventListener('change', function () { if (cb.checked) KE_SELECTED[e.id] = e; else delete KE_SELECTED[e.id]; keUpdateBulkButton(); });
+    selCell.appendChild(cb);
+    tr.appendChild(selCell);
     tr.appendChild(el('td', e.sourceType + '/' + (e.sourceRef || '(none)')));
     tr.appendChild(el('td', e.title || '(untitled)'));
     tr.appendChild(entryStatusCell(e.status));
@@ -3763,11 +3780,37 @@ function renderKnowledgeEntries() {
     tr.appendChild(el('td', e.fetchedAt ? new Date(e.fetchedAt).toLocaleString() : ''));
     var act = el('td');
     var view = el('button', 'view'); view.addEventListener('click', function () { openEntryDetail(e); });
-    act.appendChild(view);
+    var del = el('button', 'delete'); del.addEventListener('click', function () {
+      if (!confirm('Delete "' + (e.title || '(untitled)') + '"?')) return;
+      epPost('dashboard/knowledge/' + e.sourceType + '/' + (e.sourceRef || '-') + '/' + e.id, undefined, 'DELETE').then(function () { delete KE_SELECTED[e.id]; loadKnowledgeEntries(); });
+    });
+    act.appendChild(view); act.appendChild(document.createTextNode(' ')); act.appendChild(del);
     tr.appendChild(act);
     body.appendChild(tr);
   });
+  Object.keys(KE_SELECTED).forEach(function (id) { if (!stillThere[id]) delete KE_SELECTED[id]; });
+  keUpdateBulkButton();
 }
+function keUpdateBulkButton() {
+  var n = Object.keys(KE_SELECTED).length;
+  $('kebulkdelete').disabled = !n;
+  $('kebulkdelete').textContent = n ? 'delete selected… (' + n + ')' : 'delete selected…';
+  var visible = keVisible();
+  $('keselall').checked = Boolean(visible.length) && visible.every(function (e) { return KE_SELECTED[e.id]; });
+}
+$('keselall').addEventListener('change', function () {
+  keVisible().forEach(function (e) { if ($('keselall').checked) KE_SELECTED[e.id] = e; else delete KE_SELECTED[e.id]; });
+  renderKnowledgeEntries();
+});
+$('kesearch').addEventListener('input', renderKnowledgeEntries);
+$('kebulkdelete').addEventListener('click', function () {
+  var chosen = Object.keys(KE_SELECTED).map(function (id) { return KE_SELECTED[id]; });
+  if (!chosen.length) return;
+  if (!confirm('Delete ' + chosen.length + ' entry(ies)? This cannot be undone.')) return;
+  Promise.all(chosen.map(function (e) { return epPost('dashboard/knowledge/' + e.sourceType + '/' + (e.sourceRef || '-') + '/' + e.id, undefined, 'DELETE'); }))
+    .then(function () { KE_SELECTED = {}; loadKnowledgeEntries(); })
+    .catch(function (e) { alert(e.message); loadKnowledgeEntries(); });
+});
 function openEntryDetail(e) {
   KE_OPEN = e;
   $('kedetail').hidden = false;

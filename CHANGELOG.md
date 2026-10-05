@@ -23,7 +23,8 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   the Entries tab. When a fetch looks blocked rather than merely failed (a 403, Cloudflare, a CAPTCHA), the
   same agent gets one more try in the same turn — the Wayback Machine, a search for the same report
   elsewhere, or whatever its tools allow — before the entry is marked **blocked** (a status distinct from a
-  plain failure) instead of giving up on the first try; `RSS_AUTO_UNBLOCK` (on by default) is the switch.
+  plain failure) instead of giving up on the first try; `RSS_AUTO_UNBLOCK` (on by default) is the switch. The
+  Entries tab can search by title, and select and delete entries one at a time or in bulk.
 - **Agent memory.** A chat can remember durable notes across its own chats and containers, through three new
   tools: `piper_remember` (write or update a note), `piper_recall` (read one back by name), `piper_memories`
   (list or search notes, newest first). Never read or written through the container's own filesystem — every
