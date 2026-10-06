@@ -54,9 +54,11 @@
   .bar select { max-width:220px; }
   .bar .sp { flex:1; }
   .statusbar { padding:6px 14px; border-bottom:1px solid var(--border); background:var(--panel); font-size:11px;
-               color:var(--muted); display:flex; gap:16px; flex-wrap:wrap; }
+               color:var(--muted); display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
   .statusbar b { color:var(--fg); font-weight:600; }
   .statusbar .ctxfull { color:var(--amber); }
+  #statusstats { display:flex; gap:16px; flex-wrap:wrap; }
+  .toolToggle { margin-left:auto; display:flex; align-items:center; gap:5px; cursor:pointer; white-space:nowrap; }
   #msgs { flex:1; overflow:auto; padding:16px; }
   .msg { max-width:720px; margin:0 auto 18px; }
   .msg.user .bubble { background:#1c2a1f; border:1px solid #243329; border-radius:10px; padding:8px 12px;
@@ -182,7 +184,10 @@
       <div class="sp"></div>
       <button id="filesbtn">files</button>
     </div>
-    <div id="statusbar" class="statusbar" hidden></div>
+    <div id="statusbar" class="statusbar">
+      <div id="statusstats"></div>
+      <label class="toolToggle"><input type="checkbox" id="toolToggle">show tool calls</label>
+    </div>
     <div id="msgs"></div>
     <div id="pending" class="pending" hidden></div>
     <div class="composer">
@@ -380,6 +385,7 @@ var PENDING_IMAGES = []; // { name, dataUrl }
 var PENDING_DOCS = []; // { name, path }
 var ATTACH_MAX_BYTES = 8 * 1024 * 1024; // mirrors the server's own PORTAL_ATTACHMENT_MAX_BYTES default
 var ATTACH_MAX_IMAGES = 6;
+var SHOW_TOOLS = (function () { try { return localStorage.getItem('piper-portal-showtools') !== '0'; } catch (e) { return true; } })();
 
 function api(path, opts) {
   opts = opts || {};
@@ -523,6 +529,7 @@ function textBlocks(text) {
 }
 
 function partNode(p) {
+  if (p.kind === 'tool' && !SHOW_TOOLS) return document.createDocumentFragment();
   if (p.kind === 'thinking') {
     var det = el('details');
     det.className = 'think' + (p.pending ? ' live' : '');
@@ -644,11 +651,10 @@ function fmtTok(n) {
 }
 function renderStatusBar() {
   var c = conv();
-  var bar = $('statusbar');
-  var s = c && c.status;
-  if (!s || !s.model) { bar.hidden = true; return; }
-  bar.hidden = false;
+  var bar = $('statusstats');
   bar.replaceChildren();
+  var s = c && c.status;
+  if (!s || !s.model) return;
   var add = function (label, value, cls) {
     var span = el('span');
     span.appendChild(document.createTextNode(label + ': '));
@@ -985,6 +991,12 @@ $('input').addEventListener('paste', function (e) {
 });
 $('attachbtn').addEventListener('click', function () { $('attachinput').click(); });
 $('attachinput').addEventListener('change', function () { addAttachments(this.files); this.value = ''; });
+$('toolToggle').checked = SHOW_TOOLS;
+$('toolToggle').addEventListener('change', function () {
+  SHOW_TOOLS = this.checked;
+  try { localStorage.setItem('piper-portal-showtools', SHOW_TOOLS ? '1' : '0'); } catch (e) { /* not fatal */ }
+  renderMessages();
+});
 $('filesbtn').addEventListener('click', function () { FILES_OPEN = !FILES_OPEN; $('filesbox').classList.toggle('on', FILES_OPEN); $('filesbtn').className = FILES_OPEN ? 'on' : ''; if (FILES_OPEN) loadFiles(); });
 $('filesrefresh').addEventListener('click', loadFiles);
 $('uploadbtn').addEventListener('click', function () { $('uploadinput').click(); });
