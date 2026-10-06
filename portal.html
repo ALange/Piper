@@ -66,13 +66,15 @@
   .think-sub { border-left:3px solid var(--agent-c, var(--blue)); padding:2px 0 2px 8px; margin:2px 0 2px -8px; }
   .think-sub b { color:var(--agent-c, var(--blue)); }
 
-  /* tool calls: a small pill, click to expand its summary/result */
+  /* tool calls: <pill>name</pill>: excerpt, click the line to expand the full result */
+  .tool-line { display:flex; align-items:baseline; gap:7px; margin:5px 0; cursor:pointer; user-select:none; }
   .tool-pill { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--border); border-radius:999px;
-               padding:3px 11px; font-size:11px; cursor:pointer; margin:5px 0; user-select:none; }
-  .tool-pill:hover { border-color:#3a3a3a; }
+               padding:2px 10px; font-size:11px; flex:0 0 auto; }
+  .tool-line:hover .tool-pill { border-color:#3a3a3a; }
   .tool-pill .dot { width:6px; height:6px; border-radius:50%; background:var(--amber); }
-  .tool-pill.done .dot { background:var(--green); }
-  .tool-pill.error .dot { background:var(--red); }
+  .tool-line.done .tool-pill .dot { background:var(--green); }
+  .tool-line.error .tool-pill .dot { background:var(--red); }
+  .tool-excerpt { font-size:12px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
   .tool-body { display:none; margin:2px 0 8px 4px; padding:8px 10px; background:#0c0c0c; border:1px solid var(--border);
                border-radius:6px; font-size:11px; white-space:pre-wrap; color:var(--muted); }
   .tool-body.open { display:block; }
@@ -307,17 +309,23 @@ function partNode(p) {
   }
   if (p.kind === 'tool') {
     var frag = document.createDocumentFragment();
+    var line = el('div');
+    line.className = 'tool-line ' + (p.state === 'error' ? 'error' : p.state === 'running' ? 'running' : 'done');
     var pill = el('div');
-    pill.className = 'tool-pill ' + (p.state === 'error' ? 'error' : p.state === 'running' ? 'running' : 'done');
+    pill.className = 'tool-pill';
     pill.appendChild(el('span')).className = 'dot';
-    pill.appendChild(document.createTextNode(p.summary || p.name));
+    pill.appendChild(document.createTextNode(p.name));
+    line.appendChild(pill);
+    var excerptText = p.summary && p.summary !== p.name ? p.summary : (p.result ? p.result.split('\n')[0] : (p.state === 'running' ? 'running…' : ''));
+    if (excerptText.length > 140) excerptText = excerptText.slice(0, 140) + '…';
+    line.appendChild(el('span', excerptText)).className = 'tool-excerpt';
     var tbox = el('div', p.result || '(still running…)');
     tbox.className = 'tool-body' + (OPEN_TOOL[p.id] ? ' open' : '');
-    pill.addEventListener('click', function () {
+    line.addEventListener('click', function () {
       OPEN_TOOL[p.id] = !OPEN_TOOL[p.id];
       tbox.classList.toggle('open', OPEN_TOOL[p.id]);
     });
-    frag.appendChild(pill);
+    frag.appendChild(line);
     frag.appendChild(tbox);
     return frag;
   }
