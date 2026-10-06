@@ -5,6 +5,13 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 ## [Unreleased]
 
 ### Added
+- **Tools & Extensions and Skills sidebars in the client portal.** Two new buttons next to **files**
+  open a sidebar listing what the current agent has loaded: Skills shows each skill command with its
+  description and where it came from (your own profile, a shared bundle, or this workspace); Tools &
+  Extensions shows your own extension files, any shared (read-only) ones granted by the operator, and
+  the commands extensions have added. Backed by two new routes, `GET /api/skills` and
+  `GET /api/extensions`, which ask the same running Pi session the `/skills` and `/extensions` chat
+  commands already did — the text and the sidebar can never show something different.
 - **`/reload` and the other gateway chat commands now work in the client portal and the dashboard
   Playground, not just the plain API.** `/piper`, `/reload`, `/skills`, `/extensions`, `/settings` and
   `/profile` were only ever intercepted inside `/v1/chat/completions`; a chat through the Portal or

@@ -8980,6 +8980,89 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	const stolenFiles = await call(`/api/files?agentId=${theirAgent.id}`, { headers: auth });
 	assert.equal(stolenFiles.status, 404, "never another key's agent's files");
 
+	// Skills & extensions: /api/skills and /api/extensions back the portal's own sidebars, asking a real
+	// (here, faked) Pi session what is loaded -- never tied to any one chat, so a session of its own
+	// ("portal:tools") is used instead.
+	{
+		resetEngineCheck();
+		const priorNetwork = config.CONTAINER_NETWORK;
+		const accessLog = config.ACCESS_LOG;
+		config.CONTAINER_NETWORK = "none";
+		config.ACCESS_LOG = false;
+		setRunner(async (bin, args) => {
+			if (bin === "docker" && args[0] === "version") return { code: 0, stdout: "27.0.0", stderr: "" };
+			if (bin === "docker" && args[0] === "inspect") return { code: 1, stdout: "", stderr: "No such object" };
+			if (bin === "docker" && args[0] === "image") return { code: 0, stdout: "sha256:fakeimage|0.99.1", stderr: "" };
+			return { code: 0, stdout: "", stderr: "" };
+		});
+		const { EventEmitter } = await import("node:events");
+		const { PassThrough } = await import("node:stream");
+		const fakeChild = () => {
+			const child = new EventEmitter();
+			child.stdout = new PassThrough();
+			child.stderr = new PassThrough();
+			child.exitCode = null;
+			child.signalCode = null;
+			child.kill = (signal = "SIGTERM") => {
+				if (child.exitCode !== null || child.signalCode !== null) return true;
+				child.signalCode = signal;
+				setImmediate(() => child.emit("exit", null, signal));
+				return true;
+			};
+			child.stdin = new PassThrough();
+			child.stdin.on("end", () => child.exitCode === null && child.signalCode === null && setImmediate(() => child.emit("exit", 0, null)));
+			let buffer = "";
+			child.stdin.on("data", (chunk) => {
+				buffer += chunk;
+				let i;
+				while ((i = buffer.indexOf("\n")) >= 0) {
+					const command = JSON.parse(buffer.slice(0, i));
+					buffer = buffer.slice(i + 1);
+					const reply = (record) => child.stdout.write(`${JSON.stringify(record)}\n`);
+					const ok = (data) => reply({ type: "response", id: command.id, command: command.type, success: true, data });
+					if (command.type === "get_state") ok({ model: { provider: "p", id: "m", input: ["text"] }, isStreaming: false });
+					else if (command.type === "get_commands")
+						ok({
+							commands: [
+								{ name: "review", source: "skill", description: "Review a change", sourceInfo: { scope: "user" } },
+								{ name: "mytool", source: "extension", description: "Does a thing" },
+							],
+						});
+					else ok();
+				}
+			});
+			return child;
+		};
+		setSessionSpawn(() => fakeChild());
+
+		const skillsRes = await call("/api/skills", { headers: auth });
+		assert.equal(skillsRes.status, 200);
+		assert.deepEqual(skillsRes.json.skills, [{ name: "review", description: "Review a change" }]);
+
+		const extRes = await call("/api/extensions", { headers: auth });
+		assert.equal(extRes.status, 200);
+		assert.deepEqual(extRes.json.files, []);
+		assert.deepEqual(extRes.json.shared, []);
+		assert.deepEqual(extRes.json.commands, [{ name: "mytool", description: "Does a thing" }]);
+
+		const stolenSkills = await call(`/api/skills?agentId=${theirAgent.id}`, { headers: auth });
+		assert.equal(stolenSkills.status, 404, "never another key's agent's skills");
+		const stolenExt = await call(`/api/extensions?agentId=${theirAgent.id}`, { headers: auth });
+		assert.equal(stolenExt.status, 404, "never another key's agent's extensions");
+
+		const noAuthSkills = await call("/api/skills");
+		assert.equal(noAuthSkills.status, 401);
+
+		const openRecords = sessions.allRecords();
+		sessions.closeAll();
+		await Promise.all(openRecords.map((r) => r.stopped ?? Promise.resolve()));
+		setSessionSpawn(null);
+		setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+		config.CONTAINER_NETWORK = priorNetwork;
+		config.ACCESS_LOG = accessLog;
+		resetEngineCheck();
+	}
+
 	// History: a key's whole chat list, kept server-side so another browser or device sees the same chats.
 	assert.equal(getHistory(myKey.id), null, "nothing saved yet");
 	const noHistory = await call("/api/history", { headers: auth });

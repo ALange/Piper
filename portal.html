@@ -52,6 +52,7 @@
   main { flex:1; display:flex; flex-direction:column; min-width:0; }
   .bar { padding:10px 14px; border-bottom:1px solid var(--border); display:flex; gap:8px; align-items:center; }
   .bar select { max-width:220px; }
+  .bar button.on { border-color:var(--blue); color:var(--fg); }
   .bar .sp { flex:1; }
   .statusbar { padding:6px 14px; border-bottom:1px solid var(--border); background:var(--panel); font-size:11px;
                color:var(--muted); display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
@@ -133,19 +134,26 @@
   .msg-docs { margin-top:6px; display:flex; flex-direction:column; gap:3px; }
   .msg-docs a { font-size:12px; }
 
-  /* files panel */
-  #filesbox { width:300px; flex:0 0 300px; border-left:1px solid var(--border); background:var(--side);
-              display:none; flex-direction:column; }
-  #filesbox.on { display:flex; }
-  #filesbox .top { padding:10px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; }
+  /* files / tools & extensions / skills panels -- one at a time, same shape */
+  .sidebox { width:300px; flex:0 0 300px; border-left:1px solid var(--border); background:var(--side);
+             display:none; flex-direction:column; }
+  .sidebox.on { display:flex; }
+  .sidebox .top { padding:10px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
   #crumb { padding:8px 10px; font-size:11px; color:var(--muted); }
   #crumb a { margin-right:2px; }
-  #filelist { flex:1; overflow:auto; padding:0 6px; }
+  #filelist, .plist { flex:1; overflow:auto; padding:0 6px 10px; }
   .frow { padding:6px 8px; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; font-size:12px; }
   .frow:hover { background:#161616; }
   .frow .sz { color:var(--dim); font-size:10px; }
   .frow .del { opacity:.5; padding:0 4px; }
   .frow .del:hover { opacity:1; color:var(--red); }
+  .plist .psection { color:var(--dim); font-size:10px; text-transform:uppercase; letter-spacing:.06em; padding:10px 8px 3px; }
+  .plist .prow { padding:6px 8px; border-radius:6px; font-size:12px; }
+  .plist .prow .nm { display:flex; justify-content:space-between; gap:6px; }
+  .plist .prow .nm b { font-weight:600; }
+  .plist .prow .tag { color:var(--dim); font-size:10px; }
+  .plist .prow .desc { color:var(--muted); font-size:11px; margin-top:1px; }
+  .plist .empty { padding:10px 8px; color:var(--muted); font-size:12px; }
 
   /* a small modal for previewing/downloading a file */
   .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center;
@@ -182,7 +190,9 @@
     <div class="bar">
       <select id="target"></select>
       <div class="sp"></div>
-      <button id="filesbtn">files</button>
+      <button id="toolsbtn">Tools &amp; Extensions</button>
+      <button id="skillsbtn">Skills</button>
+      <button id="filesbtn" class="on">files</button>
     </div>
     <div id="statusbar" class="statusbar">
       <div id="statusstats"></div>
@@ -197,7 +207,15 @@
       <button id="send">send</button>
     </div>
   </main>
-  <div id="filesbox" class="on">
+  <div id="toolsbox" class="sidebox">
+    <div class="top"><b>Tools &amp; Extensions</b><button id="toolsrefresh">refresh</button></div>
+    <div id="toolslist" class="plist"></div>
+  </div>
+  <div id="skillsbox" class="sidebox">
+    <div class="top"><b>Skills</b><button id="skillsrefresh">refresh</button></div>
+    <div id="skillslist" class="plist"></div>
+  </div>
+  <div id="filesbox" class="sidebox on">
     <div class="top"><b>Files</b><div><button id="uploadbtn">upload</button><button id="filesrefresh">refresh</button></div></div>
     <input type="file" id="uploadinput" multiple hidden>
     <div id="crumb"></div>
@@ -379,7 +397,7 @@ var CONVOS = [];
 var CUR = null;
 var BUSY = false;
 var CTRL = null;
-var FILES_OPEN = true;
+var SIDE_OPEN = 'files'; // 'files' | 'tools' | 'skills' | null -- one side panel at a time
 var FILES_PATH = '';
 var PENDING_IMAGES = []; // { name, dataUrl }
 var PENDING_DOCS = []; // { name, path }
@@ -680,7 +698,7 @@ function renderAll() {
   var c = conv();
   $('target').value = c ? (c.agentId || '') : '';
   $('target').disabled = Boolean(c && c.messages.length) || BUSY;
-  if (FILES_OPEN) loadFiles();
+  reloadSidePanel();
 }
 
 function newChat() {
@@ -772,6 +790,73 @@ function send() {
     $('send').textContent = 'send';
     saveConvos();
     renderAll();
+  });
+}
+
+/* ---- side panels: files, tools & extensions, skills -- one open at a time ---- */
+function agentQuery() {
+  var c = conv();
+  return (c && c.agentId) ? ('agentId=' + encodeURIComponent(c.agentId)) : '';
+}
+function setSide(which) {
+  SIDE_OPEN = SIDE_OPEN === which ? null : which;
+  $('filesbox').classList.toggle('on', SIDE_OPEN === 'files');
+  $('toolsbox').classList.toggle('on', SIDE_OPEN === 'tools');
+  $('skillsbox').classList.toggle('on', SIDE_OPEN === 'skills');
+  $('filesbtn').className = SIDE_OPEN === 'files' ? 'on' : '';
+  $('toolsbtn').className = SIDE_OPEN === 'tools' ? 'on' : '';
+  $('skillsbtn').className = SIDE_OPEN === 'skills' ? 'on' : '';
+  reloadSidePanel();
+}
+function reloadSidePanel() {
+  if (SIDE_OPEN === 'files') loadFiles();
+  else if (SIDE_OPEN === 'tools') loadTools();
+  else if (SIDE_OPEN === 'skills') loadSkills();
+}
+function prow(name, description, tag) {
+  var row = el('div'); row.className = 'prow';
+  var nm = el('div'); nm.className = 'nm';
+  nm.appendChild(el('b', name));
+  if (tag) nm.appendChild(el('span', tag)).className = 'tag';
+  row.appendChild(nm);
+  if (description) row.appendChild(el('div', description)).className = 'desc';
+  return row;
+}
+function loadSkills() {
+  var box = $('skillslist');
+  box.replaceChildren(el('div', 'loading…'));
+  apiJson('api/skills' + (agentQuery() ? '?' + agentQuery() : '')).then(function (d) {
+    box.replaceChildren();
+    var skills = d.skills || [];
+    if (!skills.length) { box.appendChild(el('div', 'No skills are loaded.')).className = 'empty'; return; }
+    skills.forEach(function (s) {
+      box.appendChild(prow('/' + s.name, s.description, s.shared ? 'shared: ' + s.shared : s.workspace ? 'workspace' : ''));
+    });
+  }).catch(function (e) {
+    box.replaceChildren(el('div', e.message));
+  });
+}
+function loadTools() {
+  var box = $('toolslist');
+  box.replaceChildren(el('div', 'loading…'));
+  apiJson('api/extensions' + (agentQuery() ? '?' + agentQuery() : '')).then(function (d) {
+    box.replaceChildren();
+    var files = d.files || [], shared = d.shared || [], commands = d.commands || [];
+    if (!files.length && !shared.length && !commands.length) { box.appendChild(el('div', 'No extensions or tools are loaded.')).className = 'empty'; return; }
+    if (files.length) {
+      box.appendChild(el('div', 'Your extensions')).className = 'psection';
+      files.forEach(function (f) { box.appendChild(prow(f.name, '', bytes(f.bytes))); });
+    }
+    if (shared.length) {
+      box.appendChild(el('div', 'Shared (read-only)')).className = 'psection';
+      shared.forEach(function (s) { box.appendChild(prow(s.name, '', s.bundle)); });
+    }
+    if (commands.length) {
+      box.appendChild(el('div', 'Tools available')).className = 'psection';
+      commands.forEach(function (c) { box.appendChild(prow('/' + c.name, c.description, '')); });
+    }
+  }).catch(function (e) {
+    box.replaceChildren(el('div', e.message));
   });
 }
 
@@ -997,7 +1082,11 @@ $('toolToggle').addEventListener('change', function () {
   try { localStorage.setItem('piper-portal-showtools', SHOW_TOOLS ? '1' : '0'); } catch (e) { /* not fatal */ }
   renderMessages();
 });
-$('filesbtn').addEventListener('click', function () { FILES_OPEN = !FILES_OPEN; $('filesbox').classList.toggle('on', FILES_OPEN); $('filesbtn').className = FILES_OPEN ? 'on' : ''; if (FILES_OPEN) loadFiles(); });
+$('filesbtn').addEventListener('click', function () { setSide('files'); });
+$('toolsbtn').addEventListener('click', function () { setSide('tools'); });
+$('skillsbtn').addEventListener('click', function () { setSide('skills'); });
+$('toolsrefresh').addEventListener('click', loadTools);
+$('skillsrefresh').addEventListener('click', loadSkills);
 $('filesrefresh').addEventListener('click', loadFiles);
 $('uploadbtn').addEventListener('click', function () { $('uploadinput').click(); });
 $('uploadinput').addEventListener('change', function () { uploadFiles(this.files); this.value = ''; });

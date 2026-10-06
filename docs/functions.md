@@ -51,7 +51,11 @@ on its own port, separate from the dashboard and the gateway's own API port, and
 and from there can only ever chat with that key's own agents and browse that key's own (or one of its
 agents') workspace files — there is no way to pick a different key, unlike the operator's Playground.
 The chat itself works the same way (a real turn, streamed, with thinking and tool calls shown) and
-reuses the same workspace file browser. Typing one of the gateway's own commands (`/piper` for the
+reuses the same workspace file browser. Two more sidebars sit next to **files**: **Tools & Extensions**
+(your own extension files, any shared ones granted by the operator, and the commands extensions add)
+and **Skills** (each skill command, its description and where it came from) — the same information the
+`/extensions` and `/skills` chat commands give as text, asking the same running session. Typing one of
+the gateway's own commands (`/piper` for the
 list, `/reload`, `/skills`, `/extensions`, `/settings`, `/profile`) is answered directly, the same as
 the plain API, rather than sent to the agent as a chat message. The key itself is kept in the browser's `sessionStorage`
 only: gone on logout or when the tab closes, never remembered across restarts. The **chat history**
