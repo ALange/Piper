@@ -53,6 +53,10 @@
   .bar { padding:10px 14px; border-bottom:1px solid var(--border); display:flex; gap:8px; align-items:center; }
   .bar select { max-width:220px; }
   .bar .sp { flex:1; }
+  .statusbar { padding:6px 14px; border-bottom:1px solid var(--border); background:var(--panel); font-size:11px;
+               color:var(--muted); display:flex; gap:16px; flex-wrap:wrap; }
+  .statusbar b { color:var(--fg); font-weight:600; }
+  .statusbar .ctxfull { color:var(--amber); }
   #msgs { flex:1; overflow:auto; padding:16px; }
   .msg { max-width:720px; margin:0 auto 18px; }
   .msg.user .bubble { background:#1c2a1f; border:1px solid #243329; border-radius:10px; padding:8px 12px;
@@ -150,6 +154,7 @@
       <div class="sp"></div>
       <button id="filesbtn">files</button>
     </div>
+    <div id="statusbar" class="statusbar" hidden></div>
     <div id="msgs"></div>
     <div class="composer">
       <textarea id="input" placeholder="Message your agent... (Enter to send, Shift+Enter for a new line)"></textarea>
@@ -541,9 +546,41 @@ function renderMessages() {
   box.scrollTop = box.scrollHeight;
 }
 
+function fmtTok(n) {
+  n = Number(n) || 0;
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+  return String(n);
+}
+function renderStatusBar() {
+  var c = conv();
+  var bar = $('statusbar');
+  var s = c && c.status;
+  if (!s || !s.model) { bar.hidden = true; return; }
+  bar.hidden = false;
+  bar.replaceChildren();
+  var add = function (label, value, cls) {
+    var span = el('span');
+    span.appendChild(document.createTextNode(label + ': '));
+    var b = el('b', value);
+    if (cls) b.className = cls;
+    span.appendChild(b);
+    bar.appendChild(span);
+  };
+  add('model', s.model);
+  if (s.contextWindow) {
+    var pct = s.contextUsed ? Math.round((s.contextUsed / s.contextWindow) * 100) : null;
+    add('context', fmtTok(s.contextUsed || 0) + ' / ' + fmtTok(s.contextWindow) + (pct !== null ? ' (' + pct + '%)' : ''), pct !== null && pct >= 80 ? 'ctxfull' : '');
+  } else if (s.contextUsed) {
+    add('context', fmtTok(s.contextUsed));
+  }
+  if (s.gen) add('generation', s.gen.toFixed(1) + ' tok/s');
+  if (s.prompt) add('prompt processing', s.prompt.toFixed(1) + ' tok/s');
+}
 function renderAll() {
   renderSide();
   renderMessages();
+  renderStatusBar();
   var c = conv();
   $('target').value = c ? (c.agentId || '') : '';
   $('target').disabled = Boolean(c && c.messages.length) || BUSY;
@@ -608,7 +645,7 @@ function send() {
       var d;
       try { d = JSON.parse(data[1]); } catch (e) { return; }
       if (ev[1] === 'item') { applyItem(msg, d.item); renderMessages(); }
-      else if (ev[1] === 'done') { done = true; msg.usage = d.usage; msg.cost = d.cost; if (!(msg.parts || []).some(function (p) { return p.kind === 'text' && p.text; }) && d.text) msg.parts.push({ kind: 'text', id: 'final', text: d.text }); }
+      else if (ev[1] === 'done') { done = true; msg.usage = d.usage; msg.cost = d.cost; if (!(msg.parts || []).some(function (p) { return p.kind === 'text' && p.text; }) && d.text) msg.parts.push({ kind: 'text', id: 'final', text: d.text }); if (d.status) { c.status = d.status; c.status.contextUsed = (d.usage && d.usage.total_tokens) || null; } renderStatusBar(); }
       else if (ev[1] === 'error') { done = true; msg.error = d.message; }
     }
     function pump() {
