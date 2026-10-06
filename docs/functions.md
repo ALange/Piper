@@ -327,7 +327,10 @@ The **Extensions** page installs Pi extensions **on this host** and decides who 
   scripts* (they would run as the gateway's user), git hooks disabled, and an environment holding nothing but `PATH`. What arrives
   must be a Pi package (a `pi` section in `package.json`, the `pi-package` keyword, or `extensions/`, `skills/` or `prompts/`
   folders) and fit `EXTENSION_MAX_BYTES`, or it is removed again. **update** installs it again from the same source; **remove**
-  asks first when something gets it. The code is never run on the host.
+  asks first when something gets it. The code is never run on the host. Installing, updating or removing one closes the live
+  chats of everyone it is granted to and waits for their containers to actually stop before touching anything on disk — the
+  next message gets a freshly recreated container with the new (or, for a remove, no) copy, rather than one still pointing at
+  content that is about to change or disappear.
 - **Access tab.** A matrix of who gets which library extension or shared bundle, at three levels: the **default** for every key
   (`SHARED_BUNDLES`), a **key** (all of its agents) and an **agent**. A key or agent either *follows* the level above or has *its own
   list*; the last column shows what it finally gets. A change stops the affected live chats, and each resumes on its next message
@@ -358,9 +361,11 @@ The detail view of a key's or an agent's profile (Files & profiles → Profiles)
 
 **Files → Bundles** (the third root of the file browser) edits the shared bundles under `SHARED_ROOT`: **new bundle** (creates `skills/`, `extensions/` and
 `prompts/`), the same browser and text editor as for profiles, upload, rename, delete, and **delete bundle**. Granting a
-bundle to keys stays on the API keys page. After a change the live chats of every key and agent that gets the bundle reload.
-A bundle that is a link (you pointed it at another folder) is shown but not edited here. Changes need a dashboard
-password, because every granted key runs a bundle's extensions.
+bundle to keys stays on the API keys page. After an in-place file edit, the live chats of every key and agent that gets the
+bundle reload (their container's mount already sees the new file, nothing needs recreating); **deleting** the bundle instead
+closes those chats and waits for their containers to stop, since the directory they have mounted is about to go away
+entirely, not just change. A bundle that is a link (you pointed it at another folder) is shown but not edited here. Changes
+need a dashboard password, because every granted key runs a bundle's extensions.
 
 ## Containers
 

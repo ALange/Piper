@@ -1204,9 +1204,22 @@ assert.equal(isReloadCommand(undefined), false);
 	const withMissing = await call({ messages: [{ role: "user", content: "hi" }] }, { "x-session-id": "needs-missing-ext" });
 	assert.equal(withMissing.status, 200, "the chat still starts");
 	const withMissingText = (await withMissing.json()).choices[0].message.content;
-	assert.match(withMissingText, /^\[container: an extension this chat was granted could not be found on the host and was left out: missing-pkg\. Reinstall or remove it on Extensions\.\]\n\necho: hi$/);
+	assert.match(withMissingText, /^\[container: an extension this chat was granted could not be found or loaded on the host and was left out: missing-pkg\. Reinstall or remove it on Extensions\.\]\n\necho: hi$/);
 	apiKeys.update(key.id, { sharedBundles: null });
 	rmSync(join(TEST_EXT, "missing-pkg"), { recursive: true, force: true });
+
+	// A granted extension whose folder exists but is not a usable Pi package (no package.json, no
+	// extensions/skills/prompts folder — a half-written edit, or a file deleted out from under it) gets the
+	// same treatment: left out with a notice, not a crash. The folder is present, unlike the case above.
+	mkdirSync(join(TEST_EXT, "broken-pkg", "node_modules", "broken-pkg"), { recursive: true });
+	writeFileSync(join(TEST_EXT, "broken-pkg", "entry.json"), JSON.stringify({ name: "broken-pkg", source: "npm:broken-pkg", version: "1.0.0", entry: "node_modules/broken-pkg" }));
+	apiKeys.update(key.id, { sharedBundles: "broken-pkg" });
+	const withBroken = await call({ messages: [{ role: "user", content: "hi" }] }, { "x-session-id": "needs-broken-ext" });
+	assert.equal(withBroken.status, 200, "the chat still starts");
+	const withBrokenText = (await withBroken.json()).choices[0].message.content;
+	assert.match(withBrokenText, /^\[container: an extension this chat was granted could not be found or loaded on the host and was left out: broken-pkg\. Reinstall or remove it on Extensions\.\]\n\necho: hi$/);
+	apiKeys.update(key.id, { sharedBundles: null });
+	rmSync(join(TEST_EXT, "broken-pkg"), { recursive: true, force: true });
 
 	// Each chat opened a real bridge server (a listening unix socket); closing the sessions tears those down
 	// too, or they would outlive this test and keep the process from ever exiting.
@@ -7928,7 +7941,17 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	apiKeys.update(key.id, { sharedBundles: "team-tools" });
 	assert.deepEqual(bundleUsers("team-tools").map((u) => u.label), ["pkg test"]);
 	await assert.rejects(deleteBundle("team-tools"), (e) => e.status === 409 && /granted to pkg test/.test(e.message));
-	assert.deepEqual((await deleteBundle("team-tools", { force: true })), { deleted: "team-tools" });
+	// Deleting a bundle (forced) closes its users' live sessions and waits for them to stop, not just a
+	// soft reload — the directory their container has mounted is about to disappear entirely.
+	{
+		const realRecordsByScope = P.sessions.recordsByScope.bind(P.sessions);
+		let stoppedAwaited = false;
+		P.sessions.recordsByScope = (scope) =>
+			scope === key.id ? [{ id: "fake-bundle-session", container: { name: "fake" }, inflight: 0, stopped: new Promise((resolve) => setTimeout(() => ((stoppedAwaited = true), resolve()), 20)) }] : realRecordsByScope(scope);
+		assert.deepEqual((await deleteBundle("team-tools", { force: true })), { deleted: "team-tools" });
+		assert.equal(stoppedAwaited, true, "deleting it waited for the live session's container to actually stop");
+		P.sessions.recordsByScope = realRecordsByScope;
+	}
 	assert.equal(existsSync(join(root, "team-tools")), false);
 	assert.ok(existsSync(join(TEST_WS, "outside-bundle")), "deleting never follows a link");
 
@@ -8046,7 +8069,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 // Phase A (0.7): the extension library and grants.
 {
 	const X = await import("./server.mjs");
-	const { checkedSource, nameFromSource, gitTarget, installEnv, installCommands, looksLikePiPackage, treeBytes, installExtension, updateExtension, removeExtension, extensionJobView, resetExtensionJob, libraryOverview, ExtensionError, listLibrary, listShared, grantedBundles, bundleUsers, createBundle, extensionRoutes, setAccess, extensionsPayload, agents, apiKeys, config, packageDir, containerCreateArgs, piInvocation, containerSignature, installInto } = X;
+	const { checkedSource, nameFromSource, gitTarget, installEnv, installCommands, looksLikePiPackage, treeBytes, installExtension, updateExtension, removeExtension, extensionJobView, resetExtensionJob, libraryOverview, ExtensionError, listLibrary, listShared, grantedBundles, bundleUsers, createBundle, extensionRoutes, setAccess, extensionsPayload, agents, apiKeys, config, packageDir, containerCreateArgs, piInvocation, containerSignature, installInto, sessions } = X;
 	const fsm = await import("node:fs");
 	const log = join(TEST_WS, "fake-tools.log");
 	const bin = mkdtempSync(join(tmpdir(), "fakenpm-"));
@@ -8178,12 +8201,35 @@ echo "# demo" > "$target/skills/demo/SKILL.md"
 	assert.throws(() => createBundle("good-ext"), /already the name of a library extension/);
 	assert.throws(() => installExtension({ source: "npm:other-thing", name: "good-ext" }), (e) => e.status === 409 && /already installed from/.test(e.message));
 	// Reinstall of the same source (update) swaps in place.
+	const sigBefore = containerSignature({ bundles: [listLibrary().find((e) => e.name === "good-ext")] });
+	await new Promise((r) => setTimeout(r, 2)); // installedAt is Date.now(); make sure it actually moves
 	updateExtension("good-ext");
 	assert.equal((await waitJob()).state, "done");
 	assert.equal(listLibrary().filter((e) => e.name === "good-ext").length, 1);
 	assert.throws(() => updateExtension("nope"), (e) => e.status === 404);
 	assert.ok(treeBytes(join(TEST_EXT, "good-ext")) > 0);
 	assert.equal(looksLikePiPackage(join(TEST_EXT, "good-ext", "node_modules", "good-ext")), true);
+	// A reinstall under the same name/path/entry still changes the signature (via installedAt), so a
+	// container already holding the old content is recreated on its next start rather than kept stale.
+	const sigAfter = containerSignature({ bundles: [listLibrary().find((e) => e.name === "good-ext")] });
+	assert.notEqual(sigBefore, sigAfter, "a same-name reinstall changes the signature too");
+
+	// Updating (or removing) an extension closes its users' live sessions, and waits for them to actually
+	// stop, before touching the directory their container has bind-mounted — not just a soft reload.
+	{
+		const realRecordsByScope = sessions.recordsByScope.bind(sessions);
+		let stoppedAwaited = false;
+		const fakeKeyCreated = apiKeys.create({ name: "fake-ext-user-key", expiresAt: 0 });
+		const fakeKey = fakeKeyCreated.record ?? fakeKeyCreated;
+		apiKeys.update(fakeKey.id, { sharedBundles: "good-ext" });
+		sessions.recordsByScope = (scope) =>
+			scope === fakeKey.id ? [{ id: "fake-ext-session", container: { name: "fake" }, inflight: 0, stopped: new Promise((resolve) => setTimeout(() => ((stoppedAwaited = true), resolve()), 20)) }] : realRecordsByScope(scope);
+		updateExtension("good-ext");
+		assert.equal((await waitJob()).state, "done");
+		assert.equal(stoppedAwaited, true, "the update waited for the live session's container to actually stop");
+		sessions.recordsByScope = realRecordsByScope;
+		apiKeys.update(fakeKey.id, { sharedBundles: null });
+	}
 
 	// Grants: default -> key -> agent, and what each level gets.
 	const mkKey = (name) => { const c = apiKeys.create({ name, expiresAt: 0 }); return c.record ?? c; };
@@ -8249,7 +8295,17 @@ echo "# demo" > "$target/skills/demo/SKILL.md"
 	await call("/dashboard/extensions/access", { level: "default", list: "base" });
 	// Removing something that is granted needs force.
 	assert.equal((await call("/dashboard/extensions/remove", { name: "good-ext" })).status, 409);
-	assert.equal((await call("/dashboard/extensions/remove", { name: "good-ext", force: true })).status, 200);
+	// Removing it (forced) closes its users' live sessions and waits for them to stop too, not just a
+	// soft reload — the directory their container has mounted is about to disappear entirely.
+	{
+		const realRecordsByScope = sessions.recordsByScope.bind(sessions);
+		let stoppedAwaited = false;
+		sessions.recordsByScope = (scope) =>
+			scope === key.id ? [{ id: "fake-remove-session", container: { name: "fake" }, inflight: 0, stopped: new Promise((resolve) => setTimeout(() => ((stoppedAwaited = true), resolve()), 20)) }] : realRecordsByScope(scope);
+		assert.equal((await call("/dashboard/extensions/remove", { name: "good-ext", force: true })).status, 200);
+		assert.equal(stoppedAwaited, true, "removing it waited for the live session's container to actually stop");
+		sessions.recordsByScope = realRecordsByScope;
+	}
 	assert.ok(!fsm.existsSync(join(TEST_EXT, "good-ext")));
 	assert.equal((await call("/dashboard/extensions/remove", { name: "good-ext" })).status, 404);
 	assert.deepEqual(got(scopeOf2(a2)), ["fromgit"], "a removed entry is gone from what agents get");

@@ -40,13 +40,24 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   an agent or a key removes its memory with it.
 
 ### Fixed
-- **One missing extension took a whole chat's container down.** A shared bundle or library extension that
-  was granted but whose folder is no longer actually on the host (removed by hand, a restore that missed it,
-  a reinstall that never finished) was still mounted and pointed to; Pi refuses to start at all when even one
-  of its `-e` extension paths does not exist, so the chat failed outright with "the chat's container failed
-  to start". It is now left out of that run instead, the chat is told once ("an extension this chat was
-  granted could not be found on the host and was left out: `<name>`. Reinstall or remove it on Extensions."),
-  and it mounts again on its own the moment the extension is back.
+- **One missing or broken extension took a whole chat's container down.** A shared bundle or library
+  extension that was granted but whose folder is no longer actually on the host (removed by hand, a restore
+  that missed it), or is there but is not a usable Pi package (a half-written edit, a file deleted out from
+  under it), was still mounted and pointed to; Pi refuses to start at all when even one of its `-e` extension
+  paths does not exist or does not load, so the chat failed outright with "the chat's container failed to
+  start". It is now left out of that run instead, the chat is told once ("an extension this chat was granted
+  could not be found or loaded on the host and was left out: `<name>`. Reinstall or remove it on
+  Extensions."), and it mounts again on its own the moment it is fixed.
+- **Updating an extension could break an already-open chat, or leave one stuck failing to start.**
+  Reinstalling a library extension under the same name swapped its content in place without changing
+  anything a running container's bind mount or its signature cared about, so an open chat kept pointing at
+  the old copy's files — and those were then deleted as part of the swap, right out from under it — while
+  only getting a soft, in-place reload rather than a real restart. Installing (as an update), updating, or
+  removing a library extension, and deleting a shared bundle, now close every chat currently using it and
+  wait for its container to actually stop *before* touching the directory on disk, and a same-name reinstall
+  now changes the container's signature too, so the chat's next message gets a freshly recreated container
+  with the new content (what the agent had installed in it is carried over, same as any other settings
+  change) instead of a stale or missing mount.
 
 ### Added
 - **Scheduled tasks reach their owner.** A job has a `notify` setting (never, changes, always). A finished run is put in an
