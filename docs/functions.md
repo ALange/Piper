@@ -54,9 +54,14 @@ reuses the same workspace file browser. The key itself is kept in the browser's 
 only: gone on logout or when the tab closes, never remembered across restarts. The **chat history**
 (every conversation's title, agent and messages) is different: it is kept server-side too, so logging
 in from another browser or device shows the same chats to continue — the browser's own local copy is
-just a fast first read, synced to the gateway on every change. Settings: `PORTAL_ENABLED` (off by
-default — it opens a new port), `PORTAL_PORT`, `PORTAL_HISTORY_MAX_BYTES` (a hard cap on one key's
-whole stored history; the browser already trims itself well under it).
+just a fast first read, synced to the gateway on every change. A message can carry attachments: an
+image (📎 button, or just pasted in) goes through the same pipeline as any vision-capable model's
+input and shows as a thumbnail in the chat; a document has no such pipeline in Pi's own protocol, so
+it is uploaded straight to the agent's workspace (`uploads/<name>`) with the message mentioning it, for
+the agent to read with its own tools. Settings: `PORTAL_ENABLED` (off by default — it opens a new
+port), `PORTAL_PORT`, `PORTAL_HISTORY_MAX_BYTES` (a hard cap on one key's whole stored history; the
+browser already trims itself well under it), `PORTAL_ATTACHMENT_MAX_BYTES` (a cap on one attached
+image's decoded size).
 
 ## Overview
 

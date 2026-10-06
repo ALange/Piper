@@ -1247,6 +1247,85 @@ assert.equal(isReloadCommand(undefined), false);
 	resetEngineCheck();
 }
 
+// runAgentTurn now threads an `images` option all the way to the Pi session's own "prompt" command
+// (lib/agentrun.mjs used to hardcode `images: []`); a fake, vision-capable session proves it.
+{
+	const { EventEmitter } = await import("node:events");
+	const { PassThrough } = await import("node:stream");
+	const { runAgentTurn, credentialFor } = await import("./server.mjs");
+	resetEngineCheck();
+	const priorNetwork = config.CONTAINER_NETWORK;
+	const accessLog = config.ACCESS_LOG;
+	config.CONTAINER_NETWORK = "none";
+	config.ACCESS_LOG = false;
+
+	setRunner(async (bin, args) => {
+		if (bin === "docker" && args[0] === "version") return { code: 0, stdout: "27.0.0", stderr: "" };
+		if (bin === "docker" && args[0] === "inspect") return { code: 1, stdout: "", stderr: "No such object" };
+		if (bin === "docker" && args[0] === "image") return { code: 0, stdout: "sha256:fakeimage|0.99.1", stderr: "" };
+		return { code: 0, stdout: "", stderr: "" };
+	});
+
+	let lastPrompt = null;
+	const fakeChild = () => {
+		const child = new EventEmitter();
+		child.stdout = new PassThrough();
+		child.stderr = new PassThrough();
+		child.exitCode = null;
+		child.signalCode = null;
+		child.kill = (signal = "SIGTERM") => {
+			if (child.exitCode !== null || child.signalCode !== null) return true;
+			child.signalCode = signal;
+			setImmediate(() => child.emit("exit", null, signal));
+			return true;
+		};
+		child.stdin = new PassThrough();
+		child.stdin.on("end", () => child.exitCode === null && child.signalCode === null && setImmediate(() => child.emit("exit", 0, null)));
+		let buffer = "";
+		child.stdin.on("data", (chunk) => {
+			buffer += chunk;
+			let i;
+			while ((i = buffer.indexOf("\n")) >= 0) {
+				const command = JSON.parse(buffer.slice(0, i));
+				buffer = buffer.slice(i + 1);
+				const reply = (record) => child.stdout.write(`${JSON.stringify(record)}\n`);
+				const ok = (data) => reply({ type: "response", id: command.id, command: command.type, success: true, data });
+				// This model declares image input, unlike the text-only fixture above: the whole point
+				// of this block is to exercise the path where images are NOT dropped.
+				if (command.type === "get_state") ok({ model: { provider: "p", id: "m", input: ["text", "image"] }, isStreaming: false });
+				else if (command.type === "prompt") {
+					lastPrompt = command;
+					const said = String(command.message ?? "");
+					ok();
+					reply({ type: "agent_start" });
+					reply({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: `echo: ${said}` } });
+					reply({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: `echo: ${said}` }] } });
+					setTimeout(() => reply({ type: "agent_settled" }), 10);
+				} else ok();
+			}
+		});
+		return child;
+	};
+	setSessionSpawn(() => fakeChild());
+
+	const { record: key } = apiKeys.create({ name: "images-threading-test", expiresAt: 0 });
+	const cred = credentialFor(key.id);
+	const images = [{ type: "image", data: "QQ==", mimeType: "image/png" }];
+	const result = await runAgentTurn({ credential: cred, clientSessionId: "images-threading", prompt: "describe this", images });
+	assert.equal(result.text, "echo: describe this");
+	assert.ok(lastPrompt, "a prompt command reached the fake Pi session");
+	assert.deepEqual(lastPrompt.images, images, "images passed to runAgentTurn reached the Pi session's own prompt command");
+
+	const openRecords = sessions.allRecords();
+	sessions.closeAll();
+	await Promise.all(openRecords.map((r) => r.stopped ?? Promise.resolve()));
+	setSessionSpawn(null);
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+	config.CONTAINER_NETWORK = priorNetwork;
+	config.ACCESS_LOG = accessLog;
+	resetEngineCheck();
+}
+
 // The bridge socket: owner-only, unknown routes refused, and gone once closed.
 {
 	const { statSync: stat } = await import("node:fs");
@@ -8835,6 +8914,39 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	// A keyId in the body is never trusted — only the bearer key's own id is ever used as the credential.
 	await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "conversation-id-3", message: "hi", keyId: theirKey.id }) });
 	assert.equal(seenCredential.id, myKey.id, "the body's keyId is ignored");
+
+	// Images: a valid data: URI is converted and reaches runAgentTurn's own `images` option.
+	let seenImages = null;
+	setAgentTurnRunner(async ({ images, prompt }) => {
+		seenImages = images;
+		return { text: `echo: ${prompt}`, reasoning: "", usage: {}, cost: 0, sessionId: "x", scopedId: "y", fingerprint: "z", isNew: true };
+	});
+	const tinyPng = "data:image/png;base64,QQ==";
+	const withImage = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "conversation-id-4", message: "what is this", agentId: myAgent.id, images: [tinyPng] }) });
+	assert.equal(withImage.status, 200);
+	assert.deepEqual(seenImages, [{ type: "image", data: "QQ==", mimeType: "image/png" }]);
+
+	// Too many images: refused with 413 before runAgentTurn is ever called.
+	seenImages = "untouched";
+	const tooMany = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "conversation-id-5", message: "hi", agentId: myAgent.id, images: Array(7).fill(tinyPng) }) });
+	assert.equal(tooMany.status, 413);
+	assert.match(tooMany.text, /at most 6 images/);
+	assert.equal(seenImages, "untouched", "runAgentTurn was never reached");
+
+	// Oversized: refused with 413, the reason naming PORTAL_ATTACHMENT_MAX_BYTES.
+	const priorCap = config.PORTAL_ATTACHMENT_MAX_BYTES;
+	config.PORTAL_ATTACHMENT_MAX_BYTES = 0;
+	const tooBigImage = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "conversation-id-6", message: "hi", agentId: myAgent.id, images: [tinyPng] }) });
+	assert.equal(tooBigImage.status, 413);
+	assert.match(tooBigImage.text, /PORTAL_ATTACHMENT_MAX_BYTES/);
+	assert.equal(seenImages, "untouched", "runAgentTurn was never reached for the oversized image either");
+	config.PORTAL_ATTACHMENT_MAX_BYTES = priorCap;
+
+	// Not a data: URI at all: a plain, readable refusal rather than a crash.
+	const badImage = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "conversation-id-7", message: "hi", agentId: myAgent.id, images: ["not-a-data-uri"] }) });
+	assert.equal(badImage.status, 413);
+	assert.match(badImage.text, /not a valid data: URI/);
+
 	setAgentTurnRunner(null);
 
 	// Files: the key's own workspace by default, an agent's own with ?agentId=, never another key's.

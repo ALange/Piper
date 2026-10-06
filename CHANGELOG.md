@@ -5,6 +5,15 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 ## [Unreleased]
 
 ### Added
+- **Attachments in the client portal.** A message can now carry images and documents: a 📎 button
+  beside the composer or a plain paste into it (a screenshot, a copied file). An image goes through
+  the same native vision pipeline the dashboard's Playground already has — shown as a readable
+  thumbnail in the chat, click for full size — and is dropped with a note instead of sent if the
+  agent's own model cannot see images. A document has no such pipeline in Pi's own protocol, so it is
+  uploaded straight to the agent's workspace (`uploads/<name>`) with a line added to the message
+  mentioning it, for the agent to read with its own tools; it shows as a small 📄 link in the chat
+  after sending. `PORTAL_ATTACHMENT_MAX_BYTES` caps one image's decoded size (a document instead uses
+  the ordinary `FILE_UPLOAD_MAX_BYTES`).
 - **The client portal's chat history is kept server-side.** A key's whole conversation list (titles,
   which agent, every message) now syncs to the gateway (`GET`/`PUT /api/history`), not just the
   browser it was started in — log in from another browser or device and the same chats are there to
