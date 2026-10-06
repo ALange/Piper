@@ -114,6 +114,7 @@ export * from "./lib/agentschedule.mjs";
 export * from "./lib/agents.mjs";
 export * from "./lib/agentservers.mjs";
 export * from "./lib/portal.mjs";
+export * from "./lib/portalstore.mjs";
 export * from "./lib/updates.mjs";
 export * from "./lib/hostpi.mjs";
 export * from "./lib/resources.mjs";

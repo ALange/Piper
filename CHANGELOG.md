@@ -5,6 +5,13 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 ## [Unreleased]
 
 ### Added
+- **The client portal's chat history is kept server-side.** A key's whole conversation list (titles,
+  which agent, every message) now syncs to the gateway (`GET`/`PUT /api/history`), not just the
+  browser it was started in — log in from another browser or device and the same chats are there to
+  continue. The browser's own local copy stays as the fast, offline-friendly first read; the server
+  sync is fire-and-forget and never blocks the UI. `PORTAL_HISTORY_MAX_BYTES` is a hard backstop on one
+  key's total stored history (the browser already trims itself well under it); deleting a key deletes
+  its stored history with it.
 - **Regenerate an API key.** The full value of a key is shown only once, right when it is created —
   it is never stored, so there was no way to get a working copy back if it was lost, short of deleting
   the key and starting over (losing its name, limits and grants with it). API keys → **regenerate**

@@ -50,9 +50,13 @@ on its own port, separate from the dashboard and the gateway's own API port, and
 and from there can only ever chat with that key's own agents and browse that key's own (or one of its
 agents') workspace files — there is no way to pick a different key, unlike the operator's Playground.
 The chat itself works the same way (a real turn, streamed, with thinking and tool calls shown) and
-reuses the same workspace file browser. The key is kept in the browser's `sessionStorage` only: gone
-on logout or when the tab closes, never remembered across restarts. Settings: `PORTAL_ENABLED` (off
-by default — it opens a new port), `PORTAL_PORT`.
+reuses the same workspace file browser. The key itself is kept in the browser's `sessionStorage`
+only: gone on logout or when the tab closes, never remembered across restarts. The **chat history**
+(every conversation's title, agent and messages) is different: it is kept server-side too, so logging
+in from another browser or device shows the same chats to continue — the browser's own local copy is
+just a fast first read, synced to the gateway on every change. Settings: `PORTAL_ENABLED` (off by
+default — it opens a new port), `PORTAL_PORT`, `PORTAL_HISTORY_MAX_BYTES` (a hard cap on one key's
+whole stored history; the browser already trims itself well under it).
 
 ## Overview
 

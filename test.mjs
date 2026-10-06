@@ -8771,7 +8771,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 // dashboard password), that chats with only that key's own agents and browses only its own files.
 {
 	const X = await import("./server.mjs");
-	const { config, apiKeys, agentScope, createAgent, deleteAgent, setAgentTurnRunner, startPortal, stopPortal, portalPort, ensureWorkspace } = X;
+	const { config, apiKeys, agentScope, createAgent, deleteAgent, setAgentTurnRunner, startPortal, stopPortal, portalPort, ensureWorkspace, getHistory, saveHistory, deleteHistoryOf, PortalStoreError } = X;
 
 	config.PORTAL_ENABLED = false;
 	startPortal();
@@ -8852,6 +8852,30 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 
 	const stolenFiles = await call(`/api/files?agentId=${theirAgent.id}`, { headers: auth });
 	assert.equal(stolenFiles.status, 404, "never another key's agent's files");
+
+	// History: a key's whole chat list, kept server-side so another browser or device sees the same chats.
+	assert.equal(getHistory(myKey.id), null, "nothing saved yet");
+	const noHistory = await call("/api/history", { headers: auth });
+	assert.deepEqual(noHistory.json, { data: null, updatedAt: null });
+	const sample = { convs: [{ id: "c1", title: "hello", agentId: myAgent.id, messages: [{ role: "user", text: "hi" }] }], pref: myAgent.id };
+	const saved = await call("/api/history", { method: "PUT", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify(sample) });
+	assert.equal(saved.status, 200);
+	assert.equal(typeof saved.json.updatedAt, "number");
+	assert.deepEqual(getHistory(myKey.id).data, sample, "stored exactly as given, no reshaping");
+	const reloaded = await call("/api/history", { headers: auth });
+	assert.deepEqual(reloaded.json.data, sample);
+	// Another key's history is a different row entirely; this key never sees it, and vice versa.
+	saveHistory(theirKey.id, { convs: [{ id: "x", title: "not yours", messages: [] }] });
+	assert.deepEqual((await call("/api/history", { headers: auth })).json.data, sample, "unaffected by another key's save");
+	// Oversized: refused with a clear reason, not silently truncated.
+	assert.throws(() => saveHistory(myKey.id, { big: "x".repeat(10_000_000) }), PortalStoreError);
+	const tooBig = await call("/api/history", { method: "PUT", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ big: "x".repeat(10_000_000) }) });
+	assert.equal(tooBig.status, 413);
+	assert.deepEqual(getHistory(myKey.id).data, sample, "the previous save is untouched by a refused one");
+	// No auth, no history.
+	assert.equal((await call("/api/history")).status, 401);
+	deleteHistoryOf(myKey.id);
+	assert.equal(getHistory(myKey.id), null);
 
 	await deleteAgent(myAgent.id);
 	await deleteAgent(theirAgent.id);

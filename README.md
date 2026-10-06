@@ -1004,6 +1004,7 @@ on write, so a bad one is rejected with a message rather than reaching the runni
 | --- | --- | --- | --- |
 | Network | `HOST` / `PORT` | `127.0.0.1` / `8787` | Listen address. `0.0.0.0` exposes it. *Restart.* |
 | Portal | `PORTAL_ENABLED` / `PORTAL_PORT` | off / `8788` | The client portal (see below): a key holder's own chat + files page, on its own port. Off by default — it opens a new port. *Restart.* |
+| Portal | `PORTAL_HISTORY_MAX_BYTES` | 4 MB | Hard cap on one key's whole stored chat history (every conversation it has kept), as JSON. The browser trims itself well under this already. |
 | Security | `GATEWAY_API_KEY` | unset | When set, requests must send `Authorization: Bearer <key>`. |
 | Access Control | `DASHBOARD_SESSION_MS` | `12h` | How long a dashboard sign-in lasts. `0` keeps it until the browser closes. |
 | Sessions | `MAX_SESSIONS` | `128` | Cap on live sessions; the least-recently-used is disposed past it. |

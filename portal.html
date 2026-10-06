@@ -384,9 +384,18 @@ function convKey() { return 'piper-portal-convs'; }
 function loadConvos() {
   try { CONVOS = JSON.parse(sessionStorage.getItem(convKey()) || '[]'); } catch (e) { CONVOS = []; }
 }
+/* Kept server-side too (GET/PUT /api/history), so logging in from another browser or device shows the
+   same chats. sessionStorage stays as the fast, offline-friendly local copy; the server sync is
+   fire-and-forget and never blocks the UI. */
 function saveConvos() {
   CONVOS.sort(function (a, b) { return b.updated - a.updated; });
   try { sessionStorage.setItem(convKey(), JSON.stringify(CONVOS)); } catch (e) { /* storage full: not fatal */ }
+  api('api/history', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(CONVOS) }).catch(function () { /* local copy still has it */ });
+}
+function pullHistory() {
+  return apiJson('api/history').then(function (d) {
+    if (Array.isArray(d.data)) { CONVOS = d.data; try { sessionStorage.setItem(convKey(), JSON.stringify(CONVOS)); } catch (e) { /* not fatal */ } }
+  }).catch(function () { /* the local copy, if any, is still used */ });
 }
 function newId() {
   var bytes = new Uint8Array(12);
@@ -814,6 +823,8 @@ function connect(key) {
     WHOAMI = d;
     sessionStorage.setItem('piper-portal-key', KEY);
     loadConvos();
+    return pullHistory();
+  }).then(function () {
     if (!CONVOS.length) newChat(); else CUR = CONVOS[0].id;
     renderTargets();
     showApp();
