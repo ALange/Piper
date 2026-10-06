@@ -74,8 +74,15 @@
   details.think { margin:6px 0; }
   details.think summary { cursor:pointer; color:var(--dim); font-size:12px; list-style:none; user-select:none; }
   details.think summary::-webkit-details-marker { display:none; }
-  details.think summary:before { content:'▸ '; display:inline-block; width:12px; }
+  details.think summary:before { content:'▸ '; display:inline-block; width:12px; color:var(--dim); }
   details.think[open] summary:before { content:'▾ '; }
+  /* a subtle shimmer across "Thinking..." while the turn is actually still running */
+  details.think.live summary {
+    background:linear-gradient(90deg, var(--dim) 0%, var(--dim) 35%, var(--fg) 50%, var(--dim) 65%, var(--dim) 100%);
+    background-size:200% 100%; -webkit-background-clip:text; background-clip:text; color:transparent;
+    animation:thinkshimmer 1.7s linear infinite;
+  }
+  @keyframes thinkshimmer { 0% { background-position:200% 0; } 100% { background-position:-200% 0; } }
   details.think .think-body { color:var(--dim); font-size:12px; border-left:2px solid var(--border);
                                padding-left:8px; margin-top:4px; white-space:pre-wrap; }
   .think-sub { border-left:3px solid var(--agent-c, var(--blue)); padding:2px 0 2px 8px; margin:2px 0 2px -8px; }
@@ -481,10 +488,10 @@ function textBlocks(text) {
 function partNode(p) {
   if (p.kind === 'thinking') {
     var det = el('details');
-    det.className = 'think';
+    det.className = 'think' + (p.pending ? ' live' : '');
     det.open = Boolean(OPEN_THINK[p.id]);
     det.addEventListener('toggle', function () { OPEN_THINK[p.id] = det.open; });
-    det.appendChild(el('summary', 'Thinking…'));
+    det.appendChild(el('summary', p.pending ? 'Thinking…' : 'Thought'));
     var tbody = el('div'); tbody.className = 'think-body';
     tbody.appendChild(thinkBody(p.text));
     det.appendChild(tbody);
@@ -532,7 +539,20 @@ function renderMessages() {
     row.className = 'msg ' + m.role;
     if (m.role === 'user') { row.appendChild(el('div', m.text)).className = 'bubble'; box.appendChild(row); return; }
     var body = el('div'); body.className = 'body';
-    (m.parts || []).forEach(function (p) { body.appendChild(partNode(p)); });
+    // A turn's thinking is naturally split by Pi into several pieces, one before each tool call
+    // (lib/livesession.mjs resets it on a tool call). Shown as one block instead, up front; tools and
+    // everything else keep their own place and order exactly as they already do.
+    var thinkText = '', thinkId = null, rest = [];
+    (m.parts || []).forEach(function (p) {
+      if (p.kind === 'thinking') {
+        if (thinkId === null) thinkId = p.id;
+        thinkText += (thinkText ? '\n' : '') + (p.text || '');
+      } else {
+        rest.push(p);
+      }
+    });
+    if (thinkId !== null) body.appendChild(partNode({ kind: 'thinking', id: thinkId, text: thinkText, pending: Boolean(m.pending) }));
+    rest.forEach(function (p) { body.appendChild(partNode(p)); });
     if (m.pending && !(m.parts || []).length) body.appendChild(el('div', 'Thinking…'));
     if (m.error) { var e = el('div', m.error); e.className = 'err'; body.appendChild(e); }
     row.appendChild(body);
