@@ -431,10 +431,12 @@ configuration. A **reload** button re-reads them.
 
 ## API keys
 
-Create, revoke and delete API keys (a key is shown once, then only its hash is stored). Per key: expiry, session
-cap, daily spend cap, allowed models, shared bundles, usage. In each key's detail (on Files & profiles → Profiles) a
-**Container** section holds its overrides (memory, CPU, processes, network, image, mounts, environment) and the
-**persistent container** switch.
+Create, revoke and delete API keys (a key is shown once, then only its hash is stored — **regenerate**
+issues a brand-new secret for that same key, same name/limits/grants, shown once the same way; the old
+secret stops working at once). Per key: expiry, session cap, daily spend cap, allowed models, shared
+bundles, usage. In each key's detail (on Files & profiles → Profiles) a **Container** section holds
+its overrides (memory, CPU, processes, network, image, mounts, environment) and the **persistent
+container** switch.
 
 ## Settings
 

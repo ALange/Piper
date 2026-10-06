@@ -5,6 +5,11 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 ## [Unreleased]
 
 ### Added
+- **Regenerate an API key.** The full value of a key is shown only once, right when it is created —
+  it is never stored, so there was no way to get a working copy back if it was lost, short of deleting
+  the key and starting over (losing its name, limits and grants with it). API keys → **regenerate**
+  issues a brand-new secret for that same key in place: same name, limits, bundles and agents, shown
+  once in the same reveal panel to copy. The old secret stops working immediately.
 - **A client portal.** A standalone page, on its own port (`PORTAL_PORT`, off by default —
   `PORTAL_ENABLED`), where a key holder logs in with their own API key — no dashboard password, and
   no way to pick any key or agent but their own — and chats with their own agents and browses their

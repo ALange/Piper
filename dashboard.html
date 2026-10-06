@@ -1988,6 +1988,10 @@ function renderKeyTable() {
     contents.addEventListener('click', function () { location.hash = '#files/profiles/key-' + k.id; });
     actions.appendChild(contents);
     if (k.status === 'active') {
+      var regen = el('button', 'regenerate');
+      regen.title = 'issue a new secret for this key; the old one stops working at once';
+      regen.addEventListener('click', function () { regenerateKey(k); });
+      actions.appendChild(regen);
       var revoke = el('button', 'revoke');
       revoke.addEventListener('click', function () {
         act('POST', 'dashboard/api-keys/' + k.id + '/revoke', {}, 'revoked "' + k.name + '"');
@@ -2129,6 +2133,23 @@ $('createkey').addEventListener('click', function () {
     .then(function (u) { KEYUSAGE = u; renderApiKeys(); })
     .catch(function (e) { button.disabled = false; keyNote(e.message, 'bad'); });
 });
+
+function regenerateKey(k) {
+  if (!confirm('Issue a new secret for "' + k.name + '"? The old one stops working immediately — anywhere still using it will need the new one.')) return;
+  fetch('dashboard/api-keys/' + k.id + '/regenerate', { method: 'POST' })
+    .then(readJson)
+    .then(function (d) {
+      KEYS = d;
+      CREATED_KEY = d.key;
+      $('copynote').textContent = '';
+      keyNote('issued a new secret for "' + k.name + '"', 'good');
+      renderApiKeys();
+      $('revealpanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return fetch('dashboard/api-keys/usage.json', { cache: 'no-store' }).then(readJson);
+    })
+    .then(function (u) { KEYUSAGE = u; renderApiKeys(); })
+    .catch(function (e) { keyNote(e.message, 'bad'); });
+}
 
 $('newexpiry').addEventListener('change', function () {
   $('newdate').hidden = this.value !== 'date';

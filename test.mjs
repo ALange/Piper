@@ -764,6 +764,18 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(apiKeys.update(record.id, { name: "  " }).name, "renamed", "a blank name does not clear it");
 	assert.equal(apiKeys.update("6f1e1a5c-0000-4000-8000-000000000000", {}), null, "an unknown id updates nothing");
 
+	// regenerate: a fresh secret for the same key; the old one stops working at once.
+	const forRegen = apiKeys.create({ name: "regen-test", expiresAt: 0 });
+	const regen1 = apiKeys.regenerate(forRegen.record.id);
+	assert.notEqual(regen1.key, forRegen.key, "a genuinely new secret");
+	assert.match(regen1.key, /^piper_[A-Za-z0-9_-]{43}$/, "same key shape");
+	assert.equal(regen1.record.id, forRegen.record.id, "same key record");
+	assert.equal(regen1.record.name, "regen-test", "everything else untouched");
+	assert.equal(apiKeys.verify(forRegen.key), null, "the old secret stops working at once");
+	assert.equal(apiKeys.verify(regen1.key)?.id, forRegen.record.id, "the new one works");
+	assert.equal(apiKeys.regenerate("6f1e1a5c-0000-4000-8000-000000000000"), null, "an unknown id regenerates nothing");
+	apiKeys.remove(forRegen.record.id);
+
 	apiKeys.revoke(record.id);
 	assert.equal(apiKeys.verify(key), null, "a revoked key stops working");
 	assert.ok(apiKeys.get(record.id).revokedAt > 0, "but the row survives, so its usage stays attributed");
@@ -5120,6 +5132,18 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.ok(!JSON.stringify(queryAudit({ limit: 500 }).rows).includes(ktoken), "the key itself is never recorded");
 	await call(`/dashboard/api-keys/${kid}`, { cookie, body: { maxSessions: 3, dailySpend: 2.5 } });
 	assert.match(rowsOf("key.update").at(0).detail, /maxSessions/);
+
+	// regenerate: a fresh secret, on record, the old one stops working at once; the key itself never logged.
+	const regenMade = await call("/dashboard/api-keys", { cookie, body: { name: "regen-audited", expiresAt: 0 } });
+	const regenId = regenMade.json.createdId, regenOldToken = regenMade.json.key;
+	const regen = await call(`/dashboard/api-keys/${regenId}/regenerate`, { cookie, body: {} });
+	assert.equal(regen.status, 200);
+	assert.notEqual(regen.json.key, regenOldToken, "a genuinely new secret");
+	assert.match(rowsOf("key.regenerate").at(0).detail, /new secret/);
+	assert.ok(!JSON.stringify(queryAudit({ limit: 500 }).rows).includes(regen.json.key), "the new key itself is never recorded either");
+	assert.equal((await call("/v1/models", { method: "GET", token: regenOldToken })).status, 401, "the old secret stopped working");
+	assert.equal((await call("/v1/models", { method: "GET", token: regen.json.key })).status, 200, "the new one works");
+	await call(`/dashboard/api-keys/${regenId}`, { method: "DELETE", cookie });
 	ensureProfile(kid);
 	await call(`/dashboard/profiles/${scopeOf(kid)}/lock`, { cookie, body: { locked: true } });
 	await call(`/dashboard/profiles/${scopeOf(kid)}/lock`, { cookie, body: { locked: false } });
