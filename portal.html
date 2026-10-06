@@ -43,6 +43,7 @@
   .convrow.on { background:#1c1c1c; }
   .convrow .t { font-size:12px; }
   .convrow .s { color:var(--dim); font-size:10px; }
+  .livedot { color:var(--green); font-size:9px; }
   .convclear { position:absolute; top:6px; right:6px; border:none; background:transparent; color:var(--dim);
                padding:2px 6px; border-radius:4px; font-size:13px; line-height:1; }
   .convclear:hover { color:var(--red); background:#201414; }
@@ -396,7 +397,6 @@ var WHOAMI = null;
 var CONVOS = [];
 var CUR = null;
 var BUSY = false;
-var CTRL = null;
 var SIDE_OPEN = 'files'; // 'files' | 'tools' | 'skills' | null -- one side panel at a time
 var FILES_PATH = '';
 var PENDING_IMAGES = []; // { name, dataUrl }
@@ -471,10 +471,15 @@ function renderSide() {
   CONVOS.forEach(function (c) {
     var row = el('div');
     row.className = 'convrow' + (c.id === CUR ? ' on' : '');
-    row.appendChild(el('div', c.title || 'New chat')).className = 't';
+    var titleRow = el('div');
+    titleRow.className = 't';
+    titleRow.appendChild(document.createTextNode(c.title || 'New chat'));
+    var last = c.messages[c.messages.length - 1];
+    if (last && last.role === 'assistant' && last.pending) titleRow.appendChild(el('span', ' ●')).className = 'livedot';
+    row.appendChild(titleRow);
     var agent = (WHOAMI.agents || []).filter(function (a) { return a.id === c.agentId; })[0];
     row.appendChild(el('div', agent ? agent.name : '(main endpoint)')).className = 's';
-    row.addEventListener('click', function () { CUR = c.id; renderAll(); });
+    row.addEventListener('click', function () { CUR = c.id; renderAll(); resumeIfLive(conv()); });
     var clear = el('button', '×');
     clear.className = 'convclear';
     clear.title = 'clear this chat';
@@ -728,6 +733,29 @@ function applyItem(msg, item) {
   else { p.text = item.text; }
 }
 
+/* Reads a fetch body's SSE stream, calling onEvent(name, data) for each "event: ...\ndata: ..." block.
+   Shared by send() (a turn just started here) and resumeIfLive() (catching up on one already running). */
+function streamInto(reader, onEvent) {
+  var dec = new TextDecoder(), buf = '';
+  function handle(block) {
+    var ev = /^event: (.*)$/m.exec(block), data = /^data: (.*)$/m.exec(block);
+    if (!ev || !data) return;
+    var d;
+    try { d = JSON.parse(data[1]); } catch (e) { return; }
+    onEvent(ev[1], d);
+  }
+  function pump() {
+    return reader.read().then(function (x) {
+      if (x.done) return;
+      buf += dec.decode(x.value, { stream: true });
+      var i;
+      while ((i = buf.indexOf('\n\n')) >= 0) { handle(buf.slice(0, i)); buf = buf.slice(i + 2); }
+      return pump();
+    });
+  }
+  return pump();
+}
+
 function send() {
   var c = conv();
   if (!c || BUSY) return;
@@ -750,47 +778,68 @@ function send() {
   BUSY = true;
   $('send').textContent = 'stop';
   renderAll();
-  CTRL = new AbortController();
+  // Durable the moment the turn starts, not just when it ends: if the tab closes mid-turn, a reload
+  // (or another device) can tell this conversation might still be running and go check -- the turn
+  // itself keeps running on the server regardless of this browser's connection (lib/portal.mjs).
+  saveConvos();
   var done = false;
   api('api/chat', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    signal: CTRL.signal,
     body: JSON.stringify({ conversation: c.id, message: outgoing, agentId: c.agentId || undefined, images: images.length ? images : undefined }),
   }).then(function (r) {
     var type = r.headers.get('content-type') || '';
     if (!r.ok || type.indexOf('event-stream') < 0) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error((j.error && j.error.message) || ('HTTP ' + r.status)); });
-    var reader = r.body.getReader(), dec = new TextDecoder(), buf = '';
-    function handle(block) {
-      var ev = /^event: (.*)$/m.exec(block), data = /^data: (.*)$/m.exec(block);
-      if (!ev || !data) return;
-      var d;
-      try { d = JSON.parse(data[1]); } catch (e) { return; }
-      if (ev[1] === 'item') { applyItem(msg, d.item); renderMessages(); }
-      else if (ev[1] === 'done') { done = true; msg.usage = d.usage; msg.cost = d.cost; if (!(msg.parts || []).some(function (p) { return p.kind === 'text' && p.text; }) && d.text) msg.parts.push({ kind: 'text', id: 'final', text: d.text }); if (d.status) { c.status = d.status; c.status.contextUsed = (d.usage && d.usage.total_tokens) || null; } renderStatusBar(); }
-      else if (ev[1] === 'error') { done = true; msg.error = d.message; }
-    }
-    function pump() {
-      return reader.read().then(function (x) {
-        if (x.done) return;
-        buf += dec.decode(x.value, { stream: true });
-        var i;
-        while ((i = buf.indexOf('\n\n')) >= 0) { handle(buf.slice(0, i)); buf = buf.slice(i + 2); }
-        return pump();
-      });
-    }
-    return pump();
+    return streamInto(r.body.getReader(), function (event, d) {
+      if (event === 'item') { applyItem(msg, d.item); renderMessages(); }
+      else if (event === 'done') { done = true; msg.usage = d.usage; msg.cost = d.cost; if (!(msg.parts || []).some(function (p) { return p.kind === 'text' && p.text; }) && d.text) msg.parts.push({ kind: 'text', id: 'final', text: d.text }); if (d.status) { c.status = d.status; c.status.contextUsed = (d.usage && d.usage.total_tokens) || null; } renderStatusBar(); }
+      else if (event === 'error') { done = true; msg.error = d.message; }
+    });
   }).catch(function (e) {
-    if (e && e.name === 'AbortError') msg.error = 'Stopped.'; else msg.error = e.message;
+    msg.error = e.message;
   }).then(function () {
     msg.pending = false;
     if (!done && !msg.error) msg.error = 'The connection ended before the agent finished.';
     c.updated = Date.now();
-    BUSY = false; CTRL = null;
+    BUSY = false;
     $('send').textContent = 'send';
     saveConvos();
     renderAll();
   });
+}
+
+/* Catches up on a conversation that might still be running a turn from before a reload, a re-login, or
+   simply switching away and back -- cheap and quiet when there is nothing to catch up on. */
+function resumeIfLive(c) {
+  if (!c || BUSY) return;
+  var q = agentQuery();
+  api('api/conversation/' + encodeURIComponent(c.id) + '/events' + (q ? '?' + q : '')).then(function (r) {
+    var type = r.headers.get('content-type') || '';
+    if (type.indexOf('event-stream') < 0) return r.json().catch(function () { return {}; }); // {live:false}, or an error: nothing to resume
+    var msg = c.messages[c.messages.length - 1];
+    if (!msg || msg.role !== 'assistant') { msg = { role: 'assistant', parts: [], pending: true }; c.messages.push(msg); }
+    var wasLive = false;
+    return streamInto(r.body.getReader(), function (event, d) {
+      if (event === 'snapshot') {
+        // The log may span older, already-finished turns too (capped by item count, not per-turn):
+        // only what came after the last user message belongs to the one we're catching up on.
+        var lastUserId = 0;
+        (d.items || []).forEach(function (it) { if (it.kind === 'user' && it.id > lastUserId) lastUserId = it.id; });
+        (d.items || []).forEach(function (it) { if (it.kind !== 'user' && it.id > lastUserId) applyItem(msg, it); });
+        msg.pending = Boolean(d.state && d.state.working);
+        if (msg.pending) { wasLive = true; BUSY = true; $('send').textContent = 'stop'; }
+        renderMessages();
+      } else if (event === 'item') { applyItem(msg, d.item); renderMessages(); }
+      else if (event === 'done') { if (d.usage) msg.usage = d.usage; if (d.cost) msg.cost = d.cost; }
+      else if (event === 'error') { msg.error = d.message; }
+    }).then(function () {
+      msg.pending = false;
+      if (wasLive) { BUSY = false; $('send').textContent = 'send'; }
+      c.updated = Date.now();
+      saveConvos();
+      renderAll();
+    });
+  }).catch(function () { /* a reconnect probe failing is quiet; the next reload or switch tries again */ });
 }
 
 /* ---- side panels: files, tools & extensions, skills -- one open at a time ---- */
@@ -1047,6 +1096,7 @@ function connect(key) {
     renderTargets();
     showApp();
     renderAll();
+    resumeIfLive(conv());
   }).catch(function (e) {
     KEY = '';
     showLogin(e.message);
@@ -1066,7 +1116,13 @@ $('logout').addEventListener('click', function () {
 });
 $('newchat').addEventListener('click', function () { if (BUSY) return; newChat(); });
 $('target').addEventListener('change', function () { var c = conv(); if (!c || c.messages.length) return; c.agentId = $('target').value; saveConvos(); renderAll(); });
-$('send').addEventListener('click', function () { if (BUSY) { if (CTRL) CTRL.abort(); } else send(); });
+$('send').addEventListener('click', function () {
+  if (!BUSY) return send();
+  var c = conv();
+  if (!c) return;
+  var q = agentQuery();
+  api('api/conversation/' + encodeURIComponent(c.id) + '/interrupt' + (q ? '?' + q : ''), { method: 'POST' }).catch(function () {});
+});
 $('input').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!BUSY) send(); } });
 $('input').addEventListener('paste', function (e) {
   var files = (e.clipboardData && e.clipboardData.files) || [];

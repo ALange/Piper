@@ -8865,7 +8865,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 // dashboard password), that chats with only that key's own agents and browses only its own files.
 {
 	const X = await import("./server.mjs");
-	const { config, apiKeys, agentScope, createAgent, deleteAgent, setAgentTurnRunner, startPortal, stopPortal, portalPort, ensureWorkspace, getHistory, saveHistory, deleteHistoryOf, PortalStoreError } = X;
+	const { config, apiKeys, agentScope, createAgent, deleteAgent, setAgentTurnRunner, startPortal, stopPortal, portalPort, ensureWorkspace, getHistory, saveHistory, deleteHistoryOf, PortalStoreError, credentialFor, recentAudit } = X;
 
 	config.PORTAL_ENABLED = false;
 	startPortal();
@@ -9052,6 +9052,164 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 
 		const noAuthSkills = await call("/api/skills");
 		assert.equal(noAuthSkills.status, 401);
+
+		const openRecords = sessions.allRecords();
+		sessions.closeAll();
+		await Promise.all(openRecords.map((r) => r.stopped ?? Promise.resolve()));
+		setSessionSpawn(null);
+		setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+		config.CONTAINER_NETWORK = priorNetwork;
+		config.ACCESS_LOG = accessLog;
+		resetEngineCheck();
+	}
+
+	// sessions.recordById: a non-spawning lookup, unlike acquire().
+	assert.equal(sessions.recordById("no-such-portal-session"), null);
+	const sizeBefore = sessions.allRecords().length;
+	assert.equal(sessions.recordById("still-no-such-session"), null, "a miss never spawns");
+	assert.equal(sessions.allRecords().length, sizeBefore);
+
+	// A turn surviving disconnect, catching up on it from a second request, and the explicit interrupt
+	// that replaces the old "the connection closing aborts the turn" behavior.
+	{
+		resetEngineCheck();
+		const priorNetwork = config.CONTAINER_NETWORK;
+		const accessLog = config.ACCESS_LOG;
+		config.CONTAINER_NETWORK = "none";
+		config.ACCESS_LOG = false;
+		setRunner(async (bin, args) => {
+			if (bin === "docker" && args[0] === "version") return { code: 0, stdout: "27.0.0", stderr: "" };
+			if (bin === "docker" && args[0] === "inspect") return { code: 1, stdout: "", stderr: "No such object" };
+			if (bin === "docker" && args[0] === "image") return { code: 0, stdout: "sha256:fakeimage|0.99.1", stderr: "" };
+			return { code: 0, stdout: "", stderr: "" };
+		});
+		const { EventEmitter } = await import("node:events");
+		const { PassThrough } = await import("node:stream");
+		const { MAX_WATCHERS_PER_SESSION: MWPS } = await import("./server.mjs");
+
+		// A turn that only settles when the test tells it to (via a real "abort", or by calling
+		// settleNow()), so the test can inspect what is going on mid-turn -- a disconnect, a second
+		// request catching up, an explicit interrupt -- before it finishes.
+		let settleNow = null;
+		let promptSeenResolve = null;
+		let promptSeen = new Promise((r) => (promptSeenResolve = r));
+		const fakeChild = () => {
+			const child = new EventEmitter();
+			child.stdout = new PassThrough();
+			child.stderr = new PassThrough();
+			child.exitCode = null;
+			child.signalCode = null;
+			child.kill = (signal = "SIGTERM") => {
+				if (child.exitCode !== null || child.signalCode !== null) return true;
+				child.signalCode = signal;
+				setImmediate(() => child.emit("exit", null, signal));
+				return true;
+			};
+			child.stdin = new PassThrough();
+			child.stdin.on("end", () => child.exitCode === null && child.signalCode === null && setImmediate(() => child.emit("exit", 0, null)));
+			let buffer = "";
+			child.stdin.on("data", (chunk) => {
+				buffer += chunk;
+				let i;
+				while ((i = buffer.indexOf("\n")) >= 0) {
+					const command = JSON.parse(buffer.slice(0, i));
+					buffer = buffer.slice(i + 1);
+					const reply = (record) => child.stdout.write(`${JSON.stringify(record)}\n`);
+					const ok = (data) => reply({ type: "response", id: command.id, command: command.type, success: true, data });
+					if (command.type === "get_state") ok({ model: { provider: "p", id: "m", input: ["text"] }, isStreaming: false });
+					else if (command.type === "prompt") {
+						const said = String(command.message ?? "");
+						ok();
+						reply({ type: "agent_start" });
+						reply({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: `echo: ${said}` } });
+						settleNow = () => {
+							settleNow = null;
+							reply({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: `echo: ${said}` }] } });
+							reply({ type: "agent_settled" });
+						};
+						promptSeenResolve();
+					} else if (command.type === "abort") {
+						ok();
+						if (settleNow) settleNow();
+					} else ok();
+				}
+			});
+			return child;
+		};
+		setSessionSpawn(() => fakeChild());
+
+		const credential = credentialFor(myKey.id, myAgent.id);
+		const scoped = scopedSessionId(credential, "portal:disco-test-convo");
+
+		// Disconnect no longer aborts: a client that goes away while a turn is running does not stop it.
+		const ctrl = new AbortController();
+		const pending = fetch(`${base}/api/chat`, { method: "POST", headers: { ...auth, "content-type": "application/json" }, signal: ctrl.signal, body: JSON.stringify({ conversation: "disco-test-convo", message: "hi", agentId: myAgent.id }) });
+		await promptSeen;
+		const rec = sessions.recordById(scoped);
+		assert.ok(rec, "the session exists once the turn has started");
+		assert.ok(rec.inflight > 0, "the turn is in flight");
+		ctrl.abort();
+		await pending.catch(() => {});
+		await new Promise((r) => setTimeout(r, 30));
+		assert.ok(sessions.recordById(scoped), "the session is still there after the client disconnected");
+		assert.ok(rec.inflight > 0, "and the turn itself was not aborted by the disconnect");
+
+		// Catching up from a second request: a snapshot first, then live items, then done once settled.
+		const stream = await fetch(`${base}/api/conversation/disco-test-convo/events?agentId=${myAgent.id}`, { headers: auth });
+		assert.equal(stream.headers.get("content-type"), "text/event-stream; charset=utf-8");
+		const reader = stream.body.getReader();
+		let got = "";
+		const readUntil = async (re) => {
+			const deadline = Date.now() + 3000;
+			while (!re.test(got) && Date.now() < deadline) got += new TextDecoder().decode((await reader.read()).value ?? new Uint8Array());
+		};
+		await readUntil(/event: snapshot/);
+		assert.match(got, /event: snapshot\ndata: .*"working":true/, "still working, per the snapshot");
+		assert.match(got, /echo: hi/, "the partial reply streamed so far is in the snapshot");
+		settleNow();
+		await readUntil(/event: done/);
+		assert.match(got, /event: done/);
+		await reader.cancel().catch(() => {});
+
+		// A finished conversation (nothing live any more) answers plainly, not as an error.
+		await new Promise((r) => setTimeout(r, 30));
+		const afterDone = await call("/api/conversation/finished-or-never-started/events", { headers: auth });
+		assert.deepEqual(afterDone.json, { live: false });
+
+		// Interrupt: nothing running.
+		const nothingToStop = await call("/api/conversation/finished-or-never-started/interrupt", { method: "POST", headers: auth });
+		assert.deepEqual(nothingToStop.json, { interrupted: false, wasRunning: false });
+
+		// Interrupt: a real turn in flight is actually stopped, not just detached from.
+		const pending2 = fetch(`${base}/api/chat`, { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "disco-test-convo-2", message: "hi again", agentId: myAgent.id }) });
+		promptSeen = new Promise((r) => (promptSeenResolve = r));
+		await promptSeen;
+		const stopped = await call(`/api/conversation/disco-test-convo-2/interrupt?agentId=${myAgent.id}`, { method: "POST", headers: auth });
+		assert.deepEqual(stopped.json, { interrupted: true, wasRunning: true });
+		const resp2 = await pending2;
+		assert.equal(resp2.status, 200);
+		const kinds = recentAudit(50).map((r) => r.action);
+		assert.ok(kinds.includes("session.interrupt"), "the interrupt is audited");
+
+		// Ownership on interrupt too: another key's agentId is refused, the same as every other route.
+		const stolenInterrupt = await call(`/api/conversation/disco-test-convo-2/interrupt`, { method: "POST", headers: { authorization: `Bearer ${theirs.key}` } });
+		assert.deepEqual(stolenInterrupt.json, { interrupted: false, wasRunning: false }, "a different key's own session, if any, not this one");
+
+		// Watcher cap: one more catch-up connection than allowed on one session is refused.
+		const capCred = credentialFor(myKey.id, myAgent.id);
+		const capScoped = scopedSessionId(capCred, "portal:watcher-cap-convo");
+		const capRec = sessions.acquire(capScoped, null).record;
+		capRec.sessionPromise.catch(() => {});
+		capRec.live.feed({ type: "agent_start" });
+		const opened = [];
+		for (let i = 0; i < MWPS; i++) {
+			const r = await fetch(`${base}/api/conversation/watcher-cap-convo/events?agentId=${myAgent.id}`, { headers: auth });
+			assert.equal(r.status, 200);
+			opened.push(r);
+		}
+		assert.equal((await fetch(`${base}/api/conversation/watcher-cap-convo/events?agentId=${myAgent.id}`, { headers: auth })).status, 429, "one more watcher than allowed");
+		for (const r of opened) await r.body.cancel().catch(() => {});
+		sessions.close(capScoped);
 
 		const openRecords = sessions.allRecords();
 		sessions.closeAll();

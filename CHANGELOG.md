@@ -5,6 +5,14 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 ## [Unreleased]
 
 ### Added
+- **A turn in the client portal survives closing the tab, and reconnecting catches up on it.**
+  Previously, losing the connection (closing the tab, a network drop) aborted the agent's turn in
+  progress — the opposite of "it kept running while I was away." The turn is no longer tied to the
+  connection that started it: closing the tab lets it keep going, and reloading the page, logging back
+  in, or just switching back to that conversation now catches up on whatever happened while you were
+  disconnected, live if it's still running. A real "stop" button (`POST /api/conversation/:id/interrupt`)
+  replaces the old "the browser going away stops it" trick. Built on the same live-session log the
+  dashboard's own operator view already used (`GET /api/conversation/:id/events`).
 - **Tools & Extensions and Skills sidebars in the client portal.** Two new buttons next to **files**
   open a sidebar listing what the current agent has loaded: Skills shows each skill command with its
   description and where it came from (your own profile, a shared bundle, or this workspace); Tools &

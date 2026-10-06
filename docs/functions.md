@@ -61,7 +61,12 @@ the plain API, rather than sent to the agent as a chat message. The key itself i
 only: gone on logout or when the tab closes, never remembered across restarts. The **chat history**
 (every conversation's title, agent and messages) is different: it is kept server-side too, so logging
 in from another browser or device shows the same chats to continue — the browser's own local copy is
-just a fast first read, synced to the gateway on every change. A message can carry attachments: an
+just a fast first read, synced to the gateway on every change. A turn is not tied to the connection
+that started it: closing the tab, or losing the connection, lets the agent keep working, and reloading
+the page, logging back in, or switching back to that conversation catches up on whatever happened while
+disconnected — live, if it is still running. The **stop** button sends an explicit interrupt
+(`POST /api/conversation/:id/interrupt`) rather than relying on the connection closing, which no longer
+stops anything by itself. A message can carry attachments: an
 image (📎 button, or just pasted in) goes through the same pipeline as any vision-capable model's
 input and shows as a thumbnail in the chat; a document has no such pipeline in Pi's own protocol, so
 it is uploaded straight to the agent's workspace (`uploads/<name>`) with the message mentioning it, for
