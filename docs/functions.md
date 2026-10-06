@@ -55,7 +55,10 @@ reuses the same workspace file browser, which renders an `.html`/`.htm` file as 
 `<iframe>`, script allowed but no access to this page's session) instead of dumping its source. Several
 conversations can be running at once — busy is tracked
 per conversation, not page-wide, so starting a turn in one and switching to chat in another works, and
-the sidebar marks every conversation still working with a small dot. Two more sidebars sit next to **files**: **Tools & Extensions**
+the sidebar marks every conversation still working with a small dot. When Pi compacts a chat's context
+automatically (or recovers from an overflow), a short note shows right in the chat, and the context
+figure in the status bar updates live, mid-turn, rather than only once the whole turn finishes. Two more
+sidebars sit next to **files**: **Tools & Extensions**
 (your own extension files, any shared ones granted by the operator, and the commands extensions add)
 and **Skills** (each skill command, its description and where it came from) — the same information the
 `/extensions` and `/skills` chat commands give as text, asking the same running session. Typing one of

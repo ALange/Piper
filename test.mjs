@@ -6688,6 +6688,18 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	log.feed({ type: "agent_settled" });
 	assert.equal(log.snapshot().state.working, false);
 	assert.equal(JSON.stringify(log.snapshot()).includes("sessionId"), false);
+	// Auto-compaction: a note either side, and the new size lands in state for a reconnecting client's
+	// status bar to pick up -- not just the in-turn stream that was there when it happened.
+	log.feed({ type: "compaction_start", reason: "threshold" });
+	assert.match(log.snapshot().items.at(-1).text, /context is getting full/);
+	log.feed({ type: "compaction_end", reason: "threshold", result: { tokensBefore: 42000, estimatedTokensAfter: 18000 }, aborted: false, willRetry: false });
+	assert.match(log.snapshot().items.at(-1).text, /compacted the context: 42000 . 18000 tokens/);
+	assert.equal(log.snapshot().state.contextTokens, 18000);
+	log.feed({ type: "compaction_end", reason: "overflow", result: undefined, aborted: true, willRetry: false });
+	assert.match(log.snapshot().items.at(-1).text, /interrupted/);
+	assert.equal(log.snapshot().state.contextTokens, 18000, "an aborted compaction changed nothing");
+	log.feed({ type: "compaction_end", reason: "overflow", result: undefined, aborted: false, willRetry: false, errorMessage: "model unavailable" });
+	assert.match(log.snapshot().items.at(-1).text, /compaction failed: model unavailable/);
 	// Bounded: items and text.
 	for (let i = 0; i < MAX_ITEMS + 50; i++) log.note(`n${i}`);
 	assert.equal(log.snapshot().items.length, MAX_ITEMS);
@@ -9122,6 +9134,10 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 						ok();
 						reply({ type: "agent_start" });
 						reply({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: `echo: ${said}` } });
+						if (said === "please compact") {
+							reply({ type: "compaction_start", reason: "threshold" });
+							reply({ type: "compaction_end", reason: "threshold", result: { tokensBefore: 50000, estimatedTokensAfter: 20000 }, aborted: false, willRetry: false });
+						}
 						settleNow = () => {
 							settleNow = null;
 							reply({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: `echo: ${said}` }] } });
@@ -9170,6 +9186,25 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		await readUntil(/event: done/);
 		assert.match(got, /event: done/);
 		await reader.cancel().catch(() => {});
+
+		// Auto-compaction mid-turn: a note reaches the chat stream, and the status bar gets the new
+		// context size live, without waiting for the turn to finish.
+		promptSeen = new Promise((r) => (promptSeenResolve = r));
+		const compactPending = fetch(`${base}/api/chat`, { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "compact-test-convo", message: "please compact", agentId: myAgent.id }) });
+		await promptSeen;
+		const compactResp = await compactPending;
+		const compactReader = compactResp.body.getReader();
+		let compactGot = "";
+		const readCompactUntil = async (re) => {
+			const deadline = Date.now() + 3000;
+			while (!re.test(compactGot) && Date.now() < deadline) compactGot += new TextDecoder().decode((await compactReader.read()).value ?? new Uint8Array());
+		};
+		await readCompactUntil(/event: context/);
+		assert.match(compactGot, /event: item\ndata: .*"kind":"note"/, "a note about the compaction reached the chat stream");
+		assert.match(compactGot, /event: context\ndata: \{"contextUsed":20000\}/, "the status bar gets the new context size live, mid-turn");
+		settleNow();
+		await readCompactUntil(/event: done/);
+		await compactReader.cancel().catch(() => {});
 
 		// A finished conversation (nothing live any more) answers plainly, not as an error.
 		await new Promise((r) => setTimeout(r, 30));

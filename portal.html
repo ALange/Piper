@@ -114,6 +114,7 @@
 
   .err { color:var(--red); margin-top:6px; }
   .foot { color:var(--dim); font-size:11px; margin-top:6px; }
+  .sys-note { color:var(--dim); font-size:11px; font-style:italic; margin:6px 0; }
   .composer { padding:12px 14px; border-top:1px solid var(--border); display:flex; gap:8px; align-items:flex-end; }
   .composer textarea { flex:1; resize:none; min-height:40px; max-height:160px; }
   #attachbtn { align-self:center; }
@@ -615,6 +616,9 @@ function partNode(p) {
     frag.appendChild(tbox);
     return frag;
   }
+  // A one-line note from the gateway itself, not the model -- an interrupt, a hand-off, or auto-compaction
+  // making room in the context.
+  if (p.kind === 'note') { var note = el('div', p.text); note.className = 'sys-note'; return note; }
   return textBlocks(p.text || '');
 }
 function renderMessages() {
@@ -690,7 +694,7 @@ function renderStatusBar() {
   var bar = $('statusstats');
   bar.replaceChildren();
   var s = c && c.status;
-  if (!s || !s.model) return;
+  if (!s || (!s.model && s.contextUsed == null)) return;
   var add = function (label, value, cls) {
     var span = el('span');
     span.appendChild(document.createTextNode(label + ': '));
@@ -699,7 +703,7 @@ function renderStatusBar() {
     span.appendChild(b);
     bar.appendChild(span);
   };
-  add('model', s.model);
+  if (s.model) add('model', s.model);
   if (s.contextWindow) {
     var pct = s.contextUsed ? Math.round((s.contextUsed / s.contextWindow) * 100) : null;
     add('context', fmtTok(s.contextUsed || 0) + ' / ' + fmtTok(s.contextWindow) + (pct !== null ? ' (' + pct + '%)' : ''), pct !== null && pct >= 80 ? 'ctxfull' : '');
@@ -804,6 +808,7 @@ function send() {
     if (!r.ok || type.indexOf('event-stream') < 0) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error((j.error && j.error.message) || ('HTTP ' + r.status)); });
     return streamInto(r.body.getReader(), function (event, d) {
       if (event === 'item') { applyItem(msg, d.item); renderMessages(); }
+      else if (event === 'context') { c.status = c.status || {}; c.status.contextUsed = d.contextUsed; renderStatusBar(); }
       else if (event === 'done') { done = true; msg.usage = d.usage; msg.cost = d.cost; if (!(msg.parts || []).some(function (p) { return p.kind === 'text' && p.text; }) && d.text) msg.parts.push({ kind: 'text', id: 'final', text: d.text }); if (d.status) { c.status = d.status; c.status.contextUsed = (d.usage && d.usage.total_tokens) || null; } renderStatusBar(); }
       else if (event === 'error') { done = true; msg.error = d.message; }
     });
@@ -840,8 +845,10 @@ function resumeIfLive(c) {
         (d.items || []).forEach(function (it) { if (it.kind === 'user' && it.id > lastUserId) lastUserId = it.id; });
         (d.items || []).forEach(function (it) { if (it.kind !== 'user' && it.id > lastUserId) applyItem(msg, it); });
         msg.pending = Boolean(d.state && d.state.working);
+        if (d.state && d.state.contextTokens != null) { c.status = c.status || {}; c.status.contextUsed = d.state.contextTokens; }
         refresh();
       } else if (event === 'item') { applyItem(msg, d.item); if (c.id === CUR) renderMessages(); }
+      else if (event === 'context') { c.status = c.status || {}; c.status.contextUsed = d.contextUsed; if (c.id === CUR) renderStatusBar(); }
       else if (event === 'done') { if (d.usage) msg.usage = d.usage; if (d.cost) msg.cost = d.cost; }
       else if (event === 'error') { msg.error = d.message; }
     }).then(function () {

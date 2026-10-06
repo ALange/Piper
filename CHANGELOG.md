@@ -5,6 +5,12 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 ## [Unreleased]
 
 ### Added
+- **Auto-compaction is now visible in the client portal.** When an agent's context gets full and Pi
+  compacts it automatically (or recovers from an overflow), a short note now appears in the chat
+  ("context is getting full; compacting automatically…", then "compacted the context: 42000 → 18000
+  tokens") and the context figure in the status bar updates live, mid-turn, instead of only reflecting
+  it once the whole turn finishes. Built on the same live-session log already used for reconnecting to
+  a running turn: `LiveLog` now understands Pi's own `compaction_start`/`compaction_end` events.
 - **An HTML file previews as a rendered page in the client portal, not just as text.** Clicking a
   `.html`/`.htm` file in the workspace browser (one an agent just wrote, or one you uploaded) now opens
   it in a sandboxed `<iframe>` (`sandbox="allow-scripts"`, no `allow-same-origin`) instead of dumping its
