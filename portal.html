@@ -99,6 +99,9 @@
   .tool-body { display:none; margin:2px 0 8px 4px; padding:8px 10px; background:#0c0c0c; border:1px solid var(--border);
                border-radius:6px; font-size:11px; white-space:pre-wrap; color:var(--muted); }
   .tool-body.open { display:block; }
+  .tool-body .tool-section { color:var(--dim); font-size:10px; text-transform:uppercase; letter-spacing:.06em;
+                              margin:8px 0 3px; }
+  .tool-body .tool-section:first-child { margin-top:0; }
 
   /* a colleague agent's own reply, folded into the caller's — a distinct colored callout per name */
   .colleague-msg { border-left:3px solid var(--agent-c, var(--blue)); background:#111214; padding:8px 10px;
@@ -517,8 +520,16 @@ function partNode(p) {
       : p.state === 'running' ? 'running…' : '';
     if (excerptText.length > 140) excerptText = excerptText.slice(0, 140) + '…';
     line.appendChild(el('span', excerptText)).className = 'tool-excerpt';
-    var tbox = el('div', p.result || '(still running…)');
+    var tbox = el('div');
     tbox.className = 'tool-body' + (OPEN_TOOL[p.id] ? ' open' : '');
+    if (delegateMatch) {
+      tbox.appendChild(el('div', 'Task')).className = 'tool-section';
+      tbox.appendChild(el('div', delegateMatch[2]));
+      tbox.appendChild(el('div', 'Response')).className = 'tool-section';
+      tbox.appendChild(el('div', p.result || '(still running…)'));
+    } else {
+      tbox.textContent = p.result || '(still running…)';
+    }
     line.addEventListener('click', function () {
       OPEN_TOOL[p.id] = !OPEN_TOOL[p.id];
       tbox.classList.toggle('open', OPEN_TOOL[p.id]);

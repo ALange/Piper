@@ -2368,7 +2368,8 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(toolActivity("analyze", { level: 2 }), 'analyze: {"level":2}');
 	assert.ok(toolActivity("bash", { command: "y".repeat(500) }).length < 220, "long commands are truncated");
 	assert.equal(toolActivity("piper_delegate", { agent: "Researcher", task: "find   the   root cause\n of the bug" }), "Researcher: find the root cause of the bug", "the colleague's name leads, not the tool's own");
-	assert.ok(toolActivity("piper_delegate", { agent: "Researcher", task: "z".repeat(500) }).length < 220, "a long task is truncated too");
+	assert.equal(toolActivity("piper_delegate", { agent: "Researcher", task: "z".repeat(500) }).length, "Researcher: ".length + 500, "a realistic task is kept in full, for an expanded view");
+	assert.ok(toolActivity("piper_delegate", { agent: "Researcher", task: "z".repeat(5000) }).length < 4020, "but an extreme one is still bounded");
 }
 
 // Spend per model: a chat that switched models is billed to each for what it used there.
