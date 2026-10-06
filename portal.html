@@ -38,11 +38,14 @@
   .side .top { padding:12px; border-bottom:1px solid var(--border); display:flex; gap:6px; }
   .side .top input { flex:1; min-width:0; }
   #convlist { flex:1; overflow:auto; padding:6px; }
-  .convrow { padding:8px 10px; border-radius:6px; cursor:pointer; margin-bottom:2px; }
+  .convrow { padding:8px 32px 8px 10px; border-radius:6px; cursor:pointer; margin-bottom:2px; position:relative; }
   .convrow:hover { background:#161616; }
   .convrow.on { background:#1c1c1c; }
   .convrow .t { font-size:12px; }
   .convrow .s { color:var(--dim); font-size:10px; }
+  .convclear { position:absolute; top:6px; right:6px; border:none; background:transparent; color:var(--dim);
+               padding:2px 6px; border-radius:4px; font-size:13px; line-height:1; }
+  .convclear:hover { color:var(--red); background:#201414; }
   .side .bottom { padding:10px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
   .who { font-size:11px; color:var(--muted); }
 
@@ -238,6 +241,14 @@ function renderSide() {
     var agent = (WHOAMI.agents || []).filter(function (a) { return a.id === c.agentId; })[0];
     row.appendChild(el('div', agent ? agent.name : '(main endpoint)')).className = 's';
     row.addEventListener('click', function () { CUR = c.id; renderAll(); });
+    var clear = el('button', '×');
+    clear.className = 'convclear';
+    clear.title = 'clear this chat';
+    clear.addEventListener('click', function (e) {
+      e.stopPropagation();
+      clearChat(c);
+    });
+    row.appendChild(clear);
     box.appendChild(row);
   });
 }
@@ -378,6 +389,17 @@ function newChat() {
   CUR = c.id;
   saveConvos();
   renderAll();
+}
+
+/* Ends the server-side session (so its container is freed) and drops it from the list in this browser. */
+function clearChat(c) {
+  if (c.messages.length && !confirm('Clear "' + (c.title || 'New chat') + '"?')) return;
+  if (BUSY && c.id === CUR) return;
+  var q = c.agentId ? ('?agentId=' + encodeURIComponent(c.agentId)) : '';
+  api('api/conversation/' + encodeURIComponent(c.id) + q, { method: 'DELETE' }).catch(function () {});
+  CONVOS = CONVOS.filter(function (x) { return x.id !== c.id; });
+  if (CUR === c.id) CUR = CONVOS[0] ? CONVOS[0].id : null;
+  if (!CUR) newChat(); else { saveConvos(); renderAll(); }
 }
 
 function applyItem(msg, item) {
