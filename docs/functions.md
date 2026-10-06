@@ -299,24 +299,27 @@ ask for. From the next poll on, a genuinely new entry (by the feed's own guid) i
 named for that feed (or `RSS_DEFAULT_AGENT` when it names none) runs a whole turn: fetch the article page
 itself — with whatever fetch tool that agent has, inside its own container — and extract it clean, no ads,
 navigation or sponsored sections, replying with one strict JSON object (title, text, summary, tags). A reply
-that is not valid JSON, or is missing a title or text, is kept as a `failed` entry with the reason — including
-what the agent actually said, so a retry has something to go on — not a crash. **retry** it from the
-Knowledge page once it is fixed (a different model, a working fetch tool, and so on).
+that is not valid JSON, or is missing a title or text, is not kept as a dead entry waiting for someone to
+notice and retry it by hand — it is discarded outright (the reason is still on record in the Log tab), and
+the same article is simply tried again, as if new, the next time that feed is polled. Nothing to manage here
+on purpose: a one-off hiccup (a slow page, a model stumble) just gets a fresh attempt on its own.
 
 **Blocked, not just failed.** Some sites refuse automated fetches outright (a 403, Cloudflare, a CAPTCHA).
 When a reply that failed to parse also reads like one of those (a small, deliberately heuristic check — it
 only decides whether to spend one more turn, never whether the entry is kept), the same agent, in the same
 session, gets one more try at the same article before giving up: the Wayback Machine, a search for the same
 headline reported elsewhere, or whatever else its tools allow. If that works, the entry is `done` as normal.
-If not, it is marked `blocked` — a status distinct from a plain `failed`, since the cause is the site, not
-the agent or the pipeline — with the agent's own reason kept. `RSS_AUTO_UNBLOCK` (on by default) is the
+If not, it is marked `blocked` and, unlike a plain failed attempt, kept rather than discarded — the cause was
+the site refusing automated fetches outright, not a one-off hiccup worth just trying again on its own, so it
+is worth a person's attention, with the agent's own reason kept. `RSS_AUTO_UNBLOCK` (on by default) is the
 switch; off marks it `blocked` on the first such reply instead of trying again.
 
 **Management (Knowledge page).** **Feeds** tab: add, edit (name, URL, agent, interval, enabled), **pull now**
 (polls regardless of schedule), delete; each row shows when it was last polled and its last article's own
-outcome (success, blocked or failed, with when). **Entries** tab: every entry (source, title, status,
-published, fetched), a detail view (full text, summary, tags), **retry** a failed or blocked one, delete, or
-clear a whole source; a skipped (backfilled) entry never shows here, since there is nothing to read or act on
+outcome (success or blocked, with when — a merely failed attempt leaves no trace here, since it is retried
+on its own). **Entries** tab: every entry (source, title, status, published, fetched), a detail view (full
+text, summary, tags), **retry** a blocked one, delete, or clear a whole source; a skipped (backfilled) entry
+never shows here, since there is nothing to read or act on
 — search by title, and select and delete one or several at once. **Log** tab: every poll, extraction and
 operator action, newest first — the audit log, filtered to Knowledge and RSS actions.
 

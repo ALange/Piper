@@ -1670,31 +1670,46 @@ assert.equal(isReloadCommand(undefined), false);
 			await new Promise((r) => setTimeout(r, 15));
 		}
 	};
+	// A "failed" extraction is discarded, not kept (see extractOne) -- there is no row left to read a
+	// status off of, so a test that provoked one waits for it to be gone instead, then checks the
+	// error text landed in the audit log (the only place it is still kept).
+	const waitForGone = async (guid, ms = 3000, sourceRef = feed.id) => {
+		const end = Date.now() + ms;
+		for (;;) {
+			if (!getByKey(SOURCE_TYPE, sourceRef, guid)) return;
+			if (Date.now() > end) throw new Error(`timed out waiting for ${guid} to be discarded`);
+			await new Promise((r) => setTimeout(r, 15));
+		}
+	};
 	setExtractionRunner(async ({ prompt }) => ({ text: JSON.stringify({ title: "C, extracted", text: "The full clean article.", summary: "Short summary.", tags: ["news"] }), usage: { total_tokens: 5 }, cost: 0, scopedId: "x" }));
 	rssPump();
 	const doneC = await waitForEntry("gc", (e) => e.status === "done");
 	assert.deepEqual([doneC.title, doneC.text, doneC.summary, doneC.tags], ["C, extracted", "The full clean article.", "Short summary.", ["news"]]);
 
+	// A "failed" extraction is discarded, not kept: the next poll sees the same guid as new again (the
+	// row is gone, so getByKey no longer finds it) instead of leaving a dead entry for someone to retry
+	// by hand. The error itself is still on record, in the audit log.
 	const { AgentRunError: KAgentRunError } = await import("./server.mjs");
 	setExtractionRunner(async () => {
 		throw new KAgentRunError("daily spend limit reached", 429, "spend_limit_exceeded", "rate_limit_error");
 	});
 	await forcePoll(feed.id, { fetchFn: fakeFetch(xmlOne([{ t: "D", u: "https://feed.test/d", g: "gd" }])) });
 	rssPump();
-	const failedD = await waitForEntry("gd", (e) => e.status === "failed");
-	assert.equal(failedD.error, "daily spend limit reached");
+	await waitForGone("gd");
+	assert.ok(recentAuditRows(20).some((r) => r.action === "rss.extract" && /failed: daily spend limit reached/.test(r.detail)));
 
 	config.RSS_EXTRACT_TIMEOUT_MS = 80;
 	setExtractionRunner(({ signal }) => new Promise((_, reject) => signal.addEventListener("abort", () => reject(new Error("aborted")))));
 	await forcePoll(feed.id, { fetchFn: fakeFetch(xmlOne([{ t: "E", u: "https://feed.test/e", g: "ge" }])) });
 	rssPump();
-	const timedOutE = await waitForEntry("ge", (e) => e.status === "failed");
-	assert.match(timedOutE.error, /no answer within/);
+	await waitForGone("ge");
+	assert.ok(recentAuditRows(20).some((r) => r.action === "rss.extract" && /failed: no answer within/.test(r.detail)));
 	config.RSS_EXTRACT_TIMEOUT_MS = 5 * 60_000;
 
-	// retryEntry: a failed row goes back to pending and gets another pass.
+	// Discarded, then genuinely tried again next time the feed is polled, not immediately.
 	setExtractionRunner(async () => ({ text: JSON.stringify({ title: "D, extracted", text: "Recovered text." }), usage: { total_tokens: 1 }, cost: 0, scopedId: "x" }));
-	assert.equal(retryEntry(failedD.id), true);
+	await forcePoll(feed.id, { fetchFn: fakeFetch(xmlOne([{ t: "D", u: "https://feed.test/d", g: "gd" }])) });
+	rssPump();
 	const recoveredD = await waitForEntry("gd", (e) => e.status === "done");
 	assert.equal(recoveredD.text, "Recovered text.");
 	assert.throws(() => retryEntry(999_999_999), (e) => e.status === 404);
@@ -1736,6 +1751,13 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(getFeed(feed.id).lastEntryStatus, "blocked", "the Feeds list shows the latest extraction's own status");
 	assert.equal(getFeed(feed.id).lastEntryAt, blockedH.fetchedAt);
 
+	// retryEntry: unlike a plain failure, a deliberate "blocked" give-up is kept and is the one status
+	// a person retries by hand from the dashboard; a retried row goes back to pending and gets another pass.
+	setExtractionRunner(async () => ({ text: JSON.stringify({ title: "H, extracted", text: "Recovered text." }), usage: { total_tokens: 1 }, cost: 0, scopedId: "x" }));
+	assert.equal(retryEntry(blockedH.id), true);
+	const recoveredH = await waitForEntry("gh", (e) => e.status === "done");
+	assert.equal(recoveredH.text, "Recovered text.");
+
 	// RSS_AUTO_UNBLOCK off: no second try, straight to failed.
 	config.RSS_AUTO_UNBLOCK = false;
 	let onlyOneTurn = 0;
@@ -1745,9 +1767,9 @@ assert.equal(isReloadCommand(undefined), false);
 	});
 	await forcePoll(feed.id, { fetchFn: fakeFetch(xmlOne([{ t: "I", u: "https://feed.test/i", g: "gi" }])) });
 	rssPump();
-	const failedI = await waitForEntry("gi", (e) => e.status === "failed");
+	await waitForGone("gi");
 	assert.equal(onlyOneTurn, 1, "no retry when RSS_AUTO_UNBLOCK is off");
-	assert.match(failedI.error, /was not JSON/);
+	assert.ok(recentAuditRows(20).some((r) => r.action === "rss.extract" && /failed:.*was not JSON/.test(r.detail)));
 	config.RSS_AUTO_UNBLOCK = true;
 
 	// A feed with no agent and no RSS_DEFAULT_AGENT names the problem, not a crash.
@@ -1756,8 +1778,8 @@ assert.equal(isReloadCommand(undefined), false);
 	await forcePoll(orphanFeed.id, { fetchFn: fakeFetch(xmlOne([{ t: "Seed", u: "https://feed.test/seed", g: "gseed" }])) });
 	await forcePoll(orphanFeed.id, { fetchFn: fakeFetch(xmlOne([{ t: "Seed", u: "https://feed.test/seed", g: "gseed" }, { t: "F", u: "https://feed.test/f", g: "gf" }])) });
 	rssPump();
-	const orphanedF = await waitForEntry("gf", (e) => e.status === "failed", 3000, orphanFeed.id);
-	assert.match(orphanedF.error, /no extracting agent/);
+	await waitForGone("gf", 3000, orphanFeed.id);
+	assert.ok(recentAuditRows(20).some((r) => r.action === "rss.extract" && /failed:.*no extracting agent/.test(r.detail)));
 	setExtractionRunner(null);
 
 	// The dashboard's own routes: Entries (generic) and Feeds (RSS-specific).

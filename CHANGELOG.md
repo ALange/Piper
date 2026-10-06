@@ -223,6 +223,13 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   check, mkdir, move, delete, upload/download/delete, the workspace quota), both run against the real profile
   helper script rather than mocked away.
 
+### Fixed
+- **A failed RSS article extraction is discarded and simply tried again next time its feed is polled,
+  instead of sitting forever as a `failed` entry waiting for someone to notice and click retry.** The
+  guid is freed the moment the row is gone, so the next poll sees it as new again; the reason is still
+  on record in the Log tab. `blocked` (a site deliberately refusing automated fetches) is unchanged —
+  that one is worth a person's attention and is still kept, still retriable by hand.
+
 ## [0.7.0] - 2026-10-01
 
 ### Added
