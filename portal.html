@@ -1025,17 +1025,19 @@ function previewFile(path, size) {
     }
     if (HTML_TYPES[ext]) {
       if (size > PREVIEW_MAX) { $('fmbody').replaceChildren(el('div', 'Too large to preview (' + bytes(size) + '). Use download.')); return; }
-      // The download route always serves application/octet-stream; re-tag it so the iframe actually
-      // renders the page instead of treating it as a generic download.
-      MODAL_OBJECT_URL = URL.createObjectURL(new Blob([blob], { type: 'text/html' }));
-      var frame = el('iframe');
-      frame.src = MODAL_OBJECT_URL;
-      // No allow-same-origin: a workspace page can run its own script, but gets a unique, opaque
-      // origin -- it can never read this page's sessionStorage, cookies, or API key.
-      frame.setAttribute('sandbox', 'allow-scripts');
-      frame.className = 'htmlpreview';
-      $('fmbox').classList.add('wide');
-      $('fmbody').replaceChildren(frame);
+      // srcdoc, not a blob: URL -- a blob's origin belongs to this page, and a sandboxed iframe
+      // without allow-same-origin cannot reliably load one across browsers (it can render as a
+      // download or plain text instead). srcdoc has no such origin mismatch.
+      blob.text().then(function (html) {
+        var frame = el('iframe');
+        // No allow-same-origin: a workspace page can run its own script, but gets a unique, opaque
+        // origin -- it can never read this page's sessionStorage, cookies, or API key.
+        frame.setAttribute('sandbox', 'allow-scripts');
+        frame.className = 'htmlpreview';
+        frame.srcdoc = html;
+        $('fmbox').classList.add('wide');
+        $('fmbody').replaceChildren(frame);
+      });
       return;
     }
     if (size > PREVIEW_MAX) {
