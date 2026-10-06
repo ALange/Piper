@@ -3735,7 +3735,7 @@ $('rssrefresh').addEventListener('click', loadFeeds);
 $('rsssave').addEventListener('click', function () {
   var body = { name: $('rssname').value.trim(), url: $('rssurl').value.trim(), agentId: $('rssagent').value || null, intervalMs: Number($('rssinterval').value) * 60000, enabled: $('rsson').checked };
   var p = FEED_EDIT ? epPost('dashboard/rss/' + FEED_EDIT, body, 'PATCH') : epPost('dashboard/rss', body);
-  p.then(function () { $('rssform').hidden = true; loadFeeds(); }).catch(function (e) { $('rssformnote').textContent = e.message; });
+  p.then(function () { $('rssform').hidden = true; loadFeeds(); }).catch(function (e) { $('rssformnote').textContent = e.message; $('rssformnote').className = 'passnote bad'; });
 });
 
 var KENTRIES = null;
