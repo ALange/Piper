@@ -5,6 +5,11 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 ## [Unreleased]
 
 ### Added
+- **`/reload` and the other gateway chat commands now work in the client portal and the dashboard
+  Playground, not just the plain API.** `/piper`, `/reload`, `/skills`, `/extensions`, `/settings` and
+  `/profile` were only ever intercepted inside `/v1/chat/completions`; a chat through the Portal or
+  the Playground sent the literal text to the agent instead, since both go through `runAgentTurn`
+  directly. `runAgentTurn` now answers these itself, the same as the plain API always did.
 - **Attachments in the client portal.** A message can now carry images and documents: a 📎 button
   beside the composer or a plain paste into it (a screenshot, a copied file). An image goes through
   the same native vision pipeline the dashboard's Playground already has — shown as a readable

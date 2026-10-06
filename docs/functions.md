@@ -40,7 +40,8 @@ It is a real chat: it runs as that key or agent, so the key's session cap, daily
 the key's and the agent's, and the agent can use its tools in its container. A chat keeps its agent for its whole life and
 continues after a gateway restart. The messages you see are kept **in this browser only** (the gateway keeps just the live session,
 which expires like any chat's); deleting a chat also ends its session. It needs a dashboard password and `PLAYGROUND_ENABLED`.
-Slash commands and image attachments are not part of it yet.
+The gateway's own chat commands (`/piper`, `/reload`, `/skills`, `/extensions`, `/settings`, `/profile`)
+work the same as anywhere else; image attachments are not part of it yet.
 
 ## Client portal
 
@@ -50,7 +51,9 @@ on its own port, separate from the dashboard and the gateway's own API port, and
 and from there can only ever chat with that key's own agents and browse that key's own (or one of its
 agents') workspace files — there is no way to pick a different key, unlike the operator's Playground.
 The chat itself works the same way (a real turn, streamed, with thinking and tool calls shown) and
-reuses the same workspace file browser. The key itself is kept in the browser's `sessionStorage`
+reuses the same workspace file browser. Typing one of the gateway's own commands (`/piper` for the
+list, `/reload`, `/skills`, `/extensions`, `/settings`, `/profile`) is answered directly, the same as
+the plain API, rather than sent to the agent as a chat message. The key itself is kept in the browser's `sessionStorage`
 only: gone on logout or when the tab closes, never remembered across restarts. The **chat history**
 (every conversation's title, agent and messages) is different: it is kept server-side too, so logging
 in from another browser or device shows the same chats to continue — the browser's own local copy is

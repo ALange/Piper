@@ -1248,7 +1248,10 @@ assert.equal(isReloadCommand(undefined), false);
 }
 
 // runAgentTurn now threads an `images` option all the way to the Pi session's own "prompt" command
-// (lib/agentrun.mjs used to hardcode `images: []`); a fake, vision-capable session proves it.
+// (lib/agentrun.mjs used to hardcode `images: []`); a fake, vision-capable session proves it. The same
+// block also proves runAgentTurn now answers `/reload` and the gateway's own commands itself, instead
+// of forwarding the literal text to the agent (lib/agentrun.mjs again -- previously only
+// /v1/chat/completions handled these).
 {
 	const { EventEmitter } = await import("node:events");
 	const { PassThrough } = await import("node:stream");
@@ -1315,6 +1318,18 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(result.text, "echo: describe this");
 	assert.ok(lastPrompt, "a prompt command reached the fake Pi session");
 	assert.deepEqual(lastPrompt.images, images, "images passed to runAgentTurn reached the Pi session's own prompt command");
+
+	// `/reload` and the gateway's own commands (`/piper`, `/skills`, ...) answered directly by runAgentTurn
+	// itself, the same as /v1/chat/completions -- not sent to the agent as a literal chat message. This is
+	// what makes them actually work when typed into the Portal or Playground chat, which call runAgentTurn
+	// directly and never go through chatCompletions.
+	const helpResult = await runAgentTurn({ credential: cred, clientSessionId: "gateway-command-help", prompt: "/piper" });
+	assert.match(helpResult.text, /\/reload\s+re-read skills/);
+
+	lastPrompt = null;
+	const reloadResult = await runAgentTurn({ credential: cred, clientSessionId: "gateway-command-reload", prompt: "/reload" });
+	assert.match(reloadResult.text, /Reloaded\. Skills, extensions, prompts, settings/);
+	assert.equal(lastPrompt.message, "/piper-reload", "the literal /reload text itself never reached the model");
 
 	const openRecords = sessions.allRecords();
 	sessions.closeAll();
