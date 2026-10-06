@@ -5,6 +5,11 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 ## [Unreleased]
 
 ### Added
+- **Multiple conversations in the client portal can be busy at once.** A single page-wide "busy" flag
+  used to block sending (or even switching away) while any one chat was streaming — in practice, only
+  one conversation could ever be running at a time. Busy is now tracked per conversation: start a turn
+  in one, switch to another, and send there too; each streams independently, and the sidebar marks
+  every conversation still working with a small dot.
 - **A turn in the client portal survives closing the tab, and reconnecting catches up on it.**
   Previously, losing the connection (closing the tab, a network drop) aborted the agent's turn in
   progress — the opposite of "it kept running while I was away." The turn is no longer tied to the

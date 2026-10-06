@@ -396,7 +396,10 @@ var KEY = sessionStorage.getItem('piper-portal-key') || '';
 var WHOAMI = null;
 var CONVOS = [];
 var CUR = null;
-var BUSY = false;
+// A conversation is busy on its own, not globally: id -> true while this tab has a live reader
+// (send() or resumeIfLive()) attached to it, so sending/switching never has to wait on a DIFFERENT
+// conversation's turn.
+var WATCHING = {};
 var SIDE_OPEN = 'files'; // 'files' | 'tools' | 'skills' | null -- one side panel at a time
 var FILES_PATH = '';
 var PENDING_IMAGES = []; // { name, dataUrl }
@@ -452,6 +455,15 @@ function newId() {
   return Array.prototype.map.call(bytes, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
 }
 function conv() { return CONVOS.filter(function (c) { return c.id === CUR; })[0] || null; }
+/* Busy is per conversation: either this tab has a live reader attached to it right now (WATCHING), or
+   its own last message is still an unsettled "pending" reply (true right after send() pushes one, and
+   true again on reload until resumeIfLive() either confirms it settled or reattaches to it live). */
+function isBusy(c) {
+  if (!c) return false;
+  if (WATCHING[c.id]) return true;
+  var m = c.messages[c.messages.length - 1];
+  return Boolean(m && m.role === 'assistant' && m.pending);
+}
 
 function renderTargets() {
   var t = $('target');
@@ -474,12 +486,11 @@ function renderSide() {
     var titleRow = el('div');
     titleRow.className = 't';
     titleRow.appendChild(document.createTextNode(c.title || 'New chat'));
-    var last = c.messages[c.messages.length - 1];
-    if (last && last.role === 'assistant' && last.pending) titleRow.appendChild(el('span', ' ●')).className = 'livedot';
+    if (isBusy(c)) titleRow.appendChild(el('span', ' ●')).className = 'livedot';
     row.appendChild(titleRow);
     var agent = (WHOAMI.agents || []).filter(function (a) { return a.id === c.agentId; })[0];
     row.appendChild(el('div', agent ? agent.name : '(main endpoint)')).className = 's';
-    row.addEventListener('click', function () { CUR = c.id; renderAll(); resumeIfLive(conv()); });
+    row.addEventListener('click', function () { CUR = c.id; renderAll(); resumeIfLive(c); });
     var clear = el('button', '×');
     clear.className = 'convclear';
     clear.title = 'clear this chat';
@@ -702,7 +713,8 @@ function renderAll() {
   renderStatusBar();
   var c = conv();
   $('target').value = c ? (c.agentId || '') : '';
-  $('target').disabled = Boolean(c && c.messages.length) || BUSY;
+  $('target').disabled = Boolean(c && c.messages.length) || isBusy(c);
+  $('send').textContent = isBusy(c) ? 'stop' : 'send';
   reloadSidePanel();
 }
 
@@ -717,7 +729,7 @@ function newChat() {
 /* Ends the server-side session (so its container is freed) and drops it from the list in this browser. */
 function clearChat(c) {
   if (c.messages.length && !confirm('Clear "' + (c.title || 'New chat') + '"?')) return;
-  if (BUSY && c.id === CUR) return;
+  if (isBusy(c)) return;
   var q = c.agentId ? ('?agentId=' + encodeURIComponent(c.agentId)) : '';
   api('api/conversation/' + encodeURIComponent(c.id) + q, { method: 'DELETE' }).catch(function () {});
   CONVOS = CONVOS.filter(function (x) { return x.id !== c.id; });
@@ -758,7 +770,7 @@ function streamInto(reader, onEvent) {
 
 function send() {
   var c = conv();
-  if (!c || BUSY) return;
+  if (!c || isBusy(c)) return;
   var text = $('input').value.trim();
   if (!text) return;
   if (PENDING_DOCS.some(function (d) { return d.uploading; })) { alert('still uploading an attachment -- wait a moment and send again'); return; }
@@ -775,8 +787,6 @@ function send() {
   PENDING_IMAGES = [];
   PENDING_DOCS = [];
   renderPending();
-  BUSY = true;
-  $('send').textContent = 'stop';
   renderAll();
   // Durable the moment the turn starts, not just when it ends: if the tab closes mid-turn, a reload
   // (or another device) can tell this conversation might still be running and go check -- the turn
@@ -801,24 +811,25 @@ function send() {
     msg.pending = false;
     if (!done && !msg.error) msg.error = 'The connection ended before the agent finished.';
     c.updated = Date.now();
-    BUSY = false;
-    $('send').textContent = 'send';
     saveConvos();
     renderAll();
   });
 }
 
 /* Catches up on a conversation that might still be running a turn from before a reload, a re-login, or
-   simply switching away and back -- cheap and quiet when there is nothing to catch up on. */
+   simply switching away and back -- cheap and quiet when there is nothing to catch up on. Safe to call
+   for a conversation other than the one on screen: it only re-renders if it is still the one showing
+   by the time something changes, so one busy conversation never blocks using another. */
 function resumeIfLive(c) {
-  if (!c || BUSY) return;
-  var q = agentQuery();
+  if (!c || WATCHING[c.id]) return;
+  WATCHING[c.id] = true;
+  var refresh = function () { if (c.id === CUR) renderAll(); else renderSide(); };
+  var q = agentQuery(c);
   api('api/conversation/' + encodeURIComponent(c.id) + '/events' + (q ? '?' + q : '')).then(function (r) {
     var type = r.headers.get('content-type') || '';
-    if (type.indexOf('event-stream') < 0) return r.json().catch(function () { return {}; }); // {live:false}, or an error: nothing to resume
+    if (type.indexOf('event-stream') < 0) { delete WATCHING[c.id]; return r.json().catch(function () { return {}; }); } // {live:false}, or an error: nothing to resume
     var msg = c.messages[c.messages.length - 1];
     if (!msg || msg.role !== 'assistant') { msg = { role: 'assistant', parts: [], pending: true }; c.messages.push(msg); }
-    var wasLive = false;
     return streamInto(r.body.getReader(), function (event, d) {
       if (event === 'snapshot') {
         // The log may span older, already-finished turns too (capped by item count, not per-turn):
@@ -827,24 +838,23 @@ function resumeIfLive(c) {
         (d.items || []).forEach(function (it) { if (it.kind === 'user' && it.id > lastUserId) lastUserId = it.id; });
         (d.items || []).forEach(function (it) { if (it.kind !== 'user' && it.id > lastUserId) applyItem(msg, it); });
         msg.pending = Boolean(d.state && d.state.working);
-        if (msg.pending) { wasLive = true; BUSY = true; $('send').textContent = 'stop'; }
-        renderMessages();
-      } else if (event === 'item') { applyItem(msg, d.item); renderMessages(); }
+        refresh();
+      } else if (event === 'item') { applyItem(msg, d.item); if (c.id === CUR) renderMessages(); }
       else if (event === 'done') { if (d.usage) msg.usage = d.usage; if (d.cost) msg.cost = d.cost; }
       else if (event === 'error') { msg.error = d.message; }
     }).then(function () {
+      delete WATCHING[c.id];
       msg.pending = false;
-      if (wasLive) { BUSY = false; $('send').textContent = 'send'; }
       c.updated = Date.now();
       saveConvos();
-      renderAll();
+      refresh();
     });
-  }).catch(function () { /* a reconnect probe failing is quiet; the next reload or switch tries again */ });
+  }).catch(function () { delete WATCHING[c.id]; });
 }
 
 /* ---- side panels: files, tools & extensions, skills -- one open at a time ---- */
-function agentQuery() {
-  var c = conv();
+function agentQuery(c) {
+  c = c || conv();
   return (c && c.agentId) ? ('agentId=' + encodeURIComponent(c.agentId)) : '';
 }
 function setSide(which) {
@@ -1096,7 +1106,9 @@ function connect(key) {
     renderTargets();
     showApp();
     renderAll();
-    resumeIfLive(conv());
+    // Every conversation, not just the one on screen: any of them might still be running from
+    // before this login/reload, and each catches up (or stays quiet) independently.
+    CONVOS.forEach(function (c) { resumeIfLive(c); });
   }).catch(function (e) {
     KEY = '';
     showLogin(e.message);
@@ -1114,16 +1126,16 @@ $('logout').addEventListener('click', function () {
   KEY = ''; WHOAMI = null; CONVOS = []; CUR = null;
   showLogin();
 });
-$('newchat').addEventListener('click', function () { if (BUSY) return; newChat(); });
+$('newchat').addEventListener('click', function () { newChat(); });
 $('target').addEventListener('change', function () { var c = conv(); if (!c || c.messages.length) return; c.agentId = $('target').value; saveConvos(); renderAll(); });
 $('send').addEventListener('click', function () {
-  if (!BUSY) return send();
   var c = conv();
   if (!c) return;
-  var q = agentQuery();
+  if (!isBusy(c)) return send();
+  var q = agentQuery(c);
   api('api/conversation/' + encodeURIComponent(c.id) + '/interrupt' + (q ? '?' + q : ''), { method: 'POST' }).catch(function () {});
 });
-$('input').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!BUSY) send(); } });
+$('input').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
 $('input').addEventListener('paste', function (e) {
   var files = (e.clipboardData && e.clipboardData.files) || [];
   if (!files.length) return;
