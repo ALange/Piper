@@ -8740,6 +8740,98 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	process.env.PATH = oldPath;
 }
 
+// The client portal: a standalone page, on its own port, logged in by a plain API key (never a
+// dashboard password), that chats with only that key's own agents and browses only its own files.
+{
+	const X = await import("./server.mjs");
+	const { config, apiKeys, agentScope, createAgent, deleteAgent, setAgentTurnRunner, startPortal, stopPortal, portalPort, ensureWorkspace } = X;
+
+	config.PORTAL_ENABLED = false;
+	startPortal();
+	assert.equal(portalPort(), null, "PORTAL_ENABLED off: never starts");
+
+	config.PORTAL_ENABLED = true;
+	config.PORTAL_PORT = 0;
+	startPortal();
+	await new Promise((r) => setTimeout(r, 30));
+	const port = portalPort();
+	assert.ok(port > 0, "a real port, chosen by the OS");
+
+	const base = `http://127.0.0.1:${port}`;
+	const call = async (path, opts = {}) => {
+		const res = await fetch(base + path, opts);
+		const text = await res.text();
+		let json = null;
+		try {
+			json = JSON.parse(text);
+		} catch {
+			/* the assertions say */
+		}
+		return { status: res.status, json, text };
+	};
+
+	assert.equal((await call("/health")).json.status, "ok", "no auth needed");
+	assert.match((await call("/")).text, /Piper/, "the static page is served, no auth");
+	assert.equal((await call("/api/whoami")).status, 401, "no key");
+	assert.equal((await call("/api/whoami", { headers: { authorization: "Bearer nonsense" } })).status, 401, "unknown key");
+
+	const mine = apiKeys.create({ name: "portal test", expiresAt: 0 });
+	const myKey = mine.record ?? mine;
+	const myToken = mine.key;
+	const myAgent = await createAgent({ keyId: myKey.id, name: "portal-agent" });
+
+	const theirs = apiKeys.create({ name: "portal other", expiresAt: 0 });
+	const theirKey = theirs.record ?? theirs;
+	const theirAgent = await createAgent({ keyId: theirKey.id, name: "not-mine" });
+
+	const auth = { authorization: `Bearer ${myToken}` };
+	const who = await call("/api/whoami", { headers: auth });
+	assert.equal(who.status, 200);
+	assert.equal(who.json.id, myKey.id);
+	assert.deepEqual(who.json.agents.map((a) => a.id), [myAgent.id], "only this key's own agents, never another's");
+
+	// Chat: a real turn, through the same injectable runner every other agent-run test uses.
+	let seenCredential = null;
+	setAgentTurnRunner(async ({ credential, prompt }) => {
+		seenCredential = credential;
+		return { text: `echo: ${prompt}`, reasoning: "", usage: { total_tokens: 3 }, cost: 0, sessionId: "x", scopedId: "y", fingerprint: "z", isNew: true };
+	});
+	const chatRes = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "conversation-id-1", message: "hi", agentId: myAgent.id }) });
+	assert.equal(chatRes.status, 200);
+	assert.match(chatRes.text, /event: done/);
+	assert.equal(seenCredential.agent.id, myAgent.id);
+
+	// Ownership: an agent that is not this key's is refused, the same way credentialFor already refuses it.
+	const stolenChat = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "conversation-id-2", message: "hi", agentId: theirAgent.id }) });
+	assert.equal(stolenChat.status, 404, "an agent that is not this key's");
+
+	// A keyId in the body is never trusted — only the bearer key's own id is ever used as the credential.
+	await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "conversation-id-3", message: "hi", keyId: theirKey.id }) });
+	assert.equal(seenCredential.id, myKey.id, "the body's keyId is ignored");
+	setAgentTurnRunner(null);
+
+	// Files: the key's own workspace by default, an agent's own with ?agentId=, never another key's.
+	writeFileSync(join(ensureWorkspace(myKey.id), "hello.txt"), "hi there");
+	const list = await call("/api/files", { headers: auth });
+	assert.equal(list.status, 200);
+	assert.ok(list.json.entries.some((e) => e.name === "hello.txt"));
+	const download = await call("/api/files/hello.txt", { headers: auth });
+	assert.equal(download.text, "hi there");
+
+	writeFileSync(join(ensureWorkspace(agentScope(myKey.id, myAgent.id)), "agent-file.txt"), "agent data");
+	const agentList = await call(`/api/files?agentId=${myAgent.id}`, { headers: auth });
+	assert.ok(agentList.json.entries.some((e) => e.name === "agent-file.txt"));
+	assert.equal(agentList.json.entries.some((e) => e.name === "hello.txt"), false, "a different workspace entirely");
+
+	const stolenFiles = await call(`/api/files?agentId=${theirAgent.id}`, { headers: auth });
+	assert.equal(stolenFiles.status, 404, "never another key's agent's files");
+
+	await deleteAgent(myAgent.id);
+	await deleteAgent(theirAgent.id);
+	await stopPortal();
+	assert.equal(portalPort(), null);
+}
+
 console.log("nextTurn + images: ok");
 rmSync(TEST_DB, { force: true });
 rmSync(TEST_WS, { recursive: true, force: true });

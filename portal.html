@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Piper — Client Portal</title>
+<style>
+  :root { color-scheme: dark;
+    --bg:#0a0a0a; --side:#0d0d0d; --panel:#101010; --card:#121212;
+    --border:#232323; --fg:#ededed; --muted:#8b8f94; --dim:#5f6368;
+    --green:#6ee7a8; --red:#f87171; --amber:#f6c177; --blue:#8ab4f8; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  button { background:var(--card); color:var(--fg); border:1px solid var(--border); border-radius:6px;
+            padding:6px 10px; font:inherit; cursor:pointer; }
+  button:hover { border-color:#3a3a3a; }
+  button:disabled { opacity:.5; cursor:default; }
+  input, select, textarea { background:var(--panel); color:var(--fg); border:1px solid var(--border);
+            border-radius:6px; padding:6px 8px; font:inherit; }
+  a { color:var(--blue); cursor:pointer; }
+  .hint { color:var(--muted); font-size:11px; }
+  .bad { color:var(--red) !important; }
+
+  /* login */
+  #login { max-width:360px; margin:12vh auto; padding:24px; }
+  #login h1 { font-size:16px; margin:0 0 4px; }
+  #login p { color:var(--muted); margin:0 0 18px; }
+  #login .row { display:flex; gap:8px; }
+  #login input { flex:1; }
+  #loginnote { min-height:16px; margin-top:10px; }
+
+  /* app shell */
+  #app { display:none; height:100vh; }
+  #app.on { display:flex; }
+  .side { width:240px; flex:0 0 240px; background:var(--side); border-right:1px solid var(--border);
+          display:flex; flex-direction:column; }
+  .side .top { padding:12px; border-bottom:1px solid var(--border); display:flex; gap:6px; }
+  .side .top input { flex:1; min-width:0; }
+  #convlist { flex:1; overflow:auto; padding:6px; }
+  .convrow { padding:8px 10px; border-radius:6px; cursor:pointer; margin-bottom:2px; }
+  .convrow:hover { background:#161616; }
+  .convrow.on { background:#1c1c1c; }
+  .convrow .t { font-size:12px; }
+  .convrow .s { color:var(--dim); font-size:10px; }
+  .side .bottom { padding:10px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  .who { font-size:11px; color:var(--muted); }
+
+  main { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .bar { padding:10px 14px; border-bottom:1px solid var(--border); display:flex; gap:8px; align-items:center; }
+  .bar select { max-width:220px; }
+  .bar .sp { flex:1; }
+  #msgs { flex:1; overflow:auto; padding:16px; }
+  .msg { max-width:720px; margin:0 auto 18px; }
+  .msg.user .bubble { background:#1c2a1f; border:1px solid #243329; border-radius:10px; padding:8px 12px;
+                       white-space:pre-wrap; margin-left:auto; max-width:80%; }
+  .msg.assistant .body { white-space:pre-wrap; }
+  .part-tool { border:1px solid var(--border); border-radius:6px; padding:6px 8px; margin:6px 0; font-size:12px; }
+  .part-tool.error { border-color:var(--red); }
+  .part-tool pre { white-space:pre-wrap; margin:6px 0 0; font-size:11px; color:var(--muted); }
+  .part-think { color:var(--dim); font-size:12px; border-left:2px solid var(--border); padding-left:8px; margin:6px 0; }
+  .err { color:var(--red); margin-top:6px; }
+  .foot { color:var(--dim); font-size:11px; margin-top:6px; }
+  .composer { padding:12px 14px; border-top:1px solid var(--border); display:flex; gap:8px; }
+  .composer textarea { flex:1; resize:none; min-height:40px; max-height:160px; }
+
+  /* files panel */
+  #filesbox { width:300px; flex:0 0 300px; border-left:1px solid var(--border); background:var(--side);
+              display:none; flex-direction:column; }
+  #filesbox.on { display:flex; }
+  #filesbox .top { padding:10px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; }
+  #crumb { padding:8px 10px; font-size:11px; color:var(--muted); }
+  #crumb a { margin-right:2px; }
+  #filelist { flex:1; overflow:auto; padding:0 6px; }
+  .frow { padding:6px 8px; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; font-size:12px; }
+  .frow:hover { background:#161616; }
+  .frow .sz { color:var(--dim); font-size:10px; }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h1>Piper client portal</h1>
+  <p>Log in with your own API key to chat with your agents and browse your workspace.</p>
+  <div class="row"><input id="keyinput" type="password" placeholder="piper_..." autocomplete="off"></div>
+  <div class="row" style="margin-top:8px"><button id="connect">connect</button></div>
+  <p id="loginnote" class="hint"></p>
+</div>
+
+<div id="app">
+  <div class="side">
+    <div class="top"><button id="newchat" title="new chat">+ new chat</button></div>
+    <div id="convlist"></div>
+    <div class="bottom"><span class="who" id="who"></span><button id="logout">log out</button></div>
+  </div>
+  <main>
+    <div class="bar">
+      <select id="target"></select>
+      <select id="model"></select>
+      <div class="sp"></div>
+      <button id="filesbtn">files</button>
+    </div>
+    <div id="msgs"></div>
+    <div class="composer">
+      <textarea id="input" placeholder="Message your agent... (Enter to send, Shift+Enter for a new line)"></textarea>
+      <button id="send">send</button>
+    </div>
+  </main>
+  <div id="filesbox">
+    <div class="top"><b>Files</b><button id="filesrefresh">refresh</button></div>
+    <div id="crumb"></div>
+    <div id="filelist"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+function $(id) { return document.getElementById(id); }
+function el(tag, text) { var e = document.createElement(tag); if (text !== undefined) e.textContent = text; return e; }
+
+var KEY = sessionStorage.getItem('piper-portal-key') || '';
+var WHOAMI = null;
+var CONVOS = [];
+var CUR = null;
+var BUSY = false;
+var CTRL = null;
+var FILES_OPEN = false;
+var FILES_PATH = '';
+
+function api(path, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({ Authorization: 'Bearer ' + KEY }, opts.headers || {});
+  return fetch(path, opts);
+}
+function apiJson(path, opts) {
+  return api(path, opts).then(function (r) {
+    return r.json().catch(function () { return {}; }).then(function (j) {
+      if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
+      return j;
+    });
+  });
+}
+
+function showLogin(msg) {
+  $('login').style.display = 'block';
+  $('app').classList.remove('on');
+  if (msg) { $('loginnote').textContent = msg; $('loginnote').className = 'hint bad'; }
+}
+function showApp() {
+  $('login').style.display = 'none';
+  $('app').classList.add('on');
+}
+
+function convKey() { return 'piper-portal-convs'; }
+function loadConvos() {
+  try { CONVOS = JSON.parse(sessionStorage.getItem(convKey()) || '[]'); } catch (e) { CONVOS = []; }
+}
+function saveConvos() {
+  CONVOS.sort(function (a, b) { return b.updated - a.updated; });
+  try { sessionStorage.setItem(convKey(), JSON.stringify(CONVOS)); } catch (e) { /* storage full: not fatal */ }
+}
+function newId() {
+  var bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  return Array.prototype.map.call(bytes, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+}
+function conv() { return CONVOS.filter(function (c) { return c.id === CUR; })[0] || null; }
+
+function renderTargets() {
+  var t = $('target');
+  t.replaceChildren();
+  var main = el('option', '(main endpoint)'); main.value = '';
+  t.appendChild(main);
+  (WHOAMI.agents || []).forEach(function (a) {
+    var o = el('option', a.name + (a.description ? ' — ' + a.description : ''));
+    o.value = a.id;
+    t.appendChild(o);
+  });
+  var m = $('model');
+  m.replaceChildren();
+  var def = el('option', 'default model'); def.value = '';
+  m.appendChild(def);
+  (WHOAMI.models || []).forEach(function (mm) { var o = el('option', mm.name); o.value = mm.value; m.appendChild(o); });
+}
+
+function renderSide() {
+  var box = $('convlist');
+  box.replaceChildren();
+  CONVOS.forEach(function (c) {
+    var row = el('div');
+    row.className = 'convrow' + (c.id === CUR ? ' on' : '');
+    row.appendChild(el('div', c.title || 'New chat')).className = 't';
+    var agent = (WHOAMI.agents || []).filter(function (a) { return a.id === c.agentId; })[0];
+    row.appendChild(el('div', agent ? agent.name : '(main endpoint)')).className = 's';
+    row.addEventListener('click', function () { CUR = c.id; renderAll(); });
+    box.appendChild(row);
+  });
+}
+
+function partNode(p) {
+  if (p.kind === 'thinking') { var d = el('div', p.text || ''); d.className = 'part-think'; return d; }
+  if (p.kind === 'tool') {
+    var box = el('div');
+    box.className = 'part-tool' + (p.state === 'error' ? ' error' : '');
+    box.appendChild(el('div', (p.state === 'running' ? '⚙ ' : p.state === 'error' ? '✗ ' : '✓ ') + (p.summary || p.name)));
+    if (p.result) box.appendChild(el('pre', p.result));
+    return box;
+  }
+  return el('div', p.text || '');
+}
+function renderMessages() {
+  var box = $('msgs');
+  box.replaceChildren();
+  var c = conv();
+  if (!c) return;
+  c.messages.forEach(function (m) {
+    var row = el('div');
+    row.className = 'msg ' + m.role;
+    if (m.role === 'user') { row.appendChild(el('div', m.text)).className = 'bubble'; box.appendChild(row); return; }
+    var body = el('div'); body.className = 'body';
+    (m.parts || []).forEach(function (p) { body.appendChild(partNode(p)); });
+    if (m.pending && !(m.parts || []).length) body.appendChild(el('div', 'Thinking…'));
+    if (m.error) { var e = el('div', m.error); e.className = 'err'; body.appendChild(e); }
+    row.appendChild(body);
+    if (!m.pending && m.usage && m.usage.total_tokens) {
+      var f = el('div', m.usage.total_tokens + ' tokens' + (m.cost ? ' · $' + m.cost.toFixed(4) : ''));
+      f.className = 'foot';
+      row.appendChild(f);
+    }
+    box.appendChild(row);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+function renderAll() {
+  renderSide();
+  renderMessages();
+  var c = conv();
+  $('target').value = c ? (c.agentId || '') : '';
+  $('model').value = c ? (c.model || '') : '';
+  $('target').disabled = Boolean(c && c.messages.length) || BUSY;
+  $('model').disabled = Boolean(c && c.messages.length) || BUSY;
+  if (FILES_OPEN) loadFiles();
+}
+
+function newChat() {
+  var c = { id: newId(), title: '', agentId: '', model: '', messages: [], updated: Date.now() };
+  CONVOS.unshift(c);
+  CUR = c.id;
+  saveConvos();
+  renderAll();
+}
+
+function applyItem(msg, item) {
+  var kind = item.kind === 'assistant' ? 'text' : item.kind;
+  var p = (msg.parts || []).filter(function (x) { return x.id === item.id; })[0];
+  if (!p) { p = { kind: kind, id: item.id }; (msg.parts = msg.parts || []).push(p); }
+  if (kind === 'tool') { p.name = item.name; p.summary = item.summary; p.state = item.state; p.result = item.result || ''; }
+  else { p.text = item.text; }
+}
+
+function send() {
+  var c = conv();
+  if (!c || BUSY) return;
+  var text = $('input').value.trim();
+  if (!text) return;
+  if (!c.messages.length) c.title = text.slice(0, 48);
+  c.messages.push({ role: 'user', text: text });
+  var msg = { role: 'assistant', parts: [], pending: true };
+  c.messages.push(msg);
+  c.updated = Date.now();
+  $('input').value = '';
+  BUSY = true;
+  $('send').textContent = 'stop';
+  renderAll();
+  CTRL = new AbortController();
+  var done = false;
+  api('api/chat', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    signal: CTRL.signal,
+    body: JSON.stringify({ conversation: c.id, message: text, agentId: c.agentId || undefined, model: c.model || undefined }),
+  }).then(function (r) {
+    var type = r.headers.get('content-type') || '';
+    if (!r.ok || type.indexOf('event-stream') < 0) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error((j.error && j.error.message) || ('HTTP ' + r.status)); });
+    var reader = r.body.getReader(), dec = new TextDecoder(), buf = '';
+    function handle(block) {
+      var ev = /^event: (.*)$/m.exec(block), data = /^data: (.*)$/m.exec(block);
+      if (!ev || !data) return;
+      var d;
+      try { d = JSON.parse(data[1]); } catch (e) { return; }
+      if (ev[1] === 'item') { applyItem(msg, d.item); renderMessages(); }
+      else if (ev[1] === 'done') { done = true; msg.usage = d.usage; msg.cost = d.cost; if (!(msg.parts || []).some(function (p) { return p.kind === 'text' && p.text; }) && d.text) msg.parts.push({ kind: 'text', id: 'final', text: d.text }); }
+      else if (ev[1] === 'error') { done = true; msg.error = d.message; }
+    }
+    function pump() {
+      return reader.read().then(function (x) {
+        if (x.done) return;
+        buf += dec.decode(x.value, { stream: true });
+        var i;
+        while ((i = buf.indexOf('\n\n')) >= 0) { handle(buf.slice(0, i)); buf = buf.slice(i + 2); }
+        return pump();
+      });
+    }
+    return pump();
+  }).catch(function (e) {
+    if (e && e.name === 'AbortError') msg.error = 'Stopped.'; else msg.error = e.message;
+  }).then(function () {
+    msg.pending = false;
+    if (!done && !msg.error) msg.error = 'The connection ended before the agent finished.';
+    c.updated = Date.now();
+    BUSY = false; CTRL = null;
+    $('send').textContent = 'send';
+    saveConvos();
+    renderAll();
+  });
+}
+
+/* ---- files ---- */
+function filesUrl(path) {
+  var c = conv();
+  var q = c && c.agentId ? ('agentId=' + encodeURIComponent(c.agentId)) : '';
+  var p = String(path || '').split('/').filter(Boolean).map(encodeURIComponent).join('/');
+  return 'api/files/' + p + (q ? '?' + q : '');
+}
+function loadFiles() {
+  apiJson(filesUrl(FILES_PATH) + (FILES_PATH ? '' : '')).then(function (d) {
+    renderFiles(d.entries || []);
+  }).catch(function (e) {
+    $('filelist').replaceChildren(el('div', e.message));
+  });
+}
+function renderFiles(entries) {
+  var crumb = $('crumb');
+  crumb.replaceChildren();
+  var link = function (label, path) { var a = el('a', label); a.addEventListener('click', function () { FILES_PATH = path; loadFiles(); }); return a; };
+  crumb.appendChild(link('workspace', ''));
+  var parts = FILES_PATH.split('/').filter(Boolean);
+  parts.forEach(function (p, i) { crumb.appendChild(document.createTextNode(' / ')); crumb.appendChild(link(p, parts.slice(0, i + 1).join('/'))); });
+  var box = $('filelist');
+  box.replaceChildren();
+  if (parts.length) {
+    var up = el('div', '← ..');
+    up.className = 'frow';
+    up.addEventListener('click', function () { FILES_PATH = parts.slice(0, -1).join('/'); loadFiles(); });
+    box.appendChild(up);
+  }
+  entries.slice().sort(function (a, b) { return (a.type === 'dir' ? 0 : 1) - (b.type === 'dir' ? 0 : 1) || a.name.localeCompare(b.name); }).forEach(function (f) {
+    var full = (FILES_PATH ? FILES_PATH + '/' : '') + f.name;
+    var row = el('div');
+    row.className = 'frow';
+    row.appendChild(el('span', (f.type === 'dir' ? '📁 ' : '📄 ') + f.name));
+    if (f.type === 'file') row.appendChild(el('span', bytes(f.bytes))).className = 'sz';
+    if (f.type === 'dir') row.addEventListener('click', function () { FILES_PATH = full; loadFiles(); });
+    else row.addEventListener('click', function () { downloadFile(full); });
+    box.appendChild(row);
+  });
+}
+function bytes(n) {
+  n = Number(n) || 0;
+  if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
+  if (n >= 1024) return (n / 1024).toFixed(1) + ' KB';
+  return n + ' B';
+}
+function downloadFile(path) {
+  api(filesUrl(path)).then(function (r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.blob();
+  }).then(function (blob) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = path.split('/').pop();
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 10000);
+  }).catch(function (e) { alert('could not download: ' + e.message); });
+}
+
+/* ---- login/logout ---- */
+function connect(key) {
+  KEY = key;
+  return apiJson('api/whoami').then(function (d) {
+    WHOAMI = d;
+    sessionStorage.setItem('piper-portal-key', KEY);
+    loadConvos();
+    if (!CONVOS.length) newChat(); else CUR = CONVOS[0].id;
+    renderTargets();
+    showApp();
+    renderAll();
+  }).catch(function (e) {
+    KEY = '';
+    showLogin(e.message);
+  });
+}
+$('connect').addEventListener('click', function () {
+  var key = $('keyinput').value.trim();
+  if (!key) return;
+  connect(key);
+});
+$('keyinput').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('connect').click(); });
+$('logout').addEventListener('click', function () {
+  sessionStorage.removeItem('piper-portal-key');
+  sessionStorage.removeItem(convKey());
+  KEY = ''; WHOAMI = null; CONVOS = []; CUR = null;
+  showLogin();
+});
+$('newchat').addEventListener('click', function () { if (BUSY) return; newChat(); });
+$('target').addEventListener('change', function () { var c = conv(); if (!c || c.messages.length) return; c.agentId = $('target').value; c.model = ''; saveConvos(); renderAll(); });
+$('model').addEventListener('change', function () { var c = conv(); if (c) { c.model = $('model').value; saveConvos(); } });
+$('send').addEventListener('click', function () { if (BUSY) { if (CTRL) CTRL.abort(); } else send(); });
+$('input').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!BUSY) send(); } });
+$('filesbtn').addEventListener('click', function () { FILES_OPEN = !FILES_OPEN; $('filesbox').classList.toggle('on', FILES_OPEN); $('filesbtn').className = FILES_OPEN ? 'on' : ''; if (FILES_OPEN) loadFiles(); });
+$('filesrefresh').addEventListener('click', loadFiles);
+
+if (KEY) connect(KEY); else showLogin();
+</script>
+</body>
+</html>

@@ -64,6 +64,7 @@ import { dashboardFilesRoutes, filesRoutes, keyIdForScope, profileAdminRoutes, p
 import { sessions, spendReport, startSweeps } from "./lib/sessions.mjs";
 import { chatCompletions, listModels } from "./lib/chat.mjs";
 import { startAgentServers, stopAgentServers } from "./lib/agentservers.mjs";
+import { portalPort, startPortal, stopPortal } from "./lib/portal.mjs";
 import { LOGIN_PAGE, hostPiRoutes, updateScopeRoute, agentRoutes, apiKeyRoutes, containerPiRoutes, containerRoutes, dashboardLogin, dashboardPage, dashboardSetPassword, modelCatalog, saveSettings, settingsPayload } from "./lib/dashboard.mjs";
 
 // Everything the modules export, re-exported: the tests, and anyone embedding the gateway, import
@@ -112,6 +113,7 @@ export * from "./lib/delegate.mjs";
 export * from "./lib/agentschedule.mjs";
 export * from "./lib/agents.mjs";
 export * from "./lib/agentservers.mjs";
+export * from "./lib/portal.mjs";
 export * from "./lib/updates.mjs";
 export * from "./lib/hostpi.mjs";
 export * from "./lib/resources.mjs";
@@ -358,6 +360,7 @@ if (isMain) {
 		stopFeeds();
 		void stopAgentServers();
 		void stopTeamServers();
+		void stopPortal();
 		closeAllTerminals();
 		const deadline = setTimeout(() => process.exit(0), 10_000);
 		deadline.unref?.();
@@ -387,12 +390,14 @@ if (isMain) {
 				startImageHousekeeping();
 				startEventWatch();
 				startDiskWatch();
+				startPortal();
 				void startAgentServers().then(() => startTeamServers());
 			},
 			() => {
 				startSweeps();
 				startJobs();
 				startFeeds();
+				startPortal();
 				void startAgentServers().then(() => startTeamServers());
 			},
 		);

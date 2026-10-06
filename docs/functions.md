@@ -42,6 +42,18 @@ continues after a gateway restart. The messages you see are kept **in this brows
 which expires like any chat's); deleting a chat also ends its session. It needs a dashboard password and `PLAYGROUND_ENABLED`.
 Slash commands and image attachments are not part of it yet.
 
+## Client portal
+
+A standalone page for a **key holder**, not the operator — reached at `http://<host>:<PORTAL_PORT>/`,
+on its own port, separate from the dashboard and the gateway's own API port, and off by default
+(`PORTAL_ENABLED`). There is no dashboard password here: a person logs in with **their own API key**,
+and from there can only ever chat with that key's own agents and browse that key's own (or one of its
+agents') workspace files — there is no way to pick a different key, unlike the operator's Playground.
+The chat itself works the same way (a real turn, streamed, with thinking and tool calls shown) and
+reuses the same workspace file browser. The key is kept in the browser's `sessionStorage` only: gone
+on logout or when the tab closes, never remembered across restarts. Settings: `PORTAL_ENABLED` (off
+by default — it opens a new port), `PORTAL_PORT`.
+
 ## Overview
 
 Live numbers at a glance: conversations, working and idle agents, free slots, one-off requests, requests, models,

@@ -5,6 +5,14 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 ## [Unreleased]
 
 ### Added
+- **A client portal.** A standalone page, on its own port (`PORTAL_PORT`, off by default —
+  `PORTAL_ENABLED`), where a key holder logs in with their own API key — no dashboard password, and
+  no way to pick any key or agent but their own — and chats with their own agents and browses their
+  own workspace files. Reuses the same chat mechanism as the dashboard's Playground (a real turn,
+  streamed) and the existing workspace file API, with every route locked to the key presented in
+  `Authorization: Bearer <key>`; a `keyId` in a request body is never trusted, only `credentialFor`'s
+  own ownership check. The key is kept in the browser's `sessionStorage` only — gone on logout or when
+  the tab closes, never remembered across restarts.
 - **Knowledge base, with RSS as its first source.** The gateway polls RSS/Atom feeds you add, and for every
   new entry has a real agent of yours (your choice of model, memory, extensions and skills) fetch the article
   and extract it clean — no ads, navigation or sponsored sections — into title, text, a short summary and
