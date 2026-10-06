@@ -160,6 +160,7 @@
   .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center;
                     justify-content:center; z-index:50; }
   .modal-overlay[hidden] { display:none; }
+  .modal-box.wide { width:min(1100px, 92vw); }
   .modal-box { width:min(680px, 92vw); max-height:84vh; display:flex; flex-direction:column; background:var(--panel);
                border:1px solid var(--border); border-radius:10px; padding:16px; }
   .modal-top { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:4px; }
@@ -167,6 +168,7 @@
   .modal-body { flex:1; overflow:auto; margin-top:10px; }
   .modal-body pre { white-space:pre-wrap; word-break:break-word; margin:0; font-size:12px; }
   .modal-body img { max-width:100%; display:block; }
+  .htmlpreview { width:100%; height:65vh; border:1px solid var(--border); border-radius:6px; background:#fff; }
   .modal-actions { margin-top:12px; text-align:right; }
   .modal-actions a { text-decoration:none; }
 </style>
@@ -225,7 +227,7 @@
 </div>
 
 <div id="filemodal" class="modal-overlay" hidden>
-  <div class="modal-box">
+  <div class="modal-box" id="fmbox">
     <div class="modal-top"><b id="fmtitle"></b><button id="fmclose">close</button></div>
     <div class="hint" id="fmmeta"></div>
     <div id="fmbody" class="modal-body"></div>
@@ -982,11 +984,13 @@ function bytes(n) {
   return n + ' B';
 }
 var IMG_TYPES = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml' };
+var HTML_TYPES = { html: true, htm: true };
 var PREVIEW_MAX = 300 * 1024;
 var MODAL_OBJECT_URL = null;
 function closeModal() {
   $('filemodal').hidden = true;
   $('fmbody').replaceChildren();
+  $('fmbox').classList.remove('wide');
   if (MODAL_OBJECT_URL) { URL.revokeObjectURL(MODAL_OBJECT_URL); MODAL_OBJECT_URL = null; }
 }
 /* An image attached inline to a sent message (never uploaded to the workspace) -- the same modal as a
@@ -1017,6 +1021,21 @@ function previewFile(path, size) {
       MODAL_OBJECT_URL = URL.createObjectURL(blob);
       var img = el('img'); img.src = MODAL_OBJECT_URL; img.alt = path;
       $('fmbody').replaceChildren(img);
+      return;
+    }
+    if (HTML_TYPES[ext]) {
+      if (size > PREVIEW_MAX) { $('fmbody').replaceChildren(el('div', 'Too large to preview (' + bytes(size) + '). Use download.')); return; }
+      // The download route always serves application/octet-stream; re-tag it so the iframe actually
+      // renders the page instead of treating it as a generic download.
+      MODAL_OBJECT_URL = URL.createObjectURL(new Blob([blob], { type: 'text/html' }));
+      var frame = el('iframe');
+      frame.src = MODAL_OBJECT_URL;
+      // No allow-same-origin: a workspace page can run its own script, but gets a unique, opaque
+      // origin -- it can never read this page's sessionStorage, cookies, or API key.
+      frame.setAttribute('sandbox', 'allow-scripts');
+      frame.className = 'htmlpreview';
+      $('fmbox').classList.add('wide');
+      $('fmbody').replaceChildren(frame);
       return;
     }
     if (size > PREVIEW_MAX) {

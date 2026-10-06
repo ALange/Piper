@@ -5,6 +5,10 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 ## [Unreleased]
 
 ### Added
+- **An HTML file previews as a rendered page in the client portal, not just as text.** Clicking a
+  `.html`/`.htm` file in the workspace browser (one an agent just wrote, or one you uploaded) now opens
+  it in a sandboxed `<iframe>` (`sandbox="allow-scripts"`, no `allow-same-origin`) instead of dumping its
+  source — it can run its own script, but can never read this page's session or API key.
 - **Multiple conversations in the client portal can be busy at once.** A single page-wide "busy" flag
   used to block sending (or even switching away) while any one chat was streaming — in practice, only
   one conversation could ever be running at a time. Busy is now tracked per conversation: start a turn
