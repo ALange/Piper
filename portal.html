@@ -55,10 +55,33 @@
   .msg.user .bubble { background:#1c2a1f; border:1px solid #243329; border-radius:10px; padding:8px 12px;
                        white-space:pre-wrap; margin-left:auto; max-width:80%; }
   .msg.assistant .body { white-space:pre-wrap; }
-  .part-tool { border:1px solid var(--border); border-radius:6px; padding:6px 8px; margin:6px 0; font-size:12px; }
-  .part-tool.error { border-color:var(--red); }
-  .part-tool pre { white-space:pre-wrap; margin:6px 0 0; font-size:11px; color:var(--muted); }
-  .part-think { color:var(--dim); font-size:12px; border-left:2px solid var(--border); padding-left:8px; margin:6px 0; }
+  /* thinking: collapsed by default, an arrow that flips on open */
+  details.think { margin:6px 0; }
+  details.think summary { cursor:pointer; color:var(--dim); font-size:12px; list-style:none; user-select:none; }
+  details.think summary::-webkit-details-marker { display:none; }
+  details.think summary:before { content:'▸ '; display:inline-block; width:12px; }
+  details.think[open] summary:before { content:'▾ '; }
+  details.think .think-body { color:var(--dim); font-size:12px; border-left:2px solid var(--border);
+                               padding-left:8px; margin-top:4px; white-space:pre-wrap; }
+  .think-sub { border-left:3px solid var(--agent-c, var(--blue)); padding:2px 0 2px 8px; margin:2px 0 2px -8px; }
+  .think-sub b { color:var(--agent-c, var(--blue)); }
+
+  /* tool calls: a small pill, click to expand its summary/result */
+  .tool-pill { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--border); border-radius:999px;
+               padding:3px 11px; font-size:11px; cursor:pointer; margin:5px 0; user-select:none; }
+  .tool-pill:hover { border-color:#3a3a3a; }
+  .tool-pill .dot { width:6px; height:6px; border-radius:50%; background:var(--amber); }
+  .tool-pill.done .dot { background:var(--green); }
+  .tool-pill.error .dot { background:var(--red); }
+  .tool-body { display:none; margin:2px 0 8px 4px; padding:8px 10px; background:#0c0c0c; border:1px solid var(--border);
+               border-radius:6px; font-size:11px; white-space:pre-wrap; color:var(--muted); }
+  .tool-body.open { display:block; }
+
+  /* a colleague agent's own reply, folded into the caller's — a distinct colored callout per name */
+  .colleague-msg { border-left:3px solid var(--agent-c, var(--blue)); background:#111214; padding:8px 10px;
+                    border-radius:6px; margin:8px 0; }
+  .colleague-msg .who { font-weight:600; font-size:11px; margin-bottom:3px; color:var(--agent-c, var(--blue)); }
+
   .err { color:var(--red); margin-top:6px; }
   .foot { color:var(--dim); font-size:11px; margin-top:6px; }
   .composer { padding:12px 14px; border-top:1px solid var(--border); display:flex; gap:8px; }
@@ -75,6 +98,22 @@
   .frow { padding:6px 8px; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; font-size:12px; }
   .frow:hover { background:#161616; }
   .frow .sz { color:var(--dim); font-size:10px; }
+  .frow .del { opacity:.5; padding:0 4px; }
+  .frow .del:hover { opacity:1; color:var(--red); }
+
+  /* a small modal for previewing/downloading a file */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center;
+                    justify-content:center; z-index:50; }
+  .modal-overlay[hidden] { display:none; }
+  .modal-box { width:min(680px, 92vw); max-height:84vh; display:flex; flex-direction:column; background:var(--panel);
+               border:1px solid var(--border); border-radius:10px; padding:16px; }
+  .modal-top { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:4px; }
+  .modal-top b { font-size:13px; word-break:break-all; }
+  .modal-body { flex:1; overflow:auto; margin-top:10px; }
+  .modal-body pre { white-space:pre-wrap; word-break:break-word; margin:0; font-size:12px; }
+  .modal-body img { max-width:100%; display:block; }
+  .modal-actions { margin-top:12px; text-align:right; }
+  .modal-actions a { text-decoration:none; }
 </style>
 </head>
 <body>
@@ -96,7 +135,6 @@
   <main>
     <div class="bar">
       <select id="target"></select>
-      <select id="model"></select>
       <div class="sp"></div>
       <button id="filesbtn">files</button>
     </div>
@@ -106,10 +144,20 @@
       <button id="send">send</button>
     </div>
   </main>
-  <div id="filesbox">
-    <div class="top"><b>Files</b><button id="filesrefresh">refresh</button></div>
+  <div id="filesbox" class="on">
+    <div class="top"><b>Files</b><div><button id="uploadbtn">upload</button><button id="filesrefresh">refresh</button></div></div>
+    <input type="file" id="uploadinput" multiple hidden>
     <div id="crumb"></div>
     <div id="filelist"></div>
+  </div>
+</div>
+
+<div id="filemodal" class="modal-overlay" hidden>
+  <div class="modal-box">
+    <div class="modal-top"><b id="fmtitle"></b><button id="fmclose">close</button></div>
+    <div class="hint" id="fmmeta"></div>
+    <div id="fmbody" class="modal-body"></div>
+    <div class="modal-actions"><a id="fmdownload" download><button>download</button></a></div>
   </div>
 </div>
 
@@ -124,7 +172,7 @@ var CONVOS = [];
 var CUR = null;
 var BUSY = false;
 var CTRL = null;
-var FILES_OPEN = false;
+var FILES_OPEN = true;
 var FILES_PATH = '';
 
 function api(path, opts) {
@@ -176,11 +224,6 @@ function renderTargets() {
     o.value = a.id;
     t.appendChild(o);
   });
-  var m = $('model');
-  m.replaceChildren();
-  var def = el('option', 'default model'); def.value = '';
-  m.appendChild(def);
-  (WHOAMI.models || []).forEach(function (mm) { var o = el('option', mm.name); o.value = mm.value; m.appendChild(o); });
 }
 
 function renderSide() {
@@ -197,16 +240,88 @@ function renderSide() {
   });
 }
 
+var OPEN_THINK = {};
+var OPEN_TOOL = {};
+var AGENT_COLORS = {};
+var COLOR_HUES = [200, 280, 340, 40, 160, 10, 260, 90];
+function agentColor(name) {
+  if (!AGENT_COLORS[name]) AGENT_COLORS[name] = 'hsl(' + COLOR_HUES[Object.keys(AGENT_COLORS).length % COLOR_HUES.length] + ', 65%, 65%)';
+  return AGENT_COLORS[name];
+}
+
+/* A sub-agent's own progress is woven into the parent's thinking text as lines like "[Name] ...."
+   (lib/delegate.mjs's followColleague) -- pick those out and give each agent name its own color. */
+function thinkBody(text) {
+  var frag = document.createDocumentFragment();
+  var lines = String(text || '').split('\n');
+  lines.forEach(function (line, i) {
+    var m = /^(\s*)\[([^\]]+)\]\s?(.*)$/.exec(line);
+    if (m) {
+      var sub = el('div');
+      sub.className = 'think-sub';
+      sub.style.setProperty('--agent-c', agentColor(m[2]));
+      sub.appendChild(el('b', m[2] + ' '));
+      sub.appendChild(document.createTextNode(m[3]));
+      frag.appendChild(sub);
+    } else if (line) {
+      frag.appendChild(document.createTextNode(line));
+    }
+    if (i < lines.length - 1) frag.appendChild(document.createElement('br'));
+  });
+  return frag;
+}
+
+/* A colleague's own finished reply is woven into the caller's visible text as "(Name): message",
+   blank line either side (lib/chat.mjs's c.say) -- pull those out into their own colored callout. */
+function textBlocks(text) {
+  var frag = document.createDocumentFragment();
+  String(text || '').split(/\n\n+/).forEach(function (para) {
+    var m = /^\(([^)\n]{1,80})\):\s([\s\S]*)$/.exec(para);
+    if (m) {
+      var box = el('div');
+      box.className = 'colleague-msg';
+      box.style.setProperty('--agent-c', agentColor(m[1].split(' › ')[0]));
+      box.appendChild(el('div', m[1])).className = 'who';
+      var body = el('div', m[2]); body.style.whiteSpace = 'pre-wrap'; box.appendChild(body);
+      frag.appendChild(box);
+    } else if (para) {
+      var p = el('div', para);
+      p.style.whiteSpace = 'pre-wrap';
+      frag.appendChild(p);
+    }
+  });
+  return frag;
+}
+
 function partNode(p) {
-  if (p.kind === 'thinking') { var d = el('div', p.text || ''); d.className = 'part-think'; return d; }
-  if (p.kind === 'tool') {
-    var box = el('div');
-    box.className = 'part-tool' + (p.state === 'error' ? ' error' : '');
-    box.appendChild(el('div', (p.state === 'running' ? '⚙ ' : p.state === 'error' ? '✗ ' : '✓ ') + (p.summary || p.name)));
-    if (p.result) box.appendChild(el('pre', p.result));
-    return box;
+  if (p.kind === 'thinking') {
+    var det = el('details');
+    det.className = 'think';
+    det.open = Boolean(OPEN_THINK[p.id]);
+    det.addEventListener('toggle', function () { OPEN_THINK[p.id] = det.open; });
+    det.appendChild(el('summary', 'Thinking…'));
+    var tbody = el('div'); tbody.className = 'think-body';
+    tbody.appendChild(thinkBody(p.text));
+    det.appendChild(tbody);
+    return det;
   }
-  return el('div', p.text || '');
+  if (p.kind === 'tool') {
+    var frag = document.createDocumentFragment();
+    var pill = el('div');
+    pill.className = 'tool-pill ' + (p.state === 'error' ? 'error' : p.state === 'running' ? 'running' : 'done');
+    pill.appendChild(el('span')).className = 'dot';
+    pill.appendChild(document.createTextNode(p.summary || p.name));
+    var tbox = el('div', p.result || '(still running…)');
+    tbox.className = 'tool-body' + (OPEN_TOOL[p.id] ? ' open' : '');
+    pill.addEventListener('click', function () {
+      OPEN_TOOL[p.id] = !OPEN_TOOL[p.id];
+      tbox.classList.toggle('open', OPEN_TOOL[p.id]);
+    });
+    frag.appendChild(pill);
+    frag.appendChild(tbox);
+    return frag;
+  }
+  return textBlocks(p.text || '');
 }
 function renderMessages() {
   var box = $('msgs');
@@ -237,14 +352,12 @@ function renderAll() {
   renderMessages();
   var c = conv();
   $('target').value = c ? (c.agentId || '') : '';
-  $('model').value = c ? (c.model || '') : '';
   $('target').disabled = Boolean(c && c.messages.length) || BUSY;
-  $('model').disabled = Boolean(c && c.messages.length) || BUSY;
   if (FILES_OPEN) loadFiles();
 }
 
 function newChat() {
-  var c = { id: newId(), title: '', agentId: '', model: '', messages: [], updated: Date.now() };
+  var c = { id: newId(), title: '', agentId: '', messages: [], updated: Date.now() };
   CONVOS.unshift(c);
   CUR = c.id;
   saveConvos();
@@ -279,7 +392,7 @@ function send() {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     signal: CTRL.signal,
-    body: JSON.stringify({ conversation: c.id, message: text, agentId: c.agentId || undefined, model: c.model || undefined }),
+    body: JSON.stringify({ conversation: c.id, message: text, agentId: c.agentId || undefined }),
   }).then(function (r) {
     var type = r.headers.get('content-type') || '';
     if (!r.ok || type.indexOf('event-stream') < 0) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error((j.error && j.error.message) || ('HTTP ' + r.status)); });
@@ -324,7 +437,7 @@ function filesUrl(path) {
   return 'api/files/' + p + (q ? '?' + q : '');
 }
 function loadFiles() {
-  apiJson(filesUrl(FILES_PATH) + (FILES_PATH ? '' : '')).then(function (d) {
+  apiJson(filesUrl(FILES_PATH)).then(function (d) {
     renderFiles(d.entries || []);
   }).catch(function (e) {
     $('filelist').replaceChildren(el('div', e.message));
@@ -349,10 +462,23 @@ function renderFiles(entries) {
     var full = (FILES_PATH ? FILES_PATH + '/' : '') + f.name;
     var row = el('div');
     row.className = 'frow';
-    row.appendChild(el('span', (f.type === 'dir' ? '📁 ' : '📄 ') + f.name));
-    if (f.type === 'file') row.appendChild(el('span', bytes(f.bytes))).className = 'sz';
+    var label = el('span', (f.type === 'dir' ? '📁 ' : '📄 ') + f.name);
+    row.appendChild(label);
+    var right = el('span');
+    if (f.type === 'file') right.appendChild(el('span', bytes(f.bytes))).className = 'sz';
+    var del = el('button', '×');
+    del.className = 'del';
+    del.title = 'delete';
+    del.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (!confirm('Delete ' + (f.type === 'dir' ? 'the folder' : 'the file') + ' "' + f.name + '"' + (f.type === 'dir' ? ' and everything in it' : '') + '?')) return;
+      api(filesUrl(full), { method: 'DELETE' }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return loadFiles(); })
+        .catch(function (err) { alert('could not delete: ' + err.message); });
+    });
+    right.appendChild(del);
+    row.appendChild(right);
     if (f.type === 'dir') row.addEventListener('click', function () { FILES_PATH = full; loadFiles(); });
-    else row.addEventListener('click', function () { downloadFile(full); });
+    else row.addEventListener('click', function () { previewFile(full, f.bytes); });
     box.appendChild(row);
   });
 }
@@ -362,19 +488,50 @@ function bytes(n) {
   if (n >= 1024) return (n / 1024).toFixed(1) + ' KB';
   return n + ' B';
 }
-function downloadFile(path) {
+var IMG_TYPES = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml' };
+var PREVIEW_MAX = 300 * 1024;
+var MODAL_OBJECT_URL = null;
+function closeModal() {
+  $('filemodal').hidden = true;
+  $('fmbody').replaceChildren();
+  if (MODAL_OBJECT_URL) { URL.revokeObjectURL(MODAL_OBJECT_URL); MODAL_OBJECT_URL = null; }
+}
+function previewFile(path, size) {
+  var ext = (path.split('.').pop() || '').toLowerCase();
+  $('fmtitle').textContent = path;
+  $('fmmeta').textContent = bytes(size);
+  $('fmbody').replaceChildren(el('div', 'loading…'));
+  $('filemodal').hidden = false;
+  $('fmdownload').href = filesUrl(path);
+  $('fmdownload').download = path.split('/').pop();
   api(filesUrl(path)).then(function (r) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return r.blob();
   }).then(function (blob) {
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = path.split('/').pop();
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(function () { URL.revokeObjectURL(a.href); }, 10000);
-  }).catch(function (e) { alert('could not download: ' + e.message); });
+    if (IMG_TYPES[ext]) {
+      MODAL_OBJECT_URL = URL.createObjectURL(blob);
+      var img = el('img'); img.src = MODAL_OBJECT_URL; img.alt = path;
+      $('fmbody').replaceChildren(img);
+      return;
+    }
+    if (size > PREVIEW_MAX) {
+      $('fmbody').replaceChildren(el('div', 'Too large to preview (' + bytes(size) + '). Use download.'));
+      return;
+    }
+    blob.text().then(function (text) {
+      // A NUL byte almost never appears in real text; good enough to tell "probably binary" apart.
+      if (text.indexOf('\u0000') >= 0) { $('fmbody').replaceChildren(el('div', 'This does not look like a text file. Use download.')); return; }
+      $('fmbody').replaceChildren(el('pre', text));
+    });
+  }).catch(function (e) { $('fmbody').replaceChildren(el('div', 'cannot show it: ' + e.message)); });
+}
+function uploadFiles(fileList) {
+  var files = Array.prototype.slice.call(fileList || []);
+  if (!files.length) return;
+  Promise.all(files.map(function (f) {
+    var path = (FILES_PATH ? FILES_PATH + '/' : '') + f.name;
+    return api(filesUrl(path), { method: 'PUT', body: f }).then(function (r) { if (!r.ok) throw new Error(f.name + ': HTTP ' + r.status); });
+  })).then(loadFiles).catch(function (e) { alert('could not upload: ' + e.message); loadFiles(); });
 }
 
 /* ---- login/logout ---- */
@@ -406,12 +563,15 @@ $('logout').addEventListener('click', function () {
   showLogin();
 });
 $('newchat').addEventListener('click', function () { if (BUSY) return; newChat(); });
-$('target').addEventListener('change', function () { var c = conv(); if (!c || c.messages.length) return; c.agentId = $('target').value; c.model = ''; saveConvos(); renderAll(); });
-$('model').addEventListener('change', function () { var c = conv(); if (c) { c.model = $('model').value; saveConvos(); } });
+$('target').addEventListener('change', function () { var c = conv(); if (!c || c.messages.length) return; c.agentId = $('target').value; saveConvos(); renderAll(); });
 $('send').addEventListener('click', function () { if (BUSY) { if (CTRL) CTRL.abort(); } else send(); });
 $('input').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (!BUSY) send(); } });
 $('filesbtn').addEventListener('click', function () { FILES_OPEN = !FILES_OPEN; $('filesbox').classList.toggle('on', FILES_OPEN); $('filesbtn').className = FILES_OPEN ? 'on' : ''; if (FILES_OPEN) loadFiles(); });
 $('filesrefresh').addEventListener('click', loadFiles);
+$('uploadbtn').addEventListener('click', function () { $('uploadinput').click(); });
+$('uploadinput').addEventListener('change', function () { uploadFiles(this.files); this.value = ''; });
+$('fmclose').addEventListener('click', closeModal);
+$('filemodal').addEventListener('click', function (e) { if (e.target === $('filemodal')) closeModal(); });
 
 if (KEY) connect(KEY); else showLogin();
 </script>
