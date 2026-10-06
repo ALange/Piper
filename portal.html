@@ -68,9 +68,9 @@
 
   /* tool calls: <pill>name</pill>: excerpt, click the line to expand the full result */
   .tool-line { display:flex; align-items:baseline; gap:7px; margin:5px 0; cursor:pointer; user-select:none; }
-  .tool-pill { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--border); border-radius:999px;
-               padding:2px 10px; font-size:11px; flex:0 0 auto; }
-  .tool-line:hover .tool-pill { border-color:#3a3a3a; }
+  .tool-pill { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--agent-c, var(--border));
+               color:var(--agent-c, var(--fg)); border-radius:999px; padding:2px 10px; font-size:11px; flex:0 0 auto; }
+  .tool-line:hover .tool-pill { border-color:var(--agent-c, #3a3a3a); }
   .tool-pill .dot { width:6px; height:6px; border-radius:50%; background:var(--amber); }
   .tool-line.done .tool-pill .dot { background:var(--green); }
   .tool-line.error .tool-pill .dot { background:var(--red); }
@@ -314,9 +314,17 @@ function partNode(p) {
     var pill = el('div');
     pill.className = 'tool-pill';
     pill.appendChild(el('span')).className = 'dot';
-    pill.appendChild(document.createTextNode(p.name));
+    // piper_delegate's own summary is "AgentName: task" (lib/toolsummary.mjs) -- show who it went to,
+    // not the tool's own name, colored the same as that agent's thinking/replies elsewhere.
+    var isDelegate = p.name === 'piper_delegate';
+    var delegateMatch = isDelegate && p.summary ? /^([^:]+):\s?([\s\S]*)$/.exec(p.summary) : null;
+    pill.appendChild(document.createTextNode(delegateMatch ? delegateMatch[1] : p.name));
+    if (delegateMatch) pill.style.setProperty('--agent-c', agentColor(delegateMatch[1]));
     line.appendChild(pill);
-    var excerptText = p.summary && p.summary !== p.name ? p.summary : (p.result ? p.result.split('\n')[0] : (p.state === 'running' ? 'running…' : ''));
+    var excerptText = delegateMatch ? delegateMatch[2]
+      : p.summary && p.summary !== p.name ? p.summary
+      : p.result ? p.result.split('\n')[0]
+      : p.state === 'running' ? 'running…' : '';
     if (excerptText.length > 140) excerptText = excerptText.slice(0, 140) + '…';
     line.appendChild(el('span', excerptText)).className = 'tool-excerpt';
     var tbox = el('div', p.result || '(still running…)');

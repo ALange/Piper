@@ -2367,6 +2367,8 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(toolActivity("write", { path: "/workspace/big.txt", content: "x".repeat(10_000) }), "write: /workspace/big.txt", "the written content is never shown");
 	assert.equal(toolActivity("analyze", { level: 2 }), 'analyze: {"level":2}');
 	assert.ok(toolActivity("bash", { command: "y".repeat(500) }).length < 220, "long commands are truncated");
+	assert.equal(toolActivity("piper_delegate", { agent: "Researcher", task: "find   the   root cause\n of the bug" }), "Researcher: find the root cause of the bug", "the colleague's name leads, not the tool's own");
+	assert.ok(toolActivity("piper_delegate", { agent: "Researcher", task: "z".repeat(500) }).length < 220, "a long task is truncated too");
 }
 
 // Spend per model: a chat that switched models is billed to each for what it used there.
