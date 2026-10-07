@@ -1052,6 +1052,7 @@ on write, so a bad one is rejected with a message rather than reaching the runni
 | Notebook | `NOTEBOOK_ENABLED` | on | The client portal's notebooks (upload or link sources, grounded Q&A with citations, generated summaries). Off hides the feature; nothing stored is deleted. |
 | Notebook | `NOTEBOOK_EMBEDDING_URL` / `_MODEL` / `_API_KEY` | OpenAI's `/v1/embeddings`, `text-embedding-3-small`, unset | The embeddings endpoint a notebook's sources and questions are turned into vectors by — the one host-side call this feature makes directly, to a fixed, operator-configured address. |
 | Notebook | `NOTEBOOK_SOURCE_MAX_BYTES` / `NOTEBOOK_MAX_SOURCES` | 20 MB, 50 | The most one uploaded source file may be, and the most sources one notebook may hold. |
+| Notebook | `NOTEBOOK_EXTRACT_TIMEOUT_MS` | 5m | How long one source's read-and-clean turn may take before it is stopped and marked failed — raise it if a large or scanned PDF needs longer (a tool install plus OCR) than a plain web page does. |
 | Audit | `AUDIT_AUTH`, `AUDIT_SETTINGS`, `AUDIT_KEYS`, `AUDIT_OPERATIONS`, `AUDIT_RUNTIME` | on | Record that category (see The audit log). Applied live. |
 | Audit | `AUDIT_REQUESTS`, `AUDIT_AUTH_FAILURES` | off | Record every chat request / every refused API key (busy; deduplicated for the second). |
 | Audit | `AUDIT_RETENTION_DAYS`, `AUDIT_MAX_ROWS` | 90, 50000 | Delete rows older than this many days, and the oldest beyond this many rows. 0 is no limit. |

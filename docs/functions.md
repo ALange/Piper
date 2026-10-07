@@ -103,7 +103,7 @@ notebook on request, kept so it is not redone. The one new host-side network cal
 embeddings endpoint (`NOTEBOOK_EMBEDDING_URL`, default an OpenAI-compatible one) — a fixed,
 operator-configured address, the same trust tier as RSS's own feed-fetching, never arbitrary content.
 Settings: `NOTEBOOK_ENABLED`, `NOTEBOOK_EMBEDDING_URL`/`_MODEL`/`_API_KEY`,
-`NOTEBOOK_SOURCE_MAX_BYTES`, `NOTEBOOK_MAX_SOURCES`. The audio "two hosts discussing it" overview
+`NOTEBOOK_SOURCE_MAX_BYTES`, `NOTEBOOK_MAX_SOURCES`, `NOTEBOOK_EXTRACT_TIMEOUT_MS`. The audio "two hosts discussing it" overview
 NotebookLM has is not part of this — it would need real text-to-speech, a capability this gateway does
 not have.
 
