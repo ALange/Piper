@@ -1925,6 +1925,7 @@ assert.equal(isReloadCommand(undefined), false);
 	setNotebookRunner(async ({ prompt }) => {
 		lastPrompt = prompt;
 		if (prompt.includes("fail-me")) throw new Error("the agent could not read it");
+		if (prompt.includes("not-json-me")) return { text: "Sorry, I can't read this PDF without a tool for that." };
 		return { text: JSON.stringify({ title: "Extracted", text: "The quick brown fox jumps over the lazy dog. ".repeat(40), summary: "About a fox." }) };
 	});
 	setEmbedder(async (texts) => texts.map((t, i) => Float32Array.from([t.length % 7, i, 1])));
@@ -1936,6 +1937,15 @@ assert.equal(isReloadCommand(undefined), false);
 	}
 	assert.equal(getSource(badSrc.id), null, "a failed extraction is discarded, not kept");
 	assert.ok(recentAuditRows(20).some((r) => r.action === "notebook.extract_failed"));
+
+	// A non-JSON reply's failure detail includes what the agent actually said, so it is diagnosable.
+	const nonJsonSrc = addSource(nb.id, nk.id, { kind: "upload", name: "not-json-me.pdf", origin: "notebooks/x/sources/not-json-me.pdf" });
+	{
+		const end = Date.now() + 3000;
+		while (getSource(nonJsonSrc.id) && Date.now() < end) await new Promise((r) => setTimeout(r, 15));
+	}
+	assert.equal(getSource(nonJsonSrc.id), null, "a failed extraction is discarded, not kept");
+	assert.ok(recentAuditRows(20).some((r) => r.action === "notebook.extract_failed" && /the agent said:.*can't read this PDF/.test(r.detail)), "the raw reply is surfaced for diagnosis");
 
 	const goodSrc = addSource(nb.id, nk.id, { kind: "upload", name: "doc.txt", origin: "notebooks/x/sources/doc.txt" });
 	const waitDone = async () => {
