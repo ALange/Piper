@@ -692,6 +692,18 @@
           <button id="imgclean" title="see what can be removed, and choose">clean up…</button>
           <button id="imgprune" title="remove what is plainly unused: superseded builds and saved states of containers that are gone">quick prune</button>
         </div>
+        <div class="panel" id="imgdefaults" style="margin-bottom:14px">
+          <h4 style="margin:0 0 8px;font-size:11px;letter-spacing:.06em;color:var(--dim)">DEFAULTS FOR NEW CONTAINERS</h4>
+          <p class="hint" style="margin:0 0 8px">What a chat's container gets unless a key or an agent overrides it (Agents/API keys → Container). Applies the next time a container is created or recreated — an existing one is not touched until then. Full help text for each is under Settings → Containers.</p>
+          <div class="fieldrow"><label style="min-width:110px">image</label><input id="imgdefimage" type="text" style="flex:1"></div>
+          <div class="fieldrow" style="margin-top:6px"><label style="min-width:110px">network</label><select id="imgdefnetwork"><option value="internet">internet only</option><option value="none">none</option><option value="open">open (this machine and your LAN)</option></select></div>
+          <div class="fieldrow" style="margin-top:6px"><label style="min-width:110px">memory (MB)</label><input id="imgdefmem" type="number" min="0" style="flex:1"></div>
+          <div class="fieldrow" style="margin-top:6px"><label style="min-width:110px">cpus</label><input id="imgdefcpus" type="number" min="0" step="any" style="flex:1"></div>
+          <div class="fieldrow" style="margin-top:6px"><label style="min-width:110px">pids</label><input id="imgdefpids" type="number" min="0" style="flex:1"></div>
+          <div class="fieldrow" style="margin-top:6px"><label style="min-width:110px">mounts</label><input id="imgdefmounts" type="text" placeholder="host:container[:ro], ..." style="flex:1"></div>
+          <div class="fieldrow" style="margin-top:6px"><label style="min-width:110px">env</label><input id="imgdefenv" type="text" placeholder="KEY=value, ..." style="flex:1"></div>
+          <div class="fieldrow" style="margin-top:10px"><button id="imgdefsave">save defaults</button><span class="hint small" id="imgdefnote"></span></div>
+        </div>
         <table><thead><tr><th>environment</th><th>image</th><th>Pi</th><th class="num">containers behind</th><th></th></tr></thead><tbody id="imgenvs"></tbody></table>
         <h4 style="margin:14px 0 4px;font-size:11px;letter-spacing:.06em;color:var(--dim)">ON THIS MACHINE</h4>
         <table><thead><tr><th>image</th><th>environment</th><th>Pi</th><th class="num">size</th><th>built</th><th>used by</th><th></th></tr></thead><tbody id="imgrows"></tbody></table>
@@ -2896,6 +2908,7 @@ function renderSettings() {
 
   // A model field suggests real catalogue ids, so a typo is caught before saving.
   if (list.some(function (x) { return x.type === 'model'; })) ensureModels();
+  renderImgDefaults();
 }
 
 function collectSettingChanges() {
@@ -3194,6 +3207,47 @@ function resolveHash(hash) {
   }
   return { page: page, tab: tab, rest: rest };
 }
+/* Defaults for new containers, shown on the Images tab, right where you build the images they use.
+   A thin view over the same settings the Settings -> Containers tab edits -- its own inputs, not
+   shared with that tab's (settingField registers each key globally; two live copies would collide). */
+function renderImgDefaults() {
+  if (!SETTINGS || !$('imgdefimage')) return;
+  var byKey = {};
+  SETTINGS.settings.forEach(function (s) { byKey[s.key] = s; });
+  var text = function (k) { var s = byKey[k]; return s && s.display != null ? String(s.display) : ''; };
+  $('imgdefimage').value = text('CONTAINER_IMAGE');
+  $('imgdefnetwork').value = byKey.CONTAINER_NETWORK ? String(byKey.CONTAINER_NETWORK.value) : 'internet';
+  $('imgdefmem').value = text('CONTAINER_MEMORY_MB');
+  $('imgdefcpus').value = text('CONTAINER_CPUS');
+  $('imgdefpids').value = text('CONTAINER_PIDS');
+  $('imgdefmounts').value = text('CONTAINER_MOUNTS');
+  $('imgdefenv').value = text('CONTAINER_ENV');
+}
+$('imgdefsave').addEventListener('click', function () {
+  var changes = {
+    CONTAINER_IMAGE: $('imgdefimage').value.trim(),
+    CONTAINER_NETWORK: $('imgdefnetwork').value,
+    CONTAINER_MEMORY_MB: $('imgdefmem').value,
+    CONTAINER_CPUS: $('imgdefcpus').value,
+    CONTAINER_PIDS: $('imgdefpids').value,
+    CONTAINER_MOUNTS: $('imgdefmounts').value,
+    CONTAINER_ENV: $('imgdefenv').value,
+  };
+  var note = $('imgdefnote');
+  note.className = 'hint small'; note.textContent = 'saving…';
+  fetch('dashboard/settings', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ settings: changes }) })
+    .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+    .then(function (res) {
+      if (!res.ok) { note.textContent = (res.j.error && res.j.error.message) || 'save failed'; note.className = 'hint small bad'; return; }
+      SETTINGS = res.j;
+      renderSettings();
+      var restart = res.j.restart || [];
+      note.textContent = 'saved' + (restart.length ? ' — the gateway needs a restart for: ' + restart.join(', ') : ' — a new chat uses it; an existing container recreates on its next use');
+      note.className = 'hint small';
+    })
+    .catch(function (e) { note.textContent = 'save failed: ' + e.message; note.className = 'hint small bad'; });
+});
+
 /* Images: the environments, what is built, and a build's output while it runs. */
 var IMG_TIMER = null;
 function loadImages() {
@@ -5987,7 +6041,7 @@ function route() {
   if (pane === 'memory') loadMemory();
   if (pane === 'knowledge') { loadFeeds(); loadKnowledgeEntries(); loadKnowledgeLog(); }
   if (pane === 'extensions') loadExtensions();
-  if (pane === 'containers') { startContainersPolling(); loadHostPi(); }
+  if (pane === 'containers') { startContainersPolling(); loadHostPi(); ensureSettings(); }
   if (pane === 'models') ensureModels();
   if (pane === 'spend') ensureSpend(true);
   if (pane === 'apikeys') ensureApiKeys(true);
