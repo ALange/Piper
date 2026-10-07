@@ -5,6 +5,10 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 ## [Unreleased]
 
 ### Added
+- **Edit an environment's Dockerfile right from Containers → Images.** An **edit Dockerfile** button
+  next to each environment's **build**/**rebuild** opens it as plain text (Ctrl+S to save). Saving only
+  changes the file on disk — nothing is built automatically; use the existing build/rebuild button
+  afterward, same as editing it by hand always required.
 - **Edit the default container settings (image, network, memory, cpus, pids, mounts, env) right from
   Containers → Images**, next to the environments they apply to — the same settings Settings →
   Containers already has, just surfaced where you're already looking when picking or building an
