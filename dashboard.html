@@ -1257,7 +1257,7 @@
           <label class="ctrl"><input id="inteditenabled" type="checkbox"> enabled</label>
         </div>
         <table style="margin-top:10px">
-          <thead><tr><th>model</th><th class="num">context</th><th>vision</th><th>embedding</th><th>audio</th><th>enabled</th><th></th></tr></thead>
+          <thead><tr><th>model</th><th class="num">context</th><th>vision</th><th>embedding</th><th>audio</th><th>reasoning</th><th>enabled</th><th></th></tr></thead>
           <tbody id="inteditmodels"></tbody>
         </table>
         <p class="hint" id="inteditnote"></p>
@@ -2506,6 +2506,7 @@ $('modelrefresh').addEventListener('click', function () {
 
 /* ---- integrations: external OpenAI-compatible endpoints, their models, and per-key access ---- */
 var INT_DATA = null; // {endpoints:[{id,name,baseUrl,hasKey,enabled,models:[...]}]}
+var REASONING_EFFORTS = ['low', 'medium', 'high']; // mirrors lib/externalmodels.mjs's own REASONING_EFFORTS
 var INT_STATUS = {}; // endpointId -> last recheck result, kept across reloads until rechecked again
 var INT_EDIT = null; // the endpoint id #intedit is open on
 
@@ -2526,6 +2527,11 @@ function capBadges(m) {
     var b = el('span', c[1]); b.className = 'cap on'; b.style.marginRight = '4px';
     box.appendChild(b);
   });
+  if (m.reasoning) {
+    var r = el('span', 'Reasoning' + (m.reasoningEffort ? ' (' + m.reasoningEffort + ')' : ''));
+    r.className = 'cap vis'; r.style.marginRight = '4px';
+    box.appendChild(r);
+  }
   if (!box.children.length) box.appendChild(el('span', 'chat only')).className = 'hint';
   return box;
 }
@@ -2622,12 +2628,21 @@ function openIntEditor(ep) {
       var cb = el('input'); cb.type = 'checkbox'; cb.checked = Boolean(m[c]); caps[c] = cb;
       tr.appendChild(el('td')).appendChild(cb);
     });
+    var reasonCb = el('input'); reasonCb.type = 'checkbox'; reasonCb.checked = Boolean(m.reasoning);
+    var effortSel = el('select');
+    var none = el('option', '(default)'); none.value = ''; effortSel.appendChild(none);
+    REASONING_EFFORTS.forEach(function (lvl) { var o = el('option', lvl); o.value = lvl; effortSel.appendChild(o); });
+    effortSel.value = m.reasoningEffort || '';
+    effortSel.disabled = !reasonCb.checked;
+    reasonCb.addEventListener('change', function () { effortSel.disabled = !reasonCb.checked; });
+    var reasonTd = el('td'); reasonTd.appendChild(reasonCb); reasonTd.appendChild(effortSel);
+    tr.appendChild(reasonTd);
     var en = el('input'); en.type = 'checkbox'; en.checked = m.enabled;
     tr.appendChild(el('td')).appendChild(en);
     var save = el('button', 'save');
     save.addEventListener('click', function () {
       save.disabled = true;
-      epPost('dashboard/integrations/models/' + m.id, { contextWindow: ctx.value ? Number(ctx.value) : null, vision: caps.vision.checked, embedding: caps.embedding.checked, audio: caps.audio.checked, enabled: en.checked })
+      epPost('dashboard/integrations/models/' + m.id, { contextWindow: ctx.value ? Number(ctx.value) : null, vision: caps.vision.checked, embedding: caps.embedding.checked, audio: caps.audio.checked, reasoning: reasonCb.checked, reasoningEffort: reasonCb.checked ? (effortSel.value || null) : null, enabled: en.checked })
         .then(function (d) { INT_DATA = d; renderIntOverview(); renderIntEndpoints(); var fresh = INT_DATA.endpoints.find(function (e) { return e.id === ep.id; }); if (fresh) openIntEditor(fresh); })
         .catch(function (e) { $('inteditnote').textContent = e.message; $('inteditnote').className = 'hint bad'; })
         .then(function () { save.disabled = false; });
@@ -2682,6 +2697,16 @@ function iwzModelRow(m, i) {
     cb.addEventListener('change', function () { m[c] = cb.checked; });
     tr.appendChild(el('td')).appendChild(cb);
   });
+  var reasonCb = el('input'); reasonCb.type = 'checkbox'; reasonCb.checked = Boolean(m.reasoning);
+  var effortSel = el('select');
+  var none = el('option', '(default)'); none.value = ''; effortSel.appendChild(none);
+  REASONING_EFFORTS.forEach(function (lvl) { var o = el('option', lvl); o.value = lvl; effortSel.appendChild(o); });
+  effortSel.value = m.reasoningEffort || '';
+  effortSel.disabled = !reasonCb.checked;
+  reasonCb.addEventListener('change', function () { m.reasoning = reasonCb.checked; effortSel.disabled = !reasonCb.checked; });
+  effortSel.addEventListener('change', function () { m.reasoningEffort = effortSel.value || null; });
+  var reasonTd = el('td'); reasonTd.appendChild(reasonCb); reasonTd.appendChild(effortSel);
+  tr.appendChild(reasonTd);
   var rm = el('button', '×');
   rm.addEventListener('click', function () { IWZ.models.splice(i, 1); iwzRender(); });
   tr.appendChild(el('td')).appendChild(rm);
@@ -2726,11 +2751,11 @@ function iwzRender() {
     body.appendChild(detect);
     var addRow = el('button', '+ add model');
     addRow.style.marginLeft = '8px';
-    addRow.addEventListener('click', function () { IWZ.models.push({ modelId: '', name: '', contextWindow: null, vision: false, embedding: false, audio: false }); iwzRender(); });
+    addRow.addEventListener('click', function () { IWZ.models.push({ modelId: '', name: '', contextWindow: null, vision: false, embedding: false, audio: false, reasoning: false, reasoningEffort: null }); iwzRender(); });
     body.appendChild(addRow);
     var table = el('table'); table.style.marginTop = '10px';
     var thead = el('thead'); var htr = el('tr');
-    ['model id', 'name', 'context', 'vision', 'embedding', 'audio', ''].forEach(function (h) { htr.appendChild(el('th', h)); });
+    ['model id', 'name', 'context', 'vision', 'embedding', 'audio', 'reasoning', ''].forEach(function (h) { htr.appendChild(el('th', h)); });
     thead.appendChild(htr); table.appendChild(thead);
     var tbody = el('tbody');
     IWZ.models.forEach(function (m, i) { tbody.appendChild(iwzModelRow(m, i)); });

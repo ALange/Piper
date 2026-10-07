@@ -2061,10 +2061,13 @@ assert.equal(isReloadCommand(undefined), false);
 // ---------------------------------------------------------------- external endpoints: operator-added OpenAI-compatible chat
 {
 	// Pure functions first.
-	assert.deepEqual(guessCapabilities("gpt-4o"), { vision: true, embedding: false, audio: false });
-	assert.deepEqual(guessCapabilities("text-embedding-3-small"), { vision: false, embedding: true, audio: false });
-	assert.deepEqual(guessCapabilities("whisper-1"), { vision: false, embedding: false, audio: true });
-	assert.deepEqual(guessCapabilities("llama-3-70b"), { vision: false, embedding: false, audio: false });
+	assert.deepEqual(guessCapabilities("gpt-4o"), { vision: true, embedding: false, audio: false, reasoning: false });
+	assert.deepEqual(guessCapabilities("text-embedding-3-small"), { vision: false, embedding: true, audio: false, reasoning: false });
+	assert.deepEqual(guessCapabilities("whisper-1"), { vision: false, embedding: false, audio: true, reasoning: false });
+	assert.deepEqual(guessCapabilities("llama-3-70b"), { vision: false, embedding: false, audio: false, reasoning: false });
+	assert.equal(guessCapabilities("o3-mini").reasoning, true);
+	assert.equal(guessCapabilities("deepseek-r1").reasoning, true);
+	assert.equal(guessCapabilities("gpt-5").reasoning, true);
 
 	{
 		const a = splitSseLines('data: {"a":1}\ndata: {"b":2}\n\ndata: [DONE' /* no trailing newline yet */);
@@ -2113,6 +2116,21 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(edited.audio, true);
 	assert.throws(() => addModel(ep.id, { modelId: "" }), /needs its id/);
 	assert.throws(() => updateModel("no-such-id", {}), (e) => e.status === 404);
+
+	// Reasoning: a capability flag plus a configured effort level (REASONING_EFFORTS), sent to the
+	// model on every call -- off by default, and the effort is dropped if reasoning itself is off.
+	const reasonModel = addModel(ep.id, { modelId: "o3-mini", reasoning: true, reasoningEffort: "high" });
+	assert.equal(reasonModel.reasoning, true);
+	assert.equal(reasonModel.reasoningEffort, "high");
+	assert.throws(() => addModel(ep.id, { modelId: "bad-effort", reasoning: true, reasoningEffort: "ultra" }), /reasoningEffort must be one of/);
+	const noEffortYet = addModel(ep.id, { modelId: "o3-mini-2", reasoning: true });
+	assert.equal(noEffortYet.reasoningEffort, null, "reasoning on, no level chosen: nothing is sent");
+	const effortSet = updateModel(noEffortYet.id, { reasoningEffort: "low" });
+	assert.equal(effortSet.reasoningEffort, "low");
+	const reasonOff = updateModel(effortSet.id, { reasoning: false });
+	assert.equal(reasonOff.reasoning, false);
+	assert.equal(reasonOff.reasoningEffort, null, "turning reasoning off drops the stored effort too");
+	assert.equal(updateModel(reasonModel.id, {}).reasoningEffort, "high", "omitted fields are left alone");
 
 	// A base URL is accepted with or without a trailing /v1 -- every call here appends "/v1/..."
 	// itself, so a doubled "/v1/v1/..." would otherwise 404 silently against a real endpoint.
@@ -2210,6 +2228,37 @@ assert.equal(isReloadCommand(undefined), false);
 		throw new Error("ECONNREFUSED");
 	});
 	await assert.rejects(chatCompletion({ endpoint: ep, model: models[0], messages: [] }), (e) => e instanceof ExternalModelError && /could not reach/.test(e.message));
+	setFetch(null);
+
+	// Reasoning content streams separately from the reply text (reasoning_content, the DeepSeek/vLLM
+	// field name), and reasoning_effort is only sent when the model is flagged reasoning AND has a level.
+	const thinkSse = [
+		'data: {"choices":[{"delta":{"reasoning_content":"Let "}}]}\n\n',
+		'data: {"choices":[{"delta":{"reasoning_content":"me think."}}]}\n\n',
+		'data: {"choices":[{"delta":{"content":"42"}}]}\n\n',
+		"data: [DONE]\n\n",
+	];
+	function fakeThinkFetch(seenBody) {
+		let i = 0;
+		return async (url, opts) => {
+			if (opts?.body) seenBody.push(JSON.parse(opts.body));
+			return { ok: true, body: { getReader: () => ({ read: async () => (i >= thinkSse.length ? { done: true } : { done: false, value: new TextEncoder().encode(thinkSse[i++]) }) }) } };
+		};
+	}
+	let seenBody1 = [];
+	setFetch(fakeThinkFetch(seenBody1));
+	let thought = "";
+	const thinkResult = await chatCompletion({ endpoint: ep, model: reasonModel, messages: [{ role: "user", content: "the answer?" }], onThinking: (d) => (thought += d) });
+	assert.equal(thought, "Let me think.");
+	assert.equal(thinkResult.reasoning, "Let me think.");
+	assert.equal(thinkResult.text, "42");
+	assert.equal(seenBody1[0].reasoning_effort, "high", "reasoning + a configured level: sent");
+	assert.equal(seenBody1[0].stream_options.include_usage, true);
+
+	let seenBody2 = [];
+	setFetch(fakeThinkFetch(seenBody2));
+	await chatCompletion({ endpoint: ep, model: models[0], messages: [{ role: "user", content: "hi" }] });
+	assert.equal("reasoning_effort" in seenBody2[0], false, "not a reasoning model: never sent");
 	setFetch(null);
 
 	// Deleting an endpoint cascades: its models and any key assignments go with it.
@@ -9523,6 +9572,47 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		assert.match(granted.text, /event: item/);
 		assert.match(granted.text, /"text":"Hi"/);
 		assert.match(granted.text, /event: done/);
+
+		// Reasoning content streams as a "thinking" item, the same kind portal.html's renderMessages
+		// already groups into the "Thinking…"/"Thought" block above an agent's own reply -- and the
+		// done event carries the same status fields (model/contextWindow/prompt/gen) an agent turn does.
+		updateModel(visionModel.id, { reasoning: true, reasoningEffort: "medium" });
+		var thinkSseBody = [
+			'data: {"choices":[{"delta":{"reasoning_content":"thinking…"}}]}\n\n',
+			'data: {"choices":[{"delta":{"content":"Hi"}}]}\n\n',
+			'data: {"choices":[{"delta":{}}],"usage":{"prompt_tokens":10,"completion_tokens":5,"total_tokens":15}}\n\n',
+			"data: [DONE]\n\n",
+		];
+		var sentReasoningEffort = null;
+		var wait = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+		setFetch(function (url, opts) {
+			if (opts && opts.body) sentReasoningEffort = JSON.parse(opts.body).reasoning_effort;
+			var i = 0;
+			return Promise.resolve({
+				ok: true,
+				body: {
+					getReader: function () {
+						return {
+							// A few ms between chunks, so the status bar's own timing (time to first
+							// token, time from first to last) has something nonzero to measure.
+							read: function () { return wait(5).then(function () { if (i >= thinkSseBody.length) return { done: true }; return { done: false, value: new TextEncoder().encode(thinkSseBody[i++]) }; }); },
+						};
+					},
+				},
+			});
+		});
+		const thinking = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "ext-convo-think", message: "hi", externalModelId: visionModel.id }) });
+		assert.equal(thinking.status, 200);
+		assert.match(thinking.text, /"kind":"thinking"/);
+		assert.match(thinking.text, /"text":"thinking…"/);
+		assert.equal(sentReasoningEffort, "medium");
+		const doneLine = thinking.text.split("\n\n").find((b) => b.includes("event: done"));
+		const doneData = JSON.parse(doneLine.split("\n").find((l) => l.startsWith("data:")).slice(5));
+		assert.equal(doneData.status.model, `portal-test-ep/${visionModel.modelId}`);
+		assert.equal(doneData.status.contextWindow, visionModel.contextWindow);
+		assert.ok(doneData.status.gen > 0, "a generation speed was computed from the stream's own timing");
+		assert.equal(doneData.usage.total_tokens, 15);
+		updateModel(visionModel.id, { reasoning: false });
 
 		// Images are refused for a non-vision model, accepted (and translated) for a vision one.
 		const imgRefused = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "ext-convo-3", message: "hi", externalModelId: textModel.id, images: [tinyPng] }) });

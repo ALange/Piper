@@ -499,13 +499,19 @@ way is **chat only** -- a direct, host-side streaming HTTP call to its own `/v1/
 (`lib/externalmodels.mjs`), never a Pi container session, so there are no tools, skills or extensions;
 the client portal sends the whole conversation with every turn instead, since there's no server-side
 session to keep it in. **Overview** lists every endpoint's models, their capabilities (vision,
-embedding, audio -- chat is implied, editable here) and whether the endpoint answered last time it was
-checked (a **recheck** button, not polling); editing an endpoint's name, URL or API key opens an inline
-panel. **External Endpoints** lists the endpoints themselves. **Wizard** adds a new one in three steps:
-name/URL/API key, then a **detect models** button (probes the endpoint's own `/v1/models`, best-effort
--- always editable, and a model can be added by hand if detection finds nothing), then review and save.
-**Access Control** grants specific models to specific API keys; a key sees its granted models in the
-client portal's own agent picker, usable the same way an agent is, just chat only.
+embedding, audio, reasoning -- chat is implied, editable here) and whether the endpoint answered last
+time it was checked (a **recheck** button, not polling); editing an endpoint's name, URL or API key
+opens an inline panel. A reasoning-flagged model also gets a configurable effort level (low/medium/
+high, the same `reasoning_effort` request field Piper's own `/v1/chat/completions` already accepts) --
+left blank, nothing is sent and the model uses its own default. **External Endpoints** lists the
+endpoints themselves. **Wizard** adds a new one in three steps: name/URL/API key, then a **detect
+models** button (probes the endpoint's own `/v1/models`, best-effort -- always editable, and a model
+can be added by hand if detection finds nothing), then review and save. **Access Control** grants
+specific models to specific API keys; a key sees its granted models in the client portal's own agent
+picker, usable the same way an agent is, just chat only -- including a live "Thinking…" block when a
+reasoning model streams its own reasoning content (`reasoning_content` or `reasoning`, whichever the
+endpoint sends), and the same status bar (model, context, generation speed) an agent turn shows,
+measured around the HTTP call itself since there is no Pi session to read it from.
 
 ## API keys
 
