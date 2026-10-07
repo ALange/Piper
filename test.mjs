@@ -28,7 +28,7 @@ const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
 const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, readDockerfile, writeDockerfile, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, portalSessionToken, readPortalSession, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, memoryScopeOf, mayRemember, memoryFor, memoryOverview, memoryEntries, deleteMemoryEntry, clearMemory, deleteMemoryOf, memoryDashboardRoutes, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, mayLookupKnowledge, knowledgeFor, addEntry, getByKey, getEntry, sourceSeen, overview: knowledgeOverview, entriesOf, removeEntry, clearSource, purgeOld, activityLog, knowledgeDashboardRoutes, RssError, SOURCE_TYPE, getFeed, listFeeds, createFeed, updateFeed, removeFeed, parseFeedXml, forcePoll, rssTick, parseExtraction, looksBlocked, parseUnblockReply, setExtractionRunner, rssPump, retryEntry, startFeeds, stopFeeds, rssDashboardRoutes,
 	NotebookError, createNotebook, listNotebooks, getNotebook, renameNotebook, setNotebookAgent, deleteNotebook, listSources, getSource, addSource, removeSource, chunkText, cosine, topChunks, embedTexts, setEmbedder, setNotebookRunner, setFileReader, parseExtraction: parseNotebookExtraction, askNotebook, generateOutput, listOutputs, OUTPUT_KINDS, pumpExtract: pumpNotebookExtract, resumeNotebookExtractions, stopNotebookExtractions,
-	ExternalModelError, listEndpoints, getEndpoint, createEndpoint, updateEndpoint, deleteEndpoint, listExternalModels, getModel, addModel, updateModel, removeModel, listEndpointsWithModels, setFetch, guessCapabilities, detectModels, checkEndpointStatus, modelsForKey, setKeyModels, listAccess, splitSseLines, chatCompletion,
+	ExternalModelError, listEndpoints, getEndpoint, createEndpoint, updateEndpoint, deleteEndpoint, listExternalModels, getModel, addModel, updateModel, removeModel, listEndpointsWithModels, setFetch, guessCapabilities, detectModels, checkEndpointStatus, modelsForKey, setKeyModels, listAccess, splitSseLines, chatCompletion, normalizeBaseUrl,
 	recentAudit: recentAuditRows } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
@@ -2082,14 +2082,14 @@ assert.equal(isReloadCommand(undefined), false);
 
 	const ep = createEndpoint({
 		name: "Local vLLM",
-		baseUrl: "https://llm.internal/v1/",
+		baseUrl: "https://llm.internal/",
 		apiKey: "sk-test-123",
 		models: [
 			{ modelId: "llama-3-70b", name: "Llama 3 70B", contextWindow: 8192 },
 			{ modelId: "llava-7b", vision: true },
 		],
 	});
-	assert.equal(ep.baseUrl, "https://llm.internal/v1", "a trailing slash is trimmed");
+	assert.equal(ep.baseUrl, "https://llm.internal", "a trailing slash is trimmed");
 	assert.equal(ep.hasKey, true);
 	assert.ok(!("apiKey" in ep), "the raw key is never in the returned shape");
 	const models = listExternalModels(ep.id);
@@ -2113,6 +2113,24 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(edited.audio, true);
 	assert.throws(() => addModel(ep.id, { modelId: "" }), /needs its id/);
 	assert.throws(() => updateModel("no-such-id", {}), (e) => e.status === 404);
+
+	// A base URL is accepted with or without a trailing /v1 -- every call here appends "/v1/..."
+	// itself, so a doubled "/v1/v1/..." would otherwise 404 silently against a real endpoint.
+	assert.equal(normalizeBaseUrl("https://x.test"), "https://x.test");
+	assert.equal(normalizeBaseUrl("https://x.test/"), "https://x.test");
+	assert.equal(normalizeBaseUrl("https://x.test/v1"), "https://x.test");
+	assert.equal(normalizeBaseUrl("https://x.test/v1/"), "https://x.test");
+	assert.equal(normalizeBaseUrl("https://x.test/V1"), "https://x.test", "case-insensitive");
+	let lastDetectUrl = null;
+	setFetch(async (url) => {
+		lastDetectUrl = url;
+		return { ok: true, status: 200, json: async () => ({ data: [{ id: "m1" }] }) };
+	});
+	await detectModels("https://x.test/v1", "");
+	assert.equal(lastDetectUrl, "https://x.test/v1/models", "a base URL already ending in /v1 is not doubled");
+	const epV1 = createEndpoint({ name: "already-v1", baseUrl: "https://x.test/v1/", models: [{ modelId: "m1" }] });
+	assert.equal(epV1.baseUrl, "https://x.test", "stored normalized, so later /v1 calls are never doubled either");
+	deleteEndpoint(epV1.id);
 
 	// Detection and status: an injectable fetch, so no real network call runs in the suite.
 	setFetch(async (url) => {

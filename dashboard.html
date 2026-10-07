@@ -2706,7 +2706,9 @@ function iwzRender() {
   var id = IWZ.done ? 'done' : IWZ_STEPS[IWZ.step][0];
   if (id === 'iwzdetails') {
     body.appendChild(iwzField('Name', iwzInput(IWZ.name, function (v) { IWZ.name = v; })));
-    body.appendChild(iwzField('Base URL', iwzInput(IWZ.baseUrl, function (v) { IWZ.baseUrl = v; })));
+    var urlInput = iwzInput(IWZ.baseUrl, function (v) { IWZ.baseUrl = v; });
+    urlInput.placeholder = 'https://host:port -- with or without a trailing /v1, either works';
+    body.appendChild(iwzField('Base URL', urlInput));
     body.appendChild(iwzField('API key (optional)', iwzInput(IWZ.apiKey, function (v) { IWZ.apiKey = v; }, 'password')));
   } else if (id === 'iwzmodels') {
     var detect = el('button', 'detect models');
