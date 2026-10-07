@@ -26,7 +26,7 @@ process.env.CONTAINER_PI_DIR = TEST_CONTAINER_PI;
 const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 // Seeded at startup, which is when a validator that reads a not-yet-defined constant would fail.
 process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
-const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, memoryScopeOf, mayRemember, memoryFor, memoryOverview, memoryEntries, deleteMemoryEntry, clearMemory, deleteMemoryOf, memoryDashboardRoutes, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, mayLookupKnowledge, knowledgeFor, addEntry, getByKey, getEntry, sourceSeen, overview: knowledgeOverview, entriesOf, removeEntry, clearSource, purgeOld, activityLog, knowledgeDashboardRoutes, RssError, SOURCE_TYPE, getFeed, listFeeds, createFeed, updateFeed, removeFeed, parseFeedXml, forcePoll, rssTick, parseExtraction, looksBlocked, parseUnblockReply, setExtractionRunner, rssPump, retryEntry, startFeeds, stopFeeds, rssDashboardRoutes, recentAudit: recentAuditRows } = await import("./server.mjs");
+const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, portalSessionToken, readPortalSession, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, memoryScopeOf, mayRemember, memoryFor, memoryOverview, memoryEntries, deleteMemoryEntry, clearMemory, deleteMemoryOf, memoryDashboardRoutes, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, mayLookupKnowledge, knowledgeFor, addEntry, getByKey, getEntry, sourceSeen, overview: knowledgeOverview, entriesOf, removeEntry, clearSource, purgeOld, activityLog, knowledgeDashboardRoutes, RssError, SOURCE_TYPE, getFeed, listFeeds, createFeed, updateFeed, removeFeed, parseFeedXml, forcePoll, rssTick, parseExtraction, looksBlocked, parseUnblockReply, setExtractionRunner, rssPump, retryEntry, startFeeds, stopFeeds, rssDashboardRoutes, recentAudit: recentAuditRows } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
 
@@ -795,6 +795,49 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(expiryFromInput("2030-06-01"), Date.parse("2030-06-01"), "a date string is accepted");
 	assert.throws(() => expiryFromInput("the twelfth of never"), /valid date/);
 	assert.throws(() => expiryFromInput("2001-01-01"), /future/, "an expiry in the past is rejected");
+
+	// The client portal's own login: a username+password per key, and the session token it issues.
+	const forPortal = apiKeys.create({ name: "portal-password-test", expiresAt: 0 });
+	assert.throws(() => apiKeys.setPortalPassword(forPortal.record.id, { username: "a", password: "longenough1" }), /3 to 32/, "too short a username");
+	assert.throws(() => apiKeys.setPortalPassword(forPortal.record.id, { username: "ok-name", password: "short" }), /at least 8/, "too short a password");
+	const withPass = apiKeys.setPortalPassword(forPortal.record.id, { username: "Alice", password: "correct horse battery" });
+	assert.equal(withPass.portalUsername, "Alice", "stored as given");
+	assert.equal(apiKeys.verifyPortalPassword("Alice", "correct horse battery")?.id, forPortal.record.id);
+	assert.equal(apiKeys.verifyPortalPassword("alice", "correct horse battery")?.id, forPortal.record.id, "case-insensitive");
+	assert.equal(apiKeys.verifyPortalPassword("Alice", "wrong password"), null);
+	assert.equal(apiKeys.verifyPortalPassword("no-such-user", "correct horse battery"), null);
+
+	const otherPortal = apiKeys.create({ name: "portal-password-other", expiresAt: 0 });
+	assert.throws(() => apiKeys.setPortalPassword(otherPortal.record.id, { username: "alice", password: "another password" }), /already taken/, "case-insensitive collision with a different key");
+	// The same key changing its own username/password is not a collision with itself.
+	const changed = apiKeys.setPortalPassword(forPortal.record.id, { username: "alice2", password: "a different password" });
+	assert.equal(changed.portalUsername, "alice2");
+	assert.equal(apiKeys.verifyPortalPassword("Alice", "correct horse battery"), null, "the old username no longer resolves");
+	assert.equal(apiKeys.verifyPortalPassword("alice2", "a different password")?.id, forPortal.record.id);
+
+	// portalSessionToken / readPortalSession: signed per key, with that key's own portal password hash.
+	const token = portalSessionToken(changed);
+	assert.equal(readPortalSession(token)?.id, forPortal.record.id, "a fresh token verifies");
+	assert.equal(readPortalSession(`${token}x`), null, "a tampered token is refused");
+	assert.equal(readPortalSession("not.a.token.at.all"), null);
+	assert.equal(readPortalSession(""), null);
+	const priorTtl = config.PORTAL_SESSION_MS;
+	config.PORTAL_SESSION_MS = 10;
+	const staleToken = portalSessionToken(changed, Date.now() - 1000);
+	assert.equal(readPortalSession(staleToken), null, "an expired token is refused");
+	config.PORTAL_SESSION_MS = priorTtl;
+	const beforeClear = portalSessionToken(apiKeys.get(forPortal.record.id));
+	assert.ok(readPortalSession(beforeClear));
+	apiKeys.clearPortalPassword(forPortal.record.id);
+	assert.equal(apiKeys.get(forPortal.record.id).portalUsername, null);
+	assert.equal(readPortalSession(beforeClear), null, "clearing the password ends every session of its own");
+	assert.equal(apiKeys.verifyPortalPassword("alice2", "a different password"), null, "and the password login itself");
+	apiKeys.setPortalPassword(otherPortal.record.id, { username: "bob", password: "yet another password" });
+	const revokedToken = portalSessionToken(apiKeys.get(otherPortal.record.id));
+	apiKeys.revoke(otherPortal.record.id);
+	assert.equal(readPortalSession(revokedToken), null, "a revoked key's token is refused too");
+	apiKeys.remove(forPortal.record.id);
+	apiKeys.remove(otherPortal.record.id);
 }
 
 // Usage has to be attributed to the key that opened each session, and a key that was never used
@@ -8944,6 +8987,44 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.equal(who.status, 200);
 	assert.equal(who.json.id, myKey.id);
 	assert.deepEqual(who.json.agents.map((a) => a.id), [myAgent.id], "only this key's own agents, never another's");
+	assert.equal(who.json.portalUsername, null, "no portal password set yet");
+
+	// Password login: an alternative to the raw key, via a username+password set up through the
+	// already-authenticated route, never handing back the raw key.
+	assert.equal((await call("/api/login-password", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ username: "nope", password: "wrong password" }) })).status, 401);
+	const setPass = await call("/api/portal-password", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ username: "mallory", password: "a fine password" }) });
+	assert.equal(setPass.status, 200);
+	assert.equal(setPass.json.username, "mallory");
+	assert.equal((await call("/api/whoami", { headers: auth })).json.portalUsername, "mallory");
+
+	// A different key cannot take the same username.
+	const stolenUsername = await call("/api/portal-password", { method: "POST", headers: { authorization: `Bearer ${theirs.key}`, "content-type": "application/json" }, body: JSON.stringify({ username: "Mallory", password: "another one entirely" }) });
+	assert.equal(stolenUsername.status, 400);
+
+	const wrongPass = await call("/api/login-password", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ username: "mallory", password: "nope" }) });
+	assert.equal(wrongPass.status, 401);
+	assert.doesNotMatch(wrongPass.text, /mallory/i, "never says which part was wrong, or confirms the username exists");
+
+	const login = await call("/api/login-password", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ username: "Mallory", password: "a fine password" }) });
+	assert.equal(login.status, 200);
+	assert.ok(login.json.token, "a session token, not the raw key");
+	assert.notEqual(login.json.token, myToken);
+	const sessionAuth = { authorization: `Bearer ${login.json.token}` };
+	const whoBySession = await call("/api/whoami", { headers: sessionAuth });
+	assert.equal(whoBySession.status, 200);
+	assert.equal(whoBySession.json.id, myKey.id, "the session token resolves to the same key");
+
+	// Removing the password ends every session of its own at once.
+	const cleared = await call("/api/portal-password", { method: "DELETE", headers: auth });
+	assert.equal(cleared.status, 200);
+	assert.equal((await call("/api/whoami", { headers: sessionAuth })).status, 401, "the old session token stops working");
+	assert.equal((await call("/api/whoami", { headers: auth })).json.portalUsername, null);
+
+	// Throttle: enough wrong attempts on one username and the next is refused outright, not retried.
+	let lastWrong;
+	for (let i = 0; i < 7; i++) lastWrong = await call("/api/login-password", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ username: "throttle-test", password: "wrong" }) });
+	assert.equal(lastWrong.status, 429);
+	assert.ok(lastWrong.text.includes("wait") || Number(lastWrong.json?.error?.message?.match(/\d+/)?.[0]) >= 0, "a wait, not a bare refusal");
 
 	// Chat: a real turn, through the same injectable runner every other agent-run test uses.
 	let seenCredential = null;

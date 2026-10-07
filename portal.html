@@ -28,6 +28,12 @@
   #login p { color:var(--muted); margin:0 0 18px; }
   #login .row { display:flex; gap:8px; }
   #login input { flex:1; }
+  #pmbody .row { display:flex; gap:8px; margin-top:8px; }
+  #pmbody .row:first-child { margin-top:0; }
+  #pmbody input { flex:1; }
+  .logintabs { margin-bottom:14px; }
+  .logintabs .tab { flex:1; background:transparent; }
+  .logintabs .tab.on { border-color:var(--blue); color:var(--fg); }
   #loginnote { min-height:16px; margin-top:10px; }
 
   /* app shell */
@@ -48,6 +54,7 @@
                padding:2px 6px; border-radius:4px; font-size:13px; line-height:1; }
   .convclear:hover { color:var(--red); background:#201414; }
   .side .bottom { padding:10px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  .side .bottom span:last-child { display:flex; gap:6px; }
   .who { font-size:11px; color:var(--muted); }
 
   main { flex:1; display:flex; flex-direction:column; min-width:0; }
@@ -178,9 +185,21 @@
 
 <div id="login">
   <h1>Piper client portal</h1>
-  <p>Log in with your own API key to chat with your agents and browse your workspace.</p>
-  <div class="row"><input id="keyinput" type="password" placeholder="piper_..." autocomplete="off"></div>
-  <div class="row" style="margin-top:8px"><button id="connect">connect</button></div>
+  <div class="row logintabs">
+    <button id="tabkey" class="tab on">API key</button>
+    <button id="tabpass" class="tab">Password</button>
+  </div>
+  <div id="keyform">
+    <p>Log in with your own API key to chat with your agents and browse your workspace.</p>
+    <div class="row"><input id="keyinput" type="password" placeholder="piper_..." autocomplete="off"></div>
+    <div class="row" style="margin-top:8px"><button id="connect">connect</button></div>
+  </div>
+  <div id="passform" hidden>
+    <p>Log in with the username and password you set up for this portal.</p>
+    <div class="row"><input id="loginuser" type="text" placeholder="username" autocomplete="username"></div>
+    <div class="row" style="margin-top:8px"><input id="loginpass" type="password" placeholder="password" autocomplete="current-password"></div>
+    <div class="row" style="margin-top:8px"><button id="connectpass">log in</button></div>
+  </div>
   <p id="loginnote" class="hint"></p>
 </div>
 
@@ -188,7 +207,7 @@
   <div class="side">
     <div class="top"><button id="newchat" title="new chat">+ new chat</button></div>
     <div id="convlist"></div>
-    <div class="bottom"><span class="who" id="who"></span><button id="logout">log out</button></div>
+    <div class="bottom"><span class="who" id="who"></span><span><button id="passbtn" title="portal password">&#9881;</button><button id="logout">log out</button></span></div>
   </div>
   <main>
     <div class="bar">
@@ -224,6 +243,13 @@
     <input type="file" id="uploadinput" multiple hidden>
     <div id="crumb"></div>
     <div id="filelist"></div>
+  </div>
+</div>
+
+<div id="passmodal" class="modal-overlay" hidden>
+  <div class="modal-box">
+    <div class="modal-top"><b>Portal password</b><button id="pmclose">close</button></div>
+    <div id="pmbody" class="modal-body"></div>
   </div>
 </div>
 
@@ -1148,6 +1174,26 @@ $('connect').addEventListener('click', function () {
   connect(key);
 });
 $('keyinput').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('connect').click(); });
+function connectWithPassword(username, password) {
+  fetch('api/login-password', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: username, password: password }) })
+    .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status)); return j; }); })
+    .then(function (j) { return connect(j.token); })
+    .catch(function (e) { showLogin(e.message); });
+}
+$('tabkey').addEventListener('click', function () {
+  $('tabkey').className = 'tab on'; $('tabpass').className = 'tab';
+  $('keyform').hidden = false; $('passform').hidden = true;
+});
+$('tabpass').addEventListener('click', function () {
+  $('tabpass').className = 'tab on'; $('tabkey').className = 'tab';
+  $('passform').hidden = false; $('keyform').hidden = true;
+});
+$('connectpass').addEventListener('click', function () {
+  var username = $('loginuser').value.trim(), password = $('loginpass').value;
+  if (!username || !password) return;
+  connectWithPassword(username, password);
+});
+$('loginpass').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('connectpass').click(); });
 $('logout').addEventListener('click', function () {
   sessionStorage.removeItem('piper-portal-key');
   sessionStorage.removeItem(convKey());
@@ -1188,6 +1234,53 @@ $('uploadbtn').addEventListener('click', function () { $('uploadinput').click();
 $('uploadinput').addEventListener('change', function () { uploadFiles(this.files); this.value = ''; });
 $('fmclose').addEventListener('click', closeModal);
 $('filemodal').addEventListener('click', function (e) { if (e.target === $('filemodal')) closeModal(); });
+
+/* ---- portal password: an alternative login, set up from inside the portal itself ---- */
+function renderPassModal() {
+  var box = $('pmbody');
+  box.replaceChildren();
+  var user = WHOAMI && WHOAMI.portalUsername;
+  box.appendChild(el('p', user ? 'Signed in with "' + user + '" also works to log in to the portal, instead of the API key.' : 'Set a username and password to log in to the portal without the API key.')).className = 'hint';
+  var uIn = el('input'); uIn.placeholder = 'username'; uIn.value = user || '';
+  var pIn = el('input'); pIn.type = 'password'; pIn.placeholder = user ? 'new password' : 'password';
+  var row1 = el('div'); row1.className = 'row'; row1.appendChild(uIn);
+  var row2 = el('div'); row2.className = 'row'; row2.appendChild(pIn);
+  var saveBtn = el('button', user ? 'change password' : 'set password');
+  var row3 = el('div'); row3.className = 'row'; row3.appendChild(saveBtn);
+  var note = el('div'); note.className = 'hint';
+  box.appendChild(row1); box.appendChild(row2); box.appendChild(row3); box.appendChild(note);
+  saveBtn.addEventListener('click', function () {
+    var username = uIn.value.trim(), password = pIn.value;
+    if (!username || !password) return;
+    api('api/portal-password', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: username, password: password }) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status)); return j; }); })
+      .then(function (j) { WHOAMI.portalUsername = j.username; renderPassModal(); })
+      .catch(function (e) { note.textContent = e.message; note.className = 'hint bad'; });
+  });
+  if (user) {
+    var rmBtn = el('button', 'remove password');
+    var row4 = el('div'); row4.className = 'row'; row4.appendChild(rmBtn);
+    box.appendChild(row4);
+    rmBtn.addEventListener('click', function () {
+      if (!confirm('Remove the portal password? Logging in will need the API key again, and this ends right away if you are signed in with a password now.')) return;
+      api('api/portal-password', { method: 'DELETE' }).then(function (r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        // If this very session was a password login, it just ended with the password -- the next
+        // call would 401; check now, cleanly, rather than leave every other button quietly broken.
+        return apiJson('api/whoami').then(function (d) { WHOAMI = d; renderPassModal(); }).catch(function () {
+          sessionStorage.removeItem('piper-portal-key');
+          sessionStorage.removeItem(convKey());
+          KEY = ''; WHOAMI = null; CONVOS = []; CUR = null;
+          $('passmodal').hidden = true;
+          showLogin('The portal password was removed, and this signed-in session ended with it -- log in again.');
+        });
+      }).catch(function (e) { note.textContent = e.message; note.className = 'hint bad'; });
+    });
+  }
+}
+$('passbtn').addEventListener('click', function () { renderPassModal(); $('passmodal').hidden = false; });
+$('pmclose').addEventListener('click', function () { $('passmodal').hidden = true; });
+$('passmodal').addEventListener('click', function (e) { if (e.target === $('passmodal')) $('passmodal').hidden = true; });
 
 if (KEY) connect(KEY); else showLogin();
 </script>
