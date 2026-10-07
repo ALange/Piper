@@ -2506,7 +2506,7 @@ $('modelrefresh').addEventListener('click', function () {
 
 /* ---- integrations: external OpenAI-compatible endpoints, their models, and per-key access ---- */
 var INT_DATA = null; // {endpoints:[{id,name,baseUrl,hasKey,enabled,models:[...]}]}
-var REASONING_EFFORTS = ['low', 'medium', 'high']; // mirrors lib/externalmodels.mjs's own REASONING_EFFORTS
+var REASONING_EFFORTS = ['low', 'medium', 'high', 'xhigh']; // mirrors lib/externalmodels.mjs's own REASONING_EFFORTS
 var INT_STATUS = {}; // endpointId -> last recheck result, kept across reloads until rechecked again
 var INT_EDIT = null; // the endpoint id #intedit is open on
 

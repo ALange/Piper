@@ -501,9 +501,10 @@ the client portal sends the whole conversation with every turn instead, since th
 session to keep it in. **Overview** lists every endpoint's models, their capabilities (vision,
 embedding, audio, reasoning -- chat is implied, editable here) and whether the endpoint answered last
 time it was checked (a **recheck** button, not polling); editing an endpoint's name, URL or API key
-opens an inline panel. A reasoning-flagged model also gets a configurable effort level (low/medium/
-high, the same `reasoning_effort` request field Piper's own `/v1/chat/completions` already accepts) --
-left blank, nothing is sent and the model uses its own default. **External Endpoints** lists the
+opens an inline panel. A reasoning-flagged model also gets a configurable effort level (default, low,
+medium, high, xhigh -- the same level names as Pi's own agents, and the same `reasoning_effort` request
+field Piper's own `/v1/chat/completions` already accepts); default sends nothing at all, leaving the
+model to its own behavior. **External Endpoints** lists the
 endpoints themselves. **Wizard** adds a new one in three steps: name/URL/API key, then a **detect
 models** button (probes the endpoint's own `/v1/models`, best-effort -- always editable, and a model
 can be added by hand if detection finds nothing), then review and save. **Access Control** grants

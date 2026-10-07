@@ -11,8 +11,9 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   every endpoint's models, their capabilities (vision/embedding/audio/reasoning — chat is always
   implied) and whether the endpoint answered last time it was checked (an on-demand **recheck**, not
   polling); editing an endpoint opens an inline panel. A reasoning-flagged model also gets a
-  configurable effort level (low/medium/high — the same `reasoning_effort` field Piper's own
-  `/v1/chat/completions` already accepts); left blank, nothing is sent. **External Endpoints** lists
+  configurable effort level (default, low, medium, high, xhigh — the same level names as Pi's own
+  agents, and the same `reasoning_effort` field Piper's own `/v1/chat/completions` already accepts);
+  default sends nothing at all. **External Endpoints** lists
   the endpoints. **Wizard** adds one in three steps: name/URL/key, a **detect models** button that
   probes the endpoint's own `/v1/models` (best-effort, always editable, or add a model by hand), then
   review and save. **Access Control** grants specific models to specific API keys. A key with a

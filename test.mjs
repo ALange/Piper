@@ -2123,6 +2123,7 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(reasonModel.reasoning, true);
 	assert.equal(reasonModel.reasoningEffort, "high");
 	assert.throws(() => addModel(ep.id, { modelId: "bad-effort", reasoning: true, reasoningEffort: "ultra" }), /reasoningEffort must be one of/);
+	assert.equal(addModel(ep.id, { modelId: "xhigh-effort", reasoning: true, reasoningEffort: "xhigh" }).reasoningEffort, "xhigh", "default/low/medium/high/xhigh -- xhigh is a real level too");
 	const noEffortYet = addModel(ep.id, { modelId: "o3-mini-2", reasoning: true });
 	assert.equal(noEffortYet.reasoningEffort, null, "reasoning on, no level chosen: nothing is sent");
 	const effortSet = updateModel(noEffortYet.id, { reasoningEffort: "low" });
