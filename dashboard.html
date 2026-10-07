@@ -5119,16 +5119,25 @@ function pgTargetOf(c) {
   if (!PG.targets) return null;
   var k = PG.targets.filter(function (t) { return t.keyId === c.keyId; })[0];
   if (!k) return null;
+  if (c.externalModelId) {
+    var m = (k.externalModels || []).filter(function (x) { return x.id === c.externalModelId; })[0];
+    if (!m) return null;
+    return { key: k, agent: null, model: m, label: k.key + ' / ' + m.name + ' (model)', description: m.endpointName };
+  }
   var a = c.agentId ? k.agents.filter(function (x) { return x.id === c.agentId; })[0] : null;
   if (c.agentId && !a) return null;
   return { key: k, agent: a, label: k.key + (a ? ' / ' + a.name : ''), description: a ? a.description : '' };
 }
 function pgNew() {
   var pref = PG.pref ? PG.pref.split('|') : null;
+  var prefSub = pref && pref[1] || '';
   var first = PG.targets && PG.targets[0];
-  var c = { id: pgId(), title: 'New chat', keyId: pref && pref[0] || (first ? first.keyId : ''), agentId: pref && pref[1] || null, model: '', messages: [], updated: Date.now() };
+  var c = { id: pgId(), title: 'New chat', keyId: pref && pref[0] || (first ? first.keyId : ''),
+    agentId: prefSub.indexOf('m:') === 0 ? null : (prefSub || null),
+    externalModelId: prefSub.indexOf('m:') === 0 ? prefSub.slice(2) : null,
+    model: '', messages: [], updated: Date.now() };
   var t = pgTargetOf(c);
-  if (!t && first) { c.keyId = first.keyId; c.agentId = first.agents.length ? first.agents[0].id : null; }
+  if (!t && first) { c.keyId = first.keyId; c.agentId = first.agents.length ? first.agents[0].id : null; c.externalModelId = null; }
   PG.convs.unshift(c); PG.cur = c.id; pgSave();
   return c;
 }
@@ -5166,14 +5175,19 @@ function pgRenderBar() {
     var g = el('optgroup'); g.label = k.key;
     var o0 = el('option', k.key + ' (main endpoint)'); o0.value = k.keyId + '|'; g.appendChild(o0);
     k.agents.forEach(function (a) { var o = el('option', k.key + ' / ' + a.name); o.value = k.keyId + '|' + a.id; g.appendChild(o); });
+    (k.externalModels || []).forEach(function (m) { var o = el('option', k.key + ' / ' + m.name + ' (model, chat only)'); o.value = k.keyId + '|m:' + m.id; g.appendChild(o); });
     sel.appendChild(g);
   });
-  sel.value = c.keyId + '|' + (c.agentId || '');
+  sel.value = c.externalModelId ? (c.keyId + '|m:' + c.externalModelId) : (c.keyId + '|' + (c.agentId || ''));
   sel.disabled = c.messages.length > 0 || PG.busy;
   var t = pgTargetOf(c);
-  var d = el('option', 'default model'); d.value = ''; msel.appendChild(d);
-  (t ? t.key.models : []).forEach(function (m) { var o = el('option', m.value); o.value = m.value; msel.appendChild(o); });
-  msel.value = c.model || '';
+  // An external model has no Pi model-within-it to pick -- it IS the model.
+  msel.hidden = Boolean(c.externalModelId);
+  if (!c.externalModelId) {
+    var d = el('option', 'default model'); d.value = ''; msel.appendChild(d);
+    (t ? t.key.models : []).forEach(function (m) { var o = el('option', m.value); o.value = m.value; msel.appendChild(o); });
+    msel.value = c.model || '';
+  }
   $('pgtitle').textContent = c.title;
   $('pgsend').textContent = PG.busy ? 'Stop' : 'Send';
   $('pgsend').className = PG.busy ? 'stop' : '';
@@ -5254,6 +5268,13 @@ function pgSend(text) {
   if (!text) return;
   if (!pgTargetOf(c)) { $('pgnote').textContent = 'Pick an agent first.'; return; }
   $('pgnote').textContent = '';
+  // A model has no server-side session (lib/playground.mjs's playgroundExternalChat is stateless),
+  // so the whole conversation is resent every time -- flattened to plain {role, content} pairs.
+  var history = c.externalModelId ? c.messages.filter(function (m) { return !m.pending && !m.error; }).map(function (m) {
+    if (m.role === 'user') return { role: 'user', content: m.text };
+    var t = (m.parts || []).filter(function (p) { return p.kind === 'text' && p.text; }).map(function (p) { return p.text; }).join('\n\n');
+    return { role: 'assistant', content: t };
+  }).filter(function (m) { return m.content; }) : undefined;
   if (!c.messages.length) c.title = text.replace(/\s+/g, ' ').slice(0, 48);
   c.messages.push({ role: 'user', text: text, ts: Date.now() });
   var msg = { role: 'assistant', parts: [], pending: true, ts: Date.now() };
@@ -5263,7 +5284,7 @@ function pgSend(text) {
   pgSetBusy(true); pgRenderSide(); pgRenderBar(); pgRenderMessages(true);
   PG.ctrl = new AbortController();
   var done = false;
-  fetch('dashboard/playground/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, signal: PG.ctrl.signal, body: JSON.stringify({ keyId: c.keyId, agentId: c.agentId || undefined, conversation: c.id, message: text, model: c.model || undefined }) })
+  fetch('dashboard/playground/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, signal: PG.ctrl.signal, body: JSON.stringify({ keyId: c.keyId, agentId: c.externalModelId ? undefined : (c.agentId || undefined), externalModelId: c.externalModelId || undefined, history: history, conversation: c.id, message: text, model: c.model || undefined }) })
     .then(function (r) {
       var type = r.headers.get('content-type') || '';
       if (!r.ok || type.indexOf('event-stream') < 0) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); });
@@ -5317,7 +5338,18 @@ function pgExport() {
 $('pgnew').addEventListener('click', function () { if (PG.busy) return; var cur = pgConv(); if (cur && !cur.messages.length) { $('pginput').focus(); return; } pgNew(); $('pgside').classList.remove('open'); pgRender(); $('pginput').focus(); });
 $('pgsearch').addEventListener('input', pgRenderSide);
 $('pgtoggle').addEventListener('click', function () { $('pgside').classList.toggle('open'); });
-$('pgtarget').addEventListener('change', function () { var c = pgConv(); if (!c || c.messages.length) return; var v = $('pgtarget').value.split('|'); c.keyId = v[0]; c.agentId = v[1] || null; c.model = ''; PG.pref = $('pgtarget').value; pgSave(); pgRender(); });
+$('pgtarget').addEventListener('change', function () {
+  var c = pgConv();
+  if (!c || c.messages.length) return;
+  var v = $('pgtarget').value.split('|');
+  c.keyId = v[0];
+  var sub = v[1] || '';
+  if (sub.indexOf('m:') === 0) { c.externalModelId = sub.slice(2); c.agentId = null; }
+  else { c.agentId = sub || null; c.externalModelId = null; }
+  c.model = '';
+  PG.pref = $('pgtarget').value;
+  pgSave(); pgRender();
+});
 $('pgmodel').addEventListener('change', function () { var c = pgConv(); if (c) { c.model = $('pgmodel').value; pgSave(); } });
 $('pgsend').addEventListener('click', function () { if (PG.busy) pgStop(); else pgSend(); });
 $('pginput').addEventListener('input', pgResize);

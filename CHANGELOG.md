@@ -17,9 +17,10 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   the endpoints. **Wizard** adds one in three steps: name/URL/key, a **detect models** button that
   probes the endpoint's own `/v1/models` (best-effort, always editable, or add a model by hand), then
   review and save. **Access Control** grants specific models to specific API keys. A key with a
-  granted model sees it in the client portal's own target picker and can chat with it exactly like an
-  agent — except chat only: no tools, skills or extensions, since a bare completion endpoint can't run
-  them, and no container either. The portal shows a live "Thinking…" block when a reasoning model
+  granted model sees it in the client portal's own target picker, and in the dashboard Playground's own
+  target picker too (any key the operator chooses, same as an agent there) — and can chat with it
+  exactly like an agent — except chat only: no tools, skills or extensions, since a bare completion
+  endpoint can't run them, and no container either. Both show a live "Thinking…" block when a reasoning model
   streams its own reasoning content (`reasoning_content`/`reasoning`, whichever the endpoint sends) and
   the same status bar (model, context, generation speed) an agent turn shows, measured around the call
   itself. It's one direct, streaming, stateless HTTP call to the endpoint's own `/v1/chat/completions`

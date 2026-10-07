@@ -9262,6 +9262,45 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.equal(sessions.has(scoped), false);
 	assert.equal((await (await fetch(`${base}/conversation/conv-delete-0001?keyId=${key.id}&agentId=${agent.id}`, { method: "DELETE" })).json()).ended, false, "nothing to end twice");
 	assert.equal((await fetch(`${base}/conversation/bad%20id?keyId=${key.id}`, { method: "DELETE" })).status, 404, "an id that is not one is not a route");
+
+	// External models: chat only, through lib/externalmodels.mjs, the same as the client portal's own --
+	// but the Playground trusts keyId straight from the body, the same tier the agent path above does.
+	{
+		const ep = createEndpoint({ name: "pg-test-ep", baseUrl: "https://llm.pg-test", models: [{ modelId: "m1" }] });
+		const [model] = listExternalModels(ep.id);
+		const targetsBefore = await (await fetch(`${base}/targets.json`)).json();
+		assert.deepEqual(targetsBefore.targets.find((t) => t.keyId === key.id).externalModels, [], "nothing granted yet");
+
+		setKeyModels(key.id, [model.id]);
+		const targetsAfter = await (await fetch(`${base}/targets.json`)).json();
+		const offeredModel = targetsAfter.targets.find((t) => t.keyId === key.id).externalModels[0];
+		assert.equal(offeredModel.id, model.id);
+
+		const notGranted = await post({ keyId: key.id, externalModelId: "no-such-model", conversation: "pg-ext-1", message: "hi" });
+		assert.equal(notGranted.status, 403);
+
+		const sseBody = ['data: {"choices":[{"delta":{"content":"Hi"}}]}\n\n', "data: [DONE]\n\n"];
+		setFetch(() => {
+			let i = 0;
+			return Promise.resolve({ ok: true, body: { getReader: () => ({ read: () => (i >= sseBody.length ? Promise.resolve({ done: true }) : Promise.resolve({ done: false, value: new TextEncoder().encode(sseBody[i++]) })) }) } });
+		});
+		const granted = await post({ keyId: key.id, externalModelId: model.id, conversation: "pg-ext-2", message: "hi" });
+		assert.equal(granted.status, 200);
+		const extEv = await events(granted);
+		assert.deepEqual(extEv.map(([e]) => e).filter((e, i, a) => e !== a[i - 1]), ["item", "done"]);
+		assert.equal(extEv.find(([e]) => e === "item")[1].item.kind, "assistant");
+		const extDone = extEv.at(-1)[1];
+		assert.equal(extDone.text, "Hi");
+		assert.equal(extDone.status.model, `pg-test-ep/${model.modelId}`);
+
+		const badHistory = await post({ keyId: key.id, externalModelId: model.id, conversation: "pg-ext-3", message: "hi", history: [{ role: "nope", content: "x" }] });
+		assert.equal(badHistory.status, 400);
+
+		setFetch(null);
+		setKeyModels(key.id, []);
+		deleteEndpoint(ep.id);
+	}
+
 	G.clearPasswordHash();
 	await new Promise((r2) => srv.close(r2));
 	srv.closeAllConnections?.();

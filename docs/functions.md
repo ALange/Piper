@@ -26,7 +26,11 @@ Endpoints page is now **Agents**.
 ## Playground
 
 The first item of the menu: a chat with an agent, laid out like the chat apps you know. Pick **who to talk to** (a key's main
-endpoint, or one of its agents) and optionally a **model** from what that key may use, then type. Answers stream in as they are
+endpoint, one of its agents, or -- if the key has been granted one in Integrations -> Access Control -- one of its external
+chat-only models) and optionally a **model** from what that key may use, then type. A granted external model behaves like any
+other target here: Markdown, a live "Thinking…" block if it streams reasoning content, and a token/cost footer, just without
+tools, skills or extensions and without a Pi session (lib/externalmodels.mjs) -- so the "model" dropdown next to it (which picks
+a model *inside* a Pi session) does not apply and is hidden. Answers stream in as they are
 written, with **Markdown** (headings, lists, tables, quotes, code blocks with a copy button) and, collapsed above the answer, the
 agent's **thinking** and each **tool call** with what it ran and what came back. **Enter** sends, **Shift+Enter** is a new line,
 **Stop** ends the turn (the agent's turn is stopped too), **retry** asks the last question again, **copy** copies an answer.
@@ -509,9 +513,10 @@ endpoints themselves. **Wizard** adds a new one in three steps: name/URL/API key
 models** button (probes the endpoint's own `/v1/models`, best-effort -- always editable, and a model
 can be added by hand if detection finds nothing), then review and save. **Access Control** grants
 specific models to specific API keys; a key sees its granted models in the client portal's own agent
-picker, usable the same way an agent is, just chat only -- including a live "Thinking…" block when a
-reasoning model streams its own reasoning content (`reasoning_content` or `reasoning`, whichever the
-endpoint sends), and the same status bar (model, context, generation speed) an agent turn shows,
+picker and in the dashboard Playground's own target picker (any key the operator chooses, same as an
+agent there), usable the same way an agent is, just chat only -- including a live "Thinking…" block
+when a reasoning model streams its own reasoning content (`reasoning_content` or `reasoning`, whichever
+the endpoint sends), and the same status bar (model, context, generation speed) an agent turn shows,
 measured around the HTTP call itself since there is no Pi session to read it from.
 
 ## API keys
