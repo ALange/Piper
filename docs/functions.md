@@ -106,10 +106,15 @@ the closest chunks are found by cosine similarity (a plain scan over vectors kep
 SQLite database — no vector database, no new service), and the agent is asked to answer only from
 them, citing which excerpt backs each claim; it says plainly when they don't answer the question
 rather than guessing. **Generated** produces a summary, an FAQ, or a study guide from the whole
-notebook on request, kept so it is not redone. `notebook.html` shares the chat portal's own markdown
-renderer, status bar and file browser (the same `/api/files`, scoped to the notebook's own agent when
-it has one), and a notebook's agent can be changed after creation from a picker in its own bar — the
-same shape the chat portal's own agent picker has. The one new host-side network call this adds is to an
+notebook on request, kept so it is not redone. **Chat** and **Generated** can instead go through a
+granted external model (Integrations) rather than an agent — creating a notebook opens a modal to set
+its title and pick who processes it (the key's main endpoint, an agent, or a granted model), and that
+can be changed afterward from the same picker in the notebook's own bar. A model answers chat only, with
+no memory between questions (there is no Pi session to keep it in, unlike an agent notebook's
+persistent one); extracting a new source still always goes through the key's main endpoint either way,
+since a model has no file-reading or URL-fetching ability at all. `notebook.html` shares the chat
+portal's own markdown renderer, status bar and file browser (the same `/api/files`, scoped to the
+notebook's own agent when it has one). The one new host-side network call this adds is to an
 embeddings endpoint (`NOTEBOOK_EMBEDDING_URL`, default an OpenAI-compatible one) — a fixed,
 operator-configured address, the same trust tier as RSS's own feed-fetching, never arbitrary content.
 Settings: `NOTEBOOK_ENABLED`, `NOTEBOOK_EMBEDDING_URL`/`_MODEL`/`_API_KEY`,

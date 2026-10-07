@@ -218,6 +218,20 @@
   </main>
 </div>
 
+<div id="newnbmodal" class="modal-overlay" hidden>
+  <div class="modal-box">
+    <div class="modal-top"><b>New notebook</b><button id="newnbclose">close</button></div>
+    <div class="modal-body">
+      <p class="hint" style="margin:0 0 4px">Title</p>
+      <input type="text" id="newnbtitle" placeholder="Notebook title" style="width:100%; box-sizing:border-box">
+      <p class="hint" style="margin:14px 0 4px">Who should process it? A model answers questions and generates summaries directly, chat only &mdash; extracting new sources (reading files, fetching pages) always runs through your key's main endpoint either way, since a model can't do that itself.</p>
+      <select id="newnbtarget" style="width:100%"></select>
+      <p class="hint bad" id="newnbnote"></p>
+    </div>
+    <div class="modal-actions"><button id="newnbcreate">create</button></div>
+  </div>
+</div>
+
 <div id="filemodal" class="modal-overlay" hidden>
   <div class="modal-box" id="fmbox">
     <div class="modal-top"><b id="fmtitle"></b><button id="fmclose">close</button></div>
@@ -430,7 +444,8 @@ function renderSide() {
     row.className = 'nbrow' + (n.id === CUR ? ' on' : '');
     row.appendChild(el('div', n.title)).className = 't';
     var agent = (WHOAMI.agents || []).filter(function (a) { return a.id === n.agentId; })[0];
-    row.appendChild(el('div', agent ? agent.name : '(main endpoint)')).className = 's';
+    var model = n.externalModelId ? (WHOAMI.externalModels || []).filter(function (m) { return m.id === n.externalModelId; })[0] : null;
+    row.appendChild(el('div', model ? (model.name + ' (model)') : agent ? agent.name : '(main endpoint)')).className = 's';
     row.addEventListener('click', function () { openNotebook(n.id); });
     var clear = el('button', '×');
     clear.className = 'nbclear';
@@ -454,13 +469,48 @@ function loadNotebooks() {
   });
 }
 
-function newNotebook() {
-  var title = prompt('Notebook title:', 'New notebook');
-  if (title === null) return;
-  apiJson('api/notebooks', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: title }) })
-    .then(function (n) { return loadNotebooks().then(function () { openNotebook(n.id); }); })
-    .catch(function (e) { alert(e.message); });
+/* ---- new-notebook modal: title + who processes it (the key's main endpoint, an agent, or a
+   granted model) -- the same option set renderTargets() below offers for an existing notebook. */
+function targetOptions(select) {
+  select.replaceChildren();
+  var main = el('option', '(main endpoint)'); main.value = ''; select.appendChild(main);
+  (WHOAMI.agents || []).forEach(function (a) {
+    var o = el('option', a.name + (a.description ? ' — ' + a.description : '')); o.value = a.id; select.appendChild(o);
+  });
+  if ((WHOAMI.externalModels || []).length) {
+    var grp = el('optgroup'); grp.label = 'Models (chat only)';
+    WHOAMI.externalModels.forEach(function (m) {
+      var o = el('option', m.name + ' — ' + m.endpointName); o.value = 'm:' + m.id; grp.appendChild(o);
+    });
+    select.appendChild(grp);
+  }
 }
+function openNewNotebookModal() {
+  $('newnbtitle').value = 'New notebook';
+  $('newnbnote').textContent = '';
+  targetOptions($('newnbtarget'));
+  $('newnbmodal').hidden = false;
+  $('newnbtitle').focus();
+  $('newnbtitle').select();
+}
+function closeNewNotebookModal() { $('newnbmodal').hidden = true; }
+function createNotebook() {
+  var title = $('newnbtitle').value.trim();
+  if (!title) { $('newnbnote').textContent = 'give it a title'; return; }
+  var v = $('newnbtarget').value;
+  var body = { title: title };
+  if (v.indexOf('m:') === 0) body.externalModelId = v.slice(2);
+  else if (v) body.agentId = v;
+  $('newnbcreate').disabled = true;
+  apiJson('api/notebooks', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+    .then(function (n) { closeNewNotebookModal(); return loadNotebooks().then(function () { openNotebook(n.id); }); })
+    .catch(function (e) { $('newnbnote').textContent = e.message; })
+    .then(function () { $('newnbcreate').disabled = false; });
+}
+$('newnbclose').addEventListener('click', closeNewNotebookModal);
+$('newnbmodal').addEventListener('click', function (e) { if (e.target === $('newnbmodal')) closeNewNotebookModal(); });
+$('newnbcreate').addEventListener('click', createNotebook);
+$('newnbtitle').addEventListener('keydown', function (e) { if (e.key === 'Enter') createNotebook(); });
 
 function openNotebook(id) {
   CUR = id;
@@ -481,23 +531,16 @@ $('tabsources').addEventListener('click', function () { setTab('sources'); });
 $('tabchat').addEventListener('click', function () { setTab('chat'); });
 $('tabgen').addEventListener('click', function () { setTab('gen'); });
 
-/* ---- agent picker: which agent (or the key's own main endpoint) answers this notebook ---- */
+/* ---- target picker: which agent, model (chat only) or the key's own main endpoint processes this notebook ---- */
 function renderTargets() {
-  var t = $('target');
-  t.replaceChildren();
-  var main = el('option', '(main endpoint)'); main.value = '';
-  t.appendChild(main);
-  (WHOAMI.agents || []).forEach(function (a) {
-    var o = el('option', a.name + (a.description ? ' — ' + a.description : ''));
-    o.value = a.id;
-    t.appendChild(o);
-  });
+  targetOptions($('target'));
 }
 $('target').addEventListener('change', function () {
   var c = nb();
   if (!c) return;
-  var agentId = $('target').value;
-  apiJson('api/notebooks/' + c.id, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ agentId: agentId || null }) })
+  var v = $('target').value;
+  var body = v.indexOf('m:') === 0 ? { externalModelId: v.slice(2) } : { agentId: v || null };
+  apiJson('api/notebooks/' + c.id, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
     .then(function (updated) {
       NOTEBOOKS = NOTEBOOKS.map(function (n) { return n.id === updated.id ? updated : n; });
       renderSide();
@@ -536,7 +579,7 @@ function renderMain() {
   $('viewchatwrap').hidden = !c || TAB !== 'chat';
   $('viewgen').hidden = !c || TAB !== 'gen';
   $('nbtitle').textContent = c ? c.title : '';
-  $('target').value = c ? (c.agentId || '') : '';
+  $('target').value = c ? (c.externalModelId ? 'm:' + c.externalModelId : (c.agentId || '')) : '';
   $('target').disabled = !c;
   $('filesbtn').disabled = !c;
   ['tabsources', 'tabchat', 'tabgen'].forEach(function (id) { $(id).disabled = !c; });
@@ -864,7 +907,7 @@ $('connect').addEventListener('click', function () {
   connect(key);
 });
 $('keyinput').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('connect').click(); });
-$('newnb').addEventListener('click', newNotebook);
+$('newnb').addEventListener('click', openNewNotebookModal);
 
 if (KEY) connect(KEY); else showLogin();
 </script>

@@ -27,7 +27,7 @@ const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 // Seeded at startup, which is when a validator that reads a not-yet-defined constant would fail.
 process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
 const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, readDockerfile, writeDockerfile, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, portalSessionToken, readPortalSession, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, memoryScopeOf, mayRemember, memoryFor, memoryOverview, memoryEntries, deleteMemoryEntry, clearMemory, deleteMemoryOf, memoryDashboardRoutes, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, mayLookupKnowledge, knowledgeFor, addEntry, getByKey, getEntry, sourceSeen, overview: knowledgeOverview, entriesOf, removeEntry, clearSource, purgeOld, activityLog, knowledgeDashboardRoutes, RssError, SOURCE_TYPE, getFeed, listFeeds, createFeed, updateFeed, removeFeed, parseFeedXml, forcePoll, rssTick, parseExtraction, looksBlocked, parseUnblockReply, setExtractionRunner, rssPump, retryEntry, startFeeds, stopFeeds, rssDashboardRoutes,
-	NotebookError, createNotebook, listNotebooks, getNotebook, renameNotebook, setNotebookAgent, deleteNotebook, listSources, getSource, addSource, removeSource, chunkText, cosine, topChunks, embedTexts, setEmbedder, setNotebookRunner, setFileReader, parseExtraction: parseNotebookExtraction, askNotebook, generateOutput, listOutputs, OUTPUT_KINDS, pumpExtract: pumpNotebookExtract, resumeNotebookExtractions, stopNotebookExtractions,
+	NotebookError, createNotebook, listNotebooks, getNotebook, renameNotebook, setNotebookAgent, setNotebookExternalModel, deleteNotebook, listSources, getSource, addSource, removeSource, chunkText, cosine, topChunks, embedTexts, setEmbedder, setNotebookRunner, setFileReader, parseExtraction: parseNotebookExtraction, askNotebook, generateOutput, listOutputs, OUTPUT_KINDS, pumpExtract: pumpNotebookExtract, resumeNotebookExtractions, stopNotebookExtractions,
 	ExternalModelError, listEndpoints, getEndpoint, createEndpoint, updateEndpoint, deleteEndpoint, listExternalModels, getModel, addModel, updateModel, removeModel, listEndpointsWithModels, setFetch, guessCapabilities, detectModels, checkEndpointStatus, modelsForKey, setKeyModels, listAccess, splitSseLines, chatCompletion, normalizeBaseUrl,
 	recentAudit: recentAuditRows } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
@@ -1918,6 +1918,27 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.throws(() => setNotebookAgent(nb.id, nk.id, "no-such-agent"), (e) => e.status === 404);
 	assert.throws(() => setNotebookAgent(nb.id, ok.id, nagent.id), (e) => e.status === 404, "another key cannot change it");
 
+	// A notebook can be processed by a granted external model instead of an agent -- chat and generate
+	// go through it directly (no Pi session), but extraction still always falls back to the main
+	// endpoint, since a model has no file-reading or URL-fetching ability at all.
+	const nep = createEndpoint({ name: "notebook-test-ep", baseUrl: "https://llm.notebook-test", models: [{ modelId: "nb-model" }] });
+	const [nmodel] = listExternalModels(nep.id);
+	assert.throws(() => createNotebook(nk.id, { title: "x", externalModelId: nmodel.id }), /not granted/, "not granted to this key yet");
+	assert.throws(() => createNotebook(nk.id, { title: "x", agentId: nagent.id, externalModelId: nmodel.id }), /not both/);
+	setKeyModels(nk.id, [nmodel.id]);
+	const modelNb = createNotebook(nk.id, { title: "Model notebook", externalModelId: nmodel.id });
+	assert.equal(modelNb.externalModelId, nmodel.id);
+	assert.equal(modelNb.agentId, null);
+	assert.throws(() => setNotebookExternalModel(nb.id, nk.id, "no-such-model"), (e) => e.status === 404);
+	const switched = setNotebookExternalModel(nb.id, nk.id, nmodel.id);
+	assert.equal(switched.externalModelId, nmodel.id);
+	assert.equal(switched.agentId, null, "switching to a model clears the agent");
+	const switchedBack = setNotebookAgent(switched.id, nk.id, nagent.id);
+	assert.equal(switchedBack.agentId, nagent.id);
+	assert.equal(switchedBack.externalModelId, null, "switching to an agent clears the model");
+
+	assert.throws(() => setNotebookExternalModel(nb.id, ok.id, nmodel.id), (e) => e.status === 404, "another key cannot switch it");
+
 	// Sources: validation, the per-notebook cap.
 	assert.throws(() => addSource(nb.id, nk.id, { kind: "bad", name: "x", origin: "x" }), /"upload" or "url"/);
 	assert.throws(() => addSource(nb.id, nk.id, { kind: "url", name: "x", origin: "not a url" }), /not a URL/);
@@ -2025,6 +2046,37 @@ assert.equal(isReloadCommand(undefined), false);
 	// A notebook with no done sources yet refuses to generate rather than send nothing useful.
 	const emptyNb = createNotebook(nk.id, { title: "Empty" });
 	await assert.rejects(generateOutput(emptyNb, "summary"), (e) => e.status === 409);
+
+	// A model notebook: extraction still runs through the main endpoint (the fake agent runner already
+	// in place), but asking a question and generating an output go through the external model instead.
+	setNotebookRunner(async ({ prompt }) => ({ text: JSON.stringify({ title: "Model doc", text: "The moon is bright tonight. ".repeat(40), summary: "About the moon." }) }));
+	const modelSrc = addSource(modelNb.id, nk.id, { kind: "upload", name: "moon.txt", origin: "notebooks/x/sources/moon.txt" });
+	const waitModelDone = async () => {
+		const end = Date.now() + 3000;
+		for (;;) {
+			const s = getSource(modelSrc.id);
+			if (s?.status === "done") return s;
+			if (Date.now() > end) throw new Error("timed out waiting for the model notebook's extraction");
+			await new Promise((r) => setTimeout(r, 15));
+		}
+	};
+	await waitModelDone();
+	let seenModelCompletion = null;
+	setFetch(async (url, opts) => {
+		if (opts?.body) seenModelCompletion = JSON.parse(opts.body);
+		return { ok: true, body: { getReader: () => { let sent = false; return { read: async () => (sent ? { done: true } : ((sent = true), { done: false, value: new TextEncoder().encode('data: {"choices":[{"delta":{"content":"The moon."}}]}\n\ndata: [DONE]\n\n') })) }; } } };
+	});
+	const modelNotebook = getNotebook(modelNb.id, nk.id);
+	const modelAnswer = await askNotebook({ notebook: modelNotebook, question: "What is bright tonight?" });
+	assert.equal(modelAnswer.text, "The moon.");
+	assert.ok(modelAnswer.citations.length > 0, "retrieval still works the same way for a model notebook");
+	assert.equal(seenModelCompletion.model, "nb-model", "the external model was actually called, not the agent runner");
+	const modelOut = await generateOutput(modelNotebook, "summary");
+	assert.equal(modelOut.text, "The moon.");
+	setFetch(null);
+	deleteNotebook(modelNb.id, nk.id);
+	setKeyModels(nk.id, []);
+	deleteEndpoint(nep.id);
 
 	// A bad embeddings reply is reported, not thrown through the extraction pipeline.
 	setNotebookRunner(async ({ prompt }) => {
@@ -9999,6 +10051,24 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		assert.equal(badAgent.status, 404);
 		const unset = await call(`/api/notebooks/${nbId}`, { method: "PATCH", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ agentId: null }) });
 		assert.equal(unset.json.agentId, null);
+
+		// externalModelId the same way -- mutually exclusive with agentId, and only a model this key
+		// was actually granted (Integrations -> Access Control) is accepted.
+		const nbEp = createEndpoint({ name: "nb-http-test-ep", baseUrl: "https://llm.nb-http-test", models: [{ modelId: "nb-http-model" }] });
+		const [nbModel] = listExternalModels(nbEp.id);
+		const ungranted = await call(`/api/notebooks/${nbId}`, { method: "PATCH", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ externalModelId: nbModel.id }) });
+		assert.equal(ungranted.status, 404);
+		setKeyModels(myKey.id, [nbModel.id]);
+		const toModel = await call(`/api/notebooks/${nbId}`, { method: "PATCH", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ externalModelId: nbModel.id }) });
+		assert.equal(toModel.json.externalModelId, nbModel.id);
+		assert.equal(toModel.json.agentId, null, "switching to a model clears the agent");
+		const createdWithModel = await call("/api/notebooks", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ title: "Model NB", externalModelId: nbModel.id }) });
+		assert.equal(createdWithModel.status, 201);
+		assert.equal(createdWithModel.json.externalModelId, nbModel.id);
+		await call(`/api/notebooks/${createdWithModel.json.id}`, { method: "DELETE", headers: auth });
+		await call(`/api/notebooks/${nbId}`, { method: "PATCH", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ externalModelId: null }) });
+		setKeyModels(myKey.id, []);
+		deleteEndpoint(nbEp.id);
 
 		// Generating with no sources at all is refused cleanly, not a crash.
 		const tooSoon = await call(`/api/notebooks/${nbId}/generate`, { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ kind: "summary" }) });

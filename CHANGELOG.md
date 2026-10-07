@@ -27,6 +27,13 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   itself. It's one direct, streaming, stateless HTTP call to the endpoint's own `/v1/chat/completions`
   (`lib/externalmodels.mjs`) — the browser resends the whole conversation each time, since there is no
   Pi session to keep it in.
+- **Notebooks can be processed by a granted model instead of an agent.** Creating a notebook now opens
+  a modal (title + a picker: the key's main endpoint, an agent, or a granted external model) instead of
+  a plain prompt; the same picker in the notebook's own bar changes it afterward. A model notebook's
+  **Chat** and **Generated** go straight through it (no tools, no Pi session, so a follow-up question
+  has no memory of the one before it — unlike an agent notebook's persistent session); extracting a new
+  source still always runs through the key's main endpoint either way, since a model has no
+  file-reading or URL-fetching ability at all.
 - **Notebooks: a NotebookLM-style feature in the client portal.** A new page (`/notebook`, linked from
   the chat portal's sidebar, same login) where a key holder uploads documents or adds URLs as a
   notebook's **sources**; each is extracted by that notebook's own agent (in its own container, the
