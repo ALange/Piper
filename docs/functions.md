@@ -40,7 +40,47 @@ It is a real chat: it runs as that key or agent, so the key's session cap, daily
 the key's and the agent's, and the agent can use its tools in its container. A chat keeps its agent for its whole life and
 continues after a gateway restart. The messages you see are kept **in this browser only** (the gateway keeps just the live session,
 which expires like any chat's); deleting a chat also ends its session. It needs a dashboard password and `PLAYGROUND_ENABLED`.
-Slash commands and image attachments are not part of it yet.
+The gateway's own chat commands (`/piper`, `/reload`, `/skills`, `/extensions`, `/settings`, `/profile`)
+work the same as anywhere else; image attachments are not part of it yet.
+
+## Client portal
+
+A standalone page for a **key holder**, not the operator — reached at `http://<host>:<PORTAL_PORT>/`,
+on its own port, separate from the dashboard and the gateway's own API port, and off by default
+(`PORTAL_ENABLED`). There is no dashboard password here: a person logs in with **their own API key**,
+and from there can only ever chat with that key's own agents and browse that key's own (or one of its
+agents') workspace files — there is no way to pick a different key, unlike the operator's Playground.
+The chat itself works the same way (a real turn, streamed, with thinking and tool calls shown) and
+reuses the same workspace file browser, which renders an `.html`/`.htm` file as a live page (a sandboxed
+`<iframe>`, script allowed but no access to this page's session) instead of dumping its source. Several
+conversations can be running at once — busy is tracked
+per conversation, not page-wide, so starting a turn in one and switching to chat in another works, and
+the sidebar marks every conversation still working with a small dot. When Pi compacts a chat's context
+automatically (or recovers from an overflow), a short note shows right in the chat, and the context
+figure in the status bar updates live, mid-turn, rather than only once the whole turn finishes. Two more
+sidebars sit next to **files**: **Tools & Extensions**
+(your own extension files, any shared ones granted by the operator, and the commands extensions add)
+and **Skills** (each skill command, its description and where it came from) — the same information the
+`/extensions` and `/skills` chat commands give as text, asking the same running session. Typing one of
+the gateway's own commands (`/piper` for the
+list, `/reload`, `/skills`, `/extensions`, `/settings`, `/profile`) is answered directly, the same as
+the plain API, rather than sent to the agent as a chat message. The key itself is kept in the browser's `sessionStorage`
+only: gone on logout or when the tab closes, never remembered across restarts. The **chat history**
+(every conversation's title, agent and messages) is different: it is kept server-side too, so logging
+in from another browser or device shows the same chats to continue — the browser's own local copy is
+just a fast first read, synced to the gateway on every change. A turn is not tied to the connection
+that started it: closing the tab, or losing the connection, lets the agent keep working, and reloading
+the page, logging back in, or switching back to that conversation catches up on whatever happened while
+disconnected — live, if it is still running. The **stop** button sends an explicit interrupt
+(`POST /api/conversation/:id/interrupt`) rather than relying on the connection closing, which no longer
+stops anything by itself. A message can carry attachments: an
+image (📎 button, or just pasted in) goes through the same pipeline as any vision-capable model's
+input and shows as a thumbnail in the chat; a document has no such pipeline in Pi's own protocol, so
+it is uploaded straight to the agent's workspace (`uploads/<name>`) with the message mentioning it, for
+the agent to read with its own tools. Settings: `PORTAL_ENABLED` (off by default — it opens a new
+port), `PORTAL_PORT`, `PORTAL_HISTORY_MAX_BYTES` (a hard cap on one key's whole stored history; the
+browser already trims itself well under it), `PORTAL_ATTACHMENT_MAX_BYTES` (a cap on one attached
+image's decoded size).
 
 ## Overview
 
@@ -217,6 +257,85 @@ shown once); a failed delivery is retried once and the outcome is written on the
 Settings (Settings → Jobs): `JOBS_ENABLED`, `JOBS_MAX_PARALLEL`, `JOBS_MIN_INTERVAL_MS`, `JOBS_MAX_PER_KEY`,
 `JOBS_RESULT_DAYS`, `JOBS_MAX_FAILURES`, `JOBS_NOTIFY_ALERTS`, `AGENT_JOBS_DAILY_COST`.
 
+## Memory
+
+Durable notes a chat remembers across its own chats and containers, through three tools (`piper_remember`,
+`piper_recall`, `piper_memories`) — never through the container's own filesystem, so there is nothing for an
+agent to plant that would matter: every call crosses the bridge and the gateway itself is the only thing that
+ever reads or writes the data.
+
+**Scope.** A key's own chats always share one memory. A named agent's does too — its own, or (chosen when it is
+created, fixed afterward, the same as its workspace mode) folded into its key's, so the agent and the key's own
+chats read and write the same notes. There is no per-chat memory: that would defeat the point.
+
+**The agent's tools.** `piper_remember {name, value}` writes or updates a note (writing the same name again
+replaces it); `piper_recall {name}` reads one back by its exact name; `piper_memories {query}` lists notes
+newest first, or searches their names and values for a word or phrase. The agent can write and read; it cannot
+delete — that stays the operator's, on the Memory page, so one chat cannot quietly erase what another wrote.
+
+**Management (Settings → Memory page).** Every scope that has notes, with its count and size; open one to see
+its notes, delete a note, or clear all of them. A cleared or deleted note is gone for good.
+
+**Guards.** `MEMORY_MAX_ENTRIES` caps notes per memory — a *new* name over it is refused, but updating an
+existing one is always allowed, so an agent is never stuck; only the operator clears room. `MEMORY_MAX_NAME_BYTES`
+and `MEMORY_MAX_VALUE_BYTES` cap one note's name and content. `MEMORY_LOOKUP_LIMIT` caps how many notes one
+search returns, so a broad query cannot dump a whole memory into context at once.
+
+Settings (Settings → Sessions → Memory): `AGENT_MEMORY_ENABLED`, `MEMORY_MAX_ENTRIES`, `MEMORY_MAX_NAME_BYTES`,
+`MEMORY_MAX_VALUE_BYTES`, `MEMORY_LOOKUP_LIMIT`.
+
+## Knowledge base
+
+Entries every chat can search and read, through two tools — `piper_knowledge_search {query}` and
+`piper_knowledge_read {id}` — read and search only, the same "never through the agent" shape as Memory: an
+agent can draw on it, but writing and deleting stay the operator's, on the Knowledge page. The store itself
+(`knowledge_entries`, keyed by a source type and reference) is source-agnostic; RSS is the first thing that
+fills it, not the only one planned.
+
+**RSS, the first source.** The gateway polls each feed you add on its own interval, using its own `http(s)`
+fetch — only the *feed XML* is fetched by the gateway itself. A feed's first poll ever only seeds its current
+entries, marked `skipped`: known, but never extracted, so adding a feed never backfills a history you did not
+ask for. From the next poll on, a genuinely new entry (by the feed's own guid) is queued, and a real agent you
+named for that feed (or `RSS_DEFAULT_AGENT` when it names none) runs a whole turn: fetch the article page
+itself — with whatever fetch tool that agent has, inside its own container — and extract it clean, no ads,
+navigation or sponsored sections, replying with one strict JSON object (title, text, summary, tags). A reply
+that is not valid JSON, or is missing a title or text, is not kept as a dead entry waiting for someone to
+notice and retry it by hand — it is discarded outright (the reason is still on record in the Log tab), and
+the same article is simply tried again, as if new, the next time that feed is polled. Nothing to manage here
+on purpose: a one-off hiccup (a slow page, a model stumble) just gets a fresh attempt on its own.
+
+**Blocked, not just failed.** Some sites refuse automated fetches outright (a 403, Cloudflare, a CAPTCHA).
+When a reply that failed to parse also reads like one of those (a small, deliberately heuristic check — it
+only decides whether to spend one more turn, never whether the entry is kept), the same agent, in the same
+session, gets one more try at the same article before giving up: the Wayback Machine, a search for the same
+headline reported elsewhere, or whatever else its tools allow. If that works, the entry is `done` as normal.
+If not, it is marked `blocked` and, unlike a plain failed attempt, kept rather than discarded — the cause was
+the site refusing automated fetches outright, not a one-off hiccup worth just trying again on its own, so it
+is worth a person's attention, with the agent's own reason kept. `RSS_AUTO_UNBLOCK` (on by default) is the
+switch; off marks it `blocked` on the first such reply instead of trying again.
+
+**Management (Knowledge page).** **Feeds** tab: add, edit (name, URL, agent, interval, enabled), **pull now**
+(polls regardless of schedule), delete; each row shows when it was last polled and its last article's own
+outcome (success or blocked, with when — a merely failed attempt leaves no trace here, since it is retried
+on its own). **Entries** tab: every entry (source, title, status, published, fetched), a detail view (full
+text, summary, tags), **retry** a blocked one, delete, or clear a whole source; a skipped (backfilled) entry
+never shows here, since there is nothing to read or act on
+— search by title, and select and delete one or several at once. **Log** tab: every poll, extraction and
+operator action, newest first — the audit log, filtered to Knowledge and RSS actions.
+
+**Guards.** `RSS_POLL_MIN_INTERVAL_MS` floors how often any one feed may be polled; `RSS_MAX_FEEDS` caps how
+many feeds exist at once; `RSS_MAX_PARALLEL_EXTRACTIONS` caps concurrent extraction turns;
+`RSS_EXTRACT_TIMEOUT_MS` stops a stuck one (covering both tries, when `RSS_AUTO_UNBLOCK` uses its second);
+`RSS_MAX_ARTICLE_BYTES` caps one article's stored text (cut, not refused — it is the pipeline's own output).
+`KNOWLEDGE_LOOKUP_LIMIT` caps how many entries one search returns; `KNOWLEDGE_RETENTION_DAYS` forgets entries
+older than that (0 keeps everything). `KNOWLEDGE_ENABLED` and `RSS_ENABLED` are separate switches on purpose:
+turning off RSS pauses new extraction without taking the tools away from agents reading what is already
+there.
+
+Settings (Settings → Knowledge): `KNOWLEDGE_ENABLED`, `KNOWLEDGE_LOOKUP_LIMIT`, `KNOWLEDGE_RETENTION_DAYS`,
+`RSS_ENABLED`, `RSS_POLL_MIN_INTERVAL_MS`, `RSS_MAX_FEEDS`, `RSS_MAX_PARALLEL_EXTRACTIONS`, `RSS_AUTO_UNBLOCK`,
+`RSS_EXTRACT_TIMEOUT_MS`, `RSS_DEFAULT_AGENT`, `RSS_MAX_ARTICLE_BYTES`.
+
 ## Files & profiles
 
 Browse the **workspace** (what the agents see at `/workspace`) or the **profile** (skills, extensions, `AGENTS.md`,
@@ -251,7 +370,10 @@ The **Extensions** page installs Pi extensions **on this host** and decides who 
   scripts* (they would run as the gateway's user), git hooks disabled, and an environment holding nothing but `PATH`. What arrives
   must be a Pi package (a `pi` section in `package.json`, the `pi-package` keyword, or `extensions/`, `skills/` or `prompts/`
   folders) and fit `EXTENSION_MAX_BYTES`, or it is removed again. **update** installs it again from the same source; **remove**
-  asks first when something gets it. The code is never run on the host.
+  asks first when something gets it. The code is never run on the host. Installing, updating or removing one closes the live
+  chats of everyone it is granted to and waits for their containers to actually stop before touching anything on disk — the
+  next message gets a freshly recreated container with the new (or, for a remove, no) copy, rather than one still pointing at
+  content that is about to change or disappear.
 - **Access tab.** A matrix of who gets which library extension or shared bundle, at three levels: the **default** for every key
   (`SHARED_BUNDLES`), a **key** (all of its agents) and an **agent**. A key or agent either *follows* the level above or has *its own
   list*; the last column shows what it finally gets. A change stops the affected live chats, and each resumes on its next message
@@ -282,9 +404,11 @@ The detail view of a key's or an agent's profile (Files & profiles → Profiles)
 
 **Files → Bundles** (the third root of the file browser) edits the shared bundles under `SHARED_ROOT`: **new bundle** (creates `skills/`, `extensions/` and
 `prompts/`), the same browser and text editor as for profiles, upload, rename, delete, and **delete bundle**. Granting a
-bundle to keys stays on the API keys page. After a change the live chats of every key and agent that gets the bundle reload.
-A bundle that is a link (you pointed it at another folder) is shown but not edited here. Changes need a dashboard
-password, because every granted key runs a bundle's extensions.
+bundle to keys stays on the API keys page. After an in-place file edit, the live chats of every key and agent that gets the
+bundle reload (their container's mount already sees the new file, nothing needs recreating); **deleting** the bundle instead
+closes those chats and waits for their containers to stop, since the directory they have mounted is about to go away
+entirely, not just change. A bundle that is a link (you pointed it at another folder) is shown but not edited here. Changes
+need a dashboard password, because every granted key runs a bundle's extensions.
 
 ## Containers
 
@@ -338,10 +462,12 @@ configuration. A **reload** button re-reads them.
 
 ## API keys
 
-Create, revoke and delete API keys (a key is shown once, then only its hash is stored). Per key: expiry, session
-cap, daily spend cap, allowed models, shared bundles, usage. In each key's detail (on Files & profiles → Profiles) a
-**Container** section holds its overrides (memory, CPU, processes, network, image, mounts, environment) and the
-**persistent container** switch.
+Create, revoke and delete API keys (a key is shown once, then only its hash is stored — **regenerate**
+issues a brand-new secret for that same key, same name/limits/grants, shown once the same way; the old
+secret stops working at once). Per key: expiry, session cap, daily spend cap, allowed models, shared
+bundles, usage. In each key's detail (on Files & profiles → Profiles) a **Container** section holds
+its overrides (memory, CPU, processes, network, image, mounts, environment) and the **persistent
+container** switch.
 
 ## Settings
 
