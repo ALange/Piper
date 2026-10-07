@@ -5,6 +5,14 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 ## [Unreleased]
 
 ### Added
+- **Edit an environment's Dockerfile right from Containers → Images.** An **edit Dockerfile** button
+  next to each environment's **build**/**rebuild** opens it as plain text (Ctrl+S to save). Saving only
+  changes the file on disk — nothing is built automatically; use the existing build/rebuild button
+  afterward, same as editing it by hand always required.
+- **Edit the default container settings (image, network, memory, cpus, pids, mounts, env) right from
+  Containers → Images**, next to the environments they apply to — the same settings Settings →
+  Containers already has, just surfaced where you're already looking when picking or building an
+  image. Saving applies to a container the next time it's created or recreated, same as before.
 - **A username+password login for the client portal, as an alternative to pasting the API key.** Set
   one up once (the ⚙ button next to **log out**) and the login screen's **Password** tab logs in with
   it from then on. This never hands back the raw key: a successful password login issues a separate
