@@ -5,6 +5,13 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 ## [Unreleased]
 
 ### Added
+- **A username+password login for the client portal, as an alternative to pasting the API key.** Set
+  one up once (the ⚙ button next to **log out**) and the login screen's **Password** tab logs in with
+  it from then on. This never hands back the raw key: a successful password login issues a separate
+  session token of its own (`PORTAL_SESSION_MS`, default 30 days), signed with that key's own password
+  hash the same one-way way the dashboard's own password already is — changing or removing the
+  password ends every session of its own at once, with nothing to separately revoke. Wrong attempts
+  are throttled per username (exponential backoff, same mechanism the dashboard's login already uses).
 - **Auto-compaction is now visible in the client portal.** When an agent's context gets full and Pi
   compacts it automatically (or recovers from an overflow), a short note now appears in the chat
   ("context is getting full; compacting automatically…", then "compacted the context: 42000 → 18000

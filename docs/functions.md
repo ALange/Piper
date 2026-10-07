@@ -48,8 +48,12 @@ work the same as anywhere else; image attachments are not part of it yet.
 A standalone page for a **key holder**, not the operator — reached at `http://<host>:<PORTAL_PORT>/`,
 on its own port, separate from the dashboard and the gateway's own API port, and off by default
 (`PORTAL_ENABLED`). There is no dashboard password here: a person logs in with **their own API key**,
-and from there can only ever chat with that key's own agents and browse that key's own (or one of its
-agents') workspace files — there is no way to pick a different key, unlike the operator's Playground.
+or a username+password they set up once from inside the portal itself (the ⚙ button next to **log
+out**) — the login screen offers both. A password login never hands back the raw key: it issues a
+separate session token of its own (`PORTAL_SESSION_MS`, default 30 days), signed with that key's own
+password hash, so changing or removing the password ends every session of its own at once. Either way,
+from there a key can only ever chat with its own agents and browse its own (or one of its agents')
+workspace files — there is no way to pick a different key, unlike the operator's Playground.
 The chat itself works the same way (a real turn, streamed, with thinking and tool calls shown) and
 reuses the same workspace file browser, which renders an `.html`/`.htm` file as a live page (a sandboxed
 `<iframe>`, script allowed but no access to this page's session) instead of dumping its source. Several
@@ -80,7 +84,7 @@ it is uploaded straight to the agent's workspace (`uploads/<name>`) with the mes
 the agent to read with its own tools. Settings: `PORTAL_ENABLED` (off by default — it opens a new
 port), `PORTAL_PORT`, `PORTAL_HISTORY_MAX_BYTES` (a hard cap on one key's whole stored history; the
 browser already trims itself well under it), `PORTAL_ATTACHMENT_MAX_BYTES` (a cap on one attached
-image's decoded size).
+image's decoded size), `PORTAL_SESSION_MS` (how long a password sign-in lasts).
 
 ## Overview
 
