@@ -4,14 +4,124 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 
 ## [Unreleased]
 
+### Added
+- **Auto-compaction is now visible in the client portal.** When an agent's context gets full and Pi
+  compacts it automatically (or recovers from an overflow), a short note now appears in the chat
+  ("context is getting full; compacting automatically…", then "compacted the context: 42000 → 18000
+  tokens") and the context figure in the status bar updates live, mid-turn, instead of only reflecting
+  it once the whole turn finishes. Built on the same live-session log already used for reconnecting to
+  a running turn: `LiveLog` now understands Pi's own `compaction_start`/`compaction_end` events.
+- **An HTML file previews as a rendered page in the client portal, not just as text.** Clicking a
+  `.html`/`.htm` file in the workspace browser (one an agent just wrote, or one you uploaded) now opens
+  it in a sandboxed `<iframe>` (`sandbox="allow-scripts"`, no `allow-same-origin`) instead of dumping its
+  source — it can run its own script, but can never read this page's session or API key.
+- **Multiple conversations in the client portal can be busy at once.** A single page-wide "busy" flag
+  used to block sending (or even switching away) while any one chat was streaming — in practice, only
+  one conversation could ever be running at a time. Busy is now tracked per conversation: start a turn
+  in one, switch to another, and send there too; each streams independently, and the sidebar marks
+  every conversation still working with a small dot.
+- **A turn in the client portal survives closing the tab, and reconnecting catches up on it.**
+  Previously, losing the connection (closing the tab, a network drop) aborted the agent's turn in
+  progress — the opposite of "it kept running while I was away." The turn is no longer tied to the
+  connection that started it: closing the tab lets it keep going, and reloading the page, logging back
+  in, or just switching back to that conversation now catches up on whatever happened while you were
+  disconnected, live if it's still running. A real "stop" button (`POST /api/conversation/:id/interrupt`)
+  replaces the old "the browser going away stops it" trick. Built on the same live-session log the
+  dashboard's own operator view already used (`GET /api/conversation/:id/events`).
+- **Tools & Extensions and Skills sidebars in the client portal.** Two new buttons next to **files**
+  open a sidebar listing what the current agent has loaded: Skills shows each skill command with its
+  description and where it came from (your own profile, a shared bundle, or this workspace); Tools &
+  Extensions shows your own extension files, any shared (read-only) ones granted by the operator, and
+  the commands extensions have added. Backed by two new routes, `GET /api/skills` and
+  `GET /api/extensions`, which ask the same running Pi session the `/skills` and `/extensions` chat
+  commands already did — the text and the sidebar can never show something different.
+- **`/reload` and the other gateway chat commands now work in the client portal and the dashboard
+  Playground, not just the plain API.** `/piper`, `/reload`, `/skills`, `/extensions`, `/settings` and
+  `/profile` were only ever intercepted inside `/v1/chat/completions`; a chat through the Portal or
+  the Playground sent the literal text to the agent instead, since both go through `runAgentTurn`
+  directly. `runAgentTurn` now answers these itself, the same as the plain API always did.
+- **Attachments in the client portal.** A message can now carry images and documents: a 📎 button
+  beside the composer or a plain paste into it (a screenshot, a copied file). An image goes through
+  the same native vision pipeline the dashboard's Playground already has — shown as a readable
+  thumbnail in the chat, click for full size — and is dropped with a note instead of sent if the
+  agent's own model cannot see images. A document has no such pipeline in Pi's own protocol, so it is
+  uploaded straight to the agent's workspace (`uploads/<name>`) with a line added to the message
+  mentioning it, for the agent to read with its own tools; it shows as a small 📄 link in the chat
+  after sending. `PORTAL_ATTACHMENT_MAX_BYTES` caps one image's decoded size (a document instead uses
+  the ordinary `FILE_UPLOAD_MAX_BYTES`).
+- **The client portal's chat history is kept server-side.** A key's whole conversation list (titles,
+  which agent, every message) now syncs to the gateway (`GET`/`PUT /api/history`), not just the
+  browser it was started in — log in from another browser or device and the same chats are there to
+  continue. The browser's own local copy stays as the fast, offline-friendly first read; the server
+  sync is fire-and-forget and never blocks the UI. `PORTAL_HISTORY_MAX_BYTES` is a hard backstop on one
+  key's total stored history (the browser already trims itself well under it); deleting a key deletes
+  its stored history with it.
+- **Regenerate an API key.** The full value of a key is shown only once, right when it is created —
+  it is never stored, so there was no way to get a working copy back if it was lost, short of deleting
+  the key and starting over (losing its name, limits and grants with it). API keys → **regenerate**
+  issues a brand-new secret for that same key in place: same name, limits, bundles and agents, shown
+  once in the same reveal panel to copy. The old secret stops working immediately.
+- **A client portal.** A standalone page, on its own port (`PORTAL_PORT`, off by default —
+  `PORTAL_ENABLED`), where a key holder logs in with their own API key — no dashboard password, and
+  no way to pick any key or agent but their own — and chats with their own agents and browses their
+  own workspace files. Reuses the same chat mechanism as the dashboard's Playground (a real turn,
+  streamed) and the existing workspace file API, with every route locked to the key presented in
+  `Authorization: Bearer <key>`; a `keyId` in a request body is never trusted, only `credentialFor`'s
+  own ownership check. The key is kept in the browser's `sessionStorage` only — gone on logout or when
+  the tab closes, never remembered across restarts.
+- **Knowledge base, with RSS as its first source.** The gateway polls RSS/Atom feeds you add, and for every
+  new entry has a real agent of yours (your choice of model, memory, extensions and skills) fetch the article
+  and extract it clean — no ads, navigation or sponsored sections — into title, text, a short summary and
+  tags. Every chat can then search and read it through two new tools, `piper_knowledge_search` and
+  `piper_knowledge_read` — read and search only, never write or delete, so an agent can draw on it without
+  being able to corrupt it. A feed's first poll only seeds its current entries; nothing is extracted until
+  something genuinely new shows up, so adding a feed never backfills a history you did not ask for. The
+  storage itself (`knowledge_entries`, keyed by a source type and reference) is source-agnostic by design —
+  RSS is the first producer, not the only one planned. A new **Knowledge** page manages feeds (add, edit,
+  pull now, delete) on its Feeds tab, and every entry (view, retry a failed one, delete, clear a whole
+  source) on its Entries tab. `KNOWLEDGE_ENABLED`/`RSS_ENABLED` are separate switches on purpose, so new
+  extraction can be paused without losing agents' ability to read what is already there; `RSS_MAX_FEEDS`,
+  `RSS_MAX_PARALLEL_EXTRACTIONS`, `RSS_EXTRACT_TIMEOUT_MS`, `RSS_MAX_ARTICLE_BYTES`, `RSS_DEFAULT_AGENT` and
+  `KNOWLEDGE_RETENTION_DAYS` round out the Settings → Knowledge group. The Feeds tab shows each feed's last
+  poll and its last article's own outcome (success, blocked, failed), so a problem is visible without opening
+  the Entries tab. When a fetch looks blocked rather than merely failed (a 403, Cloudflare, a CAPTCHA), the
+  same agent gets one more try in the same turn — the Wayback Machine, a search for the same report
+  elsewhere, or whatever its tools allow — before the entry is marked **blocked** (a status distinct from a
+  plain failure) instead of giving up on the first try; `RSS_AUTO_UNBLOCK` (on by default) is the switch. The
+  Entries tab can search by title, and select and delete entries one at a time or in bulk; it no longer shows
+  a feed's skipped (backfilled) entries, since there is nothing to read or act on there. A new **Log** tab
+  lists every poll, extraction and operator action (newest first) — the audit log, filtered to Knowledge and
+  RSS actions.
+- **Agent memory.** A chat can remember durable notes across its own chats and containers, through three new
+  tools: `piper_remember` (write or update a note), `piper_recall` (read one back by name), `piper_memories`
+  (list or search notes, newest first). Never read or written through the container's own filesystem — every
+  call crosses the bridge, and only the gateway itself ever touches the data. A key's own chats always share
+  one memory; a named agent's does too, either its own or (chosen when the agent is created, fixed afterward
+  like its workspace mode) folded into its key's. The agent can write and read but not delete — a new Memory
+  page lists every scope with notes (count, size, last updated), and lets the operator view, delete one, or
+  clear a whole scope. `AGENT_MEMORY_ENABLED` (on by default) is the one switch; `MEMORY_MAX_ENTRIES`,
+  `MEMORY_MAX_NAME_BYTES`, `MEMORY_MAX_VALUE_BYTES` and `MEMORY_LOOKUP_LIMIT` keep one memory bounded. Deleting
+  an agent or a key removes its memory with it.
+
 ### Fixed
-- **One missing extension took a whole chat's container down.** A shared bundle or library extension that
-  was granted but whose folder is no longer actually on the host (removed by hand, a restore that missed it,
-  a reinstall that never finished) was still mounted and pointed to; Pi refuses to start at all when even one
-  of its `-e` extension paths does not exist, so the chat failed outright with "the chat's container failed
-  to start". It is now left out of that run instead, the chat is told once ("an extension this chat was
-  granted could not be found on the host and was left out: `<name>`. Reinstall or remove it on Extensions."),
-  and it mounts again on its own the moment the extension is back.
+- **One missing or broken extension took a whole chat's container down.** A shared bundle or library
+  extension that was granted but whose folder is no longer actually on the host (removed by hand, a restore
+  that missed it), or is there but is not a usable Pi package (a half-written edit, a file deleted out from
+  under it), was still mounted and pointed to; Pi refuses to start at all when even one of its `-e` extension
+  paths does not exist or does not load, so the chat failed outright with "the chat's container failed to
+  start". It is now left out of that run instead, the chat is told once ("an extension this chat was granted
+  could not be found or loaded on the host and was left out: `<name>`. Reinstall or remove it on
+  Extensions."), and it mounts again on its own the moment it is fixed.
+- **Updating an extension could break an already-open chat, or leave one stuck failing to start.**
+  Reinstalling a library extension under the same name swapped its content in place without changing
+  anything a running container's bind mount or its signature cared about, so an open chat kept pointing at
+  the old copy's files — and those were then deleted as part of the swap, right out from under it — while
+  only getting a soft, in-place reload rather than a real restart. Installing (as an update), updating, or
+  removing a library extension, and deleting a shared bundle, now close every chat currently using it and
+  wait for its container to actually stop *before* touching the directory on disk, and a same-name reinstall
+  now changes the container's signature too, so the chat's next message gets a freshly recreated container
+  with the new content (what the agent had installed in it is carried over, same as any other settings
+  change) instead of a stale or missing mount.
 
 ### Added
 - **Scheduled tasks reach their owner.** A job has a `notify` setting (never, changes, always). A finished run is put in an
@@ -112,6 +222,13 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   workspace file API (`/v1/piper/files`) and the dashboard's file browser (list, text edit with its conflict
   check, mkdir, move, delete, upload/download/delete, the workspace quota), both run against the real profile
   helper script rather than mocked away.
+
+### Fixed
+- **A failed RSS article extraction is discarded and simply tried again next time its feed is polled,
+  instead of sitting forever as a `failed` entry waiting for someone to notice and click retry.** The
+  guid is freed the moment the row is gone, so the next poll sees it as new again; the reason is still
+  on record in the Log tab. `blocked` (a site deliberately refusing automated fetches) is unchanged —
+  that one is worth a person's attention and is still kept, still retriable by hand.
 
 ## [0.7.0] - 2026-10-01
 

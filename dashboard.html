@@ -517,6 +517,8 @@
       <a href="#agents"><span class="ic">&#8644;</span>Agents</a>
       <a href="#extensions"><span class="ic">&#10010;</span>Extensions</a>
       <a href="#jobs"><span class="ic">&#9201;</span>Jobs</a>
+      <a href="#memory"><span class="ic">&#8734;</span>Memory</a>
+      <a href="#knowledge"><span class="ic">&#9737;</span>Knowledge</a>
       <a href="#files"><span class="ic">&#9776;</span>Files &amp; profiles</a>
       <div class="navgroup">Infrastructure</div>
       <a href="#containers"><span class="ic">&#9635;</span>Containers<span class="navbadge bad" id="nav-containers-badge" hidden>!</span></a>
@@ -989,6 +991,97 @@
       </section>
     </div><!-- /view-jobs -->
 
+    <div class="view" id="view-memory">
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Memory</h3>
+            <p class="hint" style="margin:0">Notes a chat remembers (<code>piper_remember</code>/<code>piper_recall</code>/<code>piper_memories</code>), kept until cleared here. A key&rsquo;s own chats all share one memory; a named agent&rsquo;s is its own, or its key&rsquo;s, chosen when it was created (Endpoints &rarr; create). The agent can write and read notes but not delete them &mdash; that is here only.</p>
+          </div>
+          <button id="memrefresh">refresh</button>
+        </div>
+        <table>
+          <thead><tr><th>memory</th><th class="num">notes</th><th class="num">size</th><th class="num">last updated</th><th></th></tr></thead>
+          <tbody id="memrows"></tbody>
+        </table>
+        <p class="hint" id="memempty" hidden>No memory yet: nothing has been remembered.</p>
+      </section>
+      <section class="panel" id="memdetail" hidden>
+        <div class="toolbar"><h3 id="memdetailtitle">Notes</h3><div><button id="memclear">clear all</button><button id="memdetailclose">close</button></div></div>
+        <table>
+          <thead><tr><th>name</th><th>value</th><th class="num">updated</th><th></th></tr></thead>
+          <tbody id="memnoterows"></tbody>
+        </table>
+        <p class="hint" id="memnoteempty" hidden>No notes.</p>
+      </section>
+    </div><!-- /view-memory -->
+
+    <div class="view" id="view-knowledge">
+      <section data-tab="feeds" class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>RSS feeds</h3>
+            <p class="hint" style="margin:0" id="rssnote">Each feed is polled on its own interval; a new entry is handed to its agent (model, memory, extensions, skills &mdash; whatever you gave it) to fetch the article and extract it clean. A feed&rsquo;s first poll only seeds its current entries; nothing is extracted until something newer shows up. If a site seems to be blocking the fetch, the agent gets one more try at finding the same article another way before an entry is marked <b>blocked</b> (Settings &rarr; Knowledge &rarr; RSS_AUTO_UNBLOCK).</p>
+          </div>
+          <button id="rssrefresh">refresh</button>
+          <button id="rssnew">new feed</button>
+        </div>
+        <table>
+          <thead><tr><th>feed</th><th>agent</th><th class="num">interval</th><th>state</th><th>last polled</th><th>last article</th><th></th></tr></thead>
+          <tbody id="rssrows"></tbody>
+        </table>
+        <p class="hint" id="rssempty" hidden>No feeds yet.</p>
+      </section>
+      <section data-tab="feeds" class="panel" id="rssform" hidden>
+        <h3 id="rssformtitle">New feed</h3>
+        <div class="keyform">
+          <input id="rssname" placeholder="name">
+          <input id="rssurl" placeholder="https://example.com/feed" style="min-width:280px">
+          <select id="rssagent"></select>
+          <input id="rssinterval" type="number" min="1" value="30" style="width:80px"> <span class="hint small">minutes</span>
+          <label class="ctrl"><input id="rsson" type="checkbox" checked> enabled</label>
+        </div>
+        <div class="fieldrow" style="margin-top:8px"><button id="rsssave">save</button><button id="rsscancel">close</button><span class="passnote" id="rssformnote"></span></div>
+      </section>
+      <section data-tab="entries" class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Knowledge entries</h3>
+            <p class="hint" style="margin:0">Everything any producer (RSS today) has put in the knowledge base. Agents can search and read a <code>done</code> entry (<code>piper_knowledge_search</code>/<code>piper_knowledge_read</code>) &mdash; never write or delete, that is here only.</p>
+          </div>
+          <input id="kesearch" placeholder="search by title" style="min-width:200px">
+          <select id="kesource"></select>
+          <button id="kerefresh">refresh</button>
+          <button id="kebulkdelete" disabled title="select one or more entries below first">delete selected&hellip;</button>
+          <button id="keclear" title="clear every entry of the selected source">clear source&hellip;</button>
+        </div>
+        <table>
+          <thead><tr><th><input type="checkbox" id="keselall" title="select all"></th><th>source</th><th>title</th><th>status</th><th>published</th><th>fetched</th><th></th></tr></thead>
+          <tbody id="kerows"></tbody>
+        </table>
+        <p class="hint" id="keempty" hidden>No entries yet.</p>
+      </section>
+      <section data-tab="entries" class="panel" id="kedetail" hidden>
+        <div class="toolbar"><h3 id="kedetailtitle">Entry</h3><div><button id="keretry" hidden>retry</button><button id="kedelete">delete</button><button id="kedetailclose">close</button></div></div>
+        <p class="hint" id="kedetailmeta"></p>
+        <pre id="kedetailtext" style="white-space:pre-wrap;max-height:420px;overflow:auto;background:#0c0c0c;border:1px solid var(--border);border-radius:8px;padding:10px"></pre>
+      </section>
+      <section data-tab="log" class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Knowledge log</h3>
+            <p class="hint" style="margin:0">Every feed poll, extraction (success, blocked or failed) and operator action (add, edit, delete, clear a source), newest first. This is the audit log, filtered to Knowledge and RSS actions.</p>
+          </div>
+          <button id="kelogrefresh">refresh</button>
+        </div>
+        <table>
+          <thead><tr><th>when</th><th>action</th><th>target</th><th>detail</th><th>by</th></tr></thead>
+          <tbody id="kelogrows"></tbody>
+        </table>
+        <p class="hint" id="kelogempty" hidden>Nothing logged yet.</p>
+      </section>
+    </div><!-- /view-knowledge -->
+
     <div class="view" id="view-endpoints">
       <section data-tab="agents" class="panel">
         <div class="toolbar">
@@ -1090,6 +1183,10 @@
           <select id="epws" title="own: a separate /workspace for this agent. shared: the key's existing workspace, so the agents of the key see the same files.">
             <option value="own">own workspace</option>
             <option value="shared">shared with the key</option>
+          </select>
+          <select id="epmemory" title="own: this agent's notes (piper_remember/piper_recall/piper_memories) are its own. shared: folded into its key's, so the key's own chats and this agent read and write the same notes. Fixed once created, like the workspace choice.">
+            <option value="own">own memory</option>
+            <option value="shared">memory shared with the key</option>
           </select>
           <input id="epmodel" placeholder="model (optional)">
           <select id="epthink"></select>
@@ -1891,6 +1988,10 @@ function renderKeyTable() {
     contents.addEventListener('click', function () { location.hash = '#files/profiles/key-' + k.id; });
     actions.appendChild(contents);
     if (k.status === 'active') {
+      var regen = el('button', 'regenerate');
+      regen.title = 'issue a new secret for this key; the old one stops working at once';
+      regen.addEventListener('click', function () { regenerateKey(k); });
+      actions.appendChild(regen);
       var revoke = el('button', 'revoke');
       revoke.addEventListener('click', function () {
         act('POST', 'dashboard/api-keys/' + k.id + '/revoke', {}, 'revoked "' + k.name + '"');
@@ -2032,6 +2133,23 @@ $('createkey').addEventListener('click', function () {
     .then(function (u) { KEYUSAGE = u; renderApiKeys(); })
     .catch(function (e) { button.disabled = false; keyNote(e.message, 'bad'); });
 });
+
+function regenerateKey(k) {
+  if (!confirm('Issue a new secret for "' + k.name + '"? The old one stops working immediately — anywhere still using it will need the new one.')) return;
+  fetch('dashboard/api-keys/' + k.id + '/regenerate', { method: 'POST' })
+    .then(readJson)
+    .then(function (d) {
+      KEYS = d;
+      CREATED_KEY = d.key;
+      $('copynote').textContent = '';
+      keyNote('issued a new secret for "' + k.name + '"', 'good');
+      renderApiKeys();
+      $('revealpanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      return fetch('dashboard/api-keys/usage.json', { cache: 'no-store' }).then(readJson);
+    })
+    .then(function (u) { KEYUSAGE = u; renderApiKeys(); })
+    .catch(function (e) { keyNote(e.message, 'bad'); });
+}
 
 $('newexpiry').addEventListener('change', function () {
   $('newdate').hidden = this.value !== 'date';
@@ -2318,6 +2436,7 @@ var SETTING_TABS = [
   { id: 'audit', label: 'Audit', intro: 'What the audit log records and how long it keeps it. A category that is off is not stored at all. Changes to these settings are always recorded. The log itself is on the Audit page.' },
   { id: 'access', label: 'Access', intro: 'Who may use the API and the dashboard, and what the gateway will fetch for them.' },
   { id: 'server', label: 'Server', intro: 'Listening address, request limits, logging and Pi itself. Most of these need a restart.' },
+  { id: 'knowledge', label: 'Knowledge', intro: 'What every agent may search and read (the Knowledge page), and RSS, the first thing that feeds it.' },
   { id: 'other', label: 'Other', intro: 'Settings this page does not have a place for yet.' }
 ];
 
@@ -2354,6 +2473,26 @@ var LAYOUT = {
     summary: 'After this the calling agent is told it timed out and the colleague\u2019s turn is stopped.' },
   TEAM_MAX_STEPS: { tab: 'sessions', section: 'Hand-offs and teams', label: 'Most steps in a team', unit: 'steps',
     summary: 'A team is a chain of agents on an endpoint of its own.' },
+  AGENT_MEMORY_ENABLED: { tab: 'sessions', section: 'Memory', label: 'Allow memory',
+    summary: 'Notes a chat remembers across its own chats and containers (piper_remember/piper_recall/piper_memories). Off removes the tools and refuses every call; notes already written are kept. See the Memory page.' },
+  MEMORY_MAX_ENTRIES: { tab: 'sessions', section: 'Memory', label: 'Most notes per memory', unit: 'notes',
+    summary: 'A new name over this is refused; updating an existing one is always allowed. Clear old notes from the Memory page.' },
+  MEMORY_MAX_NAME_BYTES: { tab: 'sessions', section: 'Memory', label: 'Longest note name', unit: 'bytes' },
+  MEMORY_MAX_VALUE_BYTES: { tab: 'sessions', section: 'Memory', label: 'Longest note', unit: 'bytes' },
+  MEMORY_LOOKUP_LIMIT: { tab: 'sessions', section: 'Memory', label: 'Most notes one search returns', unit: 'notes' },
+  KNOWLEDGE_ENABLED: { tab: 'knowledge', section: 'Knowledge', label: 'Allow the knowledge base',
+    summary: 'Every chat may search and read it (piper_knowledge_search, piper_knowledge_read) — read and search only, never write or delete. Off removes the tools; what is stored is kept.' },
+  KNOWLEDGE_LOOKUP_LIMIT: { tab: 'knowledge', section: 'Knowledge', label: 'Most entries one search returns', unit: 'entries' },
+  KNOWLEDGE_RETENTION_DAYS: { tab: 'knowledge', section: 'Knowledge', label: 'Keep entries for', unit: 'days' },
+  RSS_ENABLED: { tab: 'knowledge', section: 'RSS feeds', label: 'Poll feeds and extract articles',
+    summary: 'Off stops polling and extraction; it does not affect whether agents can read what is already there (Allow the knowledge base, above).' },
+  RSS_POLL_MIN_INTERVAL_MS: { tab: 'knowledge', section: 'RSS feeds', label: 'Least time between two polls of one feed' },
+  RSS_MAX_FEEDS: { tab: 'knowledge', section: 'RSS feeds', label: 'Most feeds', unit: 'feeds' },
+  RSS_MAX_PARALLEL_EXTRACTIONS: { tab: 'knowledge', section: 'RSS feeds', label: 'Articles fetched at once', unit: 'articles' },
+  RSS_EXTRACT_TIMEOUT_MS: { tab: 'knowledge', section: 'RSS feeds', label: 'Longest one article may take' },
+  RSS_DEFAULT_AGENT: { tab: 'knowledge', section: 'RSS feeds', label: 'Default extracting agent',
+    summary: 'The agent id (Agent endpoints) that fetches and cleans a feed’s articles when the feed names none of its own. It needs a way to fetch a web page — give it that extension like any other agent.', placeholder: 'none: a feed must name its own' },
+  RSS_MAX_ARTICLE_BYTES: { tab: 'knowledge', section: 'RSS feeds', label: 'Most one article may hold', unit: 'bytes' },
   PACKAGES_ENABLED: { tab: 'containers', section: 'Packages', label: 'Allow packages and MCP servers',
     summary: 'Install Pi packages and MCP servers into a key\u2019s or agent\u2019s profile from Files & profiles \u2192 Profiles. They run third-party code in the agent\u2019s container, so it needs a dashboard password. Off refuses all of it.' },
   LIVE_VIEW_ENABLED: { tab: 'containers', section: 'Live view', label: 'Allow the live view',
@@ -3016,6 +3155,11 @@ var PAGES = {
     { id:'library', label:'Library', pane:'extensions', sections:'library', subtitle:'Pi extensions installed on this host, for granting to keys and agents' },
     { id:'access', label:'Access', pane:'extensions', sections:'access', subtitle:'Which keys and agents get which extensions and bundles' }] },
   jobs:       { title:'Jobs', tabs:[{ id:'jobs', pane:'jobs', subtitle:'Prompts an agent runs on a schedule, by webhook or on request' }] },
+  memory:     { title:'Memory', tabs:[{ id:'memory', pane:'memory', subtitle:'Notes a key’s or an agent’s chats remember, across chats and containers' }] },
+  knowledge:  { title:'Knowledge', tabs:[
+    { id:'feeds', label:'Feeds', pane:'knowledge', sections:'feeds', subtitle:'RSS feeds polled for new articles, and the agent that extracts each one' },
+    { id:'entries', label:'Entries', pane:'knowledge', sections:'entries', subtitle:'Everything in the knowledge base agents can search and read (piper_knowledge_search/piper_knowledge_read)' },
+    { id:'log', label:'Log', pane:'knowledge', sections:'log', subtitle:'Polls, extractions and operator actions, newest first' }] },
   files:      { title:'Files & profiles', tabs:[
     { id:'files', label:'Files', pane:'files', subtitle:'Browse, upload, edit and organise a key\u2019s or an agent\u2019s workspace, profile and the shared bundles' },
     { id:'profiles', label:'Profiles & packages', pane:'profiles', subtitle:'Per-key skills, extensions, packages and MCP servers, and who can change them' }] },
@@ -3032,7 +3176,7 @@ var PAGES = {
     { id:'docs', label:'Documentation', pane:'docs', subtitle:'The administrator\u2019s handbook: architecture, deployment, operation, configuration, API and troubleshooting' },
     { id:'about', label:'About', pane:'about', subtitle:'Piper, its version, release notes and author' }] }
 };
-var PANES = ['playground', 'overview', 'agents', 'extensions', 'containers', 'terminal', 'files', 'endpoints', 'jobs', 'models', 'spend', 'apikeys', 'profiles', 'audit', 'settings', 'docs', 'about'];
+var PANES = ['playground', 'overview', 'agents', 'extensions', 'containers', 'terminal', 'files', 'endpoints', 'jobs', 'memory', 'knowledge', 'models', 'spend', 'apikeys', 'profiles', 'audit', 'settings', 'docs', 'about'];
 /* Old links keep working: bookmarks and the docs' own links used the flat view names. */
 var OLD_HASHES = { endpoints: 'agents', terminal: 'containers/terminal', profiles: 'files/profiles', docs: 'help/docs', about: 'help/about' };
 function resolveHash(hash) {
@@ -3472,6 +3616,286 @@ $('jobruns').addEventListener('click', function (e) {
   });
 });
 setInterval(function () { if (JOB_OPEN && !document.hidden && location.hash === '#jobs') loadJobRuns(JOB_OPEN); }, 5000);
+
+/* ---- memory: notes a key's or an agent's chats remember ---- */
+var MEMORY = null;
+var MEM_OPEN = null;
+function loadMemory() {
+  return fetch('dashboard/memory.json', { cache: 'no-store' }).then(readJson).then(function (d) { MEMORY = d.scopes; renderMemory(); if (MEM_OPEN) loadMemoryDetail(MEM_OPEN); })
+    .catch(function (e) { $('memempty').hidden = false; $('memempty').textContent = 'cannot load memory: ' + e.message; });
+}
+function renderMemory() {
+  var body = $('memrows');
+  body.replaceChildren();
+  $('memempty').hidden = MEMORY.length > 0;
+  MEMORY.forEach(function (m) {
+    var tr = el('tr');
+    var n = el('td', m.label); n.className = 'mono'; tr.appendChild(n);
+    tr.appendChild(el('td', String(m.entries))).className = 'num';
+    tr.appendChild(el('td', bytes(m.bytes))).className = 'num';
+    tr.appendChild(el('td', new Date(m.updatedAt).toLocaleString())).className = 'num';
+    var act = el('td');
+    var view = el('button', 'view'); view.addEventListener('click', function () { openMemoryDetail(m.scope, m.label); });
+    var clear = el('button', 'clear'); clear.addEventListener('click', function () {
+      if (!confirm('Clear all ' + m.entries + ' note(s) of ' + m.label + '? This cannot be undone.')) return;
+      epPost('dashboard/memory/' + encodeURIComponent(m.scope), undefined, 'DELETE').then(function () { if (MEM_OPEN === m.scope) $('memdetailclose').click(); loadMemory(); });
+    });
+    act.appendChild(view); act.appendChild(document.createTextNode(' ')); act.appendChild(clear);
+    tr.appendChild(act);
+    body.appendChild(tr);
+  });
+}
+function openMemoryDetail(scope, label) {
+  MEM_OPEN = scope;
+  $('memdetailtitle').textContent = 'Notes: ' + (label || scope);
+  $('memdetail').hidden = false;
+  loadMemoryDetail(scope);
+  $('memdetail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function loadMemoryDetail(scope) {
+  return fetch('dashboard/memory/' + encodeURIComponent(scope), { cache: 'no-store' }).then(readJson).then(function (d) {
+    var body = $('memnoterows');
+    body.replaceChildren();
+    $('memnoteempty').hidden = d.entries.length > 0;
+    d.entries.forEach(function (n) {
+      var tr = el('tr');
+      tr.appendChild(el('td', n.name)).className = 'mono';
+      var v = el('td', n.value.length > 200 ? n.value.slice(0, 200) + '…' : n.value); v.className = 'wrap'; v.title = n.value; tr.appendChild(v);
+      tr.appendChild(el('td', new Date(n.updatedAt).toLocaleString())).className = 'num';
+      var act = el('td');
+      var del = el('button', 'delete'); del.addEventListener('click', function () {
+        if (!confirm('Delete the note "' + n.name + '"?')) return;
+        epPost('dashboard/memory/' + encodeURIComponent(scope) + '/delete', { name: n.name }).then(function () { loadMemoryDetail(scope); loadMemory(); });
+      });
+      act.appendChild(del);
+      tr.appendChild(act);
+      body.appendChild(tr);
+    });
+  }).catch(function (e) { $('memdetailtitle').textContent = 'Notes: cannot load (' + e.message + ')'; });
+}
+$('memrefresh').addEventListener('click', loadMemory);
+$('memdetailclose').addEventListener('click', function () { MEM_OPEN = null; $('memdetail').hidden = true; });
+$('memclear').addEventListener('click', function () {
+  if (!MEM_OPEN) return;
+  var m = MEMORY.filter(function (x) { return x.scope === MEM_OPEN; })[0];
+  if (!confirm('Clear all notes of ' + (m ? m.label : MEM_OPEN) + '? This cannot be undone.')) return;
+  epPost('dashboard/memory/' + encodeURIComponent(MEM_OPEN), undefined, 'DELETE').then(function () { $('memdetailclose').click(); loadMemory(); });
+});
+
+/* ---- knowledge: RSS feeds (the Feeds tab) and the generic knowledge base (the Entries tab) ---- */
+var FEEDS = null;
+var FEED_AGENTS = null;
+var FEED_EDIT = null;
+function loadFeeds() {
+  return Promise.all([fetch('dashboard/rss.json', { cache: 'no-store' }).then(readJson), fetch('dashboard/agents.json', { cache: 'no-store' }).then(readJson)])
+    .then(function (r) { FEEDS = r[0].feeds; FEED_AGENTS = r[1].agents; renderFeeds(); })
+    .catch(function (e) { $('rssnote').textContent = 'cannot load feeds: ' + e.message; });
+}
+var ENTRY_STATUS = { done: ['success', 'ok'], blocked: ['blocked', 'busy'], failed: ['failed', 'bad'], pending: ['pending', ''], extracting: ['extracting', 'busy'], skipped: ['skipped', ''] };
+function entryStatusCell(status) {
+  var s = ENTRY_STATUS[status] || [status, ''];
+  var td = el('td', s[0]);
+  td.className = s[1];
+  return td;
+}
+function renderFeeds() {
+  var body = $('rssrows');
+  body.replaceChildren();
+  $('rssempty').hidden = FEEDS.length > 0;
+  FEEDS.forEach(function (f) {
+    var tr = el('tr');
+    tr.appendChild(el('td', f.name));
+    var agent = (FEED_AGENTS || []).filter(function (a) { return a.id === f.agentId; })[0];
+    tr.appendChild(el('td', agent ? agent.name : (f.agentId || '(default agent)')));
+    tr.appendChild(el('td', Math.round(f.intervalMs / 60000) + 'm')).className = 'num';
+    var st = el('td', !f.enabled ? 'off' : f.lastError ? 'error' : 'on');
+    st.className = !f.enabled ? '' : f.lastError ? 'bad' : 'ok';
+    if (f.lastError) st.title = f.lastError;
+    tr.appendChild(st);
+    tr.appendChild(el('td', f.lastPolledAt ? new Date(f.lastPolledAt).toLocaleString() : 'never'));
+    if (f.lastEntryStatus) {
+      var lastTd = entryStatusCell(f.lastEntryStatus);
+      lastTd.textContent += f.lastEntryAt ? ' · ' + new Date(f.lastEntryAt).toLocaleString() : '';
+      if (f.lastEntryError) lastTd.title = f.lastEntryError;
+      tr.appendChild(lastTd);
+    } else {
+      tr.appendChild(el('td', 'none yet'));
+    }
+    var act = el('td');
+    var pull = el('button', 'pull now'); pull.addEventListener('click', function () {
+      pull.disabled = true;
+      epPost('dashboard/rss/' + f.id + '/pull').then(loadFeeds).catch(function (e) { alert(e.message); pull.disabled = false; });
+    });
+    var edit = el('button', 'edit'); edit.addEventListener('click', function () { openFeedForm(f); });
+    var del = el('button', 'delete'); del.addEventListener('click', function () {
+      if (!confirm('Delete feed "' + f.name + '"? Its already-extracted entries stay in the knowledge base.')) return;
+      epPost('dashboard/rss/' + f.id, undefined, 'DELETE').then(loadFeeds);
+    });
+    act.appendChild(pull); act.appendChild(document.createTextNode(' ')); act.appendChild(edit); act.appendChild(document.createTextNode(' ')); act.appendChild(del);
+    tr.appendChild(act);
+    body.appendChild(tr);
+  });
+}
+function openFeedForm(f) {
+  FEED_EDIT = f ? f.id : null;
+  $('rssformtitle').textContent = f ? 'Edit feed' : 'New feed';
+  $('rssform').hidden = false;
+  $('rssname').value = f ? f.name : '';
+  $('rssurl').value = f ? f.url : '';
+  $('rssagent').replaceChildren(el('option', '(RSS_DEFAULT_AGENT)'));
+  (FEED_AGENTS || []).forEach(function (a) { var o = el('option', a.name + (a.key ? ' (' + a.key + ')' : '')); o.value = a.id; $('rssagent').appendChild(o); });
+  $('rssagent').value = (f && f.agentId) || '';
+  $('rssinterval').value = f ? Math.round(f.intervalMs / 60000) : 30;
+  $('rsson').checked = f ? Boolean(f.enabled) : true;
+  $('rssformnote').textContent = '';
+  $('rssform').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+$('rssnew').addEventListener('click', function () { openFeedForm(null); });
+$('rsscancel').addEventListener('click', function () { $('rssform').hidden = true; });
+$('rssrefresh').addEventListener('click', loadFeeds);
+$('rsssave').addEventListener('click', function () {
+  var body = { name: $('rssname').value.trim(), url: $('rssurl').value.trim(), agentId: $('rssagent').value || null, intervalMs: Number($('rssinterval').value) * 60000, enabled: $('rsson').checked };
+  var p = FEED_EDIT ? epPost('dashboard/rss/' + FEED_EDIT, body, 'PATCH') : epPost('dashboard/rss', body);
+  p.then(function () { $('rssform').hidden = true; loadFeeds(); }).catch(function (e) { $('rssformnote').textContent = e.message; $('rssformnote').className = 'passnote bad'; });
+});
+
+var KENTRIES = null;
+var KSOURCES = null;
+var KE_OPEN = null;
+var KE_SELECTED = {};
+function loadKnowledgeSources() {
+  return fetch('dashboard/knowledge.json', { cache: 'no-store' }).then(readJson).then(function (d) {
+    KSOURCES = d.sources;
+    var sel = $('kesource'); var cur = sel.value;
+    var all = el('option', 'all sources'); all.value = '';
+    sel.replaceChildren(all);
+    KSOURCES.forEach(function (s) {
+      var o = el('option', s.sourceType + ': ' + (s.sourceRef || '(none)') + ' (' + s.entries + ')');
+      o.value = s.sourceType + '/' + (s.sourceRef || '-');
+      sel.appendChild(o);
+    });
+    sel.value = cur;
+  });
+}
+function loadKnowledgeEntries() {
+  return loadKnowledgeSources().then(function () {
+    var sel = $('kesource').value;
+    if (sel) return fetch('dashboard/knowledge/' + sel, { cache: 'no-store' }).then(readJson).then(function (d) { KENTRIES = d.entries; renderKnowledgeEntries(); });
+    return Promise.all((KSOURCES || []).map(function (s) {
+      return fetch('dashboard/knowledge/' + s.sourceType + '/' + (s.sourceRef || '-'), { cache: 'no-store' }).then(readJson).then(function (d) { return d.entries; });
+    })).then(function (lists) {
+      KENTRIES = [].concat.apply([], lists).sort(function (a, b) { return b.createdAt - a.createdAt; });
+      renderKnowledgeEntries();
+    });
+  }).catch(function (e) { $('keempty').hidden = false; $('keempty').textContent = 'cannot load entries: ' + e.message; });
+}
+function keVisible() {
+  var q = ($('kesearch').value || '').trim().toLowerCase();
+  // 'skipped' is a feed's pre-existing backlog from before it was added here — never extracted, nothing to
+  // read or act on, so it never shows up in this list at all (it is still counted on the Feeds tab).
+  return (KENTRIES || []).filter(function (e) { return e.status !== 'skipped' && (!q || (e.title || '').toLowerCase().indexOf(q) >= 0); });
+}
+function renderKnowledgeEntries() {
+  var body = $('kerows');
+  body.replaceChildren();
+  var visible = keVisible();
+  $('keempty').hidden = visible.length > 0;
+  var q = ($('kesearch').value || '').trim();
+  $('keempty').textContent = q ? 'No entries match "' + q + '".' : (KENTRIES || []).length ? 'Nothing fresh yet — only skipped (backfilled) entries so far.' : 'No entries yet.';
+  var stillThere = {};
+  visible.forEach(function (e) {
+    stillThere[e.id] = true;
+    var tr = el('tr');
+    var selCell = el('td');
+    var cb = el('input'); cb.type = 'checkbox'; cb.checked = Boolean(KE_SELECTED[e.id]);
+    cb.addEventListener('change', function () { if (cb.checked) KE_SELECTED[e.id] = e; else delete KE_SELECTED[e.id]; keUpdateBulkButton(); });
+    selCell.appendChild(cb);
+    tr.appendChild(selCell);
+    tr.appendChild(el('td', e.sourceType + '/' + (e.sourceRef || '(none)')));
+    tr.appendChild(el('td', e.title || '(untitled)'));
+    tr.appendChild(entryStatusCell(e.status));
+    tr.appendChild(el('td', e.publishedAt ? new Date(e.publishedAt).toLocaleString() : ''));
+    tr.appendChild(el('td', e.fetchedAt ? new Date(e.fetchedAt).toLocaleString() : ''));
+    var act = el('td');
+    var view = el('button', 'view'); view.addEventListener('click', function () { openEntryDetail(e); });
+    var del = el('button', 'delete'); del.addEventListener('click', function () {
+      if (!confirm('Delete "' + (e.title || '(untitled)') + '"?')) return;
+      epPost('dashboard/knowledge/' + e.sourceType + '/' + (e.sourceRef || '-') + '/' + e.id, undefined, 'DELETE').then(function () { delete KE_SELECTED[e.id]; loadKnowledgeEntries(); });
+    });
+    act.appendChild(view); act.appendChild(document.createTextNode(' ')); act.appendChild(del);
+    tr.appendChild(act);
+    body.appendChild(tr);
+  });
+  Object.keys(KE_SELECTED).forEach(function (id) { if (!stillThere[id]) delete KE_SELECTED[id]; });
+  keUpdateBulkButton();
+}
+function keUpdateBulkButton() {
+  var n = Object.keys(KE_SELECTED).length;
+  $('kebulkdelete').disabled = !n;
+  $('kebulkdelete').textContent = n ? 'delete selected… (' + n + ')' : 'delete selected…';
+  var visible = keVisible();
+  $('keselall').checked = Boolean(visible.length) && visible.every(function (e) { return KE_SELECTED[e.id]; });
+}
+$('keselall').addEventListener('change', function () {
+  keVisible().forEach(function (e) { if ($('keselall').checked) KE_SELECTED[e.id] = e; else delete KE_SELECTED[e.id]; });
+  renderKnowledgeEntries();
+});
+$('kesearch').addEventListener('input', renderKnowledgeEntries);
+$('kebulkdelete').addEventListener('click', function () {
+  var chosen = Object.keys(KE_SELECTED).map(function (id) { return KE_SELECTED[id]; });
+  if (!chosen.length) return;
+  if (!confirm('Delete ' + chosen.length + ' entry(ies)? This cannot be undone.')) return;
+  Promise.all(chosen.map(function (e) { return epPost('dashboard/knowledge/' + e.sourceType + '/' + (e.sourceRef || '-') + '/' + e.id, undefined, 'DELETE'); }))
+    .then(function () { KE_SELECTED = {}; loadKnowledgeEntries(); })
+    .catch(function (e) { alert(e.message); loadKnowledgeEntries(); });
+});
+function openEntryDetail(e) {
+  KE_OPEN = e;
+  $('kedetail').hidden = false;
+  $('kedetailtitle').textContent = e.title || '(untitled)';
+  $('kedetailmeta').textContent = [e.sourceType + '/' + (e.sourceRef || '(none)'), e.status, e.url || ''].filter(Boolean).join(' · ') + (e.tags && e.tags.length ? ' · tags: ' + e.tags.join(', ') : '');
+  $('kedetailtext').textContent = (e.error ? 'error: ' + e.error + '\n\n' : '') + (e.summary ? e.summary + '\n\n' : '') + (e.text || '');
+  $('keretry').hidden = e.status !== 'failed' && e.status !== 'blocked';
+  $('kedetail').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+$('kedetailclose').addEventListener('click', function () { KE_OPEN = null; $('kedetail').hidden = true; });
+$('kerefresh').addEventListener('click', loadKnowledgeEntries);
+$('kesource').addEventListener('change', loadKnowledgeEntries);
+$('keretry').addEventListener('click', function () {
+  if (!KE_OPEN) return;
+  epPost('dashboard/rss/entries/' + KE_OPEN.id + '/retry').then(function () { $('kedetailclose').click(); loadKnowledgeEntries(); }).catch(function (e) { alert(e.message); });
+});
+$('kedelete').addEventListener('click', function () {
+  if (!KE_OPEN) return;
+  if (!confirm('Delete this entry?')) return;
+  epPost('dashboard/knowledge/' + KE_OPEN.sourceType + '/' + (KE_OPEN.sourceRef || '-') + '/' + KE_OPEN.id, undefined, 'DELETE').then(function () { $('kedetailclose').click(); loadKnowledgeEntries(); });
+});
+$('keclear').addEventListener('click', function () {
+  var sel = $('kesource').value;
+  if (!sel) { alert('pick a source first'); return; }
+  if (!confirm('Clear every entry of ' + sel + '? This cannot be undone.')) return;
+  epPost('dashboard/knowledge/' + sel, undefined, 'DELETE').then(loadKnowledgeEntries);
+});
+
+function loadKnowledgeLog() {
+  return fetch('dashboard/knowledge/log.json', { cache: 'no-store' }).then(readJson).then(function (d) { renderKnowledgeLog(d.entries); })
+    .catch(function (e) { $('kelogempty').hidden = false; $('kelogempty').textContent = 'cannot load the log: ' + e.message; });
+}
+function renderKnowledgeLog(rows) {
+  var body = $('kelogrows');
+  body.replaceChildren();
+  $('kelogempty').hidden = (rows || []).length > 0;
+  (rows || []).forEach(function (r) {
+    var tr = el('tr');
+    tr.appendChild(el('td', new Date(r.ts).toLocaleString()));
+    tr.appendChild(el('td', r.action));
+    tr.appendChild(el('td', r.target || ''));
+    var d = el('td', r.detail || ''); d.className = 'wrap'; tr.appendChild(d);
+    tr.appendChild(el('td', r.actor || ''));
+    body.appendChild(tr);
+  });
+}
+$('kelogrefresh').addEventListener('click', loadKnowledgeLog);
 
 function epUrl(a) { return location.protocol + '//' + location.hostname + ':' + a.port + '/v1'; }
 function epPost(url, body, method) {
@@ -4719,9 +5143,10 @@ $('epcreate').addEventListener('click', function () {
   (fromTemplate ? epPost('dashboard/agents/from-template', {
     keyId: $('epkey').value, name: $('epname').value.trim(), template: fromTemplate,
     workspace: $('epws').dataset.touched ? $('epws').value : undefined,
+    memoryMode: $('epmemory').value,
     model: $('epmodel').value.trim() || undefined, thinking: $('epthink').value || undefined
   }) : epPost('dashboard/agents', {
-    keyId: $('epkey').value, name: $('epname').value.trim(), workspace: $('epws').value,
+    keyId: $('epkey').value, name: $('epname').value.trim(), workspace: $('epws').value, memoryMode: $('epmemory').value,
     model: $('epmodel').value.trim() || null, thinking: $('epthink').value || null,
     instructions: $('epinstr').value, container: epReadCreate()
   })).then(function (j) {
@@ -5559,6 +5984,8 @@ function route() {
   if (pane === 'endpoints') { loadEndpoints(); if (tab.id === 'wizard') wzStart(); }
   if (pane === 'playground') pgStart();
   if (pane === 'jobs') loadJobs();
+  if (pane === 'memory') loadMemory();
+  if (pane === 'knowledge') { loadFeeds(); loadKnowledgeEntries(); loadKnowledgeLog(); }
   if (pane === 'extensions') loadExtensions();
   if (pane === 'containers') { startContainersPolling(); loadHostPi(); }
   if (pane === 'models') ensureModels();

@@ -1,0 +1,1195 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Piper — Client Portal</title>
+<style>
+  :root { color-scheme: dark;
+    --bg:#0a0a0a; --side:#0d0d0d; --panel:#101010; --card:#121212;
+    --border:#232323; --fg:#ededed; --muted:#8b8f94; --dim:#5f6368;
+    --green:#6ee7a8; --red:#f87171; --amber:#f6c177; --blue:#8ab4f8; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  button { background:var(--card); color:var(--fg); border:1px solid var(--border); border-radius:6px;
+            padding:6px 10px; font:inherit; cursor:pointer; }
+  button:hover { border-color:#3a3a3a; }
+  button:disabled { opacity:.5; cursor:default; }
+  input, select, textarea { background:var(--panel); color:var(--fg); border:1px solid var(--border);
+            border-radius:6px; padding:6px 8px; font:inherit; }
+  a { color:var(--blue); cursor:pointer; }
+  .hint { color:var(--muted); font-size:11px; }
+  .bad { color:var(--red) !important; }
+
+  /* login */
+  #login { max-width:360px; margin:12vh auto; padding:24px; }
+  #login h1 { font-size:16px; margin:0 0 4px; }
+  #login p { color:var(--muted); margin:0 0 18px; }
+  #login .row { display:flex; gap:8px; }
+  #login input { flex:1; }
+  #loginnote { min-height:16px; margin-top:10px; }
+
+  /* app shell */
+  #app { display:none; height:100vh; }
+  #app.on { display:flex; }
+  .side { width:240px; flex:0 0 240px; background:var(--side); border-right:1px solid var(--border);
+          display:flex; flex-direction:column; }
+  .side .top { padding:12px; border-bottom:1px solid var(--border); display:flex; gap:6px; }
+  .side .top input { flex:1; min-width:0; }
+  #convlist { flex:1; overflow:auto; padding:6px; }
+  .convrow { padding:8px 32px 8px 10px; border-radius:6px; cursor:pointer; margin-bottom:2px; position:relative; }
+  .convrow:hover { background:#161616; }
+  .convrow.on { background:#1c1c1c; }
+  .convrow .t { font-size:12px; }
+  .convrow .s { color:var(--dim); font-size:10px; }
+  .livedot { color:var(--green); font-size:9px; }
+  .convclear { position:absolute; top:6px; right:6px; border:none; background:transparent; color:var(--dim);
+               padding:2px 6px; border-radius:4px; font-size:13px; line-height:1; }
+  .convclear:hover { color:var(--red); background:#201414; }
+  .side .bottom { padding:10px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  .who { font-size:11px; color:var(--muted); }
+
+  main { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .bar { padding:10px 14px; border-bottom:1px solid var(--border); display:flex; gap:8px; align-items:center; }
+  .bar select { max-width:220px; }
+  .bar button.on { border-color:var(--blue); color:var(--fg); }
+  .bar .sp { flex:1; }
+  .statusbar { padding:6px 14px; border-bottom:1px solid var(--border); background:var(--panel); font-size:11px;
+               color:var(--muted); display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .statusbar b { color:var(--fg); font-weight:600; }
+  .statusbar .ctxfull { color:var(--amber); }
+  #statusstats { display:flex; gap:16px; flex-wrap:wrap; }
+  .toolToggle { margin-left:auto; display:flex; align-items:center; gap:5px; cursor:pointer; white-space:nowrap; }
+  #msgs { flex:1; overflow:auto; padding:16px; }
+  .msg { max-width:720px; margin:0 auto 18px; }
+  .msg.user .bubble { background:#1c2a1f; border:1px solid #243329; border-radius:10px; padding:8px 12px;
+                       white-space:pre-wrap; margin-left:auto; max-width:80%; }
+  .md p { margin:0 0 10px; } .md ul, .md ol { margin:0 0 10px; padding-left:22px; } .md li { margin:2px 0; }
+  .md h3, .md h4, .md h5, .md h6 { margin:14px 0 6px; } .md blockquote { margin:0 0 10px; padding:2px 12px; border-left:3px solid var(--border); color:var(--muted); }
+  .md code { background:#1a1a1a; padding:1px 5px; border-radius:4px; font-size:12px; } .md a { color:var(--blue); } .md hr { border:0; border-top:1px solid var(--border); }
+  .md p:last-child, .md ul:last-child, .md ol:last-child { margin-bottom:0; }
+  .mdcode { margin:0 0 12px; border:1px solid var(--border); border-radius:8px; overflow:hidden; background:#0b0b0b; }
+  .mdcodebar { display:flex; justify-content:space-between; align-items:center; padding:4px 10px; background:#151515; color:var(--dim); font-size:11px; }
+  .mdcodebar button { padding:2px 8px; font-size:11px; }
+  .mdcode pre { margin:0; padding:10px 12px; overflow:auto; font-size:12px; line-height:1.5; } .mdcode code { background:none; padding:0; }
+  .mdtable { overflow:auto; margin:0 0 12px; } .mdtable table { border-collapse:collapse; } .mdtable th, .mdtable td { border:1px solid var(--border); padding:4px 10px; }
+  /* thinking: collapsed by default, an arrow that flips on open */
+  details.think { margin:6px 0; }
+  details.think summary { cursor:pointer; color:var(--dim); font-size:12px; list-style:none; user-select:none; }
+  details.think summary::-webkit-details-marker { display:none; }
+  details.think summary:before { content:'▸ '; display:inline-block; width:12px; color:var(--dim); }
+  details.think[open] summary:before { content:'▾ '; }
+  /* a subtle shimmer across "Thinking..." while the turn is actually still running */
+  details.think.live summary {
+    background:linear-gradient(90deg, var(--dim) 0%, var(--dim) 35%, var(--fg) 50%, var(--dim) 65%, var(--dim) 100%);
+    background-size:200% 100%; -webkit-background-clip:text; background-clip:text; color:transparent;
+    animation:thinkshimmer 1.7s linear infinite;
+  }
+  @keyframes thinkshimmer { 0% { background-position:200% 0; } 100% { background-position:-200% 0; } }
+  details.think .think-body { color:var(--dim); font-size:12px; border-left:2px solid var(--border);
+                               padding-left:8px; margin-top:4px; white-space:pre-wrap; }
+  .think-sub { border-left:3px solid var(--agent-c, var(--blue)); padding:2px 0 2px 8px; margin:2px 0 2px -8px; }
+  .think-sub b { color:var(--agent-c, var(--blue)); }
+
+  /* tool calls: <pill>name</pill>: excerpt, click the line to expand the full result */
+  .tool-line { display:flex; align-items:baseline; gap:7px; margin:5px 0; cursor:pointer; user-select:none; }
+  .tool-pill { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--agent-c, var(--border));
+               color:var(--agent-c, var(--fg)); border-radius:999px; padding:2px 10px; font-size:11px; flex:0 0 auto; }
+  .tool-line:hover .tool-pill { border-color:var(--agent-c, #3a3a3a); }
+  .tool-pill .hammer { font-size:10px; filter:grayscale(.3); }
+  .tool-line.error .tool-pill .hammer { filter:none; }
+  .tool-excerpt { font-size:12px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  .tool-body { display:none; margin:2px 0 8px 4px; padding:8px 10px; background:#0c0c0c; border:1px solid var(--border);
+               border-radius:6px; font-size:11px; white-space:pre-wrap; color:var(--muted); }
+  .tool-body.open { display:block; }
+  .tool-body .tool-section { color:var(--dim); font-size:10px; text-transform:uppercase; letter-spacing:.06em;
+                              margin:8px 0 3px; }
+  .tool-body .tool-section:first-child { margin-top:0; }
+
+  /* a colleague agent's own reply, folded into the caller's — a distinct colored callout per name */
+  .colleague-msg { border-left:3px solid var(--agent-c, var(--blue)); background:#111214; padding:8px 10px;
+                    border-radius:6px; margin:8px 0; }
+  .colleague-msg .who { font-weight:600; font-size:11px; margin-bottom:3px; color:var(--agent-c, var(--blue)); }
+
+  .err { color:var(--red); margin-top:6px; }
+  .foot { color:var(--dim); font-size:11px; margin-top:6px; }
+  .sys-note { color:var(--dim); font-size:11px; font-style:italic; margin:6px 0; }
+  .composer { padding:12px 14px; border-top:1px solid var(--border); display:flex; gap:8px; align-items:flex-end; }
+  .composer textarea { flex:1; resize:none; min-height:40px; max-height:160px; }
+  #attachbtn { align-self:center; }
+
+  /* pending attachments, above the composer, before send */
+  .pending { padding:8px 14px 0; display:flex; flex-wrap:wrap; gap:6px; }
+  .pending[hidden] { display:none; }
+  .chip { display:flex; align-items:center; gap:6px; background:var(--panel); border:1px solid var(--border);
+          border-radius:6px; padding:3px 6px; font-size:11px; max-width:220px; }
+  .chip img { width:28px; height:28px; object-fit:cover; border-radius:4px; }
+  .chip .nm { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .chip .rm { opacity:.6; cursor:pointer; padding:0 2px; }
+  .chip .rm:hover { opacity:1; color:var(--red); }
+  .chip.busy { opacity:.6; }
+
+  /* attachments on a sent user message */
+  .msg-images { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+  .msg-images img { max-width:220px; max-height:220px; border-radius:8px; cursor:pointer; display:block; }
+  .msg-docs { margin-top:6px; display:flex; flex-direction:column; gap:3px; }
+  .msg-docs a { font-size:12px; }
+
+  /* files / tools & extensions / skills panels -- one at a time, same shape */
+  .sidebox { width:300px; flex:0 0 300px; border-left:1px solid var(--border); background:var(--side);
+             display:none; flex-direction:column; }
+  .sidebox.on { display:flex; }
+  .sidebox .top { padding:10px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  #crumb { padding:8px 10px; font-size:11px; color:var(--muted); }
+  #crumb a { margin-right:2px; }
+  #filelist, .plist { flex:1; overflow:auto; padding:0 6px 10px; }
+  .frow { padding:6px 8px; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; font-size:12px; }
+  .frow:hover { background:#161616; }
+  .frow .sz { color:var(--dim); font-size:10px; }
+  .frow .del { opacity:.5; padding:0 4px; }
+  .frow .del:hover { opacity:1; color:var(--red); }
+  .plist .psection { color:var(--dim); font-size:10px; text-transform:uppercase; letter-spacing:.06em; padding:10px 8px 3px; }
+  .plist .prow { padding:6px 8px; border-radius:6px; font-size:12px; }
+  .plist .prow .nm { display:flex; justify-content:space-between; gap:6px; }
+  .plist .prow .nm b { font-weight:600; }
+  .plist .prow .tag { color:var(--dim); font-size:10px; }
+  .plist .prow .desc { color:var(--muted); font-size:11px; margin-top:1px; }
+  .plist .empty { padding:10px 8px; color:var(--muted); font-size:12px; }
+
+  /* a small modal for previewing/downloading a file */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center;
+                    justify-content:center; z-index:50; }
+  .modal-overlay[hidden] { display:none; }
+  .modal-box.wide { width:min(1100px, 92vw); }
+  .modal-box { width:min(680px, 92vw); max-height:84vh; display:flex; flex-direction:column; background:var(--panel);
+               border:1px solid var(--border); border-radius:10px; padding:16px; }
+  .modal-top { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:4px; }
+  .modal-top b { font-size:13px; word-break:break-all; }
+  .modal-body { flex:1; overflow:auto; margin-top:10px; }
+  .modal-body pre { white-space:pre-wrap; word-break:break-word; margin:0; font-size:12px; }
+  .modal-body img { max-width:100%; display:block; }
+  .htmlpreview { width:100%; height:65vh; border:1px solid var(--border); border-radius:6px; background:#fff; }
+  .modal-actions { margin-top:12px; text-align:right; }
+  .modal-actions a { text-decoration:none; }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h1>Piper client portal</h1>
+  <p>Log in with your own API key to chat with your agents and browse your workspace.</p>
+  <div class="row"><input id="keyinput" type="password" placeholder="piper_..." autocomplete="off"></div>
+  <div class="row" style="margin-top:8px"><button id="connect">connect</button></div>
+  <p id="loginnote" class="hint"></p>
+</div>
+
+<div id="app">
+  <div class="side">
+    <div class="top"><button id="newchat" title="new chat">+ new chat</button></div>
+    <div id="convlist"></div>
+    <div class="bottom"><span class="who" id="who"></span><button id="logout">log out</button></div>
+  </div>
+  <main>
+    <div class="bar">
+      <select id="target"></select>
+      <div class="sp"></div>
+      <button id="toolsbtn">Tools &amp; Extensions</button>
+      <button id="skillsbtn">Skills</button>
+      <button id="filesbtn" class="on">files</button>
+    </div>
+    <div id="statusbar" class="statusbar">
+      <div id="statusstats"></div>
+      <label class="toolToggle"><input type="checkbox" id="toolToggle">show tool calls</label>
+    </div>
+    <div id="msgs"></div>
+    <div id="pending" class="pending" hidden></div>
+    <div class="composer">
+      <button id="attachbtn" title="attach images or documents">📎</button>
+      <input type="file" id="attachinput" multiple hidden>
+      <textarea id="input" placeholder="Message your agent... (Enter to send, Shift+Enter for a new line, /piper for commands)"></textarea>
+      <button id="send">send</button>
+    </div>
+  </main>
+  <div id="toolsbox" class="sidebox">
+    <div class="top"><b>Tools &amp; Extensions</b><button id="toolsrefresh">refresh</button></div>
+    <div id="toolslist" class="plist"></div>
+  </div>
+  <div id="skillsbox" class="sidebox">
+    <div class="top"><b>Skills</b><button id="skillsrefresh">refresh</button></div>
+    <div id="skillslist" class="plist"></div>
+  </div>
+  <div id="filesbox" class="sidebox on">
+    <div class="top"><b>Files</b><div><button id="uploadbtn">upload</button><button id="filesrefresh">refresh</button></div></div>
+    <input type="file" id="uploadinput" multiple hidden>
+    <div id="crumb"></div>
+    <div id="filelist"></div>
+  </div>
+</div>
+
+<div id="filemodal" class="modal-overlay" hidden>
+  <div class="modal-box" id="fmbox">
+    <div class="modal-top"><b id="fmtitle"></b><button id="fmclose">close</button></div>
+    <div class="hint" id="fmmeta"></div>
+    <div id="fmbody" class="modal-body"></div>
+    <div class="modal-actions"><a id="fmdownload" download><button>download</button></a></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+function $(id) { return document.getElementById(id); }
+function el(tag, text) { var e = document.createElement(tag); if (text !== undefined) e.textContent = text; return e; }
+
+/* ---- a small markdown renderer, for the model's replies ---- */
+function mdInline(text) {
+  var out = [];
+  var i = 0, buf = '';
+  function flush() { if (buf) { out.push({ t: 'text', v: buf }); buf = ''; } }
+  while (i < text.length) {
+    var c = text[i], rest = text.slice(i), m;
+    if (c === '\\' && i + 1 < text.length && /[\\`*_{}\[\]()#+\-.!~|>]/.test(text[i + 1])) { buf += text[i + 1]; i += 2; continue; }
+    if (c === '`') {
+      m = /^(`+)([\s\S]*?[^`])\1(?!`)/.exec(rest);
+      if (m) { flush(); out.push({ t: 'code', v: m[2].replace(/^ (.*) $/, '$1') }); i += m[0].length; continue; }
+    }
+    if (c === '[') {
+      m = /^\[([^\]]+)\]\(\s*([^)\s]+)(?:\s+"[^"]*")?\s*\)/.exec(rest);
+      if (m) { flush(); out.push({ t: 'a', href: m[2], c: mdInline(m[1]) }); i += m[0].length; continue; }
+    }
+    if (c === '*' || c === '_' || c === '~') {
+      m = (c === '~' ? /^~~([^~]+)~~/ : /^(\*\*|__)(?=\S)([\s\S]*?\S)\1/).exec(rest);
+      if (m) { flush(); out.push({ t: c === '~' ? 'del' : 'b', c: mdInline(c === '~' ? m[1] : m[2]) }); i += m[0].length; continue; }
+      m = /^([*_])(?=\S)([^*_\n]*?\S)\1(?![\w*_])/.exec(rest);
+      if (m && (c === '*' || i === 0 || /\W/.test(text[i - 1]))) { flush(); out.push({ t: 'i', c: mdInline(m[2]) }); i += m[0].length; continue; }
+    }
+    m = /^https?:\/\/[^\s<>)\]]+[^\s<>)\].,;:!?'"]/.exec(rest);
+    if (m && (i === 0 || /[\s(]/.test(text[i - 1]))) { flush(); out.push({ t: 'a', href: m[0], c: [{ t: 'text', v: m[0] }] }); i += m[0].length; continue; }
+    buf += c; i += 1;
+  }
+  flush();
+  return out;
+}
+function mdParse(text) {
+  var lines = String(text).replace(/\r\n?/g, '\n').split('\n');
+  var blocks = [];
+  var i = 0;
+  var listRe = /^(\s*)([-*+]|\d{1,9}[.)])\s+(.*)$/;
+  function isTableSep(l) { return /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l) && l.indexOf('-') >= 0; }
+  function cells(l) { return l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(function (x) { return x.trim(); }); }
+  while (i < lines.length) {
+    var line = lines[i], m;
+    if (!line.trim()) { i++; continue; }
+    if ((m = /^\s*(`{3,}|~{3,})\s*([\w+#.-]*)/.exec(line))) {
+      var fence = m[1], lang = m[2], body = [];
+      i++;
+      while (i < lines.length && !new RegExp('^\\s*' + fence[0] + '{' + fence.length + ',}\\s*$').test(lines[i])) { body.push(lines[i]); i++; }
+      i++;
+      blocks.push({ t: 'code', lang: lang, text: body.join('\n') });
+      continue;
+    }
+    if ((m = /^(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line))) { blocks.push({ t: 'h', n: m[1].length, c: mdInline(m[2]) }); i++; continue; }
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { blocks.push({ t: 'hr' }); i++; continue; }
+    if (/^\s*>/.test(line)) {
+      var q = [];
+      while (i < lines.length && /^\s*>/.test(lines[i])) { q.push(lines[i].replace(/^\s*> ?/, '')); i++; }
+      blocks.push({ t: 'quote', blocks: mdParse(q.join('\n')) });
+      continue;
+    }
+    if (line.indexOf('|') >= 0 && i + 1 < lines.length && isTableSep(lines[i + 1])) {
+      var head = cells(line).map(mdInline), rows = [];
+      i += 2;
+      while (i < lines.length && lines[i].trim() && lines[i].indexOf('|') >= 0) { rows.push(cells(lines[i]).map(mdInline)); i++; }
+      blocks.push({ t: 'table', head: head, rows: rows });
+      continue;
+    }
+    if ((m = listRe.exec(line))) {
+      var root = { t: m[2].length > 1 && /\d/.test(m[2]) ? 'ol' : 'ul', items: [], indent: m[1].length };
+      var stack = [root];
+      while (i < lines.length) {
+        var lm = listRe.exec(lines[i]);
+        if (!lm) {
+          if (lines[i].trim() && /^\s{2,}\S/.test(lines[i]) && stack.length) { var tail = stack[stack.length - 1].items; if (tail.length) tail[tail.length - 1].c = tail[tail.length - 1].c.concat([{ t: 'text', v: ' ' }], mdInline(lines[i].trim())); i++; continue; }
+          break;
+        }
+        var ind = lm[1].length, kind = /\d/.test(lm[2]) ? 'ol' : 'ul';
+        while (stack.length > 1 && ind < stack[stack.length - 1].indent) stack.pop();
+        var top = stack[stack.length - 1];
+        if (ind > top.indent && top.items.length) {
+          var parent = top.items[top.items.length - 1];
+          var sub = { t: kind, items: [], indent: ind };
+          (parent.sub = parent.sub || []).push(sub);
+          stack.push(sub); top = sub;
+        }
+        top.items.push({ c: mdInline(lm[3]), sub: null });
+        i++;
+      }
+      blocks.push(root);
+      continue;
+    }
+    var para = [line];
+    i++;
+    while (i < lines.length && lines[i].trim() && !/^\s*(`{3,}|~{3,}|#{1,6}\s|>|([-*_])(\s*\2){2,}\s*$)/.test(lines[i]) && !listRe.test(lines[i]) && !(lines[i].indexOf('|') >= 0 && i + 1 < lines.length && isTableSep(lines[i + 1]))) { para.push(lines[i]); i++; }
+    blocks.push({ t: 'p', c: mdInline(para.join('\n')) });
+  }
+  return blocks;
+}
+function mdSafeHref(href) { return /^(https?:\/\/|mailto:)/i.test(href) ? href : null; }
+function mdInlineNodes(nodes, parent) {
+  nodes.forEach(function (n) {
+    if (n.t === 'text') {
+      var parts = n.v.split('\n');
+      parts.forEach(function (p, i) { if (i) parent.appendChild(document.createElement('br')); if (p) parent.appendChild(document.createTextNode(p)); });
+    } else if (n.t === 'code') { var c = document.createElement('code'); c.textContent = n.v; parent.appendChild(c); }
+    else if (n.t === 'a') {
+      var href = mdSafeHref(n.href);
+      if (!href) { mdInlineNodes(n.c, parent); return; }
+      var a = document.createElement('a'); a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer'; mdInlineNodes(n.c, a); parent.appendChild(a);
+    } else { var e = document.createElement(n.t === 'b' ? 'strong' : n.t === 'i' ? 'em' : 'del'); mdInlineNodes(n.c, e); parent.appendChild(e); }
+  });
+}
+function mdBlockNodes(blocks, parent) {
+  blocks.forEach(function (b) {
+    var e;
+    if (b.t === 'p') { e = document.createElement('p'); mdInlineNodes(b.c, e); }
+    else if (b.t === 'h') { e = document.createElement('h' + Math.min(6, b.n + 2)); mdInlineNodes(b.c, e); }
+    else if (b.t === 'hr') e = document.createElement('hr');
+    else if (b.t === 'quote') { e = document.createElement('blockquote'); mdBlockNodes(b.blocks, e); }
+    else if (b.t === 'code') {
+      e = document.createElement('div'); e.className = 'mdcode';
+      var bar = document.createElement('div'); bar.className = 'mdcodebar';
+      var lab = document.createElement('span'); lab.textContent = b.lang || 'code'; bar.appendChild(lab);
+      var cp = document.createElement('button'); cp.textContent = 'copy'; cp.setAttribute('data-copy', b.text); bar.appendChild(cp);
+      var pre = document.createElement('pre'); var code = document.createElement('code'); code.textContent = b.text; pre.appendChild(code);
+      e.appendChild(bar); e.appendChild(pre);
+    }
+    else if (b.t === 'ul' || b.t === 'ol') { e = mdListNode(b); }
+    else if (b.t === 'table') {
+      e = document.createElement('div'); e.className = 'mdtable';
+      var t = document.createElement('table'), th = document.createElement('thead'), tr = document.createElement('tr');
+      b.head.forEach(function (h) { var c = document.createElement('th'); mdInlineNodes(h, c); tr.appendChild(c); });
+      th.appendChild(tr); t.appendChild(th);
+      var tb = document.createElement('tbody');
+      b.rows.forEach(function (r) { var rr = document.createElement('tr'); r.forEach(function (x) { var c = document.createElement('td'); mdInlineNodes(x, c); rr.appendChild(c); }); tb.appendChild(rr); });
+      t.appendChild(tb); e.appendChild(t);
+    }
+    if (e) parent.appendChild(e);
+  });
+}
+function mdListNode(list) {
+  var e = document.createElement(list.t);
+  list.items.forEach(function (it) {
+    var li = document.createElement('li'); mdInlineNodes(it.c, li);
+    (it.sub || []).forEach(function (s) { li.appendChild(mdListNode(s)); });
+    e.appendChild(li);
+  });
+  return e;
+}
+function mdRender(text, into) { into.className = (into.className ? into.className + ' ' : '') + 'md'; into.replaceChildren(); mdBlockNodes(mdParse(text), into); return into; }
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest && e.target.closest('[data-copy]');
+  if (!btn) return;
+  var text = btn.getAttribute('data-copy');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function () { var was = btn.textContent; btn.textContent = 'copied'; setTimeout(function () { btn.textContent = was; }, 1200); });
+  }
+});
+
+var KEY = sessionStorage.getItem('piper-portal-key') || '';
+var WHOAMI = null;
+var CONVOS = [];
+var CUR = null;
+// A conversation is busy on its own, not globally: id -> true while this tab has a live reader
+// (send() or resumeIfLive()) attached to it, so sending/switching never has to wait on a DIFFERENT
+// conversation's turn.
+var WATCHING = {};
+var SIDE_OPEN = 'files'; // 'files' | 'tools' | 'skills' | null -- one side panel at a time
+var FILES_PATH = '';
+var PENDING_IMAGES = []; // { name, dataUrl }
+var PENDING_DOCS = []; // { name, path }
+var ATTACH_MAX_BYTES = 8 * 1024 * 1024; // mirrors the server's own PORTAL_ATTACHMENT_MAX_BYTES default
+var ATTACH_MAX_IMAGES = 6;
+var SHOW_TOOLS = (function () { try { return localStorage.getItem('piper-portal-showtools') !== '0'; } catch (e) { return true; } })();
+
+function api(path, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({ Authorization: 'Bearer ' + KEY }, opts.headers || {});
+  return fetch(path, opts);
+}
+function apiJson(path, opts) {
+  return api(path, opts).then(function (r) {
+    return r.json().catch(function () { return {}; }).then(function (j) {
+      if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
+      return j;
+    });
+  });
+}
+
+function showLogin(msg) {
+  $('login').style.display = 'block';
+  $('app').classList.remove('on');
+  if (msg) { $('loginnote').textContent = msg; $('loginnote').className = 'hint bad'; }
+}
+function showApp() {
+  $('login').style.display = 'none';
+  $('app').classList.add('on');
+}
+
+function convKey() { return 'piper-portal-convs'; }
+function loadConvos() {
+  try { CONVOS = JSON.parse(sessionStorage.getItem(convKey()) || '[]'); } catch (e) { CONVOS = []; }
+}
+/* Kept server-side too (GET/PUT /api/history), so logging in from another browser or device shows the
+   same chats. sessionStorage stays as the fast, offline-friendly local copy; the server sync is
+   fire-and-forget and never blocks the UI. */
+function saveConvos() {
+  CONVOS.sort(function (a, b) { return b.updated - a.updated; });
+  try { sessionStorage.setItem(convKey(), JSON.stringify(CONVOS)); } catch (e) { /* storage full: not fatal */ }
+  api('api/history', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(CONVOS) }).catch(function () { /* local copy still has it */ });
+}
+function pullHistory() {
+  return apiJson('api/history').then(function (d) {
+    if (Array.isArray(d.data)) { CONVOS = d.data; try { sessionStorage.setItem(convKey(), JSON.stringify(CONVOS)); } catch (e) { /* not fatal */ } }
+  }).catch(function () { /* the local copy, if any, is still used */ });
+}
+function newId() {
+  var bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  return Array.prototype.map.call(bytes, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+}
+function conv() { return CONVOS.filter(function (c) { return c.id === CUR; })[0] || null; }
+/* Busy is per conversation: either this tab has a live reader attached to it right now (WATCHING), or
+   its own last message is still an unsettled "pending" reply (true right after send() pushes one, and
+   true again on reload until resumeIfLive() either confirms it settled or reattaches to it live). */
+function isBusy(c) {
+  if (!c) return false;
+  if (WATCHING[c.id]) return true;
+  var m = c.messages[c.messages.length - 1];
+  return Boolean(m && m.role === 'assistant' && m.pending);
+}
+
+function renderTargets() {
+  var t = $('target');
+  t.replaceChildren();
+  var main = el('option', '(main endpoint)'); main.value = '';
+  t.appendChild(main);
+  (WHOAMI.agents || []).forEach(function (a) {
+    var o = el('option', a.name + (a.description ? ' — ' + a.description : ''));
+    o.value = a.id;
+    t.appendChild(o);
+  });
+}
+
+function renderSide() {
+  var box = $('convlist');
+  box.replaceChildren();
+  CONVOS.forEach(function (c) {
+    var row = el('div');
+    row.className = 'convrow' + (c.id === CUR ? ' on' : '');
+    var titleRow = el('div');
+    titleRow.className = 't';
+    titleRow.appendChild(document.createTextNode(c.title || 'New chat'));
+    if (isBusy(c)) titleRow.appendChild(el('span', ' ●')).className = 'livedot';
+    row.appendChild(titleRow);
+    var agent = (WHOAMI.agents || []).filter(function (a) { return a.id === c.agentId; })[0];
+    row.appendChild(el('div', agent ? agent.name : '(main endpoint)')).className = 's';
+    row.addEventListener('click', function () { CUR = c.id; renderAll(); resumeIfLive(c); });
+    var clear = el('button', '×');
+    clear.className = 'convclear';
+    clear.title = 'clear this chat';
+    clear.addEventListener('click', function (e) {
+      e.stopPropagation();
+      clearChat(c);
+    });
+    row.appendChild(clear);
+    box.appendChild(row);
+  });
+}
+
+var OPEN_THINK = {};
+var OPEN_TOOL = {};
+var AGENT_COLORS = {};
+var COLOR_HUES = [200, 280, 340, 40, 160, 10, 260, 90];
+function agentColor(name) {
+  if (!AGENT_COLORS[name]) AGENT_COLORS[name] = 'hsl(' + COLOR_HUES[Object.keys(AGENT_COLORS).length % COLOR_HUES.length] + ', 65%, 65%)';
+  return AGENT_COLORS[name];
+}
+
+/* A sub-agent's own progress is woven into the parent's thinking text as lines like "[Name] ...."
+   (lib/delegate.mjs's followColleague) -- pick those out and give each agent name its own color. */
+function thinkBody(text) {
+  var frag = document.createDocumentFragment();
+  var lines = String(text || '').split('\n');
+  lines.forEach(function (line, i) {
+    var m = /^(\s*)\[([^\]]+)\]\s?(.*)$/.exec(line);
+    if (m) {
+      var sub = el('div');
+      sub.className = 'think-sub';
+      sub.style.setProperty('--agent-c', agentColor(m[2]));
+      sub.appendChild(el('b', m[2] + ' '));
+      sub.appendChild(document.createTextNode(m[3]));
+      frag.appendChild(sub);
+    } else if (line) {
+      frag.appendChild(document.createTextNode(line));
+    }
+    if (i < lines.length - 1) frag.appendChild(document.createElement('br'));
+  });
+  return frag;
+}
+
+/* A colleague's own finished reply is woven into the caller's visible text as "(Name): message",
+   blank line either side (lib/chat.mjs's c.say) -- pull those out into their own colored callout. */
+function textBlocks(text) {
+  var frag = document.createDocumentFragment();
+  var buffer = [];
+  function flushBuffer() {
+    if (!buffer.length) return;
+    frag.appendChild(mdRender(buffer.join('\n\n'), el('div')));
+    buffer = [];
+  }
+  String(text || '').split(/\n\n+/).forEach(function (para) {
+    var m = /^\(([^)\n]{1,80})\):\s([\s\S]*)$/.exec(para);
+    if (m) {
+      flushBuffer();
+      var box = el('div');
+      box.className = 'colleague-msg';
+      box.style.setProperty('--agent-c', agentColor(m[1].split(' › ')[0]));
+      box.appendChild(el('div', m[1])).className = 'who';
+      box.appendChild(mdRender(m[2], el('div')));
+      frag.appendChild(box);
+    } else if (para) {
+      buffer.push(para);
+    }
+  });
+  flushBuffer();
+  return frag;
+}
+
+function partNode(p) {
+  if (p.kind === 'tool' && !SHOW_TOOLS) return document.createDocumentFragment();
+  if (p.kind === 'thinking') {
+    var det = el('details');
+    det.className = 'think' + (p.pending ? ' live' : '');
+    det.open = Boolean(OPEN_THINK[p.id]);
+    det.addEventListener('toggle', function () { OPEN_THINK[p.id] = det.open; });
+    det.appendChild(el('summary', p.pending ? 'Thinking…' : 'Thought'));
+    var tbody = el('div'); tbody.className = 'think-body';
+    tbody.appendChild(thinkBody(p.text));
+    det.appendChild(tbody);
+    return det;
+  }
+  if (p.kind === 'tool') {
+    var frag = document.createDocumentFragment();
+    var line = el('div');
+    line.className = 'tool-line ' + (p.state === 'error' ? 'error' : p.state === 'running' ? 'running' : 'done');
+    var pill = el('div');
+    pill.className = 'tool-pill';
+    pill.appendChild(el('span', '🔨')).className = 'hammer';
+    // piper_delegate's own summary is "AgentName: task" (lib/toolsummary.mjs) -- show who it went to,
+    // not the tool's own name, colored the same as that agent's thinking/replies elsewhere.
+    var isDelegate = p.name === 'piper_delegate';
+    var delegateMatch = isDelegate && p.summary ? /^([^:]+):\s?([\s\S]*)$/.exec(p.summary) : null;
+    pill.appendChild(document.createTextNode(delegateMatch ? delegateMatch[1] : p.name));
+    if (delegateMatch) pill.style.setProperty('--agent-c', agentColor(delegateMatch[1]));
+    line.appendChild(pill);
+    var excerptText = delegateMatch ? delegateMatch[2]
+      : p.summary && p.summary !== p.name ? p.summary
+      : p.result ? p.result.split('\n')[0]
+      : p.state === 'running' ? 'running…' : '';
+    if (excerptText.length > 140) excerptText = excerptText.slice(0, 140) + '…';
+    line.appendChild(el('span', excerptText)).className = 'tool-excerpt';
+    var tbox = el('div');
+    tbox.className = 'tool-body' + (OPEN_TOOL[p.id] ? ' open' : '');
+    if (delegateMatch) {
+      tbox.appendChild(el('div', 'Task')).className = 'tool-section';
+      tbox.appendChild(el('div', delegateMatch[2]));
+      tbox.appendChild(el('div', 'Response')).className = 'tool-section';
+      tbox.appendChild(el('div', p.result || '(still running…)'));
+    } else {
+      tbox.textContent = p.result || '(still running…)';
+    }
+    line.addEventListener('click', function () {
+      OPEN_TOOL[p.id] = !OPEN_TOOL[p.id];
+      tbox.classList.toggle('open', OPEN_TOOL[p.id]);
+    });
+    frag.appendChild(line);
+    frag.appendChild(tbox);
+    return frag;
+  }
+  // A one-line note from the gateway itself, not the model -- an interrupt, a hand-off, or auto-compaction
+  // making room in the context.
+  if (p.kind === 'note') { var note = el('div', p.text); note.className = 'sys-note'; return note; }
+  return textBlocks(p.text || '');
+}
+function renderMessages() {
+  var box = $('msgs');
+  box.replaceChildren();
+  var c = conv();
+  if (!c) return;
+  c.messages.forEach(function (m) {
+    var row = el('div');
+    row.className = 'msg ' + m.role;
+    if (m.role === 'user') {
+      var bub = el('div', m.text);
+      bub.className = 'bubble';
+      if (m.images && m.images.length) {
+        var imgsBox = el('div'); imgsBox.className = 'msg-images';
+        m.images.forEach(function (dataUrl) {
+          var img = el('img'); img.src = dataUrl; img.alt = 'attached image';
+          img.addEventListener('click', function () { previewDataUrlImage(dataUrl); });
+          imgsBox.appendChild(img);
+        });
+        bub.appendChild(imgsBox);
+      }
+      if (m.docs && m.docs.length) {
+        var docsBox = el('div'); docsBox.className = 'msg-docs';
+        m.docs.forEach(function (d) {
+          var a = el('a', '📄 ' + d.name);
+          a.href = 'javascript:void(0)';
+          a.addEventListener('click', function () { previewFile(d.path, d.bytes || 0); });
+          docsBox.appendChild(a);
+        });
+        bub.appendChild(docsBox);
+      }
+      row.appendChild(bub);
+      box.appendChild(row);
+      return;
+    }
+    var body = el('div'); body.className = 'body';
+    // A turn's thinking is naturally split by Pi into several pieces, one before each tool call
+    // (lib/livesession.mjs resets it on a tool call). Shown as one block instead, up front; tools and
+    // everything else keep their own place and order exactly as they already do.
+    var thinkText = '', thinkId = null, rest = [];
+    (m.parts || []).forEach(function (p) {
+      if (p.kind === 'thinking') {
+        if (thinkId === null) thinkId = p.id;
+        thinkText += (thinkText ? '\n' : '') + (p.text || '');
+      } else {
+        rest.push(p);
+      }
+    });
+    if (thinkId !== null) body.appendChild(partNode({ kind: 'thinking', id: thinkId, text: thinkText, pending: Boolean(m.pending) }));
+    rest.forEach(function (p) { body.appendChild(partNode(p)); });
+    if (m.pending && !(m.parts || []).length) body.appendChild(el('div', 'Thinking…'));
+    if (m.error) { var e = el('div', m.error); e.className = 'err'; body.appendChild(e); }
+    row.appendChild(body);
+    if (!m.pending && m.usage && m.usage.total_tokens) {
+      var f = el('div', m.usage.total_tokens + ' tokens' + (m.cost ? ' · $' + m.cost.toFixed(4) : ''));
+      f.className = 'foot';
+      row.appendChild(f);
+    }
+    box.appendChild(row);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+function fmtTok(n) {
+  n = Number(n) || 0;
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+  return String(n);
+}
+function renderStatusBar() {
+  var c = conv();
+  var bar = $('statusstats');
+  bar.replaceChildren();
+  var s = c && c.status;
+  if (!s || (!s.model && s.contextUsed == null)) return;
+  var add = function (label, value, cls) {
+    var span = el('span');
+    span.appendChild(document.createTextNode(label + ': '));
+    var b = el('b', value);
+    if (cls) b.className = cls;
+    span.appendChild(b);
+    bar.appendChild(span);
+  };
+  if (s.model) add('model', s.model);
+  if (s.contextWindow) {
+    var pct = s.contextUsed ? Math.round((s.contextUsed / s.contextWindow) * 100) : null;
+    add('context', fmtTok(s.contextUsed || 0) + ' / ' + fmtTok(s.contextWindow) + (pct !== null ? ' (' + pct + '%)' : ''), pct !== null && pct >= 80 ? 'ctxfull' : '');
+  } else if (s.contextUsed) {
+    add('context', fmtTok(s.contextUsed));
+  }
+  if (s.gen) add('generation', s.gen.toFixed(1) + ' tok/s');
+  if (s.prompt) add('prompt processing', s.prompt.toFixed(1) + ' tok/s');
+}
+function renderAll() {
+  renderSide();
+  renderMessages();
+  renderStatusBar();
+  var c = conv();
+  $('target').value = c ? (c.agentId || '') : '';
+  $('target').disabled = Boolean(c && c.messages.length) || isBusy(c);
+  $('send').textContent = isBusy(c) ? 'stop' : 'send';
+  reloadSidePanel();
+}
+
+function newChat() {
+  var c = { id: newId(), title: '', agentId: '', messages: [], updated: Date.now() };
+  CONVOS.unshift(c);
+  CUR = c.id;
+  saveConvos();
+  renderAll();
+}
+
+/* Ends the server-side session (so its container is freed) and drops it from the list in this browser. */
+function clearChat(c) {
+  if (c.messages.length && !confirm('Clear "' + (c.title || 'New chat') + '"?')) return;
+  if (isBusy(c)) return;
+  var q = c.agentId ? ('?agentId=' + encodeURIComponent(c.agentId)) : '';
+  api('api/conversation/' + encodeURIComponent(c.id) + q, { method: 'DELETE' }).catch(function () {});
+  CONVOS = CONVOS.filter(function (x) { return x.id !== c.id; });
+  if (CUR === c.id) CUR = CONVOS[0] ? CONVOS[0].id : null;
+  if (!CUR) newChat(); else { saveConvos(); renderAll(); }
+}
+
+function applyItem(msg, item) {
+  var kind = item.kind === 'assistant' ? 'text' : item.kind;
+  var p = (msg.parts || []).filter(function (x) { return x.id === item.id; })[0];
+  if (!p) { p = { kind: kind, id: item.id }; (msg.parts = msg.parts || []).push(p); }
+  if (kind === 'tool') { p.name = item.name; p.summary = item.summary; p.state = item.state; p.result = item.result || ''; }
+  else { p.text = item.text; }
+}
+
+/* Reads a fetch body's SSE stream, calling onEvent(name, data) for each "event: ...\ndata: ..." block.
+   Shared by send() (a turn just started here) and resumeIfLive() (catching up on one already running). */
+function streamInto(reader, onEvent) {
+  var dec = new TextDecoder(), buf = '';
+  function handle(block) {
+    var ev = /^event: (.*)$/m.exec(block), data = /^data: (.*)$/m.exec(block);
+    if (!ev || !data) return;
+    var d;
+    try { d = JSON.parse(data[1]); } catch (e) { return; }
+    onEvent(ev[1], d);
+  }
+  function pump() {
+    return reader.read().then(function (x) {
+      if (x.done) return;
+      buf += dec.decode(x.value, { stream: true });
+      var i;
+      while ((i = buf.indexOf('\n\n')) >= 0) { handle(buf.slice(0, i)); buf = buf.slice(i + 2); }
+      return pump();
+    });
+  }
+  return pump();
+}
+
+function send() {
+  var c = conv();
+  if (!c || isBusy(c)) return;
+  var text = $('input').value.trim();
+  if (!text) return;
+  if (PENDING_DOCS.some(function (d) { return d.uploading; })) { alert('still uploading an attachment -- wait a moment and send again'); return; }
+  var images = PENDING_IMAGES.map(function (img) { return img.dataUrl; });
+  var docs = PENDING_DOCS.slice();
+  var outgoing = text;
+  docs.forEach(function (d) { outgoing += '\n\n[Attached: ' + d.path + ' -- read it from your workspace]'; });
+  if (!c.messages.length) c.title = text.slice(0, 48);
+  c.messages.push({ role: 'user', text: text, images: images.length ? images : undefined, docs: docs.length ? docs : undefined });
+  var msg = { role: 'assistant', parts: [], pending: true };
+  c.messages.push(msg);
+  c.updated = Date.now();
+  $('input').value = '';
+  PENDING_IMAGES = [];
+  PENDING_DOCS = [];
+  renderPending();
+  renderAll();
+  // Durable the moment the turn starts, not just when it ends: if the tab closes mid-turn, a reload
+  // (or another device) can tell this conversation might still be running and go check -- the turn
+  // itself keeps running on the server regardless of this browser's connection (lib/portal.mjs).
+  saveConvos();
+  var done = false;
+  api('api/chat', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ conversation: c.id, message: outgoing, agentId: c.agentId || undefined, images: images.length ? images : undefined }),
+  }).then(function (r) {
+    var type = r.headers.get('content-type') || '';
+    if (!r.ok || type.indexOf('event-stream') < 0) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error((j.error && j.error.message) || ('HTTP ' + r.status)); });
+    return streamInto(r.body.getReader(), function (event, d) {
+      if (event === 'item') { applyItem(msg, d.item); renderMessages(); }
+      else if (event === 'context') { c.status = c.status || {}; c.status.contextUsed = d.contextUsed; renderStatusBar(); }
+      else if (event === 'done') { done = true; msg.usage = d.usage; msg.cost = d.cost; if (!(msg.parts || []).some(function (p) { return p.kind === 'text' && p.text; }) && d.text) msg.parts.push({ kind: 'text', id: 'final', text: d.text }); if (d.status) { c.status = d.status; c.status.contextUsed = (d.usage && d.usage.total_tokens) || null; } renderStatusBar(); }
+      else if (event === 'error') { done = true; msg.error = d.message; }
+    });
+  }).catch(function (e) {
+    msg.error = e.message;
+  }).then(function () {
+    msg.pending = false;
+    if (!done && !msg.error) msg.error = 'The connection ended before the agent finished.';
+    c.updated = Date.now();
+    saveConvos();
+    renderAll();
+  });
+}
+
+/* Catches up on a conversation that might still be running a turn from before a reload, a re-login, or
+   simply switching away and back -- cheap and quiet when there is nothing to catch up on. Safe to call
+   for a conversation other than the one on screen: it only re-renders if it is still the one showing
+   by the time something changes, so one busy conversation never blocks using another. */
+function resumeIfLive(c) {
+  if (!c || WATCHING[c.id]) return;
+  WATCHING[c.id] = true;
+  var refresh = function () { if (c.id === CUR) renderAll(); else renderSide(); };
+  var q = agentQuery(c);
+  api('api/conversation/' + encodeURIComponent(c.id) + '/events' + (q ? '?' + q : '')).then(function (r) {
+    var type = r.headers.get('content-type') || '';
+    if (type.indexOf('event-stream') < 0) { delete WATCHING[c.id]; return r.json().catch(function () { return {}; }); } // {live:false}, or an error: nothing to resume
+    var msg = c.messages[c.messages.length - 1];
+    if (!msg || msg.role !== 'assistant') { msg = { role: 'assistant', parts: [], pending: true }; c.messages.push(msg); }
+    return streamInto(r.body.getReader(), function (event, d) {
+      if (event === 'snapshot') {
+        // The log may span older, already-finished turns too (capped by item count, not per-turn):
+        // only what came after the last user message belongs to the one we're catching up on.
+        var lastUserId = 0;
+        (d.items || []).forEach(function (it) { if (it.kind === 'user' && it.id > lastUserId) lastUserId = it.id; });
+        (d.items || []).forEach(function (it) { if (it.kind !== 'user' && it.id > lastUserId) applyItem(msg, it); });
+        msg.pending = Boolean(d.state && d.state.working);
+        if (d.state && d.state.contextTokens != null) { c.status = c.status || {}; c.status.contextUsed = d.state.contextTokens; }
+        refresh();
+      } else if (event === 'item') { applyItem(msg, d.item); if (c.id === CUR) renderMessages(); }
+      else if (event === 'context') { c.status = c.status || {}; c.status.contextUsed = d.contextUsed; if (c.id === CUR) renderStatusBar(); }
+      else if (event === 'done') { if (d.usage) msg.usage = d.usage; if (d.cost) msg.cost = d.cost; }
+      else if (event === 'error') { msg.error = d.message; }
+    }).then(function () {
+      delete WATCHING[c.id];
+      msg.pending = false;
+      c.updated = Date.now();
+      saveConvos();
+      refresh();
+    });
+  }).catch(function () { delete WATCHING[c.id]; });
+}
+
+/* ---- side panels: files, tools & extensions, skills -- one open at a time ---- */
+function agentQuery(c) {
+  c = c || conv();
+  return (c && c.agentId) ? ('agentId=' + encodeURIComponent(c.agentId)) : '';
+}
+function setSide(which) {
+  SIDE_OPEN = SIDE_OPEN === which ? null : which;
+  $('filesbox').classList.toggle('on', SIDE_OPEN === 'files');
+  $('toolsbox').classList.toggle('on', SIDE_OPEN === 'tools');
+  $('skillsbox').classList.toggle('on', SIDE_OPEN === 'skills');
+  $('filesbtn').className = SIDE_OPEN === 'files' ? 'on' : '';
+  $('toolsbtn').className = SIDE_OPEN === 'tools' ? 'on' : '';
+  $('skillsbtn').className = SIDE_OPEN === 'skills' ? 'on' : '';
+  reloadSidePanel();
+}
+function reloadSidePanel() {
+  if (SIDE_OPEN === 'files') loadFiles();
+  else if (SIDE_OPEN === 'tools') loadTools();
+  else if (SIDE_OPEN === 'skills') loadSkills();
+}
+function prow(name, description, tag) {
+  var row = el('div'); row.className = 'prow';
+  var nm = el('div'); nm.className = 'nm';
+  nm.appendChild(el('b', name));
+  if (tag) nm.appendChild(el('span', tag)).className = 'tag';
+  row.appendChild(nm);
+  if (description) row.appendChild(el('div', description)).className = 'desc';
+  return row;
+}
+function loadSkills() {
+  var box = $('skillslist');
+  box.replaceChildren(el('div', 'loading…'));
+  apiJson('api/skills' + (agentQuery() ? '?' + agentQuery() : '')).then(function (d) {
+    box.replaceChildren();
+    var skills = d.skills || [];
+    if (!skills.length) { box.appendChild(el('div', 'No skills are loaded.')).className = 'empty'; return; }
+    skills.forEach(function (s) {
+      box.appendChild(prow('/' + s.name, s.description, s.shared ? 'shared: ' + s.shared : s.workspace ? 'workspace' : ''));
+    });
+  }).catch(function (e) {
+    box.replaceChildren(el('div', e.message));
+  });
+}
+function loadTools() {
+  var box = $('toolslist');
+  box.replaceChildren(el('div', 'loading…'));
+  apiJson('api/extensions' + (agentQuery() ? '?' + agentQuery() : '')).then(function (d) {
+    box.replaceChildren();
+    var files = d.files || [], shared = d.shared || [], commands = d.commands || [];
+    if (!files.length && !shared.length && !commands.length) { box.appendChild(el('div', 'No extensions or tools are loaded.')).className = 'empty'; return; }
+    if (files.length) {
+      box.appendChild(el('div', 'Your extensions')).className = 'psection';
+      files.forEach(function (f) { box.appendChild(prow(f.name, '', bytes(f.bytes))); });
+    }
+    if (shared.length) {
+      box.appendChild(el('div', 'Shared (read-only)')).className = 'psection';
+      shared.forEach(function (s) { box.appendChild(prow(s.name, '', s.bundle)); });
+    }
+    if (commands.length) {
+      box.appendChild(el('div', 'Tools available')).className = 'psection';
+      commands.forEach(function (c) { box.appendChild(prow('/' + c.name, c.description, '')); });
+    }
+  }).catch(function (e) {
+    box.replaceChildren(el('div', e.message));
+  });
+}
+
+/* ---- files ---- */
+function filesUrlFor(agentId, path) {
+  var q = agentId ? ('agentId=' + encodeURIComponent(agentId)) : '';
+  var p = String(path || '').split('/').filter(Boolean).map(encodeURIComponent).join('/');
+  return 'api/files/' + p + (q ? '?' + q : '');
+}
+function filesUrl(path) {
+  var c = conv();
+  return filesUrlFor(c && c.agentId, path);
+}
+function loadFiles() {
+  apiJson(filesUrl(FILES_PATH)).then(function (d) {
+    renderFiles(d.entries || []);
+  }).catch(function (e) {
+    $('filelist').replaceChildren(el('div', e.message));
+  });
+}
+function renderFiles(entries) {
+  var crumb = $('crumb');
+  crumb.replaceChildren();
+  var link = function (label, path) { var a = el('a', label); a.addEventListener('click', function () { FILES_PATH = path; loadFiles(); }); return a; };
+  crumb.appendChild(link('workspace', ''));
+  var parts = FILES_PATH.split('/').filter(Boolean);
+  parts.forEach(function (p, i) { crumb.appendChild(document.createTextNode(' / ')); crumb.appendChild(link(p, parts.slice(0, i + 1).join('/'))); });
+  var box = $('filelist');
+  box.replaceChildren();
+  if (parts.length) {
+    var up = el('div', '← ..');
+    up.className = 'frow';
+    up.addEventListener('click', function () { FILES_PATH = parts.slice(0, -1).join('/'); loadFiles(); });
+    box.appendChild(up);
+  }
+  entries.slice().sort(function (a, b) { return (a.type === 'dir' ? 0 : 1) - (b.type === 'dir' ? 0 : 1) || a.name.localeCompare(b.name); }).forEach(function (f) {
+    var full = (FILES_PATH ? FILES_PATH + '/' : '') + f.name;
+    var row = el('div');
+    row.className = 'frow';
+    var label = el('span', (f.type === 'dir' ? '📁 ' : '📄 ') + f.name);
+    row.appendChild(label);
+    var right = el('span');
+    if (f.type === 'file') right.appendChild(el('span', bytes(f.bytes))).className = 'sz';
+    var del = el('button', '×');
+    del.className = 'del';
+    del.title = 'delete';
+    del.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (!confirm('Delete ' + (f.type === 'dir' ? 'the folder' : 'the file') + ' "' + f.name + '"' + (f.type === 'dir' ? ' and everything in it' : '') + '?')) return;
+      api(filesUrl(full), { method: 'DELETE' }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return loadFiles(); })
+        .catch(function (err) { alert('could not delete: ' + err.message); });
+    });
+    right.appendChild(del);
+    row.appendChild(right);
+    if (f.type === 'dir') row.addEventListener('click', function () { FILES_PATH = full; loadFiles(); });
+    else row.addEventListener('click', function () { previewFile(full, f.bytes); });
+    box.appendChild(row);
+  });
+}
+function bytes(n) {
+  n = Number(n) || 0;
+  if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
+  if (n >= 1024) return (n / 1024).toFixed(1) + ' KB';
+  return n + ' B';
+}
+var IMG_TYPES = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml' };
+var HTML_TYPES = { html: true, htm: true };
+var PREVIEW_MAX = 300 * 1024;
+var MODAL_OBJECT_URL = null;
+function closeModal() {
+  $('filemodal').hidden = true;
+  $('fmbody').replaceChildren();
+  $('fmbox').classList.remove('wide');
+  if (MODAL_OBJECT_URL) { URL.revokeObjectURL(MODAL_OBJECT_URL); MODAL_OBJECT_URL = null; }
+}
+/* An image attached inline to a sent message (never uploaded to the workspace) -- the same modal as a
+   workspace file's preview, just fed a data: URI directly instead of fetching one. */
+function previewDataUrlImage(dataUrl) {
+  closeModal();
+  $('fmtitle').textContent = 'attached image';
+  $('fmmeta').textContent = '';
+  var img = el('img'); img.src = dataUrl; img.alt = 'attached image';
+  $('fmbody').replaceChildren(img);
+  $('filemodal').hidden = false;
+  $('fmdownload').href = dataUrl;
+  $('fmdownload').download = 'image.png';
+}
+function previewFile(path, size) {
+  var ext = (path.split('.').pop() || '').toLowerCase();
+  $('fmtitle').textContent = path;
+  $('fmmeta').textContent = bytes(size);
+  $('fmbody').replaceChildren(el('div', 'loading…'));
+  $('filemodal').hidden = false;
+  $('fmdownload').href = filesUrl(path);
+  $('fmdownload').download = path.split('/').pop();
+  api(filesUrl(path)).then(function (r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.blob();
+  }).then(function (blob) {
+    if (IMG_TYPES[ext]) {
+      MODAL_OBJECT_URL = URL.createObjectURL(blob);
+      var img = el('img'); img.src = MODAL_OBJECT_URL; img.alt = path;
+      $('fmbody').replaceChildren(img);
+      return;
+    }
+    if (HTML_TYPES[ext]) {
+      if (size > PREVIEW_MAX) { $('fmbody').replaceChildren(el('div', 'Too large to preview (' + bytes(size) + '). Use download.')); return; }
+      // srcdoc, not a blob: URL -- a blob's origin belongs to this page, and a sandboxed iframe
+      // without allow-same-origin cannot reliably load one across browsers (it can render as a
+      // download or plain text instead). srcdoc has no such origin mismatch.
+      blob.text().then(function (html) {
+        var frame = el('iframe');
+        // No allow-same-origin: a workspace page can run its own script, but gets a unique, opaque
+        // origin -- it can never read this page's sessionStorage, cookies, or API key.
+        frame.setAttribute('sandbox', 'allow-scripts');
+        frame.className = 'htmlpreview';
+        frame.srcdoc = html;
+        $('fmbox').classList.add('wide');
+        $('fmbody').replaceChildren(frame);
+      });
+      return;
+    }
+    if (size > PREVIEW_MAX) {
+      $('fmbody').replaceChildren(el('div', 'Too large to preview (' + bytes(size) + '). Use download.'));
+      return;
+    }
+    blob.text().then(function (text) {
+      // A NUL byte almost never appears in real text; good enough to tell "probably binary" apart.
+      if (text.indexOf('\u0000') >= 0) { $('fmbody').replaceChildren(el('div', 'This does not look like a text file. Use download.')); return; }
+      $('fmbody').replaceChildren(el('pre', text));
+    });
+  }).catch(function (e) { $('fmbody').replaceChildren(el('div', 'cannot show it: ' + e.message)); });
+}
+/* ---- composer attachments ---- */
+function renderPending() {
+  var box = $('pending');
+  box.replaceChildren();
+  PENDING_IMAGES.forEach(function (img, i) {
+    var chip = el('div'); chip.className = 'chip';
+    var thumb = el('img'); thumb.src = img.dataUrl;
+    chip.appendChild(thumb);
+    chip.appendChild(el('span', img.name)).className = 'nm';
+    var rm = el('span', '×'); rm.className = 'rm';
+    rm.addEventListener('click', function () { PENDING_IMAGES.splice(i, 1); renderPending(); });
+    chip.appendChild(rm);
+    box.appendChild(chip);
+  });
+  PENDING_DOCS.forEach(function (doc, i) {
+    var chip = el('div'); chip.className = 'chip' + (doc.uploading ? ' busy' : '');
+    chip.appendChild(el('span', '📄 ' + doc.name)).className = 'nm';
+    var rm = el('span', '×'); rm.className = 'rm';
+    rm.addEventListener('click', function () { PENDING_DOCS.splice(i, 1); renderPending(); });
+    chip.appendChild(rm);
+    box.appendChild(chip);
+  });
+  box.hidden = !PENDING_IMAGES.length && !PENDING_DOCS.length;
+}
+function addImageFile(f) {
+  if (PENDING_IMAGES.length >= ATTACH_MAX_IMAGES) { alert('at most ' + ATTACH_MAX_IMAGES + ' images per message'); return; }
+  if (f.size > ATTACH_MAX_BYTES) { alert(f.name + ' is too large (over ' + bytes(ATTACH_MAX_BYTES) + ')'); return; }
+  var reader = new FileReader();
+  reader.onload = function () {
+    PENDING_IMAGES.push({ name: f.name, dataUrl: reader.result });
+    renderPending();
+  };
+  reader.readAsDataURL(f);
+}
+function addDocFile(f) {
+  var entry = { name: f.name, path: 'uploads/' + f.name, uploading: true };
+  PENDING_DOCS.push(entry);
+  renderPending();
+  api(filesUrl(entry.path), { method: 'PUT', body: f }).then(function (r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    entry.uploading = false;
+    entry.bytes = f.size;
+    renderPending();
+  }).catch(function (e) {
+    PENDING_DOCS = PENDING_DOCS.filter(function (d) { return d !== entry; });
+    renderPending();
+    alert('could not upload ' + f.name + ': ' + e.message);
+  });
+}
+function addAttachments(fileList) {
+  Array.prototype.slice.call(fileList || []).forEach(function (f) {
+    if (f.type && f.type.indexOf('image/') === 0) addImageFile(f); else addDocFile(f);
+  });
+}
+function uploadFiles(fileList) {
+  var files = Array.prototype.slice.call(fileList || []);
+  if (!files.length) return;
+  Promise.all(files.map(function (f) {
+    var path = (FILES_PATH ? FILES_PATH + '/' : '') + f.name;
+    return api(filesUrl(path), { method: 'PUT', body: f }).then(function (r) { if (!r.ok) throw new Error(f.name + ': HTTP ' + r.status); });
+  })).then(loadFiles).catch(function (e) { alert('could not upload: ' + e.message); loadFiles(); });
+}
+
+/* ---- login/logout ---- */
+function connect(key) {
+  KEY = key;
+  return apiJson('api/whoami').then(function (d) {
+    WHOAMI = d;
+    sessionStorage.setItem('piper-portal-key', KEY);
+    loadConvos();
+    return pullHistory();
+  }).then(function () {
+    if (!CONVOS.length) newChat(); else CUR = CONVOS[0].id;
+    renderTargets();
+    showApp();
+    renderAll();
+    // Every conversation, not just the one on screen: any of them might still be running from
+    // before this login/reload, and each catches up (or stays quiet) independently.
+    CONVOS.forEach(function (c) { resumeIfLive(c); });
+  }).catch(function (e) {
+    KEY = '';
+    showLogin(e.message);
+  });
+}
+$('connect').addEventListener('click', function () {
+  var key = $('keyinput').value.trim();
+  if (!key) return;
+  connect(key);
+});
+$('keyinput').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('connect').click(); });
+$('logout').addEventListener('click', function () {
+  sessionStorage.removeItem('piper-portal-key');
+  sessionStorage.removeItem(convKey());
+  KEY = ''; WHOAMI = null; CONVOS = []; CUR = null;
+  showLogin();
+});
+$('newchat').addEventListener('click', function () { newChat(); });
+$('target').addEventListener('change', function () { var c = conv(); if (!c || c.messages.length) return; c.agentId = $('target').value; saveConvos(); renderAll(); });
+$('send').addEventListener('click', function () {
+  var c = conv();
+  if (!c) return;
+  if (!isBusy(c)) return send();
+  var q = agentQuery(c);
+  api('api/conversation/' + encodeURIComponent(c.id) + '/interrupt' + (q ? '?' + q : ''), { method: 'POST' }).catch(function () {});
+});
+$('input').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
+$('input').addEventListener('paste', function (e) {
+  var files = (e.clipboardData && e.clipboardData.files) || [];
+  if (!files.length) return;
+  e.preventDefault();
+  addAttachments(files);
+});
+$('attachbtn').addEventListener('click', function () { $('attachinput').click(); });
+$('attachinput').addEventListener('change', function () { addAttachments(this.files); this.value = ''; });
+$('toolToggle').checked = SHOW_TOOLS;
+$('toolToggle').addEventListener('change', function () {
+  SHOW_TOOLS = this.checked;
+  try { localStorage.setItem('piper-portal-showtools', SHOW_TOOLS ? '1' : '0'); } catch (e) { /* not fatal */ }
+  renderMessages();
+});
+$('filesbtn').addEventListener('click', function () { setSide('files'); });
+$('toolsbtn').addEventListener('click', function () { setSide('tools'); });
+$('skillsbtn').addEventListener('click', function () { setSide('skills'); });
+$('toolsrefresh').addEventListener('click', loadTools);
+$('skillsrefresh').addEventListener('click', loadSkills);
+$('filesrefresh').addEventListener('click', loadFiles);
+$('uploadbtn').addEventListener('click', function () { $('uploadinput').click(); });
+$('uploadinput').addEventListener('change', function () { uploadFiles(this.files); this.value = ''; });
+$('fmclose').addEventListener('click', closeModal);
+$('filemodal').addEventListener('click', function (e) { if (e.target === $('filemodal')) closeModal(); });
+
+if (KEY) connect(KEY); else showLogin();
+</script>
+</body>
+</html>

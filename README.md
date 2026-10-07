@@ -1003,6 +1003,9 @@ on write, so a bad one is rejected with a message rather than reaching the runni
 | Group | Setting | Default | Meaning |
 | --- | --- | --- | --- |
 | Network | `HOST` / `PORT` | `127.0.0.1` / `8787` | Listen address. `0.0.0.0` exposes it. *Restart.* |
+| Portal | `PORTAL_ENABLED` / `PORTAL_PORT` | off / `8788` | The client portal (see below): a key holder's own chat + files page, on its own port. Off by default — it opens a new port. *Restart.* |
+| Portal | `PORTAL_HISTORY_MAX_BYTES` | 4 MB | Hard cap on one key's whole stored chat history (every conversation it has kept), as JSON. The browser trims itself well under this already. |
+| Portal | `PORTAL_ATTACHMENT_MAX_BYTES` | 8 MB | Cap on one image attached to a portal chat message, decoded. A document attached instead goes through the ordinary workspace upload limit, `FILE_UPLOAD_MAX_BYTES`. |
 | Security | `GATEWAY_API_KEY` | unset | When set, requests must send `Authorization: Bearer <key>`. |
 | Access Control | `DASHBOARD_SESSION_MS` | `12h` | How long a dashboard sign-in lasts. `0` keeps it until the browser closes. |
 | Sessions | `MAX_SESSIONS` | `128` | Cap on live sessions; the least-recently-used is disposed past it. |
@@ -1041,7 +1044,10 @@ on write, so a bad one is rejected with a message rather than reaching the runni
 | Agent | `EXPORT_MAX_BYTES`, `TEMPLATE_MAX_BYTES` | 20 MB, 5 MB | The most an exported or imported agent bundle, and a saved template, may hold. |
 | Agent | `DELEGATE_ENABLED`, `DELEGATE_MAX_DEPTH`, `DELEGATE_TIMEOUT_MS`, `DELEGATE_PROGRESS`, `DELEGATE_MESSAGES`, `TEAM_MAX_STEPS` | on, 3, 10m, full, chat, 6 | Hand-offs between agents of a key: allowed, longest chain, longest hand-off, how much of a colleague's work is shown while the caller waits; most steps in a team. |
 | Agent | `AGENT_MAX_PER_KEY`, `TEAM_MAX_PER_KEY` | 50, 50 | The most agent endpoints, and teams, one key may have (each opens its own port). |
+| Agent | `AGENT_MEMORY_ENABLED`, `MEMORY_MAX_ENTRIES`, `MEMORY_MAX_NAME_BYTES`, `MEMORY_MAX_VALUE_BYTES`, `MEMORY_LOOKUP_LIMIT` | on, 200, 100, 4000, 20 | Memory: notes a chat remembers across its own chats and containers; on; most notes per memory; longest name and note, in bytes; most notes one search returns. |
 | Jobs | `JOBS_ENABLED`, `JOBS_MAX_PARALLEL`, `JOBS_MIN_INTERVAL_MS`, `JOBS_MAX_PER_KEY`, `JOBS_RESULT_DAYS`, `JOBS_MAX_FAILURES`, `JOBS_NOTIFY_ALERTS`, `AGENT_JOBS_DAILY_COST` | on, 2, 5m, 20, 30, 3, on, 1 | Scheduled, webhook and API jobs: on, runs at once, least time between webhook triggers, queued or running runs per key, days results are kept, failures in a row before a job is switched off, also send results to the alert webhook, daily dollar cap on agent-made schedules. |
+| Knowledge | `KNOWLEDGE_ENABLED`, `KNOWLEDGE_LOOKUP_LIMIT`, `KNOWLEDGE_RETENTION_DAYS` | on, 20, 90 | The read-only knowledge base tools (`piper_knowledge_search`/`piper_knowledge_read`): on; most entries one search returns; days before an entry is forgotten (0 keeps everything). |
+| Knowledge | `RSS_ENABLED`, `RSS_POLL_MIN_INTERVAL_MS`, `RSS_MAX_FEEDS`, `RSS_MAX_PARALLEL_EXTRACTIONS`, `RSS_EXTRACT_TIMEOUT_MS`, `RSS_DEFAULT_AGENT`, `RSS_MAX_ARTICLE_BYTES`, `RSS_AUTO_UNBLOCK` | on, 5m, 100, 2, 5m, empty, 50 KB, on | RSS, the knowledge base's first source: polling and extraction on; least time between polls of one feed; most feeds at once; concurrent extraction turns; longest one may take; the extracting agent a feed names none of its own; longest article text kept; when a fetch looks blocked (403, Cloudflare, a CAPTCHA) let the agent try once more another way before marking it blocked. |
 | Audit | `AUDIT_AUTH`, `AUDIT_SETTINGS`, `AUDIT_KEYS`, `AUDIT_OPERATIONS`, `AUDIT_RUNTIME` | on | Record that category (see The audit log). Applied live. |
 | Audit | `AUDIT_REQUESTS`, `AUDIT_AUTH_FAILURES` | off | Record every chat request / every refused API key (busy; deduplicated for the second). |
 | Audit | `AUDIT_RETENTION_DAYS`, `AUDIT_MAX_ROWS` | 90, 50000 | Delete rows older than this many days, and the oldest beyond this many rows. 0 is no limit. |

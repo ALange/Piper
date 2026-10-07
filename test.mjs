@@ -26,7 +26,7 @@ process.env.CONTAINER_PI_DIR = TEST_CONTAINER_PI;
 const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 // Seeded at startup, which is when a validator that reads a not-yet-defined constant would fail.
 process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
-const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, recentAudit: recentAuditRows } = await import("./server.mjs");
+const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, memoryScopeOf, mayRemember, memoryFor, memoryOverview, memoryEntries, deleteMemoryEntry, clearMemory, deleteMemoryOf, memoryDashboardRoutes, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, mayLookupKnowledge, knowledgeFor, addEntry, getByKey, getEntry, sourceSeen, overview: knowledgeOverview, entriesOf, removeEntry, clearSource, purgeOld, activityLog, knowledgeDashboardRoutes, RssError, SOURCE_TYPE, getFeed, listFeeds, createFeed, updateFeed, removeFeed, parseFeedXml, forcePoll, rssTick, parseExtraction, looksBlocked, parseUnblockReply, setExtractionRunner, rssPump, retryEntry, startFeeds, stopFeeds, rssDashboardRoutes, recentAudit: recentAuditRows } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
 
@@ -764,6 +764,18 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(apiKeys.update(record.id, { name: "  " }).name, "renamed", "a blank name does not clear it");
 	assert.equal(apiKeys.update("6f1e1a5c-0000-4000-8000-000000000000", {}), null, "an unknown id updates nothing");
 
+	// regenerate: a fresh secret for the same key; the old one stops working at once.
+	const forRegen = apiKeys.create({ name: "regen-test", expiresAt: 0 });
+	const regen1 = apiKeys.regenerate(forRegen.record.id);
+	assert.notEqual(regen1.key, forRegen.key, "a genuinely new secret");
+	assert.match(regen1.key, /^piper_[A-Za-z0-9_-]{43}$/, "same key shape");
+	assert.equal(regen1.record.id, forRegen.record.id, "same key record");
+	assert.equal(regen1.record.name, "regen-test", "everything else untouched");
+	assert.equal(apiKeys.verify(forRegen.key), null, "the old secret stops working at once");
+	assert.equal(apiKeys.verify(regen1.key)?.id, forRegen.record.id, "the new one works");
+	assert.equal(apiKeys.regenerate("6f1e1a5c-0000-4000-8000-000000000000"), null, "an unknown id regenerates nothing");
+	apiKeys.remove(forRegen.record.id);
+
 	apiKeys.revoke(record.id);
 	assert.equal(apiKeys.verify(key), null, "a revoked key stops working");
 	assert.ok(apiKeys.get(record.id).revokedAt > 0, "but the row survives, so its usage stays attributed");
@@ -1204,9 +1216,22 @@ assert.equal(isReloadCommand(undefined), false);
 	const withMissing = await call({ messages: [{ role: "user", content: "hi" }] }, { "x-session-id": "needs-missing-ext" });
 	assert.equal(withMissing.status, 200, "the chat still starts");
 	const withMissingText = (await withMissing.json()).choices[0].message.content;
-	assert.match(withMissingText, /^\[container: an extension this chat was granted could not be found on the host and was left out: missing-pkg\. Reinstall or remove it on Extensions\.\]\n\necho: hi$/);
+	assert.match(withMissingText, /^\[container: an extension this chat was granted could not be found or loaded on the host and was left out: missing-pkg\. Reinstall or remove it on Extensions\.\]\n\necho: hi$/);
 	apiKeys.update(key.id, { sharedBundles: null });
 	rmSync(join(TEST_EXT, "missing-pkg"), { recursive: true, force: true });
+
+	// A granted extension whose folder exists but is not a usable Pi package (no package.json, no
+	// extensions/skills/prompts folder — a half-written edit, or a file deleted out from under it) gets the
+	// same treatment: left out with a notice, not a crash. The folder is present, unlike the case above.
+	mkdirSync(join(TEST_EXT, "broken-pkg", "node_modules", "broken-pkg"), { recursive: true });
+	writeFileSync(join(TEST_EXT, "broken-pkg", "entry.json"), JSON.stringify({ name: "broken-pkg", source: "npm:broken-pkg", version: "1.0.0", entry: "node_modules/broken-pkg" }));
+	apiKeys.update(key.id, { sharedBundles: "broken-pkg" });
+	const withBroken = await call({ messages: [{ role: "user", content: "hi" }] }, { "x-session-id": "needs-broken-ext" });
+	assert.equal(withBroken.status, 200, "the chat still starts");
+	const withBrokenText = (await withBroken.json()).choices[0].message.content;
+	assert.match(withBrokenText, /^\[container: an extension this chat was granted could not be found or loaded on the host and was left out: broken-pkg\. Reinstall or remove it on Extensions\.\]\n\necho: hi$/);
+	apiKeys.update(key.id, { sharedBundles: null });
+	rmSync(join(TEST_EXT, "broken-pkg"), { recursive: true, force: true });
 
 	// Each chat opened a real bridge server (a listening unix socket); closing the sessions tears those down
 	// too, or they would outlive this test and keep the process from ever exiting.
@@ -1216,6 +1241,100 @@ assert.equal(isReloadCommand(undefined), false);
 	setSessionSpawn(null);
 	server.closeAllConnections?.();
 	await new Promise((r) => server.close(r));
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+	config.CONTAINER_NETWORK = priorNetwork;
+	config.ACCESS_LOG = accessLog;
+	resetEngineCheck();
+}
+
+// runAgentTurn now threads an `images` option all the way to the Pi session's own "prompt" command
+// (lib/agentrun.mjs used to hardcode `images: []`); a fake, vision-capable session proves it. The same
+// block also proves runAgentTurn now answers `/reload` and the gateway's own commands itself, instead
+// of forwarding the literal text to the agent (lib/agentrun.mjs again -- previously only
+// /v1/chat/completions handled these).
+{
+	const { EventEmitter } = await import("node:events");
+	const { PassThrough } = await import("node:stream");
+	const { runAgentTurn, credentialFor } = await import("./server.mjs");
+	resetEngineCheck();
+	const priorNetwork = config.CONTAINER_NETWORK;
+	const accessLog = config.ACCESS_LOG;
+	config.CONTAINER_NETWORK = "none";
+	config.ACCESS_LOG = false;
+
+	setRunner(async (bin, args) => {
+		if (bin === "docker" && args[0] === "version") return { code: 0, stdout: "27.0.0", stderr: "" };
+		if (bin === "docker" && args[0] === "inspect") return { code: 1, stdout: "", stderr: "No such object" };
+		if (bin === "docker" && args[0] === "image") return { code: 0, stdout: "sha256:fakeimage|0.99.1", stderr: "" };
+		return { code: 0, stdout: "", stderr: "" };
+	});
+
+	let lastPrompt = null;
+	const fakeChild = () => {
+		const child = new EventEmitter();
+		child.stdout = new PassThrough();
+		child.stderr = new PassThrough();
+		child.exitCode = null;
+		child.signalCode = null;
+		child.kill = (signal = "SIGTERM") => {
+			if (child.exitCode !== null || child.signalCode !== null) return true;
+			child.signalCode = signal;
+			setImmediate(() => child.emit("exit", null, signal));
+			return true;
+		};
+		child.stdin = new PassThrough();
+		child.stdin.on("end", () => child.exitCode === null && child.signalCode === null && setImmediate(() => child.emit("exit", 0, null)));
+		let buffer = "";
+		child.stdin.on("data", (chunk) => {
+			buffer += chunk;
+			let i;
+			while ((i = buffer.indexOf("\n")) >= 0) {
+				const command = JSON.parse(buffer.slice(0, i));
+				buffer = buffer.slice(i + 1);
+				const reply = (record) => child.stdout.write(`${JSON.stringify(record)}\n`);
+				const ok = (data) => reply({ type: "response", id: command.id, command: command.type, success: true, data });
+				// This model declares image input, unlike the text-only fixture above: the whole point
+				// of this block is to exercise the path where images are NOT dropped.
+				if (command.type === "get_state") ok({ model: { provider: "p", id: "m", input: ["text", "image"] }, isStreaming: false });
+				else if (command.type === "prompt") {
+					lastPrompt = command;
+					const said = String(command.message ?? "");
+					ok();
+					reply({ type: "agent_start" });
+					reply({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: `echo: ${said}` } });
+					reply({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: `echo: ${said}` }] } });
+					setTimeout(() => reply({ type: "agent_settled" }), 10);
+				} else ok();
+			}
+		});
+		return child;
+	};
+	setSessionSpawn(() => fakeChild());
+
+	const { record: key } = apiKeys.create({ name: "images-threading-test", expiresAt: 0 });
+	const cred = credentialFor(key.id);
+	const images = [{ type: "image", data: "QQ==", mimeType: "image/png" }];
+	const result = await runAgentTurn({ credential: cred, clientSessionId: "images-threading", prompt: "describe this", images });
+	assert.equal(result.text, "echo: describe this");
+	assert.ok(lastPrompt, "a prompt command reached the fake Pi session");
+	assert.deepEqual(lastPrompt.images, images, "images passed to runAgentTurn reached the Pi session's own prompt command");
+
+	// `/reload` and the gateway's own commands (`/piper`, `/skills`, ...) answered directly by runAgentTurn
+	// itself, the same as /v1/chat/completions -- not sent to the agent as a literal chat message. This is
+	// what makes them actually work when typed into the Portal or Playground chat, which call runAgentTurn
+	// directly and never go through chatCompletions.
+	const helpResult = await runAgentTurn({ credential: cred, clientSessionId: "gateway-command-help", prompt: "/piper" });
+	assert.match(helpResult.text, /\/reload\s+re-read skills/);
+
+	lastPrompt = null;
+	const reloadResult = await runAgentTurn({ credential: cred, clientSessionId: "gateway-command-reload", prompt: "/reload" });
+	assert.match(reloadResult.text, /Reloaded\. Skills, extensions, prompts, settings/);
+	assert.equal(lastPrompt.message, "/piper-reload", "the literal /reload text itself never reached the model");
+
+	const openRecords = sessions.allRecords();
+	sessions.closeAll();
+	await Promise.all(openRecords.map((r) => r.stopped ?? Promise.resolve()));
+	setSessionSpawn(null);
 	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 	config.CONTAINER_NETWORK = priorNetwork;
 	config.ACCESS_LOG = accessLog;
@@ -1242,6 +1361,473 @@ assert.equal(isReloadCommand(undefined), false);
 	bridge.close();
 	assert.equal(existsSync(socketPath), false);
 	rmSync(dir, { recursive: true, force: true });
+}
+
+// Agent memory: scope resolution, the write/read/lookup round trip and its caps, the bridge routes,
+// the dashboard's view of it, and cleanup when an agent or a key is deleted.
+{
+	const rec = (extra) => ({ keyId: "mem-key-1", agentId: null, scopeId: "mem-key-1", ...extra });
+	config.AGENT_MEMORY_ENABLED = true;
+
+	// Scope: a key's own chats, and a named agent's own or shared, resolve the way workspaceScopeOf does.
+	assert.equal(memoryScopeOf("mem-key-1"), "mem-key-1", "a plain key's own scope: itself");
+	const ownAgent = agents.create({ keyId: "mem-key-1", name: "own-mem" });
+	assert.equal(agents.get(ownAgent.id).memoryMode, "own", "the default");
+	assert.equal(memoryScopeOf(agentScope("mem-key-1", ownAgent.id)), agentScope("mem-key-1", ownAgent.id));
+	const sharedAgent = agents.create({ keyId: "mem-key-1", name: "shared-mem", memoryMode: "shared" });
+	assert.equal(memoryScopeOf(agentScope("mem-key-1", sharedAgent.id)), "mem-key-1", "folds into its key's");
+	assert.throws(() => agents.create({ keyId: "mem-key-1", name: "bad-mem", memoryMode: "sometimes" }), /memory must be one of/);
+	agents.remove(ownAgent.id);
+	agents.remove(sharedAgent.id);
+
+	// mayRemember: the one global switch, and nothing to scope to is nothing to remember in.
+	assert.equal(mayRemember(rec()), true);
+	config.AGENT_MEMORY_ENABLED = false;
+	assert.equal(mayRemember(rec()), false);
+	config.AGENT_MEMORY_ENABLED = true;
+	assert.equal(mayRemember({ keyId: null, scopeId: null }), false);
+
+	// write/read/lookup, bound to one record's scope.
+	const mem = memoryFor(rec());
+	assert.deepEqual(mem.write({ name: "deploy-steps", value: "1. build 2. push 3. restart" }), { name: "deploy-steps", updated: false });
+	assert.equal(mem.read({ name: "deploy-steps" }).value, "1. build 2. push 3. restart");
+	assert.deepEqual(mem.write({ name: "deploy-steps", value: "just: deploy.sh" }), { name: "deploy-steps", updated: true }, "writing the same name again replaces it");
+	assert.equal(mem.read({ name: "deploy-steps" }).value, "just: deploy.sh");
+	assert.throws(() => mem.read({ name: "no-such-note" }), /no note called/);
+	assert.throws(() => mem.write({ name: "", value: "x" }), /name a note/);
+	assert.throws(() => mem.write({ name: "x", value: "  " }), /nothing to remember/);
+	mem.write({ name: "user-preferences", value: "prefers terse answers" });
+	const all = mem.lookup({});
+	assert.deepEqual(all.map((n) => n.name), ["user-preferences", "deploy-steps"], "newest first");
+	assert.deepEqual(mem.lookup({ query: "terse" }).map((n) => n.name), ["user-preferences"]);
+	assert.deepEqual(mem.lookup({ query: "DEPLOY" }).map((n) => n.name), ["deploy-steps"], "case-insensitive, and matches the value too");
+	assert.equal(mem.lookup({ query: "nothing matches this" }).length, 0);
+	const long = "x".repeat(500);
+	mem.write({ name: "long-one", value: long });
+	assert.equal(mem.lookup({ query: "long-one" })[0].preview.length, 161, "previews are capped, with an ellipsis");
+	clearMemory("mem-key-1");
+
+	// Caps: a brand new name over the limit is refused; updating an existing one never is.
+	config.MEMORY_MAX_ENTRIES = 2;
+	mem.write({ name: "a", value: "1" });
+	mem.write({ name: "b", value: "2" });
+	assert.throws(() => mem.write({ name: "c", value: "3" }), /already has 2 notes.*MEMORY_MAX_ENTRIES/);
+	assert.doesNotThrow(() => mem.write({ name: "a", value: "updated" }), "updating an existing one is always allowed");
+	config.MEMORY_MAX_ENTRIES = 200;
+	config.MEMORY_MAX_NAME_BYTES = 4;
+	assert.throws(() => mem.write({ name: "toolong", value: "x" }), /MEMORY_MAX_NAME_BYTES/);
+	config.MEMORY_MAX_NAME_BYTES = 100;
+	config.MEMORY_MAX_VALUE_BYTES = 4;
+	assert.throws(() => mem.write({ name: "x", value: "toolong" }), /MEMORY_MAX_VALUE_BYTES/);
+	config.MEMORY_MAX_VALUE_BYTES = 4000;
+	config.MEMORY_LOOKUP_LIMIT = 1;
+	assert.equal(mem.lookup({}).length, 1, "the lookup limit");
+	config.MEMORY_LOOKUP_LIMIT = 20;
+	clearMemory("mem-key-1");
+
+	// Scopes never cross: another key's (or agent's) memory is a different store entirely.
+	const other = memoryFor(rec({ keyId: "mem-key-2", scopeId: "mem-key-2" }));
+	other.write({ name: "deploy-steps", value: "a different key's note" });
+	assert.throws(() => mem.read({ name: "deploy-steps" }), /no note called/, "mem-key-1 never had this note back");
+	clearMemory("mem-key-2");
+
+	// Disabled: every call refuses, with existing notes untouched (checked once re-enabled).
+	mem.write({ name: "kept", value: "still here" });
+	config.AGENT_MEMORY_ENABLED = false;
+	assert.throws(() => mem.write({ name: "x", value: "y" }), /may not use memory/);
+	assert.throws(() => mem.read({ name: "kept" }), /may not use memory/);
+	assert.throws(() => mem.lookup({}), /may not use memory/);
+	config.AGENT_MEMORY_ENABLED = true;
+	assert.equal(mem.read({ name: "kept" }).value, "still here");
+	clearMemory("mem-key-1");
+
+	// The bridge routes: bound to the socket's own record, 403 when memory is not passed at all.
+	{
+		const dir = mkdtempSync(join("/tmp", "pb-mem-"));
+		const http = await import("node:http");
+		const post = (socketPath, path, body) =>
+			new Promise((resolve, reject) => {
+				const req = http.request({ socketPath, path, method: "POST", agent: false }, (res) => {
+					let data = "";
+					res.on("data", (c) => (data += c));
+					res.on("end", () => resolve({ status: res.statusCode, body: JSON.parse(data) }));
+				});
+				req.on("error", reject);
+				req.end(JSON.stringify(body ?? {}));
+			});
+		const socketPath = join(dir, "with.sock");
+		const post1 = (path, body) => post(socketPath, path, body);
+		const withMemory = await startBridge(socketPath, newMeter(), { memory: memoryFor(rec()) });
+		const wrote = await post1("/memory/write", { name: "n", value: "v" });
+		assert.deepEqual(wrote, { status: 200, body: { note: { name: "n", updated: false } } });
+		const read = await post1("/memory/read", { name: "n" });
+		assert.equal(read.status, 200);
+		assert.deepEqual([read.body.note.name, read.body.note.value, typeof read.body.note.updatedAt], ["n", "v", "number"]);
+		assert.deepEqual((await post1("/memory/lookup", {})).body.notes.map((x) => x.name), ["n"]);
+		withMemory.close();
+		clearMemory("mem-key-1");
+
+		const socketPath2 = join(dir, "without.sock");
+		const post2 = (path, body) => post(socketPath2, path, body);
+		const noMemory = await startBridge(socketPath2, newMeter(), {});
+		assert.equal((await post2("/memory/write", { name: "n", value: "v" })).status, 403);
+		assert.equal((await post2("/memory/read", { name: "n" })).status, 403);
+		assert.equal((await post2("/memory/lookup", {})).status, 403);
+		noMemory.close();
+		rmSync(dir, { recursive: true, force: true });
+	}
+
+	// The dashboard's own view: every scope with notes, one scope's notes, delete one, clear all. Driven
+	// over a real socket (memoryDashboardRoutes reads its body as a stream, like every other route here).
+	{
+		memoryFor(rec()).write({ name: "a", value: "1" });
+		memoryFor(rec()).write({ name: "b", value: "2" });
+		memoryFor(rec({ keyId: "mem-key-2", scopeId: "mem-key-2" })).write({ name: "c", value: "3" });
+		const http = await import("node:http");
+		const srv = http.createServer((req, res) => memoryDashboardRoutes(req, res, req.url));
+		await new Promise((r) => srv.listen(0, "127.0.0.1", r));
+		const base = `http://127.0.0.1:${srv.address().port}`;
+		const call = (path, opts) => fetch(base + path, opts).then((r) => r.json().then((json) => ({ status: r.status, json })));
+
+		const list = await call("/dashboard/memory.json");
+		assert.ok(list.json.scopes.some((s) => s.scope === "mem-key-1" && s.entries === 2 && s.label) && list.json.scopes.some((s) => s.scope === "mem-key-2" && s.entries === 1));
+		const view = await call("/dashboard/memory/mem-key-1");
+		assert.deepEqual(view.json.entries.map((e) => e.name).sort(), ["a", "b"]);
+		const del = await call("/dashboard/memory/mem-key-1/delete", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "a" }) });
+		assert.deepEqual(del.json, { deleted: true });
+		assert.equal((await call("/dashboard/memory/mem-key-1/delete", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "a" }) })).json.deleted, false, "already gone");
+		assert.deepEqual((await call("/dashboard/memory/mem-key-1")).json.entries.map((e) => e.name), ["b"]);
+		const cleared = await call("/dashboard/memory/mem-key-1", { method: "DELETE" });
+		assert.deepEqual(cleared.json, { cleared: 1 });
+		assert.equal((await call("/dashboard/memory/mem-key-1")).json.entries.length, 0);
+		assert.ok(recentAuditRows(10).some((r) => r.action === "memory.delete") && recentAuditRows(10).some((r) => r.action === "memory.clear"));
+		await new Promise((r) => srv.close(r));
+		clearMemory("mem-key-2");
+	}
+
+	// Cleanup: deleting an agent removes its own memory; deleting a key removes its own and every agent's.
+	setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+	const cleanupKey = apiKeys.create({ name: "mem-cleanup-test" });
+	const ckey = cleanupKey.record ?? cleanupKey;
+	const madeAgent = await createAgent({ keyId: ckey.id, name: "mem-agent" });
+	memoryFor({ keyId: ckey.id, scopeId: agentScope(ckey.id, madeAgent.id) }).write({ name: "n", value: "v" });
+	memoryFor({ keyId: ckey.id, scopeId: ckey.id }).write({ name: "n", value: "v" });
+	assert.equal(memoryEntries(agentScope(ckey.id, madeAgent.id)).length, 1);
+	await deleteAgent(madeAgent.id);
+	assert.equal(memoryEntries(agentScope(ckey.id, madeAgent.id)).length, 0, "the agent's own memory went with it");
+	assert.equal(memoryEntries(ckey.id).length, 1, "the key's own memory is untouched by deleting one agent");
+	assert.equal(deleteMemoryOf({ keyId: ckey.id }), 1, "and is removed when the key itself goes");
+	apiKeys.remove(ckey.id);
+}
+
+// Knowledge base: the generic store, RSS as its one producer today, the read-only bridge tools and
+// the dashboard's routes for both.
+{
+	const krec = (extra) => ({ keyId: "know-key-1", agentId: null, scopeId: "know-key-1", ...extra });
+	config.KNOWLEDGE_ENABLED = true;
+	config.RSS_ENABLED = true;
+
+	// parseFeedXml: RSS 2.0 (with CDATA and entities), Atom, and a feed with no guid at all.
+	const rss = `<rss><channel>
+		<item><title><![CDATA[Has &amp; Entities]]></title><link>https://example.test/a</link><guid>guid-a</guid><pubDate>Mon, 01 Jan 2024 00:00:00 GMT</pubDate></item>
+		<item><title>No Guid</title><link>https://example.test/b</link></item>
+	</channel></rss>`;
+	const parsed = parseFeedXml(rss);
+	assert.deepEqual(parsed.map((e) => e.title), ["Has & Entities", "No Guid"]);
+	assert.equal(parsed[0].guid, "guid-a");
+	assert.equal(parsed[1].guid, "https://example.test/b", "no guid falls back to the link");
+	assert.equal(parsed[0].publishedAt, Date.parse("Mon, 01 Jan 2024 00:00:00 GMT"));
+	const atom = `<feed><entry><title>Atom Title</title><link href="https://example.test/atom-1"/><id>atom-1</id><updated>2024-01-02T00:00:00Z</updated></entry></feed>`;
+	const parsedAtom = parseFeedXml(atom);
+	assert.deepEqual(parsedAtom, [{ guid: "atom-1", url: "https://example.test/atom-1", title: "Atom Title", publishedAt: Date.parse("2024-01-02T00:00:00Z") }]);
+	assert.deepEqual(parseFeedXml("<rss><channel></channel></rss>"), []);
+
+	// The generic store: upsert on (sourceType, sourceRef, guid), the dashboard's views, cleanup.
+	clearSource("test", "s1");
+	addEntry({ sourceType: "test", sourceRef: "s1", guid: "g1", url: "https://x.test/1", title: "One", text: "body one", summary: "sum one", tags: ["a", "b"], status: "done" });
+	const e1 = getByKey("test", "s1", "g1");
+	assert.deepEqual([e1.title, e1.text, e1.tags, e1.status], ["One", "body one", ["a", "b"], "done"]);
+	addEntry({ sourceType: "test", sourceRef: "s1", guid: "g1", url: "https://x.test/1", title: "One (updated)", text: "body one v2", status: "done" });
+	assert.equal(getByKey("test", "s1", "g1").title, "One (updated)", "same key replaces, not duplicates");
+	assert.equal(sourceSeen("test", "s1"), true);
+	assert.equal(sourceSeen("test", "never-seen"), false);
+	addEntry({ sourceType: "test", sourceRef: "s1", guid: "g2", url: "https://x.test/2", title: "Two", text: "body two", status: "pending" });
+	assert.deepEqual(entriesOf("test", "s1").map((e) => e.guid).sort(), ["g1", "g2"]);
+	assert.ok(knowledgeOverview().some((s) => s.sourceType === "test" && s.sourceRef === "s1" && s.entries === 2));
+	assert.equal(removeEntry(getByKey("test", "s1", "g2").id), true);
+	assert.equal(entriesOf("test", "s1").length, 1);
+	assert.equal(clearSource("test", "s1"), 1);
+	assert.equal(entriesOf("test", "s1").length, 0);
+	addEntry({ sourceType: "test", sourceRef: "s1", guid: "gold", title: "Old", text: "x", status: "done" });
+	db.prepare("UPDATE knowledge_entries SET created_at = ? WHERE source_type = 'test' AND source_ref = 's1'").run(Date.now() - 200 * 86_400_000);
+	config.KNOWLEDGE_RETENTION_DAYS = 90;
+	assert.equal(purgeOld(), 1, "older than KNOWLEDGE_RETENTION_DAYS is forgotten");
+	config.KNOWLEDGE_RETENTION_DAYS = 0;
+	addEntry({ sourceType: "test", sourceRef: "s1", guid: "forever", title: "Forever", text: "x", status: "done" });
+	db.prepare("UPDATE knowledge_entries SET created_at = 1 WHERE source_type = 'test' AND source_ref = 's1'").run();
+	assert.equal(purgeOld(), 0, "0 keeps everything");
+	config.KNOWLEDGE_RETENTION_DAYS = 90;
+	clearSource("test", "s1");
+
+	// The agent-facing half: search/read, status-gated, available to any chat with a scope.
+	assert.equal(mayLookupKnowledge(krec()), true);
+	assert.equal(mayLookupKnowledge({ keyId: null, scopeId: null }), false);
+	config.KNOWLEDGE_ENABLED = false;
+	assert.equal(mayLookupKnowledge(krec()), false);
+	config.KNOWLEDGE_ENABLED = true;
+	clearSource("test", "know");
+	addEntry({ sourceType: "test", sourceRef: "know", guid: "done-1", title: "Reactor Meltdown", text: "Full text about a reactor.", summary: "A reactor had a problem.", tags: ["energy"], status: "done" });
+	addEntry({ sourceType: "test", sourceRef: "know", guid: "pending-1", title: "Still Cooking", text: "half text", status: "pending" });
+	const kn = knowledgeFor(krec());
+	const hits = kn.search({ query: "reactor" });
+	assert.equal(hits.length, 1);
+	assert.deepEqual([hits[0].title, hits[0].summary, hits[0].source], ["Reactor Meltdown", "A reactor had a problem.", "test"]);
+	assert.equal(kn.search({ query: "still cooking" }).length, 0, "a pending entry is not findable");
+	const got = kn.read({ id: hits[0].id });
+	assert.equal(got.text, "Full text about a reactor.");
+	assert.throws(() => kn.read({ id: getByKey("test", "know", "pending-1").id }), /no entry called/, "a pending entry is not readable either");
+	config.KNOWLEDGE_ENABLED = false;
+	assert.throws(() => kn.search({}), /may not use the knowledge base/);
+	assert.throws(() => kn.read({ id: hits[0].id }), /may not use the knowledge base/);
+	config.KNOWLEDGE_ENABLED = true;
+	clearSource("test", "know");
+
+	// The bridge routes: present only when `knowledge` is passed to startBridge.
+	{
+		const dir = mkdtempSync(join("/tmp", "pb-know-"));
+		const http2 = await import("node:http");
+		const post = (socketPath, path, body) =>
+			new Promise((resolve, reject) => {
+				const req = http2.request({ socketPath, path, method: "POST", agent: false }, (res) => {
+					let data = "";
+					res.on("data", (c) => (data += c));
+					res.on("end", () => resolve({ status: res.statusCode, body: JSON.parse(data) }));
+				});
+				req.on("error", reject);
+				req.end(JSON.stringify(body ?? {}));
+			});
+		addEntry({ sourceType: "test", sourceRef: "bridge", guid: "b1", title: "Bridged", text: "bridged text", summary: "s", status: "done" });
+		const socketPath = join(dir, "with.sock");
+		const withKnowledge = await startBridge(socketPath, newMeter(), { knowledge: knowledgeFor(krec()) });
+		const found = await post(socketPath, "/knowledge/search", { query: "bridged" });
+		assert.equal(found.status, 200);
+		assert.equal(found.body.entries[0].title, "Bridged");
+		const read1 = await post(socketPath, "/knowledge/read", { id: found.body.entries[0].id });
+		assert.equal(read1.body.entry.text, "bridged text");
+		withKnowledge.close();
+
+		const socketPath2 = join(dir, "without.sock");
+		const noKnowledge = await startBridge(socketPath2, newMeter(), {});
+		assert.equal((await post(socketPath2, "/knowledge/search", { query: "x" })).status, 403);
+		assert.equal((await post(socketPath2, "/knowledge/read", { id: 1 })).status, 403);
+		noKnowledge.close();
+		rmSync(dir, { recursive: true, force: true });
+		clearSource("test", "bridge");
+	}
+
+	// RSS feeds: CRUD, validation, the feed cap.
+	const kkey = apiKeys.create({ name: "rss-test" });
+	const rkey = kkey.record ?? kkey;
+	const extractor = await createAgent({ keyId: rkey.id, name: "rss-extractor" });
+	assert.throws(() => createFeed({ name: "bad", url: "not a url" }), /not a URL/);
+	assert.throws(() => createFeed({ name: "bad", url: "ftp://x.test/feed" }), /http or https/);
+	config.RSS_POLL_MIN_INTERVAL_MS = 60_000;
+	assert.throws(() => createFeed({ name: "too fast", url: "https://feed.test/fast", intervalMs: 1_000 }), /RSS_POLL_MIN_INTERVAL_MS/, "an interval under the floor is refused, not silently floored");
+	const feed = createFeed({ name: "Test Feed", url: "https://feed.test/one", agentId: extractor.id, intervalMs: 60_000 });
+	assert.equal(feed.intervalMs, 60_000);
+	assert.throws(() => createFeed({ name: "bad agent", url: "https://feed.test/two", agentId: "no-such-agent" }), (e) => e.status === 404);
+	assert.equal(updateFeed(feed.id, { name: "Renamed" }).name, "Renamed");
+	assert.throws(() => updateFeed("no-such-feed", { name: "x" }), (e) => e.status === 404);
+	config.RSS_MAX_FEEDS = listFeeds().length;
+	assert.throws(() => createFeed({ name: "over cap", url: "https://feed.test/three" }), (e) => e.status === 409);
+	config.RSS_MAX_FEEDS = 100;
+
+	// The backfill rule: a feed's first poll seeds entries as 'skipped' (never queued); its next poll
+	// queues only what is genuinely new.
+	const xmlOne = (items) => `<rss><channel>${items.map((it) => `<item><title>${it.t}</title><link>${it.u}</link><guid>${it.g}</guid></item>`).join("")}</channel></rss>`;
+	const fakeFetch = (xml) => async () => ({ ok: true, status: 200, arrayBuffer: async () => Buffer.from(xml, "utf8") });
+	await forcePoll(feed.id, { fetchFn: fakeFetch(xmlOne([{ t: "A", u: "https://feed.test/a", g: "ga" }, { t: "B", u: "https://feed.test/b", g: "gb" }])) });
+	assert.deepEqual(entriesOf(SOURCE_TYPE, feed.id).map((e) => e.status), ["skipped", "skipped"]);
+	await forcePoll(feed.id, { fetchFn: fakeFetch(xmlOne([{ t: "A", u: "https://feed.test/a", g: "ga" }, { t: "B", u: "https://feed.test/b", g: "gb" }, { t: "C", u: "https://feed.test/c", g: "gc" }])) });
+	const afterSecond = entriesOf(SOURCE_TYPE, feed.id);
+	assert.equal(afterSecond.length, 3);
+	assert.equal(afterSecond.find((e) => e.guid === "gc").status, "pending", "only the new one is queued");
+	assert.equal(getFeed(feed.id).lastError, null);
+
+	// Extraction: a whole agent turn per pending entry, strict JSON, the AgentRunError/timeout mapping.
+	assert.deepEqual(parseExtraction('{"title":"T","text":"Body","summary":"S","tags":["x"]}'), { title: "T", text: "Body", summary: "S", tags: ["x"] });
+	assert.deepEqual(parseExtraction('```json\n{"title":"T","text":"Body"}\n```'), { title: "T", text: "Body", summary: "", tags: [] });
+	assert.throws(() => parseExtraction("not json at all"), /was not JSON/);
+	assert.throws(() => parseExtraction("[1,2,3]"), /was not a JSON object/);
+	assert.throws(() => parseExtraction('{"title":"","text":""}'), /no title or text/);
+
+	const waitForEntry = async (guid, pred, ms = 3000, sourceRef = feed.id) => {
+		const end = Date.now() + ms;
+		for (;;) {
+			const e = getByKey(SOURCE_TYPE, sourceRef, guid);
+			if (e && pred(e)) return e;
+			if (Date.now() > end) throw new Error(`timed out waiting on ${guid}`);
+			await new Promise((r) => setTimeout(r, 15));
+		}
+	};
+	// A "failed" extraction is discarded, not kept (see extractOne) -- there is no row left to read a
+	// status off of, so a test that provoked one waits for it to be gone instead, then checks the
+	// error text landed in the audit log (the only place it is still kept).
+	const waitForGone = async (guid, ms = 3000, sourceRef = feed.id) => {
+		const end = Date.now() + ms;
+		for (;;) {
+			if (!getByKey(SOURCE_TYPE, sourceRef, guid)) return;
+			if (Date.now() > end) throw new Error(`timed out waiting for ${guid} to be discarded`);
+			await new Promise((r) => setTimeout(r, 15));
+		}
+	};
+	setExtractionRunner(async ({ prompt }) => ({ text: JSON.stringify({ title: "C, extracted", text: "The full clean article.", summary: "Short summary.", tags: ["news"] }), usage: { total_tokens: 5 }, cost: 0, scopedId: "x" }));
+	rssPump();
+	const doneC = await waitForEntry("gc", (e) => e.status === "done");
+	assert.deepEqual([doneC.title, doneC.text, doneC.summary, doneC.tags], ["C, extracted", "The full clean article.", "Short summary.", ["news"]]);
+
+	// A "failed" extraction is discarded, not kept: the next poll sees the same guid as new again (the
+	// row is gone, so getByKey no longer finds it) instead of leaving a dead entry for someone to retry
+	// by hand. The error itself is still on record, in the audit log.
+	const { AgentRunError: KAgentRunError } = await import("./server.mjs");
+	setExtractionRunner(async () => {
+		throw new KAgentRunError("daily spend limit reached", 429, "spend_limit_exceeded", "rate_limit_error");
+	});
+	await forcePoll(feed.id, { fetchFn: fakeFetch(xmlOne([{ t: "D", u: "https://feed.test/d", g: "gd" }])) });
+	rssPump();
+	await waitForGone("gd");
+	assert.ok(recentAuditRows(20).some((r) => r.action === "rss.extract" && /failed: daily spend limit reached/.test(r.detail)));
+
+	config.RSS_EXTRACT_TIMEOUT_MS = 80;
+	setExtractionRunner(({ signal }) => new Promise((_, reject) => signal.addEventListener("abort", () => reject(new Error("aborted")))));
+	await forcePoll(feed.id, { fetchFn: fakeFetch(xmlOne([{ t: "E", u: "https://feed.test/e", g: "ge" }])) });
+	rssPump();
+	await waitForGone("ge");
+	assert.ok(recentAuditRows(20).some((r) => r.action === "rss.extract" && /failed: no answer within/.test(r.detail)));
+	config.RSS_EXTRACT_TIMEOUT_MS = 5 * 60_000;
+
+	// Discarded, then genuinely tried again next time the feed is polled, not immediately.
+	setExtractionRunner(async () => ({ text: JSON.stringify({ title: "D, extracted", text: "Recovered text." }), usage: { total_tokens: 1 }, cost: 0, scopedId: "x" }));
+	await forcePoll(feed.id, { fetchFn: fakeFetch(xmlOne([{ t: "D", u: "https://feed.test/d", g: "gd" }])) });
+	rssPump();
+	const recoveredD = await waitForEntry("gd", (e) => e.status === "done");
+	assert.equal(recoveredD.text, "Recovered text.");
+	assert.throws(() => retryEntry(999_999_999), (e) => e.status === 404);
+
+	// looksBlocked / parseUnblockReply: the heuristic, and what the forced give-up reply keeps.
+	assert.equal(looksBlocked("blah blah 403 Forbidden blah"), true);
+	assert.equal(looksBlocked("This site uses Cloudflare to protect itself"), true);
+	assert.equal(looksBlocked("here is a normal answer"), false);
+	assert.deepEqual(parseUnblockReply('{"title":"T","text":"Body"}'), { extracted: { title: "T", text: "Body", summary: "", tags: [] } });
+	assert.deepEqual(parseUnblockReply('{"blocked":true,"reason":"Cloudflare challenge"}'), { reason: "Cloudflare challenge" });
+	assert.deepEqual(parseUnblockReply("plain prose giving up"), { reason: "plain prose giving up" });
+
+	// Auto-unblock: a reply that looks blocked gets one more try, in the same session, before giving up.
+	let turn = 0;
+	const sessionsSeen = [];
+	setExtractionRunner(async ({ clientSessionId }) => {
+		turn++;
+		sessionsSeen.push(clientSessionId);
+		if (turn === 1) return { text: "Sorry, I got a 403 Forbidden from Cloudflare.", usage: { total_tokens: 1 }, cost: 0, scopedId: "x" };
+		return { text: JSON.stringify({ title: "G, extracted", text: "Found it another way." }), usage: { total_tokens: 1 }, cost: 0, scopedId: "x" };
+	});
+	await forcePoll(feed.id, { fetchFn: fakeFetch(xmlOne([{ t: "G", u: "https://feed.test/g", g: "gg" }])) });
+	rssPump();
+	const recoveredG = await waitForEntry("gg", (e) => e.status === "done");
+	assert.equal(recoveredG.text, "Found it another way.");
+	assert.equal(turn, 2, "one retry, in the same session");
+	assert.deepEqual(sessionsSeen, [`rss:${recoveredG.id}`, `rss:${recoveredG.id}`]);
+
+	// Auto-unblock: still blocked after the retry — a distinct status from a plain failure.
+	setExtractionRunner(async ({ prompt }) =>
+		/That reply could not be used/.test(prompt)
+			? { text: '{"blocked":true,"reason":"Cloudflare challenge page"}', usage: { total_tokens: 1 }, cost: 0, scopedId: "x" }
+			: { text: "Blocked by Cloudflare, 403 Forbidden.", usage: { total_tokens: 1 }, cost: 0, scopedId: "x" },
+	);
+	await forcePoll(feed.id, { fetchFn: fakeFetch(xmlOne([{ t: "H", u: "https://feed.test/h", g: "gh" }])) });
+	rssPump();
+	const blockedH = await waitForEntry("gh", (e) => e.status === "blocked");
+	assert.equal(blockedH.error, "Cloudflare challenge page");
+	assert.equal(getFeed(feed.id).lastEntryStatus, "blocked", "the Feeds list shows the latest extraction's own status");
+	assert.equal(getFeed(feed.id).lastEntryAt, blockedH.fetchedAt);
+
+	// retryEntry: unlike a plain failure, a deliberate "blocked" give-up is kept and is the one status
+	// a person retries by hand from the dashboard; a retried row goes back to pending and gets another pass.
+	setExtractionRunner(async () => ({ text: JSON.stringify({ title: "H, extracted", text: "Recovered text." }), usage: { total_tokens: 1 }, cost: 0, scopedId: "x" }));
+	assert.equal(retryEntry(blockedH.id), true);
+	const recoveredH = await waitForEntry("gh", (e) => e.status === "done");
+	assert.equal(recoveredH.text, "Recovered text.");
+
+	// RSS_AUTO_UNBLOCK off: no second try, straight to failed.
+	config.RSS_AUTO_UNBLOCK = false;
+	let onlyOneTurn = 0;
+	setExtractionRunner(async () => {
+		onlyOneTurn++;
+		return { text: "403 Forbidden, Cloudflare.", usage: { total_tokens: 1 }, cost: 0, scopedId: "x" };
+	});
+	await forcePoll(feed.id, { fetchFn: fakeFetch(xmlOne([{ t: "I", u: "https://feed.test/i", g: "gi" }])) });
+	rssPump();
+	await waitForGone("gi");
+	assert.equal(onlyOneTurn, 1, "no retry when RSS_AUTO_UNBLOCK is off");
+	assert.ok(recentAuditRows(20).some((r) => r.action === "rss.extract" && /failed:.*was not JSON/.test(r.detail)));
+	config.RSS_AUTO_UNBLOCK = true;
+
+	// A feed with no agent and no RSS_DEFAULT_AGENT names the problem, not a crash.
+	config.RSS_DEFAULT_AGENT = "";
+	const orphanFeed = createFeed({ name: "Orphan", url: "https://feed.test/orphan" });
+	await forcePoll(orphanFeed.id, { fetchFn: fakeFetch(xmlOne([{ t: "Seed", u: "https://feed.test/seed", g: "gseed" }])) });
+	await forcePoll(orphanFeed.id, { fetchFn: fakeFetch(xmlOne([{ t: "Seed", u: "https://feed.test/seed", g: "gseed" }, { t: "F", u: "https://feed.test/f", g: "gf" }])) });
+	rssPump();
+	await waitForGone("gf", 3000, orphanFeed.id);
+	assert.ok(recentAuditRows(20).some((r) => r.action === "rss.extract" && /failed:.*no extracting agent/.test(r.detail)));
+	setExtractionRunner(null);
+
+	// The dashboard's own routes: Entries (generic) and Feeds (RSS-specific).
+	{
+		const httpd = await import("node:http");
+		const srv = httpd.createServer((req, res) => {
+			if (req.url.startsWith("/dashboard/knowledge")) return knowledgeDashboardRoutes(req, res, req.url);
+			return rssDashboardRoutes(req, res, req.url);
+		});
+		await new Promise((r) => srv.listen(0, "127.0.0.1", r));
+		const base = `http://127.0.0.1:${srv.address().port}`;
+		const call = (path, opts) => fetch(base + path, opts).then((r) => r.json().then((json) => ({ status: r.status, json })));
+
+		const sources = await call("/dashboard/knowledge.json");
+		assert.ok(sources.json.sources.some((s) => s.sourceType === SOURCE_TYPE && s.sourceRef === feed.id));
+		const sourceEntries = await call(`/dashboard/knowledge/${SOURCE_TYPE}/${feed.id}`);
+		assert.ok(sourceEntries.json.entries.some((e) => e.guid === "gc"));
+		const oneEntry = sourceEntries.json.entries.find((e) => e.guid === "gc");
+		const detail = await call(`/dashboard/knowledge/${SOURCE_TYPE}/${feed.id}/${oneEntry.id}`);
+		assert.equal(detail.json.entry.text, "The full clean article.");
+		const deleted = await call(`/dashboard/knowledge/${SOURCE_TYPE}/${feed.id}/${oneEntry.id}`, { method: "DELETE" });
+		assert.deepEqual(deleted.json, { deleted: true });
+		assert.equal((await call(`/dashboard/knowledge/${SOURCE_TYPE}/${feed.id}`)).json.entries.some((e) => e.id === oneEntry.id), false);
+		const clearedSource = await call(`/dashboard/knowledge/${SOURCE_TYPE}/${feed.id}`, { method: "DELETE" });
+		assert.ok(clearedSource.json.cleared > 0);
+
+		const log = await call("/dashboard/knowledge/log.json");
+		assert.ok(log.json.entries.some((r) => r.action === "knowledge.delete"), "a single delete is on record");
+		assert.ok(log.json.entries.some((r) => r.action === "knowledge.clear"), "clearing a source is on record");
+		assert.ok(log.json.entries.some((r) => r.action === "rss.extract"), "an extraction is on record");
+		assert.deepEqual(activityLog(500).slice(0, log.json.entries.length).map((r) => r.action), log.json.entries.map((r) => r.action), "the dashboard route reads the same log");
+		assert.equal(activityLog().some((r) => r.action.startsWith("auth.") || r.action.startsWith("settings.")), false, "only Knowledge/RSS actions show up here");
+
+		const feedsList = await call("/dashboard/rss.json");
+		assert.ok(feedsList.json.feeds.some((f) => f.id === feed.id));
+		const created = await call("/dashboard/rss", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "Via Dashboard", url: "https://feed.test/dashboard" }) });
+		assert.equal(created.status, 201);
+		const patched = await call(`/dashboard/rss/${created.json.feed.id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ enabled: false }) });
+		assert.equal(patched.json.feed.enabled, false);
+		const removed = await call(`/dashboard/rss/${created.json.feed.id}`, { method: "DELETE" });
+		assert.deepEqual(removed.json, { deleted: true });
+		await new Promise((r) => srv.close(r));
+	}
+
+	removeFeed(feed.id);
+	removeFeed(orphanFeed.id);
+	await deleteAgent(extractor.id);
+	apiKeys.remove(rkey.id);
 }
 
 // ---------------------------------------------------------------- profile control
@@ -1897,6 +2483,9 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(toolActivity("write", { path: "/workspace/big.txt", content: "x".repeat(10_000) }), "write: /workspace/big.txt", "the written content is never shown");
 	assert.equal(toolActivity("analyze", { level: 2 }), 'analyze: {"level":2}');
 	assert.ok(toolActivity("bash", { command: "y".repeat(500) }).length < 220, "long commands are truncated");
+	assert.equal(toolActivity("piper_delegate", { agent: "Researcher", task: "find   the   root cause\n of the bug" }), "Researcher: find the root cause of the bug", "the colleague's name leads, not the tool's own");
+	assert.equal(toolActivity("piper_delegate", { agent: "Researcher", task: "z".repeat(500) }).length, "Researcher: ".length + 500, "a realistic task is kept in full, for an expanded view");
+	assert.ok(toolActivity("piper_delegate", { agent: "Researcher", task: "z".repeat(5000) }).length < 4020, "but an extreme one is still bounded");
 }
 
 // Spend per model: a chat that switched models is billed to each for what it used there.
@@ -2735,6 +3324,8 @@ assert.equal(isReloadCommand(undefined), false);
 		const resumed = piInvocation({ ...spec }, { resume: true, defaultModel: { model: "p/m", thinking: null } });
 		assert.ok(resumed.piArgs.includes("--continue"), "a resumed chat continues its session");
 		assert.equal(resumed.env.PIPER_DEFAULT_MODEL, undefined, "and keeps the model it was on");
+		assert.equal(piInvocation({ ...spec }, {}).env.PIPER_MEMORY, undefined, "off unless asked for");
+		assert.equal(piInvocation({ ...spec }, { remember: true }).env.PIPER_MEMORY, "1");
 	}
 
 	// The profile helper is the strict one: it protects the gateway, not the agent.
@@ -4660,6 +5251,18 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.ok(!JSON.stringify(queryAudit({ limit: 500 }).rows).includes(ktoken), "the key itself is never recorded");
 	await call(`/dashboard/api-keys/${kid}`, { cookie, body: { maxSessions: 3, dailySpend: 2.5 } });
 	assert.match(rowsOf("key.update").at(0).detail, /maxSessions/);
+
+	// regenerate: a fresh secret, on record, the old one stops working at once; the key itself never logged.
+	const regenMade = await call("/dashboard/api-keys", { cookie, body: { name: "regen-audited", expiresAt: 0 } });
+	const regenId = regenMade.json.createdId, regenOldToken = regenMade.json.key;
+	const regen = await call(`/dashboard/api-keys/${regenId}/regenerate`, { cookie, body: {} });
+	assert.equal(regen.status, 200);
+	assert.notEqual(regen.json.key, regenOldToken, "a genuinely new secret");
+	assert.match(rowsOf("key.regenerate").at(0).detail, /new secret/);
+	assert.ok(!JSON.stringify(queryAudit({ limit: 500 }).rows).includes(regen.json.key), "the new key itself is never recorded either");
+	assert.equal((await call("/v1/models", { method: "GET", token: regenOldToken })).status, 401, "the old secret stopped working");
+	assert.equal((await call("/v1/models", { method: "GET", token: regen.json.key })).status, 200, "the new one works");
+	await call(`/dashboard/api-keys/${regenId}`, { method: "DELETE", cookie });
 	ensureProfile(kid);
 	await call(`/dashboard/profiles/${scopeOf(kid)}/lock`, { cookie, body: { locked: true } });
 	await call(`/dashboard/profiles/${scopeOf(kid)}/lock`, { cookie, body: { locked: false } });
@@ -6107,6 +6710,18 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	log.feed({ type: "agent_settled" });
 	assert.equal(log.snapshot().state.working, false);
 	assert.equal(JSON.stringify(log.snapshot()).includes("sessionId"), false);
+	// Auto-compaction: a note either side, and the new size lands in state for a reconnecting client's
+	// status bar to pick up -- not just the in-turn stream that was there when it happened.
+	log.feed({ type: "compaction_start", reason: "threshold" });
+	assert.match(log.snapshot().items.at(-1).text, /context is getting full/);
+	log.feed({ type: "compaction_end", reason: "threshold", result: { tokensBefore: 42000, estimatedTokensAfter: 18000 }, aborted: false, willRetry: false });
+	assert.match(log.snapshot().items.at(-1).text, /compacted the context: 42000 . 18000 tokens/);
+	assert.equal(log.snapshot().state.contextTokens, 18000);
+	log.feed({ type: "compaction_end", reason: "overflow", result: undefined, aborted: true, willRetry: false });
+	assert.match(log.snapshot().items.at(-1).text, /interrupted/);
+	assert.equal(log.snapshot().state.contextTokens, 18000, "an aborted compaction changed nothing");
+	log.feed({ type: "compaction_end", reason: "overflow", result: undefined, aborted: false, willRetry: false, errorMessage: "model unavailable" });
+	assert.match(log.snapshot().items.at(-1).text, /compaction failed: model unavailable/);
 	// Bounded: items and text.
 	for (let i = 0; i < MAX_ITEMS + 50; i++) log.note(`n${i}`);
 	assert.equal(log.snapshot().items.length, MAX_ITEMS);
@@ -7481,7 +8096,17 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	apiKeys.update(key.id, { sharedBundles: "team-tools" });
 	assert.deepEqual(bundleUsers("team-tools").map((u) => u.label), ["pkg test"]);
 	await assert.rejects(deleteBundle("team-tools"), (e) => e.status === 409 && /granted to pkg test/.test(e.message));
-	assert.deepEqual((await deleteBundle("team-tools", { force: true })), { deleted: "team-tools" });
+	// Deleting a bundle (forced) closes its users' live sessions and waits for them to stop, not just a
+	// soft reload — the directory their container has mounted is about to disappear entirely.
+	{
+		const realRecordsByScope = P.sessions.recordsByScope.bind(P.sessions);
+		let stoppedAwaited = false;
+		P.sessions.recordsByScope = (scope) =>
+			scope === key.id ? [{ id: "fake-bundle-session", container: { name: "fake" }, inflight: 0, stopped: new Promise((resolve) => setTimeout(() => ((stoppedAwaited = true), resolve()), 20)) }] : realRecordsByScope(scope);
+		assert.deepEqual((await deleteBundle("team-tools", { force: true })), { deleted: "team-tools" });
+		assert.equal(stoppedAwaited, true, "deleting it waited for the live session's container to actually stop");
+		P.sessions.recordsByScope = realRecordsByScope;
+	}
 	assert.equal(existsSync(join(root, "team-tools")), false);
 	assert.ok(existsSync(join(TEST_WS, "outside-bundle")), "deleting never follows a link");
 
@@ -7530,7 +8155,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	const navPages = [...navHtml.matchAll(/<a[^>]*href="#([a-z]+)"/g)].map((m) => m[1]);
 	assert.deepEqual([...navPages].sort(), Object.keys(PAGES).sort(), "every nav item is a page and every page is in the nav");
 	assert.equal(new Set(navPages).size, navPages.length, "no page twice in the nav");
-	assert.equal(navPages.length, 14, "fourteen items in the sidebar");
+	assert.equal(navPages.length, 16, "sixteen items in the sidebar");
 	assert.deepEqual([...navHtml.matchAll(/class="navgroup">([^<]+)</g)].map((m) => m[1]), ["Monitor", "Build", "Infrastructure", "Admin"]);
 
 	// Every tab shows a pane that exists, and a split pane's sections match the markup.
@@ -7599,7 +8224,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 // Phase A (0.7): the extension library and grants.
 {
 	const X = await import("./server.mjs");
-	const { checkedSource, nameFromSource, gitTarget, installEnv, installCommands, looksLikePiPackage, treeBytes, installExtension, updateExtension, removeExtension, extensionJobView, resetExtensionJob, libraryOverview, ExtensionError, listLibrary, listShared, grantedBundles, bundleUsers, createBundle, extensionRoutes, setAccess, extensionsPayload, agents, apiKeys, config, packageDir, containerCreateArgs, piInvocation, containerSignature, installInto } = X;
+	const { checkedSource, nameFromSource, gitTarget, installEnv, installCommands, looksLikePiPackage, treeBytes, installExtension, updateExtension, removeExtension, extensionJobView, resetExtensionJob, libraryOverview, ExtensionError, listLibrary, listShared, grantedBundles, bundleUsers, createBundle, extensionRoutes, setAccess, extensionsPayload, agents, apiKeys, config, packageDir, containerCreateArgs, piInvocation, containerSignature, installInto, sessions } = X;
 	const fsm = await import("node:fs");
 	const log = join(TEST_WS, "fake-tools.log");
 	const bin = mkdtempSync(join(tmpdir(), "fakenpm-"));
@@ -7731,12 +8356,35 @@ echo "# demo" > "$target/skills/demo/SKILL.md"
 	assert.throws(() => createBundle("good-ext"), /already the name of a library extension/);
 	assert.throws(() => installExtension({ source: "npm:other-thing", name: "good-ext" }), (e) => e.status === 409 && /already installed from/.test(e.message));
 	// Reinstall of the same source (update) swaps in place.
+	const sigBefore = containerSignature({ bundles: [listLibrary().find((e) => e.name === "good-ext")] });
+	await new Promise((r) => setTimeout(r, 2)); // installedAt is Date.now(); make sure it actually moves
 	updateExtension("good-ext");
 	assert.equal((await waitJob()).state, "done");
 	assert.equal(listLibrary().filter((e) => e.name === "good-ext").length, 1);
 	assert.throws(() => updateExtension("nope"), (e) => e.status === 404);
 	assert.ok(treeBytes(join(TEST_EXT, "good-ext")) > 0);
 	assert.equal(looksLikePiPackage(join(TEST_EXT, "good-ext", "node_modules", "good-ext")), true);
+	// A reinstall under the same name/path/entry still changes the signature (via installedAt), so a
+	// container already holding the old content is recreated on its next start rather than kept stale.
+	const sigAfter = containerSignature({ bundles: [listLibrary().find((e) => e.name === "good-ext")] });
+	assert.notEqual(sigBefore, sigAfter, "a same-name reinstall changes the signature too");
+
+	// Updating (or removing) an extension closes its users' live sessions, and waits for them to actually
+	// stop, before touching the directory their container has bind-mounted — not just a soft reload.
+	{
+		const realRecordsByScope = sessions.recordsByScope.bind(sessions);
+		let stoppedAwaited = false;
+		const fakeKeyCreated = apiKeys.create({ name: "fake-ext-user-key", expiresAt: 0 });
+		const fakeKey = fakeKeyCreated.record ?? fakeKeyCreated;
+		apiKeys.update(fakeKey.id, { sharedBundles: "good-ext" });
+		sessions.recordsByScope = (scope) =>
+			scope === fakeKey.id ? [{ id: "fake-ext-session", container: { name: "fake" }, inflight: 0, stopped: new Promise((resolve) => setTimeout(() => ((stoppedAwaited = true), resolve()), 20)) }] : realRecordsByScope(scope);
+		updateExtension("good-ext");
+		assert.equal((await waitJob()).state, "done");
+		assert.equal(stoppedAwaited, true, "the update waited for the live session's container to actually stop");
+		sessions.recordsByScope = realRecordsByScope;
+		apiKeys.update(fakeKey.id, { sharedBundles: null });
+	}
 
 	// Grants: default -> key -> agent, and what each level gets.
 	const mkKey = (name) => { const c = apiKeys.create({ name, expiresAt: 0 }); return c.record ?? c; };
@@ -7802,7 +8450,17 @@ echo "# demo" > "$target/skills/demo/SKILL.md"
 	await call("/dashboard/extensions/access", { level: "default", list: "base" });
 	// Removing something that is granted needs force.
 	assert.equal((await call("/dashboard/extensions/remove", { name: "good-ext" })).status, 409);
-	assert.equal((await call("/dashboard/extensions/remove", { name: "good-ext", force: true })).status, 200);
+	// Removing it (forced) closes its users' live sessions and waits for them to stop too, not just a
+	// soft reload — the directory their container has mounted is about to disappear entirely.
+	{
+		const realRecordsByScope = sessions.recordsByScope.bind(sessions);
+		let stoppedAwaited = false;
+		sessions.recordsByScope = (scope) =>
+			scope === key.id ? [{ id: "fake-remove-session", container: { name: "fake" }, inflight: 0, stopped: new Promise((resolve) => setTimeout(() => ((stoppedAwaited = true), resolve()), 20)) }] : realRecordsByScope(scope);
+		assert.equal((await call("/dashboard/extensions/remove", { name: "good-ext", force: true })).status, 200);
+		assert.equal(stoppedAwaited, true, "removing it waited for the live session's container to actually stop");
+		sessions.recordsByScope = realRecordsByScope;
+	}
 	assert.ok(!fsm.existsSync(join(TEST_EXT, "good-ext")));
 	assert.equal((await call("/dashboard/extensions/remove", { name: "good-ext" })).status, 404);
 	assert.deepEqual(got(scopeOf2(a2)), ["fromgit"], "a removed entry is gone from what agents get");
@@ -8235,6 +8893,419 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	await new Promise((r) => server.close(r));
 	config.ACCESS_LOG = accessLog;
 	process.env.PATH = oldPath;
+}
+
+// The client portal: a standalone page, on its own port, logged in by a plain API key (never a
+// dashboard password), that chats with only that key's own agents and browses only its own files.
+{
+	const X = await import("./server.mjs");
+	const { config, apiKeys, agentScope, createAgent, deleteAgent, setAgentTurnRunner, startPortal, stopPortal, portalPort, ensureWorkspace, getHistory, saveHistory, deleteHistoryOf, PortalStoreError, credentialFor, recentAudit } = X;
+
+	config.PORTAL_ENABLED = false;
+	startPortal();
+	assert.equal(portalPort(), null, "PORTAL_ENABLED off: never starts");
+
+	config.PORTAL_ENABLED = true;
+	config.PORTAL_PORT = 0;
+	startPortal();
+	await new Promise((r) => setTimeout(r, 30));
+	const port = portalPort();
+	assert.ok(port > 0, "a real port, chosen by the OS");
+
+	const base = `http://127.0.0.1:${port}`;
+	const call = async (path, opts = {}) => {
+		const res = await fetch(base + path, opts);
+		const text = await res.text();
+		let json = null;
+		try {
+			json = JSON.parse(text);
+		} catch {
+			/* the assertions say */
+		}
+		return { status: res.status, json, text };
+	};
+
+	assert.equal((await call("/health")).json.status, "ok", "no auth needed");
+	assert.match((await call("/")).text, /Piper/, "the static page is served, no auth");
+	assert.equal((await call("/api/whoami")).status, 401, "no key");
+	assert.equal((await call("/api/whoami", { headers: { authorization: "Bearer nonsense" } })).status, 401, "unknown key");
+
+	const mine = apiKeys.create({ name: "portal test", expiresAt: 0 });
+	const myKey = mine.record ?? mine;
+	const myToken = mine.key;
+	const myAgent = await createAgent({ keyId: myKey.id, name: "portal-agent" });
+
+	const theirs = apiKeys.create({ name: "portal other", expiresAt: 0 });
+	const theirKey = theirs.record ?? theirs;
+	const theirAgent = await createAgent({ keyId: theirKey.id, name: "not-mine" });
+
+	const auth = { authorization: `Bearer ${myToken}` };
+	const who = await call("/api/whoami", { headers: auth });
+	assert.equal(who.status, 200);
+	assert.equal(who.json.id, myKey.id);
+	assert.deepEqual(who.json.agents.map((a) => a.id), [myAgent.id], "only this key's own agents, never another's");
+
+	// Chat: a real turn, through the same injectable runner every other agent-run test uses.
+	let seenCredential = null;
+	setAgentTurnRunner(async ({ credential, prompt }) => {
+		seenCredential = credential;
+		return { text: `echo: ${prompt}`, reasoning: "", usage: { total_tokens: 3 }, cost: 0, sessionId: "x", scopedId: "y", fingerprint: "z", isNew: true };
+	});
+	const chatRes = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "conversation-id-1", message: "hi", agentId: myAgent.id }) });
+	assert.equal(chatRes.status, 200);
+	assert.match(chatRes.text, /event: done/);
+	assert.equal(seenCredential.agent.id, myAgent.id);
+
+	// Ownership: an agent that is not this key's is refused, the same way credentialFor already refuses it.
+	const stolenChat = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "conversation-id-2", message: "hi", agentId: theirAgent.id }) });
+	assert.equal(stolenChat.status, 404, "an agent that is not this key's");
+
+	// A keyId in the body is never trusted — only the bearer key's own id is ever used as the credential.
+	await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "conversation-id-3", message: "hi", keyId: theirKey.id }) });
+	assert.equal(seenCredential.id, myKey.id, "the body's keyId is ignored");
+
+	// Images: a valid data: URI is converted and reaches runAgentTurn's own `images` option.
+	let seenImages = null;
+	setAgentTurnRunner(async ({ images, prompt }) => {
+		seenImages = images;
+		return { text: `echo: ${prompt}`, reasoning: "", usage: {}, cost: 0, sessionId: "x", scopedId: "y", fingerprint: "z", isNew: true };
+	});
+	const tinyPng = "data:image/png;base64,QQ==";
+	const withImage = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "conversation-id-4", message: "what is this", agentId: myAgent.id, images: [tinyPng] }) });
+	assert.equal(withImage.status, 200);
+	assert.deepEqual(seenImages, [{ type: "image", data: "QQ==", mimeType: "image/png" }]);
+
+	// Too many images: refused with 413 before runAgentTurn is ever called.
+	seenImages = "untouched";
+	const tooMany = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "conversation-id-5", message: "hi", agentId: myAgent.id, images: Array(7).fill(tinyPng) }) });
+	assert.equal(tooMany.status, 413);
+	assert.match(tooMany.text, /at most 6 images/);
+	assert.equal(seenImages, "untouched", "runAgentTurn was never reached");
+
+	// Oversized: refused with 413, the reason naming PORTAL_ATTACHMENT_MAX_BYTES.
+	const priorCap = config.PORTAL_ATTACHMENT_MAX_BYTES;
+	config.PORTAL_ATTACHMENT_MAX_BYTES = 0;
+	const tooBigImage = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "conversation-id-6", message: "hi", agentId: myAgent.id, images: [tinyPng] }) });
+	assert.equal(tooBigImage.status, 413);
+	assert.match(tooBigImage.text, /PORTAL_ATTACHMENT_MAX_BYTES/);
+	assert.equal(seenImages, "untouched", "runAgentTurn was never reached for the oversized image either");
+	config.PORTAL_ATTACHMENT_MAX_BYTES = priorCap;
+
+	// Not a data: URI at all: a plain, readable refusal rather than a crash.
+	const badImage = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "conversation-id-7", message: "hi", agentId: myAgent.id, images: ["not-a-data-uri"] }) });
+	assert.equal(badImage.status, 413);
+	assert.match(badImage.text, /not a valid data: URI/);
+
+	setAgentTurnRunner(null);
+
+	// Files: the key's own workspace by default, an agent's own with ?agentId=, never another key's.
+	writeFileSync(join(ensureWorkspace(myKey.id), "hello.txt"), "hi there");
+	const list = await call("/api/files", { headers: auth });
+	assert.equal(list.status, 200);
+	assert.ok(list.json.entries.some((e) => e.name === "hello.txt"));
+	const download = await call("/api/files/hello.txt", { headers: auth });
+	assert.equal(download.text, "hi there");
+
+	writeFileSync(join(ensureWorkspace(agentScope(myKey.id, myAgent.id)), "agent-file.txt"), "agent data");
+	const agentList = await call(`/api/files?agentId=${myAgent.id}`, { headers: auth });
+	assert.ok(agentList.json.entries.some((e) => e.name === "agent-file.txt"));
+	assert.equal(agentList.json.entries.some((e) => e.name === "hello.txt"), false, "a different workspace entirely");
+
+	const stolenFiles = await call(`/api/files?agentId=${theirAgent.id}`, { headers: auth });
+	assert.equal(stolenFiles.status, 404, "never another key's agent's files");
+
+	// Skills & extensions: /api/skills and /api/extensions back the portal's own sidebars, asking a real
+	// (here, faked) Pi session what is loaded -- never tied to any one chat, so a session of its own
+	// ("portal:tools") is used instead.
+	{
+		resetEngineCheck();
+		const priorNetwork = config.CONTAINER_NETWORK;
+		const accessLog = config.ACCESS_LOG;
+		config.CONTAINER_NETWORK = "none";
+		config.ACCESS_LOG = false;
+		setRunner(async (bin, args) => {
+			if (bin === "docker" && args[0] === "version") return { code: 0, stdout: "27.0.0", stderr: "" };
+			if (bin === "docker" && args[0] === "inspect") return { code: 1, stdout: "", stderr: "No such object" };
+			if (bin === "docker" && args[0] === "image") return { code: 0, stdout: "sha256:fakeimage|0.99.1", stderr: "" };
+			return { code: 0, stdout: "", stderr: "" };
+		});
+		const { EventEmitter } = await import("node:events");
+		const { PassThrough } = await import("node:stream");
+		const fakeChild = () => {
+			const child = new EventEmitter();
+			child.stdout = new PassThrough();
+			child.stderr = new PassThrough();
+			child.exitCode = null;
+			child.signalCode = null;
+			child.kill = (signal = "SIGTERM") => {
+				if (child.exitCode !== null || child.signalCode !== null) return true;
+				child.signalCode = signal;
+				setImmediate(() => child.emit("exit", null, signal));
+				return true;
+			};
+			child.stdin = new PassThrough();
+			child.stdin.on("end", () => child.exitCode === null && child.signalCode === null && setImmediate(() => child.emit("exit", 0, null)));
+			let buffer = "";
+			child.stdin.on("data", (chunk) => {
+				buffer += chunk;
+				let i;
+				while ((i = buffer.indexOf("\n")) >= 0) {
+					const command = JSON.parse(buffer.slice(0, i));
+					buffer = buffer.slice(i + 1);
+					const reply = (record) => child.stdout.write(`${JSON.stringify(record)}\n`);
+					const ok = (data) => reply({ type: "response", id: command.id, command: command.type, success: true, data });
+					if (command.type === "get_state") ok({ model: { provider: "p", id: "m", input: ["text"] }, isStreaming: false });
+					else if (command.type === "get_commands")
+						ok({
+							commands: [
+								{ name: "review", source: "skill", description: "Review a change", sourceInfo: { scope: "user" } },
+								{ name: "mytool", source: "extension", description: "Does a thing" },
+							],
+						});
+					else ok();
+				}
+			});
+			return child;
+		};
+		setSessionSpawn(() => fakeChild());
+
+		const skillsRes = await call("/api/skills", { headers: auth });
+		assert.equal(skillsRes.status, 200);
+		assert.deepEqual(skillsRes.json.skills, [{ name: "review", description: "Review a change" }]);
+
+		const extRes = await call("/api/extensions", { headers: auth });
+		assert.equal(extRes.status, 200);
+		assert.deepEqual(extRes.json.files, []);
+		assert.deepEqual(extRes.json.shared, []);
+		assert.deepEqual(extRes.json.commands, [{ name: "mytool", description: "Does a thing" }]);
+
+		const stolenSkills = await call(`/api/skills?agentId=${theirAgent.id}`, { headers: auth });
+		assert.equal(stolenSkills.status, 404, "never another key's agent's skills");
+		const stolenExt = await call(`/api/extensions?agentId=${theirAgent.id}`, { headers: auth });
+		assert.equal(stolenExt.status, 404, "never another key's agent's extensions");
+
+		const noAuthSkills = await call("/api/skills");
+		assert.equal(noAuthSkills.status, 401);
+
+		const openRecords = sessions.allRecords();
+		sessions.closeAll();
+		await Promise.all(openRecords.map((r) => r.stopped ?? Promise.resolve()));
+		setSessionSpawn(null);
+		setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+		config.CONTAINER_NETWORK = priorNetwork;
+		config.ACCESS_LOG = accessLog;
+		resetEngineCheck();
+	}
+
+	// sessions.recordById: a non-spawning lookup, unlike acquire().
+	assert.equal(sessions.recordById("no-such-portal-session"), null);
+	const sizeBefore = sessions.allRecords().length;
+	assert.equal(sessions.recordById("still-no-such-session"), null, "a miss never spawns");
+	assert.equal(sessions.allRecords().length, sizeBefore);
+
+	// A turn surviving disconnect, catching up on it from a second request, and the explicit interrupt
+	// that replaces the old "the connection closing aborts the turn" behavior.
+	{
+		resetEngineCheck();
+		const priorNetwork = config.CONTAINER_NETWORK;
+		const accessLog = config.ACCESS_LOG;
+		config.CONTAINER_NETWORK = "none";
+		config.ACCESS_LOG = false;
+		setRunner(async (bin, args) => {
+			if (bin === "docker" && args[0] === "version") return { code: 0, stdout: "27.0.0", stderr: "" };
+			if (bin === "docker" && args[0] === "inspect") return { code: 1, stdout: "", stderr: "No such object" };
+			if (bin === "docker" && args[0] === "image") return { code: 0, stdout: "sha256:fakeimage|0.99.1", stderr: "" };
+			return { code: 0, stdout: "", stderr: "" };
+		});
+		const { EventEmitter } = await import("node:events");
+		const { PassThrough } = await import("node:stream");
+		const { MAX_WATCHERS_PER_SESSION: MWPS } = await import("./server.mjs");
+
+		// A turn that only settles when the test tells it to (via a real "abort", or by calling
+		// settleNow()), so the test can inspect what is going on mid-turn -- a disconnect, a second
+		// request catching up, an explicit interrupt -- before it finishes.
+		let settleNow = null;
+		let promptSeenResolve = null;
+		let promptSeen = new Promise((r) => (promptSeenResolve = r));
+		const fakeChild = () => {
+			const child = new EventEmitter();
+			child.stdout = new PassThrough();
+			child.stderr = new PassThrough();
+			child.exitCode = null;
+			child.signalCode = null;
+			child.kill = (signal = "SIGTERM") => {
+				if (child.exitCode !== null || child.signalCode !== null) return true;
+				child.signalCode = signal;
+				setImmediate(() => child.emit("exit", null, signal));
+				return true;
+			};
+			child.stdin = new PassThrough();
+			child.stdin.on("end", () => child.exitCode === null && child.signalCode === null && setImmediate(() => child.emit("exit", 0, null)));
+			let buffer = "";
+			child.stdin.on("data", (chunk) => {
+				buffer += chunk;
+				let i;
+				while ((i = buffer.indexOf("\n")) >= 0) {
+					const command = JSON.parse(buffer.slice(0, i));
+					buffer = buffer.slice(i + 1);
+					const reply = (record) => child.stdout.write(`${JSON.stringify(record)}\n`);
+					const ok = (data) => reply({ type: "response", id: command.id, command: command.type, success: true, data });
+					if (command.type === "get_state") ok({ model: { provider: "p", id: "m", input: ["text"] }, isStreaming: false });
+					else if (command.type === "prompt") {
+						const said = String(command.message ?? "");
+						ok();
+						reply({ type: "agent_start" });
+						reply({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: `echo: ${said}` } });
+						if (said === "please compact") {
+							reply({ type: "compaction_start", reason: "threshold" });
+							reply({ type: "compaction_end", reason: "threshold", result: { tokensBefore: 50000, estimatedTokensAfter: 20000 }, aborted: false, willRetry: false });
+						}
+						settleNow = () => {
+							settleNow = null;
+							reply({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: `echo: ${said}` }] } });
+							reply({ type: "agent_settled" });
+						};
+						promptSeenResolve();
+					} else if (command.type === "abort") {
+						ok();
+						if (settleNow) settleNow();
+					} else ok();
+				}
+			});
+			return child;
+		};
+		setSessionSpawn(() => fakeChild());
+
+		const credential = credentialFor(myKey.id, myAgent.id);
+		const scoped = scopedSessionId(credential, "portal:disco-test-convo");
+
+		// Disconnect no longer aborts: a client that goes away while a turn is running does not stop it.
+		const ctrl = new AbortController();
+		const pending = fetch(`${base}/api/chat`, { method: "POST", headers: { ...auth, "content-type": "application/json" }, signal: ctrl.signal, body: JSON.stringify({ conversation: "disco-test-convo", message: "hi", agentId: myAgent.id }) });
+		await promptSeen;
+		const rec = sessions.recordById(scoped);
+		assert.ok(rec, "the session exists once the turn has started");
+		assert.ok(rec.inflight > 0, "the turn is in flight");
+		ctrl.abort();
+		await pending.catch(() => {});
+		await new Promise((r) => setTimeout(r, 30));
+		assert.ok(sessions.recordById(scoped), "the session is still there after the client disconnected");
+		assert.ok(rec.inflight > 0, "and the turn itself was not aborted by the disconnect");
+
+		// Catching up from a second request: a snapshot first, then live items, then done once settled.
+		const stream = await fetch(`${base}/api/conversation/disco-test-convo/events?agentId=${myAgent.id}`, { headers: auth });
+		assert.equal(stream.headers.get("content-type"), "text/event-stream; charset=utf-8");
+		const reader = stream.body.getReader();
+		let got = "";
+		const readUntil = async (re) => {
+			const deadline = Date.now() + 3000;
+			while (!re.test(got) && Date.now() < deadline) got += new TextDecoder().decode((await reader.read()).value ?? new Uint8Array());
+		};
+		await readUntil(/event: snapshot/);
+		assert.match(got, /event: snapshot\ndata: .*"working":true/, "still working, per the snapshot");
+		assert.match(got, /echo: hi/, "the partial reply streamed so far is in the snapshot");
+		settleNow();
+		await readUntil(/event: done/);
+		assert.match(got, /event: done/);
+		await reader.cancel().catch(() => {});
+
+		// Auto-compaction mid-turn: a note reaches the chat stream, and the status bar gets the new
+		// context size live, without waiting for the turn to finish.
+		promptSeen = new Promise((r) => (promptSeenResolve = r));
+		const compactPending = fetch(`${base}/api/chat`, { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "compact-test-convo", message: "please compact", agentId: myAgent.id }) });
+		await promptSeen;
+		const compactResp = await compactPending;
+		const compactReader = compactResp.body.getReader();
+		let compactGot = "";
+		const readCompactUntil = async (re) => {
+			const deadline = Date.now() + 3000;
+			while (!re.test(compactGot) && Date.now() < deadline) compactGot += new TextDecoder().decode((await compactReader.read()).value ?? new Uint8Array());
+		};
+		await readCompactUntil(/event: context/);
+		assert.match(compactGot, /event: item\ndata: .*"kind":"note"/, "a note about the compaction reached the chat stream");
+		assert.match(compactGot, /event: context\ndata: \{"contextUsed":20000\}/, "the status bar gets the new context size live, mid-turn");
+		settleNow();
+		await readCompactUntil(/event: done/);
+		await compactReader.cancel().catch(() => {});
+
+		// A finished conversation (nothing live any more) answers plainly, not as an error.
+		await new Promise((r) => setTimeout(r, 30));
+		const afterDone = await call("/api/conversation/finished-or-never-started/events", { headers: auth });
+		assert.deepEqual(afterDone.json, { live: false });
+
+		// Interrupt: nothing running.
+		const nothingToStop = await call("/api/conversation/finished-or-never-started/interrupt", { method: "POST", headers: auth });
+		assert.deepEqual(nothingToStop.json, { interrupted: false, wasRunning: false });
+
+		// Interrupt: a real turn in flight is actually stopped, not just detached from.
+		const pending2 = fetch(`${base}/api/chat`, { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "disco-test-convo-2", message: "hi again", agentId: myAgent.id }) });
+		promptSeen = new Promise((r) => (promptSeenResolve = r));
+		await promptSeen;
+		const stopped = await call(`/api/conversation/disco-test-convo-2/interrupt?agentId=${myAgent.id}`, { method: "POST", headers: auth });
+		assert.deepEqual(stopped.json, { interrupted: true, wasRunning: true });
+		const resp2 = await pending2;
+		assert.equal(resp2.status, 200);
+		const kinds = recentAudit(50).map((r) => r.action);
+		assert.ok(kinds.includes("session.interrupt"), "the interrupt is audited");
+
+		// Ownership on interrupt too: another key's agentId is refused, the same as every other route.
+		const stolenInterrupt = await call(`/api/conversation/disco-test-convo-2/interrupt`, { method: "POST", headers: { authorization: `Bearer ${theirs.key}` } });
+		assert.deepEqual(stolenInterrupt.json, { interrupted: false, wasRunning: false }, "a different key's own session, if any, not this one");
+
+		// Watcher cap: one more catch-up connection than allowed on one session is refused.
+		const capCred = credentialFor(myKey.id, myAgent.id);
+		const capScoped = scopedSessionId(capCred, "portal:watcher-cap-convo");
+		const capRec = sessions.acquire(capScoped, null).record;
+		capRec.sessionPromise.catch(() => {});
+		capRec.live.feed({ type: "agent_start" });
+		const opened = [];
+		for (let i = 0; i < MWPS; i++) {
+			const r = await fetch(`${base}/api/conversation/watcher-cap-convo/events?agentId=${myAgent.id}`, { headers: auth });
+			assert.equal(r.status, 200);
+			opened.push(r);
+		}
+		assert.equal((await fetch(`${base}/api/conversation/watcher-cap-convo/events?agentId=${myAgent.id}`, { headers: auth })).status, 429, "one more watcher than allowed");
+		for (const r of opened) await r.body.cancel().catch(() => {});
+		sessions.close(capScoped);
+
+		const openRecords = sessions.allRecords();
+		sessions.closeAll();
+		await Promise.all(openRecords.map((r) => r.stopped ?? Promise.resolve()));
+		setSessionSpawn(null);
+		setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+		config.CONTAINER_NETWORK = priorNetwork;
+		config.ACCESS_LOG = accessLog;
+		resetEngineCheck();
+	}
+
+	// History: a key's whole chat list, kept server-side so another browser or device sees the same chats.
+	assert.equal(getHistory(myKey.id), null, "nothing saved yet");
+	const noHistory = await call("/api/history", { headers: auth });
+	assert.deepEqual(noHistory.json, { data: null, updatedAt: null });
+	const sample = { convs: [{ id: "c1", title: "hello", agentId: myAgent.id, messages: [{ role: "user", text: "hi" }] }], pref: myAgent.id };
+	const saved = await call("/api/history", { method: "PUT", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify(sample) });
+	assert.equal(saved.status, 200);
+	assert.equal(typeof saved.json.updatedAt, "number");
+	assert.deepEqual(getHistory(myKey.id).data, sample, "stored exactly as given, no reshaping");
+	const reloaded = await call("/api/history", { headers: auth });
+	assert.deepEqual(reloaded.json.data, sample);
+	// Another key's history is a different row entirely; this key never sees it, and vice versa.
+	saveHistory(theirKey.id, { convs: [{ id: "x", title: "not yours", messages: [] }] });
+	assert.deepEqual((await call("/api/history", { headers: auth })).json.data, sample, "unaffected by another key's save");
+	// Oversized: refused with a clear reason, not silently truncated.
+	assert.throws(() => saveHistory(myKey.id, { big: "x".repeat(10_000_000) }), PortalStoreError);
+	const tooBig = await call("/api/history", { method: "PUT", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ big: "x".repeat(10_000_000) }) });
+	assert.equal(tooBig.status, 413);
+	assert.deepEqual(getHistory(myKey.id).data, sample, "the previous save is untouched by a refused one");
+	// No auth, no history.
+	assert.equal((await call("/api/history")).status, 401);
+	deleteHistoryOf(myKey.id);
+	assert.equal(getHistory(myKey.id), null);
+
+	await deleteAgent(myAgent.id);
+	await deleteAgent(theirAgent.id);
+	await stopPortal();
+	assert.equal(portalPort(), null);
 }
 
 console.log("nextTurn + images: ok");
