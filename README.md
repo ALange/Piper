@@ -85,6 +85,11 @@ runtime dependencies beyond Node's standard library, the Pi package you already 
   and kept; only a chat unused for a month, or a one-off request, ends.
 - **Alerts and a watchdog** — a webhook is told when Docker is unreachable, the firewall rules are
   missing, the disk is low, a container is killed for memory, or the gateway stops answering.
+- **Integrations: external OpenAI-compatible models** — add a chat endpoint outside Pi's own catalogue
+  (self-hosted inference, a third-party API), detect or hand-enter its models and their capabilities,
+  and grant specific models to specific API keys. A granted model is used in the client portal exactly
+  like an agent — chat only, no tools, skills or extensions, no container: a direct streaming call to
+  the endpoint's own `/v1/chat/completions`.
 - **Backup and restore** — `./piper.sh backup` and `restore`, and a daily timer if you want one.
 - **Starts at boot** — `deploy.sh --systemd` installs the service, so a reboot does not take it down.
 - **Models for containers** — configure the models the containers' Pi calls directly (your local

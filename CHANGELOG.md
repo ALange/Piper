@@ -5,6 +5,20 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 ## [Unreleased]
 
 ### Added
+- **Integrations: external OpenAI-compatible chat endpoints, assignable to API keys.** A new dashboard
+  section (Integrations, under Infrastructure) for adding a chat endpoint outside Pi's own provider
+  catalogue — self-hosted inference, a third-party API — with an optional API key. **Overview** lists
+  every endpoint's models, their capabilities (vision/embedding/audio — chat is always implied) and
+  whether the endpoint answered last time it was checked (an on-demand **recheck**, not polling);
+  editing an endpoint opens an inline panel. **External Endpoints** lists the endpoints. **Wizard**
+  adds one in three steps: name/URL/key, a **detect models** button that probes the endpoint's own
+  `/v1/models` (best-effort, always editable, or add a model by hand), then review and save.
+  **Access Control** grants specific models to specific API keys. A key with a granted model sees it
+  in the client portal's own target picker and can chat with it exactly like an agent — except chat
+  only: no tools, skills or extensions, since a bare completion endpoint can't run them, and no
+  container either. It's one direct, streaming, stateless HTTP call to the endpoint's own
+  `/v1/chat/completions` (`lib/externalmodels.mjs`) — the browser resends the whole conversation each
+  time, since there is no Pi session to keep it in.
 - **Notebooks: a NotebookLM-style feature in the client portal.** A new page (`/notebook`, linked from
   the chat portal's sidebar, same login) where a key holder uploads documents or adds URLs as a
   notebook's **sources**; each is extracted by that notebook's own agent (in its own container, the

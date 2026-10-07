@@ -491,6 +491,22 @@ such as `vi` and `top`, resizing with the window, Ctrl-C. Rules:
 Every model the gateway can route to, grouped by provider, from the operator's Pi and from the container
 configuration. A **reload** button re-reads them.
 
+## Integrations
+
+External OpenAI-compatible chat endpoints (self-hosted inference, a third-party API) as a source of
+models separate from Pi's own catalogue, and which API key may use which of them. A model used this
+way is **chat only** -- a direct, host-side streaming HTTP call to its own `/v1/chat/completions`
+(`lib/externalmodels.mjs`), never a Pi container session, so there are no tools, skills or extensions;
+the client portal sends the whole conversation with every turn instead, since there's no server-side
+session to keep it in. **Overview** lists every endpoint's models, their capabilities (vision,
+embedding, audio -- chat is implied, editable here) and whether the endpoint answered last time it was
+checked (a **recheck** button, not polling); editing an endpoint's name, URL or API key opens an inline
+panel. **External Endpoints** lists the endpoints themselves. **Wizard** adds a new one in three steps:
+name/URL/API key, then a **detect models** button (probes the endpoint's own `/v1/models`, best-effort
+-- always editable, and a model can be added by hand if detection finds nothing), then review and save.
+**Access Control** grants specific models to specific API keys; a key sees its granted models in the
+client portal's own agent picker, usable the same way an agent is, just chat only.
+
 ## API keys
 
 Create, revoke and delete API keys (a key is shown once, then only its hash is stored — **regenerate**

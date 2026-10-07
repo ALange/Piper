@@ -494,6 +494,8 @@ function isBusy(c) {
   return Boolean(m && m.role === 'assistant' && m.pending);
 }
 
+function externalModel(id) { return (WHOAMI.externalModels || []).filter(function (m) { return m.id === id; })[0] || null; }
+
 function renderTargets() {
   var t = $('target');
   t.replaceChildren();
@@ -504,6 +506,15 @@ function renderTargets() {
     o.value = a.id;
     t.appendChild(o);
   });
+  if ((WHOAMI.externalModels || []).length) {
+    var grp = el('optgroup'); grp.label = 'Models (chat only)';
+    WHOAMI.externalModels.forEach(function (m) {
+      var o = el('option', m.name + ' — ' + m.endpointName);
+      o.value = 'm:' + m.id;
+      grp.appendChild(o);
+    });
+    t.appendChild(grp);
+  }
 }
 
 function renderSide() {
@@ -518,7 +529,8 @@ function renderSide() {
     if (isBusy(c)) titleRow.appendChild(el('span', ' ●')).className = 'livedot';
     row.appendChild(titleRow);
     var agent = (WHOAMI.agents || []).filter(function (a) { return a.id === c.agentId; })[0];
-    row.appendChild(el('div', agent ? agent.name : '(main endpoint)')).className = 's';
+    var model = c.externalModelId ? externalModel(c.externalModelId) : null;
+    row.appendChild(el('div', model ? (model.name + ' (model)') : agent ? agent.name : '(main endpoint)')).className = 's';
     row.addEventListener('click', function () { CUR = c.id; renderAll(); resumeIfLive(c); });
     var clear = el('button', '×');
     clear.className = 'convclear';
@@ -744,14 +756,20 @@ function renderAll() {
   renderMessages();
   renderStatusBar();
   var c = conv();
-  $('target').value = c ? (c.agentId || '') : '';
+  $('target').value = c ? (c.externalModelId ? 'm:' + c.externalModelId : (c.agentId || '')) : '';
   $('target').disabled = Boolean(c && c.messages.length) || isBusy(c);
   $('send').textContent = isBusy(c) ? 'stop' : 'send';
+  // A model is chat only: no tools, skills or extensions, and no vision means no attachments either.
+  var model = c && c.externalModelId ? externalModel(c.externalModelId) : null;
+  $('toolsbtn').disabled = Boolean(model);
+  $('skillsbtn').disabled = Boolean(model);
+  $('attachbtn').disabled = Boolean(model) && !model.vision;
+  $('attachbtn').title = (model && !model.vision) ? 'this model does not support images' : 'attach images or documents';
   reloadSidePanel();
 }
 
 function newChat() {
-  var c = { id: newId(), title: '', agentId: '', messages: [], updated: Date.now() };
+  var c = { id: newId(), title: '', agentId: '', externalModelId: '', messages: [], updated: Date.now() };
   CONVOS.unshift(c);
   CUR = c.id;
   saveConvos();
@@ -800,6 +818,17 @@ function streamInto(reader, onEvent) {
   return pump();
 }
 
+/* A model has no server-side session (lib/portal.mjs's portalExternalChat), so the browser resends
+   the whole conversation every time -- the same full history this page already keeps for an agent
+   chat, just flattened to plain {role, content} pairs for an OpenAI-shaped messages array. */
+function historyFor(c) {
+  return c.messages.filter(function (m) { return !m.pending && !m.error; }).map(function (m) {
+    if (m.role === 'user') return { role: 'user', content: m.text };
+    var text = (m.parts || []).filter(function (p) { return p.kind === 'text' && p.text; }).map(function (p) { return p.text; }).join('\n\n');
+    return { role: 'assistant', content: text };
+  }).filter(function (m) { return m.content; });
+}
+
 function send() {
   var c = conv();
   if (!c || isBusy(c)) return;
@@ -810,6 +839,7 @@ function send() {
   var docs = PENDING_DOCS.slice();
   var outgoing = text;
   docs.forEach(function (d) { outgoing += '\n\n[Attached: ' + d.path + ' -- read it from your workspace]'; });
+  var history = c.externalModelId ? historyFor(c) : undefined;
   if (!c.messages.length) c.title = text.slice(0, 48);
   c.messages.push({ role: 'user', text: text, images: images.length ? images : undefined, docs: docs.length ? docs : undefined });
   var msg = { role: 'assistant', parts: [], pending: true };
@@ -828,7 +858,7 @@ function send() {
   api('api/chat', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ conversation: c.id, message: outgoing, agentId: c.agentId || undefined, images: images.length ? images : undefined }),
+    body: JSON.stringify({ conversation: c.id, message: outgoing, agentId: c.externalModelId ? undefined : (c.agentId || undefined), externalModelId: c.externalModelId || undefined, history: history, images: images.length ? images : undefined }),
   }).then(function (r) {
     var type = r.headers.get('content-type') || '';
     if (!r.ok || type.indexOf('event-stream') < 0) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error((j.error && j.error.message) || ('HTTP ' + r.status)); });
@@ -854,7 +884,10 @@ function send() {
    for a conversation other than the one on screen: it only re-renders if it is still the one showing
    by the time something changes, so one busy conversation never blocks using another. */
 function resumeIfLive(c) {
-  if (!c || WATCHING[c.id]) return;
+  // A model has no server-side session to catch up on (lib/portal.mjs's portalExternalChat is
+  // stateless) -- if the browser closed mid-turn, that turn is simply lost, same as closing a tab
+  // mid-request to any other stateless API.
+  if (!c || WATCHING[c.id] || c.externalModelId) return;
   WATCHING[c.id] = true;
   var refresh = function () { if (c.id === CUR) renderAll(); else renderSide(); };
   var q = agentQuery(c);
@@ -1202,7 +1235,15 @@ $('logout').addEventListener('click', function () {
 });
 $('newchat').addEventListener('click', function () { newChat(); });
 $('gotonotebook').addEventListener('click', function () { location.href = '/notebook'; });
-$('target').addEventListener('change', function () { var c = conv(); if (!c || c.messages.length) return; c.agentId = $('target').value; saveConvos(); renderAll(); });
+$('target').addEventListener('change', function () {
+  var c = conv();
+  if (!c || c.messages.length) return;
+  var v = $('target').value;
+  if (v.indexOf('m:') === 0) { c.externalModelId = v.slice(2); c.agentId = ''; }
+  else { c.agentId = v; c.externalModelId = ''; }
+  saveConvos();
+  renderAll();
+});
 $('send').addEventListener('click', function () {
   var c = conv();
   if (!c) return;

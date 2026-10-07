@@ -28,6 +28,7 @@ const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
 const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, readDockerfile, writeDockerfile, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, portalSessionToken, readPortalSession, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, memoryScopeOf, mayRemember, memoryFor, memoryOverview, memoryEntries, deleteMemoryEntry, clearMemory, deleteMemoryOf, memoryDashboardRoutes, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, mayLookupKnowledge, knowledgeFor, addEntry, getByKey, getEntry, sourceSeen, overview: knowledgeOverview, entriesOf, removeEntry, clearSource, purgeOld, activityLog, knowledgeDashboardRoutes, RssError, SOURCE_TYPE, getFeed, listFeeds, createFeed, updateFeed, removeFeed, parseFeedXml, forcePoll, rssTick, parseExtraction, looksBlocked, parseUnblockReply, setExtractionRunner, rssPump, retryEntry, startFeeds, stopFeeds, rssDashboardRoutes,
 	NotebookError, createNotebook, listNotebooks, getNotebook, renameNotebook, setNotebookAgent, deleteNotebook, listSources, getSource, addSource, removeSource, chunkText, cosine, topChunks, embedTexts, setEmbedder, setNotebookRunner, setFileReader, parseExtraction: parseNotebookExtraction, askNotebook, generateOutput, listOutputs, OUTPUT_KINDS, pumpExtract: pumpNotebookExtract, resumeNotebookExtractions, stopNotebookExtractions,
+	ExternalModelError, listEndpoints, getEndpoint, createEndpoint, updateEndpoint, deleteEndpoint, listExternalModels, getModel, addModel, updateModel, removeModel, listEndpointsWithModels, setFetch, guessCapabilities, detectModels, checkEndpointStatus, modelsForKey, setKeyModels, listAccess, splitSseLines, chatCompletion,
 	recentAudit: recentAuditRows } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
@@ -2055,6 +2056,151 @@ assert.equal(isReloadCommand(undefined), false);
 	await deleteAgent(nagent.id);
 	apiKeys.remove(nk.id);
 	apiKeys.remove(ok.id);
+}
+
+// ---------------------------------------------------------------- external endpoints: operator-added OpenAI-compatible chat
+{
+	// Pure functions first.
+	assert.deepEqual(guessCapabilities("gpt-4o"), { vision: true, embedding: false, audio: false });
+	assert.deepEqual(guessCapabilities("text-embedding-3-small"), { vision: false, embedding: true, audio: false });
+	assert.deepEqual(guessCapabilities("whisper-1"), { vision: false, embedding: false, audio: true });
+	assert.deepEqual(guessCapabilities("llama-3-70b"), { vision: false, embedding: false, audio: false });
+
+	{
+		const a = splitSseLines('data: {"a":1}\ndata: {"b":2}\n\ndata: [DONE' /* no trailing newline yet */);
+		assert.deepEqual(a.lines, ['{"a":1}', '{"b":2}'], "the blank line between SSE events carries no data: prefix, so it's skipped");
+		assert.equal(a.rest, "data: [DONE");
+		const b = splitSseLines(`${a.rest}]\n`);
+		assert.deepEqual(b.lines, ["[DONE]"]);
+		assert.equal(b.rest, "");
+	}
+
+	// CRUD: validation, and an endpoint always carries at least one model.
+	assert.throws(() => createEndpoint({ name: "", baseUrl: "https://x.test", models: [{ modelId: "m" }] }), /give the endpoint a name/);
+	assert.throws(() => createEndpoint({ name: "X", baseUrl: "not a url", models: [{ modelId: "m" }] }), /not a URL/);
+	assert.throws(() => createEndpoint({ name: "X", baseUrl: "https://x.test", models: [] }), /at least one model/);
+
+	const ep = createEndpoint({
+		name: "Local vLLM",
+		baseUrl: "https://llm.internal/v1/",
+		apiKey: "sk-test-123",
+		models: [
+			{ modelId: "llama-3-70b", name: "Llama 3 70B", contextWindow: 8192 },
+			{ modelId: "llava-7b", vision: true },
+		],
+	});
+	assert.equal(ep.baseUrl, "https://llm.internal/v1", "a trailing slash is trimmed");
+	assert.equal(ep.hasKey, true);
+	assert.ok(!("apiKey" in ep), "the raw key is never in the returned shape");
+	const models = listExternalModels(ep.id);
+	assert.equal(models.length, 2);
+	assert.equal(models[0].contextWindow, 8192);
+	assert.equal(models[1].vision, true);
+	assert.deepEqual(listEndpointsWithModels().find((e) => e.id === ep.id).models.map((m) => m.id).sort(), models.map((m) => m.id).sort());
+
+	const updated = updateEndpoint(ep.id, { name: "Local vLLM (renamed)" });
+	assert.equal(updated.name, "Local vLLM (renamed)");
+	assert.equal(updated.hasKey, true, "omitting apiKey on update leaves it alone");
+	const cleared = updateEndpoint(ep.id, { apiKey: "" });
+	assert.equal(cleared.hasKey, false, "an explicit blank clears it");
+	assert.throws(() => updateEndpoint("no-such-id", { name: "x" }), (e) => e.status === 404);
+
+	const extraModel = addModel(ep.id, { modelId: "new-model", embedding: true });
+	assert.equal(extraModel.embedding, true);
+	const edited = updateModel(extraModel.id, { contextWindow: 4096, embedding: false, audio: true });
+	assert.equal(edited.contextWindow, 4096);
+	assert.equal(edited.embedding, false);
+	assert.equal(edited.audio, true);
+	assert.throws(() => addModel(ep.id, { modelId: "" }), /needs its id/);
+	assert.throws(() => updateModel("no-such-id", {}), (e) => e.status === 404);
+
+	// Detection and status: an injectable fetch, so no real network call runs in the suite.
+	setFetch(async (url) => {
+		if (url.includes("down.test")) throw Object.assign(new Error("fetch failed"), { name: "FetchError" });
+		if (url.includes("empty.test")) return { ok: true, json: async () => ({ data: [] }) };
+		if (url.includes("bad.test")) return { ok: false, status: 401, text: async () => "nope" };
+		return { ok: true, status: 200, json: async () => ({ data: [{ id: "gpt-4o-mini" }, { id: "text-embedding-3-small", context_window: 8191 }] }) };
+	});
+	const detected = await detectModels("https://good.test", "");
+	assert.equal(detected.error, null);
+	assert.equal(detected.models.length, 2);
+	assert.equal(detected.models[1].contextWindow, 8191);
+	assert.equal(detected.models[0].vision, true, "the '4o' heuristic pre-ticks vision for gpt-4o-mini");
+	const detectedEmpty = await detectModels("https://empty.test", "");
+	assert.match(detectedEmpty.error, /no models/);
+	const detectedBad = await detectModels("https://bad.test", "");
+	assert.match(detectedBad.error, /401/);
+	const detectedDown = await detectModels("https://down.test", "");
+	assert.ok(detectedDown.error, "a network failure is reported, never thrown");
+
+	const statusOk = await checkEndpointStatus(ep);
+	assert.equal(statusOk.online, true);
+	setFetch(async () => {
+		throw new Error("connection refused");
+	});
+	const statusDown = await checkEndpointStatus(ep);
+	assert.equal(statusDown.online, false);
+	assert.match(statusDown.error, /connection refused/);
+	setFetch(null);
+	await assert.rejects(checkEndpointStatus({ id: "no-such-id" }), (e) => e.status === 404);
+
+	// Access control: assigning a model to a key, scoped and replaceable in one call.
+	const mkey = apiKeys.create({ name: "external-model-test" });
+	const mk = mkey.record ?? mkey;
+	assert.throws(() => setKeyModels("no-such-key", [models[0].id]), (e) => e.status === 404);
+	assert.throws(() => setKeyModels(mk.id, ["no-such-model"]), (e) => e.status === 404);
+	setKeyModels(mk.id, [models[0].id, models[1].id]);
+	assert.deepEqual(modelsForKey(mk.id).map((m) => m.id).sort(), [models[0].id, models[1].id].sort());
+	assert.equal(modelsForKey(mk.id)[0].endpointName, "Local vLLM (renamed)");
+	setKeyModels(mk.id, [models[0].id]);
+	assert.deepEqual(modelsForKey(mk.id).map((m) => m.id), [models[0].id], "replaces the whole set, not additive");
+	const access = listAccess();
+	assert.ok(access.models.some((m) => m.id === models[0].id));
+	assert.deepEqual(access.assignments[mk.id], [models[0].id]);
+
+	// The chat call itself: a fake streamed OpenAI-shaped response, no real network call.
+	const sseBody = [
+		'data: {"choices":[{"delta":{"content":"Hel"}}]}\n\n',
+		'data: {"choices":[{"delta":{"content":"lo"}}]}\n\n',
+		'data: {"choices":[{"delta":{}}],"usage":{"prompt_tokens":5,"completion_tokens":2,"total_tokens":7}}\n\n',
+		"data: [DONE]\n\n",
+	];
+	function fakeStreamFetch() {
+		let i = 0;
+		return async () => ({
+			ok: true,
+			body: {
+				getReader: () => ({
+					read: async () => {
+						if (i >= sseBody.length) return { done: true, value: undefined };
+						return { done: false, value: new TextEncoder().encode(sseBody[i++]) };
+					},
+				}),
+			},
+		});
+	}
+	setFetch(fakeStreamFetch());
+	let streamed = "";
+	const chatResult = await chatCompletion({ endpoint: ep, model: models[0], messages: [{ role: "user", content: "hi" }], onDelta: (d) => (streamed += d) });
+	assert.equal(chatResult.text, "Hello");
+	assert.equal(streamed, "Hello");
+	assert.equal(chatResult.usage.total_tokens, 7);
+
+	setFetch(async () => ({ ok: false, status: 500, text: async () => "boom" }));
+	await assert.rejects(chatCompletion({ endpoint: ep, model: models[0], messages: [] }), (e) => e instanceof ExternalModelError && /500/.test(e.message));
+	setFetch(async () => {
+		throw new Error("ECONNREFUSED");
+	});
+	await assert.rejects(chatCompletion({ endpoint: ep, model: models[0], messages: [] }), (e) => e instanceof ExternalModelError && /could not reach/.test(e.message));
+	setFetch(null);
+
+	// Deleting an endpoint cascades: its models and any key assignments go with it.
+	deleteEndpoint(ep.id);
+	assert.equal(getEndpoint(ep.id), null);
+	assert.deepEqual(listExternalModels(ep.id), []);
+	assert.deepEqual(modelsForKey(mk.id), []);
+	assert.throws(() => deleteEndpoint(ep.id), (e) => e.status === 404);
+	apiKeys.remove(mk.id);
 }
 
 // ---------------------------------------------------------------- profile control
@@ -4955,6 +5101,52 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.ok(engineCalls.some((c) => c[1] === "rm" && c.includes(keyContainerName(agentScope(OWNER, rid)))), "reset removes its container");
 	assert.equal((await dpost(`/dashboard/agents/${rid}`, undefined, "DELETE")).json.deleted, rid);
 	assert.equal(agents.get(rid), null);
+
+	// Integrations: external OpenAI-compatible endpoints + per-key model access, over the same dashboard HTTP shape.
+	{
+		assert.deepEqual((await dpost("/dashboard/integrations.json", undefined, "GET")).json.endpoints, []);
+
+		setFetch(async (url) => {
+			if (url.includes("/v1/models")) return { ok: true, status: 200, json: async () => ({ data: [{ id: "gpt-4o-mini" }] }) };
+			return { ok: false, status: 404 };
+		});
+		const detected = await dpost("/dashboard/integrations/detect", { baseUrl: "https://llm.test" });
+		assert.equal(detected.status, 200);
+		assert.equal(detected.json.models[0].modelId, "gpt-4o-mini");
+
+		const badWizard = await dpost("/dashboard/integrations/wizard", { name: "", baseUrl: "https://llm.test", models: [{ modelId: "x" }] });
+		assert.equal(badWizard.status, 400);
+		const made2 = await dpost("/dashboard/integrations/wizard", { name: "Local", baseUrl: "https://llm.test/", apiKey: "sk-abc", models: [{ modelId: "gpt-4o-mini", vision: true }, { modelId: "embed-1", embedding: true }] });
+		assert.equal(made2.status, 201);
+		const epId = made2.json.createdId;
+		assert.equal(made2.json.endpoints.find((e) => e.id === epId).models.length, 2);
+		assert.equal(made2.json.endpoints.find((e) => e.id === epId).hasKey, true);
+
+		assert.equal((await dpost(`/dashboard/integrations/${epId}`, { name: "Local (renamed)" })).json.endpoints.find((e) => e.id === epId).name, "Local (renamed)");
+		const recheck = await dpost(`/dashboard/integrations/${epId}/recheck`, {});
+		assert.equal(recheck.json.online, true);
+		assert.equal((await dpost("/dashboard/integrations/nope/recheck", {})).status, 404);
+
+		const modelId = made2.json.endpoints.find((e) => e.id === epId).models[0].id;
+		assert.equal((await dpost(`/dashboard/integrations/models/${modelId}`, { audio: true })).json.endpoints.find((e) => e.id === epId).models.find((m) => m.id === modelId).audio, true);
+		assert.equal((await dpost("/dashboard/integrations/models/nope", { audio: true })).status, 404);
+
+		assert.deepEqual((await dpost("/dashboard/integrations/access.json", undefined, "GET")).json.assignments, {});
+		const assignRes = await dpost(`/dashboard/integrations/access/${OWNER}`, { modelIds: [modelId] });
+		assert.equal(assignRes.status, 200);
+		assert.deepEqual(assignRes.json.assignments[OWNER], [modelId]);
+		assert.equal((await dpost("/dashboard/integrations/access/nope", { modelIds: [modelId] })).status, 404, "not a valid key id shape, same as api-keys routing");
+
+		const secondModelId = made2.json.endpoints.find((e) => e.id === epId).models[1].id;
+		assert.equal((await dpost(`/dashboard/integrations/models/${secondModelId}`, undefined, "DELETE")).status, 200);
+		assert.equal(getModel(secondModelId), null);
+
+		assert.equal((await dpost(`/dashboard/integrations/${epId}`, undefined, "DELETE")).status, 200);
+		assert.equal(getEndpoint(epId), null);
+		assert.deepEqual((await dpost("/dashboard/integrations/access.json", undefined, "GET")).json.assignments[OWNER] ?? [], [], "the assignment was cascaded away with the endpoint");
+		assert.equal((await dpost(`/dashboard/integrations/${epId}`, undefined, "DELETE")).status, 404);
+		setFetch(null);
+	}
 
 	// Deleting: port closed, container and saved state removed, profile and own workspace archived, the key's workspace untouched.
 	const keyFile = join(workspaceDir(OWNER), "keep.txt");
@@ -8404,7 +8596,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	const navPages = [...navHtml.matchAll(/<a[^>]*href="#([a-z]+)"/g)].map((m) => m[1]);
 	assert.deepEqual([...navPages].sort(), Object.keys(PAGES).sort(), "every nav item is a page and every page is in the nav");
 	assert.equal(new Set(navPages).size, navPages.length, "no page twice in the nav");
-	assert.equal(navPages.length, 16, "sixteen items in the sidebar");
+	assert.equal(navPages.length, 17, "seventeen items in the sidebar");
 	assert.deepEqual([...navHtml.matchAll(/class="navgroup">([^<]+)</g)].map((m) => m[1]), ["Monitor", "Build", "Infrastructure", "Admin"]);
 
 	// Every tab shows a pane that exists, and a split pane's sections match the markup.
@@ -9284,6 +9476,52 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.match(badImage.text, /not a valid data: URI/);
 
 	setAgentTurnRunner(null);
+
+	// External models: chat only, through lib/externalmodels.mjs's direct HTTP call, never a Pi session.
+	{
+		const ep = createEndpoint({ name: "portal-test-ep", baseUrl: "https://llm.portal-test", models: [{ modelId: "m1", vision: true }, { modelId: "m2" }] });
+		const [visionModel, textModel] = listExternalModels(ep.id);
+		const whoBefore = await call("/api/whoami", { headers: auth });
+		assert.deepEqual(whoBefore.json.externalModels, [], "nothing granted yet");
+
+		setKeyModels(myKey.id, [visionModel.id]);
+		const whoAfter = await call("/api/whoami", { headers: auth });
+		assert.equal(whoAfter.json.externalModels.length, 1);
+		assert.equal(whoAfter.json.externalModels[0].id, visionModel.id);
+		assert.equal(whoAfter.json.externalModels[0].vision, true);
+
+		// Not granted: refused before any HTTP call is attempted.
+		const notGranted = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "ext-convo-1", message: "hi", externalModelId: textModel.id }) });
+		assert.equal(notGranted.status, 403);
+
+		// Granted: a fake streamed SSE reply from the endpoint, translated into the portal's own item/done vocabulary.
+		var sseBody = ['data: {"choices":[{"delta":{"content":"Hi"}}]}\n\n', "data: [DONE]\n\n"];
+		setFetch(function () {
+			var i = 0;
+			return Promise.resolve({ ok: true, body: { getReader: function () { return { read: function () { if (i >= sseBody.length) return Promise.resolve({ done: true }); return Promise.resolve({ done: false, value: new TextEncoder().encode(sseBody[i++]) }); } }; } } });
+		});
+		const granted = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "ext-convo-2", message: "hi", externalModelId: visionModel.id }) });
+		assert.equal(granted.status, 200);
+		assert.match(granted.text, /event: item/);
+		assert.match(granted.text, /"text":"Hi"/);
+		assert.match(granted.text, /event: done/);
+
+		// Images are refused for a non-vision model, accepted (and translated) for a vision one.
+		const imgRefused = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "ext-convo-3", message: "hi", externalModelId: textModel.id, images: [tinyPng] }) });
+		assert.equal(imgRefused.status, 403, "textModel isn't granted either -- grant it to isolate the vision check");
+		setKeyModels(myKey.id, [visionModel.id, textModel.id]);
+		const imgRefused2 = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "ext-convo-4", message: "hi", externalModelId: textModel.id, images: [tinyPng] }) });
+		assert.equal(imgRefused2.status, 400, "textModel has no vision");
+		assert.match(imgRefused2.text, /does not support images/);
+
+		// A bad history entry is refused before any HTTP call runs.
+		const badHistory = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "ext-convo-5", message: "hi", externalModelId: visionModel.id, history: [{ role: "system", content: "x" }] }) });
+		assert.equal(badHistory.status, 400);
+
+		setFetch(null);
+		setKeyModels(myKey.id, []);
+		deleteEndpoint(ep.id);
+	}
 
 	// Files: the key's own workspace by default, an agent's own with ?agentId=, never another key's.
 	writeFileSync(join(ensureWorkspace(myKey.id), "hello.txt"), "hi there");

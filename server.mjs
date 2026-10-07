@@ -66,7 +66,7 @@ import { sessions, spendReport, startSweeps } from "./lib/sessions.mjs";
 import { chatCompletions, listModels } from "./lib/chat.mjs";
 import { startAgentServers, stopAgentServers } from "./lib/agentservers.mjs";
 import { portalPort, startPortal, stopPortal } from "./lib/portal.mjs";
-import { LOGIN_PAGE, hostPiRoutes, updateScopeRoute, agentRoutes, apiKeyRoutes, containerPiRoutes, containerRoutes, dashboardLogin, dashboardPage, dashboardSetPassword, modelCatalog, saveSettings, settingsPayload } from "./lib/dashboard.mjs";
+import { LOGIN_PAGE, hostPiRoutes, updateScopeRoute, agentRoutes, apiKeyRoutes, integrationRoutes, containerPiRoutes, containerRoutes, dashboardLogin, dashboardPage, dashboardSetPassword, modelCatalog, saveSettings, settingsPayload } from "./lib/dashboard.mjs";
 
 // Everything the modules export, re-exported: the tests, and anyone embedding the gateway, import
 // from here.
@@ -116,6 +116,7 @@ export * from "./lib/agents.mjs";
 export * from "./lib/agentservers.mjs";
 export * from "./lib/portal.mjs";
 export * from "./lib/notebooks.mjs";
+export * from "./lib/externalmodels.mjs";
 export * from "./lib/portalstore.mjs";
 export * from "./lib/updates.mjs";
 export * from "./lib/hostpi.mjs";
@@ -202,6 +203,7 @@ async function handle(req, res) {
 		}
 		if (req.method === "POST" && path === "/dashboard/password") return await dashboardSetPassword(req, res);
 		if (path.startsWith("/dashboard/api-keys")) return await apiKeyRoutes(req, res, path);
+		if (path.startsWith("/dashboard/integrations")) return await integrationRoutes(req, res, path);
 		// The Documentation page. Which files can be read comes from the docs folder, never from the request.
 		if (req.method === "GET" && (path === "/dashboard/docs.json" || path === "/dashboard/docs/search.json" || /^\/dashboard\/docs\/[a-z0-9-]+\.json$/.test(path))) {
 			const send = (status, body) => {

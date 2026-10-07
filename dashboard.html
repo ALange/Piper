@@ -524,6 +524,7 @@
       <div class="navgroup">Infrastructure</div>
       <a href="#containers"><span class="ic">&#9635;</span>Containers<span class="navbadge bad" id="nav-containers-badge" hidden>!</span></a>
       <a href="#models"><span class="ic">&#9678;</span>Models</a>
+      <a href="#integrations"><span class="ic">&#8645;</span>Integrations</a>
       <div class="navgroup">Admin</div>
       <a href="#apikeys"><span class="ic">&#9636;</span>API keys</a>
       <a href="#settings"><span class="ic">&#9881;</span>Settings</a>
@@ -1234,6 +1235,72 @@
         <div id="modelgroups"></div>
       </section>
     </div><!-- /view-models -->
+
+    <div class="view" id="view-integrations">
+      <section data-tab="overview" class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Models</h3>
+            <p class="hint" style="margin:0">Every model from an external OpenAI-compatible endpoint, grouped by endpoint, with its capabilities (editable here) and whether the endpoint answered last time it was checked. A key only gets to chat with one once it's granted in Access Control -- used like an agent, but chat only: no tools, skills or extensions.</p>
+          </div>
+          <button id="introverviewrefresh">refresh</button>
+        </div>
+        <div id="introverview"></div>
+        <p class="hint" id="introverviewempty" hidden>No external endpoints yet. Add one in the Wizard tab.</p>
+      </section>
+      <section data-tab="overview" class="panel" id="intedit" hidden>
+        <div class="toolbar"><h3 id="intedittitle">Edit endpoint</h3><div><button id="inteditsave">save</button><button id="inteditcancel">close</button></div></div>
+        <div class="keyform">
+          <input id="inteditname" placeholder="name">
+          <input id="intediturl" placeholder="https://..." style="min-width:280px">
+          <input id="inteditkey" type="password" placeholder="API key (blank keeps the current one)" autocomplete="off">
+          <label class="ctrl"><input id="inteditenabled" type="checkbox"> enabled</label>
+        </div>
+        <table style="margin-top:10px">
+          <thead><tr><th>model</th><th class="num">context</th><th>vision</th><th>embedding</th><th>audio</th><th>enabled</th><th></th></tr></thead>
+          <tbody id="inteditmodels"></tbody>
+        </table>
+        <p class="hint" id="inteditnote"></p>
+      </section>
+
+      <section data-tab="endpoints" class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>External endpoints</h3>
+            <p class="hint" style="margin:0">Operator-added OpenAI-compatible chat endpoints. Edit one from the Overview tab.</p>
+          </div>
+          <button id="intendpointsrefresh">refresh</button>
+        </div>
+        <table>
+          <thead><tr><th>name</th><th>URL</th><th class="num">models</th><th>created</th><th></th></tr></thead>
+          <tbody id="intendpointrows"></tbody>
+        </table>
+        <p class="hint" id="intendpointsempty" hidden>No external endpoints yet.</p>
+      </section>
+
+      <section data-tab="wizard" class="panel">
+        <div id="iwzsteps" class="wzsteps"></div>
+        <div id="iwzbody" class="wzbody"></div>
+        <div class="fieldrow" style="margin-top:10px">
+          <button id="iwzback">back</button>
+          <button id="iwznext">next</button>
+          <span class="hint" id="iwznote"></span>
+        </div>
+      </section>
+
+      <section data-tab="access" class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Access control</h3>
+            <p class="hint" style="margin:0">Pick an API key, then tick which external models it may chat with -- used like an agent in the client portal, but chat only.</p>
+          </div>
+          <select id="intaccesskey"></select>
+        </div>
+        <div id="intaccessmodels"></div>
+        <p class="hint" id="intaccessempty" hidden>No external models yet. Add an endpoint in the Wizard tab first.</p>
+        <div class="fieldrow" style="margin-top:10px"><button id="intaccesssave">save</button><span class="hint" id="intaccessnote"></span></div>
+      </section>
+    </div><!-- /view-integrations -->
 
     <div class="view" id="view-spend">
       <div class="cards" id="spendcards"></div>
@@ -2437,6 +2504,326 @@ $('modelrefresh').addEventListener('click', function () {
     .catch(function (e) { $('modelhint').textContent = 'cannot reload: ' + e.message; });
 });
 
+/* ---- integrations: external OpenAI-compatible endpoints, their models, and per-key access ---- */
+var INT_DATA = null; // {endpoints:[{id,name,baseUrl,hasKey,enabled,models:[...]}]}
+var INT_STATUS = {}; // endpointId -> last recheck result, kept across reloads until rechecked again
+var INT_EDIT = null; // the endpoint id #intedit is open on
+
+function loadIntegrations() {
+  return fetch('dashboard/integrations.json', { cache: 'no-store' }).then(readJson).then(function (d) {
+    INT_DATA = d;
+    renderIntOverview();
+    renderIntEndpoints();
+  }).catch(function (e) {
+    $('introverview').replaceChildren(el('p', 'cannot load: ' + e.message));
+  });
+}
+
+function capBadges(m) {
+  var box = el('span');
+  [['vision', 'Vision'], ['embedding', 'Embedding'], ['audio', 'Audio']].forEach(function (c) {
+    if (!m[c[0]]) return;
+    var b = el('span', c[1]); b.className = 'cap on'; b.style.marginRight = '4px';
+    box.appendChild(b);
+  });
+  if (!box.children.length) box.appendChild(el('span', 'chat only')).className = 'hint';
+  return box;
+}
+
+function renderIntOverview() {
+  var box = $('introverview');
+  box.replaceChildren();
+  var eps = (INT_DATA && INT_DATA.endpoints) || [];
+  $('introverviewempty').hidden = Boolean(eps.length);
+  eps.forEach(function (ep) {
+    var group = el('div'); group.className = 'group';
+    var st = INT_STATUS[ep.id];
+    var head = el('div'); head.className = 'cprow ' + (!st ? '' : st.online ? 'good' : 'bad');
+    head.style.marginBottom = '8px';
+    head.appendChild(el('i')).className = 'dot';
+    head.appendChild(el('b', ep.name));
+    head.appendChild(el('span', ep.baseUrl + (st ? (st.online ? ' — online (' + st.ms + 'ms)' : ' — ' + (st.error || 'offline')) : ' — not checked yet')));
+    var recheck = el('button', 'recheck'); recheck.style.marginLeft = 'auto';
+    recheck.addEventListener('click', function () {
+      recheck.disabled = true;
+      epPost('dashboard/integrations/' + ep.id + '/recheck', {}).then(function (s) { INT_STATUS[ep.id] = s; renderIntOverview(); })
+        .catch(function (e) { INT_STATUS[ep.id] = { online: false, error: e.message }; renderIntOverview(); });
+    });
+    head.appendChild(recheck);
+    var editBtn = el('button', 'edit');
+    editBtn.addEventListener('click', function () { openIntEditor(ep); });
+    head.appendChild(editBtn);
+    group.appendChild(head);
+    var table = el('table');
+    var thead = el('thead'); var htr = el('tr');
+    ['model', 'name', 'context', 'capabilities', ''].forEach(function (h) { htr.appendChild(el('th', h)); });
+    thead.appendChild(htr); table.appendChild(thead);
+    var tbody = el('tbody');
+    ep.models.forEach(function (m) {
+      var tr = el('tr');
+      tr.appendChild(el('td', m.modelId));
+      tr.appendChild(el('td', m.name || m.modelId));
+      tr.appendChild(el('td', m.contextWindow ? m.contextWindow.toLocaleString() : '—')).className = 'num';
+      tr.appendChild(el('td')).appendChild(capBadges(m));
+      var del = el('button', 'remove');
+      del.addEventListener('click', function () {
+        if (!confirm('Remove model "' + m.modelId + '"? Any key using it loses access.')) return;
+        epPost('dashboard/integrations/models/' + m.id, undefined, 'DELETE').then(function (d) { INT_DATA = d; renderIntOverview(); renderIntEndpoints(); }).catch(function (e) { alert(e.message); });
+      });
+      tr.appendChild(el('td')).appendChild(del);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    group.appendChild(table);
+    box.appendChild(group);
+  });
+}
+
+function renderIntEndpoints() {
+  var tbody = $('intendpointrows');
+  tbody.replaceChildren();
+  var eps = (INT_DATA && INT_DATA.endpoints) || [];
+  $('intendpointsempty').hidden = Boolean(eps.length);
+  eps.forEach(function (ep) {
+    var tr = el('tr');
+    tr.appendChild(el('td', ep.name));
+    tr.appendChild(el('td', ep.baseUrl));
+    tr.appendChild(el('td', String(ep.models.length))).className = 'num';
+    tr.appendChild(el('td', new Date(ep.createdAt).toLocaleDateString()));
+    var del = el('button', 'delete');
+    del.addEventListener('click', function () {
+      if (!confirm('Delete "' + ep.name + '" and all ' + ep.models.length + ' of its model(s)? Any key using one loses access.')) return;
+      epPost('dashboard/integrations/' + ep.id, undefined, 'DELETE').then(function (d) { INT_DATA = d; renderIntOverview(); renderIntEndpoints(); }).catch(function (e) { alert(e.message); });
+    });
+    tr.appendChild(el('td')).appendChild(del);
+    tbody.appendChild(tr);
+  });
+}
+$('introverviewrefresh').addEventListener('click', loadIntegrations);
+$('intendpointsrefresh').addEventListener('click', loadIntegrations);
+
+function openIntEditor(ep) {
+  INT_EDIT = ep.id;
+  $('intedit').hidden = false;
+  $('intedittitle').textContent = 'Edit ' + ep.name;
+  $('inteditname').value = ep.name;
+  $('intediturl').value = ep.baseUrl;
+  $('inteditkey').value = '';
+  $('inteditenabled').checked = ep.enabled;
+  var tbody = $('inteditmodels');
+  tbody.replaceChildren();
+  ep.models.forEach(function (m) {
+    var tr = el('tr');
+    tr.appendChild(el('td', m.modelId));
+    var ctx = el('input'); ctx.type = 'number'; ctx.value = m.contextWindow || ''; ctx.style.width = '90px'; ctx.className = 'rowlimit';
+    tr.appendChild(el('td')).appendChild(ctx);
+    var caps = {};
+    ['vision', 'embedding', 'audio'].forEach(function (c) {
+      var cb = el('input'); cb.type = 'checkbox'; cb.checked = Boolean(m[c]); caps[c] = cb;
+      tr.appendChild(el('td')).appendChild(cb);
+    });
+    var en = el('input'); en.type = 'checkbox'; en.checked = m.enabled;
+    tr.appendChild(el('td')).appendChild(en);
+    var save = el('button', 'save');
+    save.addEventListener('click', function () {
+      save.disabled = true;
+      epPost('dashboard/integrations/models/' + m.id, { contextWindow: ctx.value ? Number(ctx.value) : null, vision: caps.vision.checked, embedding: caps.embedding.checked, audio: caps.audio.checked, enabled: en.checked })
+        .then(function (d) { INT_DATA = d; renderIntOverview(); renderIntEndpoints(); var fresh = INT_DATA.endpoints.find(function (e) { return e.id === ep.id; }); if (fresh) openIntEditor(fresh); })
+        .catch(function (e) { $('inteditnote').textContent = e.message; $('inteditnote').className = 'hint bad'; })
+        .then(function () { save.disabled = false; });
+    });
+    tr.appendChild(el('td')).appendChild(save);
+    tbody.appendChild(tr);
+  });
+  $('intedit').scrollIntoView({ block: 'nearest' });
+}
+$('inteditsave').addEventListener('click', function () {
+  if (!INT_EDIT) return;
+  var body = { name: $('inteditname').value, baseUrl: $('intediturl').value, enabled: $('inteditenabled').checked };
+  if ($('inteditkey').value) body.apiKey = $('inteditkey').value;
+  $('inteditsave').disabled = true;
+  epPost('dashboard/integrations/' + INT_EDIT, body)
+    .then(function (d) { INT_DATA = d; renderIntOverview(); renderIntEndpoints(); $('inteditnote').textContent = 'saved'; $('inteditnote').className = 'hint good'; })
+    .catch(function (e) { $('inteditnote').textContent = e.message; $('inteditnote').className = 'hint bad'; })
+    .then(function () { $('inteditsave').disabled = false; });
+});
+$('inteditcancel').addEventListener('click', function () { $('intedit').hidden = true; INT_EDIT = null; $('inteditnote').textContent = ''; });
+
+/* ---- the add-endpoint wizard: details -> detected/editable models table -> review & save ---- */
+var IWZ_STEPS = [['iwzdetails', 'Endpoint'], ['iwzmodels', 'Models'], ['iwzreview', 'Review']];
+var IWZ = null;
+function iwzFresh() { return { step: 0, name: '', baseUrl: '', apiKey: '', models: [], done: null }; }
+function iwzStart() {
+  IWZ = iwzFresh();
+  iwzRender();
+}
+function iwzField(label, input) {
+  var row = el('label'); row.className = 'row';
+  row.appendChild(el('b', label));
+  row.appendChild(input);
+  return row;
+}
+function iwzInput(value, onInput, type) {
+  var i = el('input'); i.type = type || 'text'; i.value = value || '';
+  i.addEventListener('input', function () { onInput(i.value); });
+  return i;
+}
+function iwzModelRow(m, i) {
+  var tr = el('tr');
+  var idInput = iwzInput(m.modelId, function (v) { m.modelId = v; });
+  tr.appendChild(el('td')).appendChild(idInput);
+  var nameInput = iwzInput(m.name, function (v) { m.name = v; });
+  tr.appendChild(el('td')).appendChild(nameInput);
+  var ctxInput = iwzInput(m.contextWindow || '', function (v) { m.contextWindow = v ? Number(v) : null; }, 'number');
+  ctxInput.style.width = '90px';
+  tr.appendChild(el('td')).appendChild(ctxInput);
+  ['vision', 'embedding', 'audio'].forEach(function (c) {
+    var cb = el('input'); cb.type = 'checkbox'; cb.checked = Boolean(m[c]);
+    cb.addEventListener('change', function () { m[c] = cb.checked; });
+    tr.appendChild(el('td')).appendChild(cb);
+  });
+  var rm = el('button', '×');
+  rm.addEventListener('click', function () { IWZ.models.splice(i, 1); iwzRender(); });
+  tr.appendChild(el('td')).appendChild(rm);
+  return tr;
+}
+function iwzRender() {
+  var body = $('iwzbody');
+  body.replaceChildren();
+  var steps = $('iwzsteps'); steps.replaceChildren();
+  IWZ_STEPS.forEach(function (s, i) {
+    var chip = el('span', s[1]);
+    chip.className = i === IWZ.step ? 'on' : i < IWZ.step ? 'done' : '';
+    if (i < IWZ.step) chip.addEventListener('click', function () { IWZ.step = i; iwzRender(); });
+    steps.appendChild(chip);
+  });
+  $('iwzback').hidden = IWZ.step === 0 || Boolean(IWZ.done);
+  $('iwznext').hidden = Boolean(IWZ.done);
+  $('iwznext').textContent = IWZ.step === IWZ_STEPS.length - 1 ? 'save' : 'next';
+  $('iwznote').textContent = '';
+  $('iwznote').className = 'hint';
+
+  var id = IWZ.done ? 'done' : IWZ_STEPS[IWZ.step][0];
+  if (id === 'iwzdetails') {
+    body.appendChild(iwzField('Name', iwzInput(IWZ.name, function (v) { IWZ.name = v; })));
+    body.appendChild(iwzField('Base URL', iwzInput(IWZ.baseUrl, function (v) { IWZ.baseUrl = v; })));
+    body.appendChild(iwzField('API key (optional)', iwzInput(IWZ.apiKey, function (v) { IWZ.apiKey = v; }, 'password')));
+  } else if (id === 'iwzmodels') {
+    var detect = el('button', 'detect models');
+    detect.addEventListener('click', function () {
+      detect.disabled = true;
+      $('iwznote').textContent = 'probing ' + IWZ.baseUrl + '/v1/models…';
+      epPost('dashboard/integrations/detect', { baseUrl: IWZ.baseUrl, apiKey: IWZ.apiKey })
+        .then(function (d) {
+          if (d.error) { $('iwznote').textContent = d.error; $('iwznote').className = 'hint bad'; }
+          IWZ.models = IWZ.models.concat(d.models.filter(function (dm) { return !IWZ.models.some(function (m) { return m.modelId === dm.modelId; }); }));
+          iwzRender();
+        })
+        .catch(function (e) { $('iwznote').textContent = e.message; $('iwznote').className = 'hint bad'; detect.disabled = false; });
+    });
+    body.appendChild(detect);
+    var addRow = el('button', '+ add model');
+    addRow.style.marginLeft = '8px';
+    addRow.addEventListener('click', function () { IWZ.models.push({ modelId: '', name: '', contextWindow: null, vision: false, embedding: false, audio: false }); iwzRender(); });
+    body.appendChild(addRow);
+    var table = el('table'); table.style.marginTop = '10px';
+    var thead = el('thead'); var htr = el('tr');
+    ['model id', 'name', 'context', 'vision', 'embedding', 'audio', ''].forEach(function (h) { htr.appendChild(el('th', h)); });
+    thead.appendChild(htr); table.appendChild(thead);
+    var tbody = el('tbody');
+    IWZ.models.forEach(function (m, i) { tbody.appendChild(iwzModelRow(m, i)); });
+    table.appendChild(tbody);
+    body.appendChild(table);
+    if (!IWZ.models.length) body.appendChild(el('p', 'No models yet -- detect them, or add one by hand.')).className = 'hint';
+  } else if (id === 'iwzreview') {
+    var rt = el('table'); rt.className = 'review';
+    [['Name', IWZ.name], ['Base URL', IWZ.baseUrl], ['API key', IWZ.apiKey ? 'set' : '(none)'], ['Models', String(IWZ.models.length)]].forEach(function (r) {
+      var tr = el('tr'); tr.appendChild(el('td', r[0])); tr.appendChild(el('td', r[1])); rt.appendChild(tr);
+    });
+    body.appendChild(rt);
+  } else if (id === 'done') {
+    body.appendChild(el('h3', 'Endpoint added'));
+    body.appendChild(el('p', IWZ.done.name + ' with ' + IWZ.done.models.length + ' model(s) is ready to grant in Access Control.')).className = 'hint';
+    var again = el('button', 'add another');
+    again.addEventListener('click', function () { iwzStart(); });
+    body.appendChild(again);
+  }
+}
+function iwzValidate() {
+  var id = IWZ_STEPS[IWZ.step][0];
+  if (id === 'iwzdetails') {
+    if (!IWZ.name.trim()) return 'give the endpoint a name';
+    if (!/^https?:\/\//.test(IWZ.baseUrl.trim())) return 'the base URL must start with http:// or https://';
+  }
+  if (id === 'iwzmodels' && !IWZ.models.length) return 'add at least one model';
+  if (id === 'iwzmodels' && IWZ.models.some(function (m) { return !m.modelId.trim(); })) return 'every model needs its id';
+  return '';
+}
+$('iwzback').addEventListener('click', function () { IWZ.step -= 1; iwzRender(); });
+$('iwznext').addEventListener('click', function () {
+  var problem = iwzValidate();
+  if (problem) { $('iwznote').textContent = problem; $('iwznote').className = 'hint bad'; return; }
+  if (IWZ.step < IWZ_STEPS.length - 1) { IWZ.step += 1; iwzRender(); return; }
+  $('iwznext').disabled = true;
+  epPost('dashboard/integrations/wizard', { name: IWZ.name, baseUrl: IWZ.baseUrl, apiKey: IWZ.apiKey, models: IWZ.models })
+    .then(function (d) {
+      INT_DATA = d;
+      IWZ.done = d.endpoints.find(function (e) { return e.id === d.createdId; });
+      renderIntOverview(); renderIntEndpoints();
+      iwzRender();
+    })
+    .catch(function (e) { $('iwznote').textContent = e.message; $('iwznote').className = 'hint bad'; })
+    .then(function () { $('iwznext').disabled = false; });
+});
+
+/* ---- access control: one key at a time, a checklist of every external model, grouped by endpoint ---- */
+var INT_ACCESS = null; // {keys, models, assignments}
+function loadIntAccess() {
+  return fetch('dashboard/integrations/access.json', { cache: 'no-store' }).then(readJson).then(function (d) {
+    INT_ACCESS = d;
+    var sel = $('intaccesskey');
+    var was = sel.value;
+    sel.replaceChildren();
+    d.keys.forEach(function (k) { var o = el('option', k.name); o.value = k.id; sel.appendChild(o); });
+    if (was && d.keys.some(function (k) { return k.id === was; })) sel.value = was;
+    renderIntAccess();
+  }).catch(function (e) { $('intaccessmodels').replaceChildren(el('p', 'cannot load: ' + e.message)); });
+}
+function renderIntAccess() {
+  var box = $('intaccessmodels');
+  box.replaceChildren();
+  if (!INT_ACCESS) return;
+  $('intaccessempty').hidden = Boolean(INT_ACCESS.models.length);
+  var keyId = $('intaccesskey').value;
+  var assigned = new Set((INT_ACCESS.assignments[keyId] || []));
+  var byEndpoint = {};
+  INT_ACCESS.models.forEach(function (m) { (byEndpoint[m.endpointName] = byEndpoint[m.endpointName] || []).push(m); });
+  Object.keys(byEndpoint).forEach(function (epName) {
+    var group = el('div'); group.className = 'group';
+    group.appendChild(el('div', epName)).className = 'grouphead';
+    byEndpoint[epName].forEach(function (m) {
+      var row = el('label'); row.className = 'ctrl'; row.style.display = 'flex'; row.style.padding = '4px 0';
+      var cb = el('input'); cb.type = 'checkbox'; cb.checked = assigned.has(m.id); cb.dataset.modelId = m.id;
+      row.appendChild(cb);
+      row.appendChild(document.createTextNode(' ' + (m.name || m.modelId) + ' '));
+      row.appendChild(capBadges(m));
+      group.appendChild(row);
+    });
+    box.appendChild(group);
+  });
+}
+$('intaccesskey').addEventListener('change', renderIntAccess);
+$('intaccesssave').addEventListener('click', function () {
+  var keyId = $('intaccesskey').value;
+  if (!keyId) return;
+  var modelIds = Array.prototype.slice.call($('intaccessmodels').querySelectorAll('input[type=checkbox]:checked')).map(function (cb) { return cb.dataset.modelId; });
+  $('intaccesssave').disabled = true;
+  epPost('dashboard/integrations/access/' + keyId, { modelIds: modelIds })
+    .then(function (d) { INT_ACCESS = d; $('intaccessnote').textContent = 'saved'; $('intaccessnote').className = 'hint good'; })
+    .catch(function (e) { $('intaccessnote').textContent = e.message; $('intaccessnote').className = 'hint bad'; })
+    .then(function () { $('intaccesssave').disabled = false; });
+});
+
 /* ---- settings view ----
    The server owns what a setting is (type, bounds, default, full help). This page owns how it is
    presented: which tab and section it lives in, a plain-language label and one-line summary, units,
@@ -3191,13 +3578,18 @@ var PAGES = {
     { id:'pihost', label:'Pi on this host', pane:'containers', sections:'pihost', subtitle:'The Pi the gateway runs on, and updating it and its extensions' },
     { id:'events', label:'Events & command', pane:'containers', sections:'events', subtitle:'Run a command in a container, and what happened to containers' }] },
   models:     { title:'Models', tabs:[{ id:'models', pane:'models', subtitle:'Every model this gateway can route to, grouped by provider' }] },
+  integrations: { title:'Integrations', tabs:[
+    { id:'overview', label:'Overview', pane:'integrations', sections:'overview', subtitle:'Every external model, its capabilities and whether its endpoint answered last time it was checked' },
+    { id:'endpoints', label:'External Endpoints', pane:'integrations', sections:'endpoints', subtitle:'OpenAI-compatible endpoints this gateway can send chat-only models to' },
+    { id:'wizard', label:'Wizard', pane:'integrations', sections:'wizard', subtitle:'Add a new OpenAI-compatible endpoint, step by step' },
+    { id:'access', label:'Access Control', pane:'integrations', sections:'access', subtitle:'Which API key may chat with which external model' }] },
   apikeys:    { title:'API keys', tabs:[{ id:'apikeys', pane:'apikeys', subtitle:'Keys for the OpenAI endpoints, their expiry, and what each one has used' }] },
   settings:   { title:'Settings', tabs:[{ id:'settings', pane:'settings', subtitle:'Gateway configuration, stored in SQLite and editable here' }] },
   help:       { title:'Help', tabs:[
     { id:'docs', label:'Documentation', pane:'docs', subtitle:'The administrator\u2019s handbook: architecture, deployment, operation, configuration, API and troubleshooting' },
     { id:'about', label:'About', pane:'about', subtitle:'Piper, its version, release notes and author' }] }
 };
-var PANES = ['playground', 'overview', 'agents', 'extensions', 'containers', 'terminal', 'files', 'endpoints', 'jobs', 'memory', 'knowledge', 'models', 'spend', 'apikeys', 'profiles', 'audit', 'settings', 'docs', 'about'];
+var PANES = ['playground', 'overview', 'agents', 'extensions', 'containers', 'terminal', 'files', 'endpoints', 'jobs', 'memory', 'knowledge', 'models', 'integrations', 'spend', 'apikeys', 'profiles', 'audit', 'settings', 'docs', 'about'];
 /* Old links keep working: bookmarks and the docs' own links used the flat view names. */
 var OLD_HASHES = { endpoints: 'agents', terminal: 'containers/terminal', profiles: 'files/profiles', docs: 'help/docs', about: 'help/about' };
 function resolveHash(hash) {
@@ -6075,6 +6467,7 @@ function route() {
   if (pane === 'docs') startDocs(rest[0], rest[1]);
   if (pane === 'audit') startAudit();
   if (pane === 'endpoints') { loadEndpoints(); if (tab.id === 'wizard') wzStart(); }
+  if (pane === 'integrations') { loadIntegrations(); if (tab.id === 'access') loadIntAccess(); if (tab.id === 'wizard') iwzStart(); }
   if (pane === 'playground') pgStart();
   if (pane === 'jobs') loadJobs();
   if (pane === 'memory') loadMemory();
