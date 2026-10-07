@@ -27,7 +27,7 @@ const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 // Seeded at startup, which is when a validator that reads a not-yet-defined constant would fail.
 process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
 const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, readDockerfile, writeDockerfile, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, portalSessionToken, readPortalSession, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, memoryScopeOf, mayRemember, memoryFor, memoryOverview, memoryEntries, deleteMemoryEntry, clearMemory, deleteMemoryOf, memoryDashboardRoutes, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, mayLookupKnowledge, knowledgeFor, addEntry, getByKey, getEntry, sourceSeen, overview: knowledgeOverview, entriesOf, removeEntry, clearSource, purgeOld, activityLog, knowledgeDashboardRoutes, RssError, SOURCE_TYPE, getFeed, listFeeds, createFeed, updateFeed, removeFeed, parseFeedXml, forcePoll, rssTick, parseExtraction, looksBlocked, parseUnblockReply, setExtractionRunner, rssPump, retryEntry, startFeeds, stopFeeds, rssDashboardRoutes,
-	NotebookError, createNotebook, listNotebooks, getNotebook, renameNotebook, deleteNotebook, listSources, getSource, addSource, removeSource, chunkText, cosine, topChunks, embedTexts, setEmbedder, setNotebookRunner, parseExtraction: parseNotebookExtraction, askNotebook, generateOutput, listOutputs, OUTPUT_KINDS, pumpExtract: pumpNotebookExtract, resumeNotebookExtractions, stopNotebookExtractions,
+	NotebookError, createNotebook, listNotebooks, getNotebook, renameNotebook, deleteNotebook, listSources, getSource, addSource, removeSource, chunkText, cosine, topChunks, embedTexts, setEmbedder, setNotebookRunner, setFileReader, parseExtraction: parseNotebookExtraction, askNotebook, generateOutput, listOutputs, OUTPUT_KINDS, pumpExtract: pumpNotebookExtract, resumeNotebookExtractions, stopNotebookExtractions,
 	recentAudit: recentAuditRows } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
@@ -1926,6 +1926,10 @@ assert.equal(isReloadCommand(undefined), false);
 		lastPrompt = prompt;
 		if (prompt.includes("fail-me")) throw new Error("the agent could not read it");
 		if (prompt.includes("not-json-me")) return { text: "Sorry, I can't read this PDF without a tool for that." };
+		if (prompt.includes("big.pdf")) {
+			const match = prompt.match(/write the full extracted text as plain UTF-8 to a new file at "([^"]+)"/);
+			return { text: JSON.stringify({ title: "A long document", savedTo: match?.[1] ?? ".notebook-extract/missing.txt", summary: "It is long." }) };
+		}
 		return { text: JSON.stringify({ title: "Extracted", text: "The quick brown fox jumps over the lazy dog. ".repeat(40), summary: "About a fox." }) };
 	});
 	setEmbedder(async (texts) => texts.map((t, i) => Float32Array.from([t.length % 7, i, 1])));
@@ -1946,6 +1950,36 @@ assert.equal(isReloadCommand(undefined), false);
 	}
 	assert.equal(getSource(nonJsonSrc.id), null, "a failed extraction is discarded, not kept");
 	assert.ok(recentAuditRows(20).some((r) => r.action === "notebook.extract_failed" && /the agent said:.*can't read this PDF/.test(r.detail)), "the raw reply is surfaced for diagnosis");
+
+	// A long source: the agent saves the text to a file instead of inlining it (avoids a reply so
+	// big it risks being cut off), and extraction reads that file back instead of the JSON's "text".
+	let readFilePath = null;
+	setFileReader(async (keyId, path) => {
+		readFilePath = { keyId, path };
+		return "A very long document's worth of extracted text. ".repeat(50);
+	});
+	const bigSrc = addSource(nb.id, nk.id, { kind: "upload", name: "big.pdf", origin: "notebooks/x/sources/big.pdf" });
+	const waitBigDone = async () => {
+		const end = Date.now() + 3000;
+		for (;;) {
+			const s = getSource(bigSrc.id);
+			if (!s || s.status === "done") return s;
+			if (Date.now() > end) throw new Error("timed out waiting for the big source to extract");
+			await new Promise((r) => setTimeout(r, 15));
+		}
+	};
+	setNotebookRunner(async ({ prompt }) => {
+		lastPrompt = prompt;
+		if (prompt.includes("big.pdf")) {
+			const match = prompt.match(/write the full extracted text as plain UTF-8 to a new file at "([^"]+)"/);
+			return { text: JSON.stringify({ title: "A long document", savedTo: match?.[1] ?? ".notebook-extract/missing.txt", summary: "It is long." }) };
+		}
+		return { text: JSON.stringify({ title: "Extracted", text: "The quick brown fox jumps over the lazy dog. ".repeat(40), summary: "About a fox." }) };
+	});
+	const bigDone = await waitBigDone();
+	assert.ok(bigDone, "a source using savedTo still reaches done");
+	assert.ok(readFilePath && /\.notebook-extract\/.*\.txt$/.test(readFilePath.path), "the saved-to path is read back by its own name");
+	setFileReader(null);
 
 	const goodSrc = addSource(nb.id, nk.id, { kind: "upload", name: "doc.txt", origin: "notebooks/x/sources/doc.txt" });
 	const waitDone = async () => {

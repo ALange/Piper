@@ -92,7 +92,10 @@ A NotebookLM-style feature inside the client portal — `/notebook`, same login,
 page's sidebar. A **notebook** is a key's own set of **sources** (an uploaded file, or a URL), each
 extracted by that notebook's own agent (its own container, whatever reading or fetch tool it has —
 the gateway itself never parses a file or fetches a URL, the same rule RSS extraction already
-follows), chunked, and embedded for retrieval. A failed extraction is discarded, not kept, the same
+follows), chunked, and embedded for retrieval. A long source's text is saved to a file in the agent's
+own workspace rather than inlined in its reply, so the extraction turn's own reply never risks being
+cut off by the model's output limit; the gateway reads that file straight back, the same way it already
+reads any other file in a key's workspace. A failed extraction is discarded, not kept, the same
 tolerance RSS's own extraction has — re-add the source to try again rather than hunting down a dead
 row. **Chat** asks a question grounded only in that notebook's sources: the question is embedded too,
 the closest chunks are found by cosine similarity (a plain scan over vectors kept as BLOBs in the same
