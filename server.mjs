@@ -58,6 +58,7 @@ import { knowledgeDashboardRoutes } from "./lib/knowledgeroutes.mjs";
 import { rssDashboardRoutes } from "./lib/rssroutes.mjs";
 import { startJobs, stopJobs } from "./lib/jobs.mjs";
 import { startFeeds, stopFeeds } from "./lib/rssfeeds.mjs";
+import { resumeNotebookExtractions, stopNotebookExtractions } from "./lib/notebooks.mjs";
 import { startImageHousekeeping } from "./lib/images.mjs";
 import { startTeamServers, stopTeamServers } from "./lib/teams.mjs";
 import { dashboardFilesRoutes, filesRoutes, keyIdForScope, profileAdminRoutes, profileRoutes } from "./lib/profiles.mjs";
@@ -114,6 +115,7 @@ export * from "./lib/agentschedule.mjs";
 export * from "./lib/agents.mjs";
 export * from "./lib/agentservers.mjs";
 export * from "./lib/portal.mjs";
+export * from "./lib/notebooks.mjs";
 export * from "./lib/portalstore.mjs";
 export * from "./lib/updates.mjs";
 export * from "./lib/hostpi.mjs";
@@ -359,6 +361,7 @@ if (isMain) {
 		server.close();
 		stopJobs();
 		stopFeeds();
+		stopNotebookExtractions();
 		void stopAgentServers();
 		void stopTeamServers();
 		void stopPortal();
@@ -388,6 +391,7 @@ if (isMain) {
 				startSweeps();
 				startJobs();
 				startFeeds();
+				resumeNotebookExtractions();
 				startImageHousekeeping();
 				startEventWatch();
 				startDiskWatch();
@@ -398,6 +402,7 @@ if (isMain) {
 				startSweeps();
 				startJobs();
 				startFeeds();
+				resumeNotebookExtractions();
 				startPortal();
 				void startAgentServers().then(() => startTeamServers());
 			},

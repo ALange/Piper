@@ -86,6 +86,27 @@ port), `PORTAL_PORT`, `PORTAL_HISTORY_MAX_BYTES` (a hard cap on one key's whole 
 browser already trims itself well under it), `PORTAL_ATTACHMENT_MAX_BYTES` (a cap on one attached
 image's decoded size), `PORTAL_SESSION_MS` (how long a password sign-in lasts).
 
+## Notebooks
+
+A NotebookLM-style feature inside the client portal — `/notebook`, same login, linked from the chat
+page's sidebar. A **notebook** is a key's own set of **sources** (an uploaded file, or a URL), each
+extracted by that notebook's own agent (its own container, whatever reading or fetch tool it has —
+the gateway itself never parses a file or fetches a URL, the same rule RSS extraction already
+follows), chunked, and embedded for retrieval. A failed extraction is discarded, not kept, the same
+tolerance RSS's own extraction has — re-add the source to try again rather than hunting down a dead
+row. **Chat** asks a question grounded only in that notebook's sources: the question is embedded too,
+the closest chunks are found by cosine similarity (a plain scan over vectors kept as BLOBs in the same
+SQLite database — no vector database, no new service), and the agent is asked to answer only from
+them, citing which excerpt backs each claim; it says plainly when they don't answer the question
+rather than guessing. **Generated** produces a summary, an FAQ, or a study guide from the whole
+notebook on request, kept so it is not redone. The one new host-side network call this adds is to an
+embeddings endpoint (`NOTEBOOK_EMBEDDING_URL`, default an OpenAI-compatible one) — a fixed,
+operator-configured address, the same trust tier as RSS's own feed-fetching, never arbitrary content.
+Settings: `NOTEBOOK_ENABLED`, `NOTEBOOK_EMBEDDING_URL`/`_MODEL`/`_API_KEY`,
+`NOTEBOOK_SOURCE_MAX_BYTES`, `NOTEBOOK_MAX_SOURCES`. The audio "two hosts discussing it" overview
+NotebookLM has is not part of this — it would need real text-to-speech, a capability this gateway does
+not have.
+
 ## Overview
 
 Live numbers at a glance: conversations, working and idle agents, free slots, one-off requests, requests, models,

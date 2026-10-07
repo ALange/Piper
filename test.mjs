@@ -26,7 +26,9 @@ process.env.CONTAINER_PI_DIR = TEST_CONTAINER_PI;
 const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 // Seeded at startup, which is when a validator that reads a not-yet-defined constant would fail.
 process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
-const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, readDockerfile, writeDockerfile, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, portalSessionToken, readPortalSession, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, memoryScopeOf, mayRemember, memoryFor, memoryOverview, memoryEntries, deleteMemoryEntry, clearMemory, deleteMemoryOf, memoryDashboardRoutes, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, mayLookupKnowledge, knowledgeFor, addEntry, getByKey, getEntry, sourceSeen, overview: knowledgeOverview, entriesOf, removeEntry, clearSource, purgeOld, activityLog, knowledgeDashboardRoutes, RssError, SOURCE_TYPE, getFeed, listFeeds, createFeed, updateFeed, removeFeed, parseFeedXml, forcePoll, rssTick, parseExtraction, looksBlocked, parseUnblockReply, setExtractionRunner, rssPump, retryEntry, startFeeds, stopFeeds, rssDashboardRoutes, recentAudit: recentAuditRows } = await import("./server.mjs");
+const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, readDockerfile, writeDockerfile, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, portalSessionToken, readPortalSession, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, memoryScopeOf, mayRemember, memoryFor, memoryOverview, memoryEntries, deleteMemoryEntry, clearMemory, deleteMemoryOf, memoryDashboardRoutes, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, mayLookupKnowledge, knowledgeFor, addEntry, getByKey, getEntry, sourceSeen, overview: knowledgeOverview, entriesOf, removeEntry, clearSource, purgeOld, activityLog, knowledgeDashboardRoutes, RssError, SOURCE_TYPE, getFeed, listFeeds, createFeed, updateFeed, removeFeed, parseFeedXml, forcePoll, rssTick, parseExtraction, looksBlocked, parseUnblockReply, setExtractionRunner, rssPump, retryEntry, startFeeds, stopFeeds, rssDashboardRoutes,
+	NotebookError, createNotebook, listNotebooks, getNotebook, renameNotebook, deleteNotebook, listSources, getSource, addSource, removeSource, chunkText, cosine, topChunks, embedTexts, setEmbedder, setNotebookRunner, parseExtraction: parseNotebookExtraction, askNotebook, generateOutput, listOutputs, OUTPUT_KINDS, pumpExtract: pumpNotebookExtract, resumeNotebookExtractions, stopNotebookExtractions,
+	recentAudit: recentAuditRows } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
 
@@ -1871,6 +1873,136 @@ assert.equal(isReloadCommand(undefined), false);
 	removeFeed(orphanFeed.id);
 	await deleteAgent(extractor.id);
 	apiKeys.remove(rkey.id);
+}
+
+// ---------------------------------------------------------------- notebooks: RAG without a vector database
+{
+	// Pure functions: chunking and the cosine-similarity math retrieval is built on.
+	assert.deepEqual(chunkText(""), []);
+	assert.deepEqual(chunkText("hello"), ["hello"]);
+	{
+		const chunks = chunkText("x".repeat(2200), 1000, 150);
+		assert.equal(chunks.length, 3, "1000 + (1000-150) + (200ish) covers 2200 chars");
+		assert.equal(chunks[0].length, 1000);
+		assert.equal(chunks[0].slice(-150), chunks[1].slice(0, 150), "consecutive chunks overlap");
+	}
+	assert.equal(cosine(Float32Array.from([1, 0]), Float32Array.from([1, 0])), 1);
+	assert.ok(Math.abs(cosine(Float32Array.from([1, 0]), Float32Array.from([0, 1]))) < 1e-9, "orthogonal vectors score ~0");
+	assert.equal(cosine(Float32Array.from([0, 0]), Float32Array.from([1, 1])), 0, "a zero vector never divides by zero");
+
+	// CRUD, scoped by key: never another key's.
+	const nkey = apiKeys.create({ name: "notebook-test" });
+	const nk = nkey.record ?? nkey;
+	const okey = apiKeys.create({ name: "notebook-other" });
+	const ok = okey.record ?? okey;
+	const nagent = await createAgent({ keyId: nk.id, name: "notebook-agent" });
+
+	assert.throws(() => createNotebook(nk.id, { agentId: "no-such-agent" }), (e) => e.status === 404);
+	const nb = createNotebook(nk.id, { title: "  My Notebook  ", agentId: nagent.id });
+	assert.equal(nb.title, "My Notebook", "trimmed");
+	assert.equal(nb.agentId, nagent.id);
+	assert.deepEqual(listNotebooks(nk.id).map((n) => n.id), [nb.id]);
+	assert.equal(getNotebook(nb.id, ok.id), null, "never another key's, even by the right id");
+	assert.equal(listNotebooks(ok.id).length, 0);
+	const renamed = renameNotebook(nb.id, nk.id, "Renamed");
+	assert.equal(renamed.title, "Renamed");
+	assert.throws(() => renameNotebook(nb.id, ok.id, "Stolen"), (e) => e.status === 404, "another key cannot rename it");
+	assert.throws(() => renameNotebook(nb.id, nk.id, "   "), /give it a title/);
+
+	// Sources: validation, the per-notebook cap.
+	assert.throws(() => addSource(nb.id, nk.id, { kind: "bad", name: "x", origin: "x" }), /"upload" or "url"/);
+	assert.throws(() => addSource(nb.id, nk.id, { kind: "url", name: "x", origin: "not a url" }), /not a URL/);
+	assert.throws(() => addSource(nb.id, ok.id, { kind: "url", name: "x", origin: "https://x.test" }), (e) => e.status === 404, "another key cannot add to it");
+	const priorCap = config.NOTEBOOK_MAX_SOURCES;
+	config.NOTEBOOK_MAX_SOURCES = 1;
+	addSource(nb.id, nk.id, { kind: "url", name: "capper", origin: "https://cap.test" });
+	assert.throws(() => addSource(nb.id, nk.id, { kind: "url", name: "over", origin: "https://over.test" }), (e) => e.status === 409);
+	removeSource(listSources(nb.id)[0].id, nb.id, nk.id);
+	config.NOTEBOOK_MAX_SOURCES = priorCap;
+
+	// Extraction: one whole agent turn, same shape as RSS's own, including discard-on-failure.
+	let lastPrompt = null;
+	setNotebookRunner(async ({ prompt }) => {
+		lastPrompt = prompt;
+		if (prompt.includes("fail-me")) throw new Error("the agent could not read it");
+		return { text: JSON.stringify({ title: "Extracted", text: "The quick brown fox jumps over the lazy dog. ".repeat(40), summary: "About a fox." }) };
+	});
+	setEmbedder(async (texts) => texts.map((t, i) => Float32Array.from([t.length % 7, i, 1])));
+
+	const badSrc = addSource(nb.id, nk.id, { kind: "upload", name: "fail-me.txt", origin: "notebooks/x/sources/fail-me.txt" });
+	{
+		const end = Date.now() + 3000;
+		while (getSource(badSrc.id) && Date.now() < end) await new Promise((r) => setTimeout(r, 15));
+	}
+	assert.equal(getSource(badSrc.id), null, "a failed extraction is discarded, not kept");
+	assert.ok(recentAuditRows(20).some((r) => r.action === "notebook.extract_failed"));
+
+	const goodSrc = addSource(nb.id, nk.id, { kind: "upload", name: "doc.txt", origin: "notebooks/x/sources/doc.txt" });
+	const waitDone = async () => {
+		const end = Date.now() + 3000;
+		for (;;) {
+			const s = getSource(goodSrc.id);
+			if (s?.status === "done") return s;
+			if (Date.now() > end) throw new Error("timed out waiting for extraction");
+			await new Promise((r) => setTimeout(r, 15));
+		}
+	};
+	const doneSrc = await waitDone();
+	assert.match(lastPrompt, /doc\.txt/, "the prompt names the uploaded file's path");
+	assert.ok(doneSrc.chunks > 0, "extraction produced at least one embedded chunk");
+
+	// Grounded Q&A: retrieval + citations, against the chunks just embedded.
+	setNotebookRunner(async ({ prompt }) => ({ text: `The fox jumps. ${prompt.includes("[1]") ? "[1]" : ""}` }));
+	const notebook = getNotebook(nb.id, nk.id);
+	const answer = await askNotebook({ notebook, question: "What does the fox do?", clientSessionId: "test-ask" });
+	assert.match(answer.text, /fox/);
+	assert.ok(answer.citations.length > 0);
+	assert.equal(answer.citations[0].sourceId, goodSrc.id);
+	await assert.rejects(askNotebook({ notebook, question: "   ", clientSessionId: "x" }), (e) => e instanceof NotebookError);
+
+	// Generated outputs: one turn over the whole notebook, persisted.
+	setNotebookRunner(async ({ prompt }) => ({ text: `A tidy ${prompt.includes("study guide") ? "study guide" : "summary"} of the fox document.` }));
+	await assert.rejects(generateOutput(notebook, "not-a-kind"), /must be one of/);
+	const out = await generateOutput(notebook, "summary");
+	assert.match(out.text, /summary/);
+	assert.deepEqual(listOutputs(nb.id).map((o) => o.id), [out.id]);
+	const out2 = await generateOutput(notebook, "study-guide");
+	assert.deepEqual(listOutputs(nb.id).map((o) => o.id).sort(), [out.id, out2.id].sort());
+
+	// A notebook with no done sources yet refuses to generate rather than send nothing useful.
+	const emptyNb = createNotebook(nk.id, { title: "Empty" });
+	await assert.rejects(generateOutput(emptyNb, "summary"), (e) => e.status === 409);
+
+	// A bad embeddings reply is reported, not thrown through the extraction pipeline.
+	setNotebookRunner(async ({ prompt }) => {
+		lastPrompt = prompt;
+		return { text: JSON.stringify({ title: "Extracted 2", text: "Another document entirely, about nothing in particular. ".repeat(20), summary: "About nothing." }) };
+	});
+	setEmbedder(async () => {
+		throw new Error("the embeddings endpoint is down");
+	});
+	const unembedded = addSource(nb.id, nk.id, { kind: "upload", name: "doc2.txt", origin: "notebooks/x/sources/doc2.txt" });
+	const waitDone2 = async () => {
+		const end = Date.now() + 3000;
+		for (;;) {
+			const s = getSource(unembedded.id);
+			if (s?.status === "done") return s;
+			if (Date.now() > end) throw new Error("timed out");
+			await new Promise((r) => setTimeout(r, 15));
+		}
+	};
+	const doneButUnembedded = await waitDone2();
+	assert.equal(doneButUnembedded.chunks, 0, "extraction itself still succeeded; only embedding failed");
+	assert.ok(recentAuditRows(20).some((r) => r.action === "notebook.embed_failed"));
+
+	setEmbedder(null);
+	setNotebookRunner(null);
+	deleteNotebook(nb.id, nk.id);
+	deleteNotebook(emptyNb.id, nk.id);
+	assert.equal(getNotebook(nb.id, nk.id), null);
+	await deleteAgent(nagent.id);
+	apiKeys.remove(nk.id);
+	apiKeys.remove(ok.id);
 }
 
 // ---------------------------------------------------------------- profile control
@@ -9404,6 +9536,51 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.equal((await call("/api/history")).status, 401);
 	deleteHistoryOf(myKey.id);
 	assert.equal(getHistory(myKey.id), null);
+
+	// Notebooks: the HTTP routes are wired and ownership-scoped -- lib/notebooks.mjs's own logic
+	// (chunking, embeddings, extraction, retrieval) is already proven directly, above.
+	{
+		const nbPage = await call("/notebook");
+		assert.equal(nbPage.status, 200);
+		assert.match(nbPage.text, /<!doctype html>|<html/i);
+
+		const created = await call("/api/notebooks", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ title: "Test Notebook" }) });
+		assert.equal(created.status, 201);
+		const nbId = created.json.id;
+		assert.equal((await call("/api/notebooks", { headers: auth })).json.notebooks.some((n) => n.id === nbId), true);
+
+		const theirAuth = { authorization: `Bearer ${theirs.key}` };
+		assert.equal((await call(`/api/notebooks/${nbId}`, { headers: theirAuth })).status, 404, "never another key's, even by the right id");
+		assert.equal((await call(`/api/notebooks/${nbId}`, { method: "DELETE", headers: theirAuth })).status, 404);
+
+		const renamed = await call(`/api/notebooks/${nbId}`, { method: "PATCH", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ title: "Renamed" }) });
+		assert.equal(renamed.json.title, "Renamed");
+
+		// Generating with no sources at all is refused cleanly, not a crash.
+		const tooSoon = await call(`/api/notebooks/${nbId}/generate`, { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ kind: "summary" }) });
+		assert.equal(tooSoon.status, 409);
+		assert.equal((await call(`/api/notebooks/${nbId}/outputs`, { headers: auth })).json.outputs.length, 0);
+
+		// A fake extraction so adding a source over HTTP does not depend on a real agent turn --
+		// lib/notebooks.mjs's own extraction and generation logic is already proven directly, above.
+		setNotebookRunner(async () => ({ text: JSON.stringify({ title: "A page", text: "Some extracted text. ".repeat(10), summary: "." }) }));
+		setEmbedder(async (texts) => texts.map(() => Float32Array.from([1, 0, 0])));
+		const srcAdded = await call(`/api/notebooks/${nbId}/sources`, { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ kind: "url", name: "a page", origin: "https://example.test/a" }) });
+		assert.equal(srcAdded.status, 201);
+		assert.equal((await call(`/api/notebooks/${nbId}/sources`, { headers: auth })).json.sources.length, 1);
+		setNotebookRunner(null);
+		setEmbedder(null);
+
+		assert.equal((await call(`/api/notebooks/${nbId}`, { method: "DELETE", headers: auth })).json.deleted, true);
+		assert.equal((await call(`/api/notebooks/${nbId}`, { headers: auth })).status, 404);
+
+		// NOTEBOOK_ENABLED off hides the whole feature, the page and every route both.
+		const priorNb = config.NOTEBOOK_ENABLED;
+		config.NOTEBOOK_ENABLED = false;
+		assert.equal((await call("/notebook")).status, 404);
+		assert.equal((await call("/api/notebooks", { headers: auth })).status, 404);
+		config.NOTEBOOK_ENABLED = priorNb;
+	}
 
 	await deleteAgent(myAgent.id);
 	await deleteAgent(theirAgent.id);

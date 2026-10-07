@@ -5,6 +5,20 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 ## [Unreleased]
 
 ### Added
+- **Notebooks: a NotebookLM-style feature in the client portal.** A new page (`/notebook`, linked from
+  the chat portal's sidebar, same login) where a key holder uploads documents or adds URLs as a
+  notebook's **sources**; each is extracted by that notebook's own agent (in its own container, the
+  same way RSS extraction already works — the gateway never parses a file or fetches a URL itself),
+  then chunked and embedded. **Chat** asks grounded questions against just those sources, with
+  citations back to which one the answer came from; a question that can't be answered from them says
+  so rather than guessing. **Generated** produces a summary, an FAQ, or a study guide from the whole
+  notebook. A failed extraction is discarded and can simply be re-added, the same tolerance this
+  session's own RSS fix already established — never a dead "failed" row.
+  Retrieval is a plain cosine-similarity scan over embeddings kept as BLOBs in the existing SQLite
+  database — no new service, no vector database; the one new host-side network call is to an
+  OpenAI-compatible embeddings endpoint (`NOTEBOOK_EMBEDDING_URL`/`_MODEL`/`_API_KEY`), the same trust
+  tier as RSS's own feed-fetching (a fixed, operator-configured address). `NOTEBOOK_ENABLED`,
+  `NOTEBOOK_SOURCE_MAX_BYTES`, `NOTEBOOK_MAX_SOURCES` round out the new settings.
 - **Edit an environment's Dockerfile right from Containers → Images.** An **edit Dockerfile** button
   next to each environment's **build**/**rebuild** opens it as plain text (Ctrl+S to save). Saving only
   changes the file on disk — nothing is built automatically; use the existing build/rebuild button

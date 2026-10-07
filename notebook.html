@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Piper — Notebooks</title>
+<style>
+  :root { color-scheme: dark;
+    --bg:#0a0a0a; --side:#0d0d0d; --panel:#101010; --card:#121212;
+    --border:#232323; --fg:#ededed; --muted:#8b8f94; --dim:#5f6368;
+    --green:#6ee7a8; --red:#f87171; --amber:#f6c177; --blue:#8ab4f8; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  button { background:var(--card); color:var(--fg); border:1px solid var(--border); border-radius:6px;
+            padding:6px 10px; font:inherit; cursor:pointer; }
+  button:hover { border-color:#3a3a3a; }
+  button:disabled { opacity:.5; cursor:default; }
+  button.on { border-color:var(--blue); color:var(--fg); }
+  input, select, textarea { background:var(--panel); color:var(--fg); border:1px solid var(--border);
+            border-radius:6px; padding:6px 8px; font:inherit; }
+  a { color:var(--blue); cursor:pointer; text-decoration:none; }
+  .hint { color:var(--muted); font-size:11px; }
+  .bad { color:var(--red) !important; }
+  .good { color:var(--green) !important; }
+
+  #login { max-width:360px; margin:12vh auto; padding:24px; }
+  #login h1 { font-size:16px; margin:0 0 4px; }
+  #login p { color:var(--muted); margin:0 0 18px; }
+  #login .row { display:flex; gap:8px; }
+  #login input { flex:1; }
+
+  #app { display:none; height:100vh; }
+  #app.on { display:flex; }
+  .side { width:240px; flex:0 0 240px; border-right:1px solid var(--border); background:var(--side);
+          display:flex; flex-direction:column; }
+  .side .top { padding:10px; border-bottom:1px solid var(--border); }
+  .side .top button { width:100%; }
+  #nblist { flex:1; overflow:auto; padding:6px; }
+  .nbrow { padding:8px 10px; border-radius:6px; cursor:pointer; margin-bottom:2px; position:relative; }
+  .nbrow:hover { background:#161616; }
+  .nbrow.on { background:#1c1c1c; }
+  .nbrow .t { font-size:12px; }
+  .nbrow .s { color:var(--dim); font-size:10px; }
+  .nbclear { position:absolute; top:6px; right:6px; border:none; background:transparent; color:var(--dim);
+             padding:2px 6px; border-radius:4px; font-size:13px; line-height:1; }
+  .nbclear:hover { color:var(--red); background:#201414; }
+  .side .bottom { padding:10px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  .who { font-size:11px; color:var(--muted); }
+
+  main { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .bar { padding:10px 14px; border-bottom:1px solid var(--border); display:flex; gap:8px; align-items:center; }
+  .bar .sp { flex:1; }
+  .bar .seg button { border-radius:0; }
+  #nbtitle { font-size:13px; font-weight:600; }
+  .nbempty { margin:10vh auto; text-align:center; color:var(--muted); max-width:400px; }
+
+  .viewbox { flex:1; overflow:auto; padding:16px; }
+  .viewbox[hidden] { display:none; }
+
+  /* sources */
+  .addsrc { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
+  .addsrc input[type=text] { flex:1; min-width:200px; }
+  .srow { padding:8px 10px; border:1px solid var(--border); border-radius:6px; margin-bottom:6px;
+          display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .srow .nm { font-size:12px; }
+  .srow .st { font-size:10px; color:var(--dim); }
+  .srow .st.working { color:var(--amber); }
+  .srow .st.bad { color:var(--red); }
+  .srow button { font-size:11px; padding:2px 8px; }
+
+  /* chat */
+  .msgs { max-width:760px; margin:0 auto; }
+  .q { margin:0 0 6px; }
+  .q b { color:var(--muted); font-size:11px; }
+  .a { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin:0 0 20px; }
+  .a.pending { color:var(--muted); }
+  .cites { margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; }
+  .cite { font-size:10px; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:2px 8px; }
+  .askrow { display:flex; gap:8px; padding:12px 14px; border-top:1px solid var(--border); }
+  .askrow textarea { flex:1; resize:none; min-height:40px; max-height:160px; }
+
+  /* generated */
+  .genbtns { display:flex; gap:8px; margin-bottom:14px; }
+  .outrow { border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin-bottom:10px; }
+  .outrow .k { color:var(--dim); font-size:10px; text-transform:uppercase; letter-spacing:.06em; }
+  .outrow pre { white-space:pre-wrap; word-break:break-word; margin:6px 0 0; font:inherit; }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h1>Piper notebooks</h1>
+  <p>Log in with your own API key or portal password (the same login the chat portal uses).</p>
+  <div class="row"><input id="keyinput" type="password" placeholder="piper_... or your portal password" autocomplete="off"></div>
+  <div class="row" style="margin-top:8px"><button id="connect">connect</button></div>
+  <p id="loginnote" class="hint"></p>
+  <p class="hint"><a href="/">&larr; back to chat</a></p>
+</div>
+
+<div id="app">
+  <div class="side">
+    <div class="top"><button id="newnb">+ new notebook</button></div>
+    <div id="nblist"></div>
+    <div class="bottom"><span class="who" id="who"></span><a href="/">&larr; chat</a></div>
+  </div>
+  <main>
+    <div class="bar">
+      <span id="nbtitle"></span>
+      <div class="sp"></div>
+      <span class="seg">
+        <button id="tabsources" class="on">Sources</button>
+        <button id="tabchat">Chat</button>
+        <button id="tabgen">Generated</button>
+      </span>
+    </div>
+
+    <div id="viewempty" class="viewbox">
+      <div class="nbempty"><p>Pick a notebook on the left, or create a new one.</p></div>
+    </div>
+
+    <div id="viewsources" class="viewbox" hidden>
+      <div class="addsrc">
+        <input type="text" id="srcurl" placeholder="https://... (a page to fetch and extract)">
+        <button id="srcaddurl">add URL</button>
+        <button id="srcaddfile">upload a file…</button>
+        <input type="file" id="srcfile" hidden>
+      </div>
+      <div id="srclist"></div>
+    </div>
+
+    <div id="viewchat" class="viewbox" hidden>
+      <div class="msgs" id="chatmsgs"></div>
+    </div>
+    <div class="askrow" id="askrow" hidden>
+      <textarea id="askinput" placeholder="Ask a question about this notebook's sources... (Enter to ask, Shift+Enter for a new line)"></textarea>
+      <button id="asksend">ask</button>
+    </div>
+
+    <div id="viewgen" class="viewbox" hidden>
+      <div class="genbtns">
+        <button id="gensummary">generate summary</button>
+        <button id="genfaq">generate FAQ</button>
+        <button id="genstudy">generate study guide</button>
+      </div>
+      <div id="genlist"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+'use strict';
+function $(id) { return document.getElementById(id); }
+function el(tag, text) { var e = document.createElement(tag); if (text !== undefined) e.textContent = text; return e; }
+
+var KEY = sessionStorage.getItem('piper-portal-key') || '';
+var WHOAMI = null;
+var NOTEBOOKS = [];
+var CUR = null;
+var TAB = 'sources';
+var ASKING = false;
+
+function api(path, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({ Authorization: 'Bearer ' + KEY }, opts.headers || {});
+  return fetch(path, opts);
+}
+function apiJson(path, opts) {
+  return api(path, opts).then(function (r) {
+    return r.json().catch(function () { return {}; }).then(function (j) {
+      if (!r.ok) throw new Error((j.error && j.error.message) || ('HTTP ' + r.status));
+      return j;
+    });
+  });
+}
+
+function showLogin(msg) {
+  $('login').style.display = 'block';
+  $('app').classList.remove('on');
+  if (msg) { $('loginnote').textContent = msg; $('loginnote').className = 'hint bad'; }
+}
+function showApp() {
+  $('login').style.display = 'none';
+  $('app').classList.add('on');
+}
+
+function nb() { return NOTEBOOKS.filter(function (n) { return n.id === CUR; })[0] || null; }
+
+function renderSide() {
+  var box = $('nblist');
+  box.replaceChildren();
+  NOTEBOOKS.forEach(function (n) {
+    var row = el('div');
+    row.className = 'nbrow' + (n.id === CUR ? ' on' : '');
+    row.appendChild(el('div', n.title)).className = 't';
+    var agent = (WHOAMI.agents || []).filter(function (a) { return a.id === n.agentId; })[0];
+    row.appendChild(el('div', agent ? agent.name : '(main endpoint)')).className = 's';
+    row.addEventListener('click', function () { openNotebook(n.id); });
+    var clear = el('button', '×');
+    clear.className = 'nbclear';
+    clear.title = 'delete this notebook';
+    clear.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (!confirm('Delete "' + n.title + '" and everything in it?')) return;
+      apiJson('api/notebooks/' + n.id, { method: 'DELETE' }).then(loadNotebooks).catch(function (err) { alert(err.message); });
+    });
+    row.appendChild(clear);
+    box.appendChild(row);
+  });
+}
+
+function loadNotebooks() {
+  return apiJson('api/notebooks').then(function (d) {
+    NOTEBOOKS = d.notebooks || [];
+    if (CUR && !nb()) CUR = null;
+    renderSide();
+    renderMain();
+  });
+}
+
+function newNotebook() {
+  var title = prompt('Notebook title:', 'New notebook');
+  if (title === null) return;
+  apiJson('api/notebooks', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: title }) })
+    .then(function (n) { return loadNotebooks().then(function () { openNotebook(n.id); }); })
+    .catch(function (e) { alert(e.message); });
+}
+
+function openNotebook(id) {
+  CUR = id;
+  renderSide();
+  renderMain();
+}
+
+function setTab(t) {
+  TAB = t;
+  ['sources', 'chat', 'gen'].forEach(function (x) {
+    $('tab' + x).className = x === t ? 'on' : '';
+  });
+  renderMain();
+}
+$('tabsources').addEventListener('click', function () { setTab('sources'); });
+$('tabchat').addEventListener('click', function () { setTab('chat'); });
+$('tabgen').addEventListener('click', function () { setTab('gen'); });
+
+function renderMain() {
+  var c = nb();
+  $('viewempty').hidden = Boolean(c);
+  $('viewsources').hidden = !c || TAB !== 'sources';
+  $('viewchat').hidden = !c || TAB !== 'chat';
+  $('askrow').hidden = !c || TAB !== 'chat';
+  $('viewgen').hidden = !c || TAB !== 'gen';
+  $('nbtitle').textContent = c ? c.title : '';
+  ['tabsources', 'tabchat', 'tabgen'].forEach(function (id) { $(id).disabled = !c; });
+  if (!c) return;
+  if (TAB === 'sources') loadSources();
+  else if (TAB === 'gen') loadOutputs();
+}
+
+/* ---- sources ---- */
+var SRC_TIMER = null;
+function loadSources() {
+  var c = nb();
+  if (!c) return;
+  apiJson('api/notebooks/' + c.id + '/sources').then(function (d) {
+    renderSources(d.sources || []);
+    clearTimeout(SRC_TIMER);
+    if (d.sources && d.sources.some(function (s) { return s.status !== 'done'; })) SRC_TIMER = setTimeout(loadSources, 2000);
+  }).catch(function () {});
+}
+function renderSources(sources) {
+  var box = $('srclist');
+  box.replaceChildren();
+  if (!sources.length) { box.appendChild(el('p', 'No sources yet. Add a URL, or upload a file above.')).className = 'hint'; return; }
+  sources.forEach(function (s) {
+    var row = el('div'); row.className = 'srow';
+    var left = el('div');
+    left.appendChild(el('div', (s.kind === 'url' ? '🔗 ' : '📄 ') + s.name)).className = 'nm';
+    var statusText = s.status === 'done' ? s.chunks + ' passage(s) indexed' : s.status === 'extracting' ? 'extracting…' : 'queued…';
+    var st = left.appendChild(el('div', statusText));
+    st.className = 'st' + (s.status !== 'done' ? ' working' : '');
+    row.appendChild(left);
+    var rm = el('button', 'remove');
+    rm.addEventListener('click', function () {
+      apiJson('api/notebooks/' + nb().id + '/sources/' + s.id, { method: 'DELETE' }).then(loadSources).catch(function (e) { alert(e.message); });
+    });
+    row.appendChild(rm);
+    box.appendChild(row);
+  });
+}
+$('srcaddurl').addEventListener('click', function () {
+  var c = nb();
+  var url = $('srcurl').value.trim();
+  if (!c || !url) return;
+  var name = url.replace(/^https?:\/\//, '').slice(0, 60);
+  apiJson('api/notebooks/' + c.id + '/sources', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'url', name: name, origin: url }) })
+    .then(function () { $('srcurl').value = ''; loadSources(); })
+    .catch(function (e) { alert(e.message); });
+});
+$('srcurl').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('srcaddurl').click(); });
+$('srcaddfile').addEventListener('click', function () { $('srcfile').click(); });
+$('srcfile').addEventListener('change', function () {
+  var c = nb();
+  var f = this.files[0];
+  this.value = '';
+  if (!c || !f) return;
+  var agentQ = c.agentId ? ('?agentId=' + encodeURIComponent(c.agentId)) : '';
+  var path = 'notebooks/' + c.id + '/sources/' + encodeURIComponent(f.name);
+  api('api/files/' + path + agentQ, { method: 'PUT', body: f }).then(function (r) {
+    if (!r.ok) throw new Error('upload failed: HTTP ' + r.status);
+    return apiJson('api/notebooks/' + c.id + '/sources', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'upload', name: f.name, origin: 'notebooks/' + c.id + '/sources/' + f.name, bytes: f.size }) });
+  }).then(loadSources).catch(function (e) { alert(e.message); });
+});
+
+/* ---- chat ---- */
+function streamInto(reader, onEvent) {
+  var dec = new TextDecoder(), buf = '';
+  function handle(block) {
+    var ev = /^event: (.*)$/m.exec(block), data = /^data: (.*)$/m.exec(block);
+    if (!ev || !data) return;
+    var d;
+    try { d = JSON.parse(data[1]); } catch (e) { return; }
+    onEvent(ev[1], d);
+  }
+  function pump() {
+    return reader.read().then(function (x) {
+      if (x.done) return;
+      buf += dec.decode(x.value, { stream: true });
+      var i;
+      while ((i = buf.indexOf('\n\n')) >= 0) { handle(buf.slice(0, i)); buf = buf.slice(i + 2); }
+      return pump();
+    });
+  }
+  return pump();
+}
+function renderCitations(box, citations) {
+  if (!citations || !citations.length) return;
+  var row = el('div'); row.className = 'cites';
+  citations.forEach(function (c) { row.appendChild(el('span', '[' + c.n + '] ' + c.sourceName)).className = 'cite'; });
+  box.appendChild(row);
+}
+function ask() {
+  var c = nb();
+  var question = $('askinput').value.trim();
+  if (!c || !question || ASKING) return;
+  var box = $('chatmsgs');
+  box.appendChild(el('div', question)).className = 'q';
+  var ans = el('div', ''); ans.className = 'a pending';
+  box.appendChild(ans);
+  $('askinput').value = '';
+  ASKING = true;
+  $('asksend').textContent = 'asking…';
+  $('asksend').disabled = true;
+  var text = '';
+  api('api/notebooks/' + c.id + '/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ question: question }) })
+    .then(function (r) {
+      if (!r.ok || (r.headers.get('content-type') || '').indexOf('event-stream') < 0) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error((j.error && j.error.message) || ('HTTP ' + r.status)); });
+      return streamInto(r.body.getReader(), function (event, d) {
+        if (event === 'delta') { text += d.text; ans.textContent = text; }
+        else if (event === 'done') { ans.textContent = d.text || text; ans.className = 'a'; renderCitations(ans, d.citations); }
+        else if (event === 'error') { ans.textContent = d.message; ans.className = 'a bad'; }
+      });
+    })
+    .catch(function (e) { ans.textContent = e.message; ans.className = 'a bad'; })
+    .then(function () {
+      ASKING = false;
+      $('asksend').textContent = 'ask';
+      $('asksend').disabled = false;
+      box.scrollTop = box.scrollHeight;
+    });
+}
+$('asksend').addEventListener('click', ask);
+$('askinput').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); } });
+
+/* ---- generated outputs ---- */
+function loadOutputs() {
+  var c = nb();
+  if (!c) return;
+  apiJson('api/notebooks/' + c.id + '/outputs').then(function (d) { renderOutputs(d.outputs || []); }).catch(function () {});
+}
+function renderOutputs(outputs) {
+  var box = $('genlist');
+  box.replaceChildren();
+  if (!outputs.length) { box.appendChild(el('p', 'Nothing generated yet.')).className = 'hint'; return; }
+  outputs.forEach(function (o) {
+    var row = el('div'); row.className = 'outrow';
+    row.appendChild(el('div', o.kind)).className = 'k';
+    row.appendChild(el('pre', o.text));
+    box.appendChild(row);
+  });
+}
+function generate(kind, btn) {
+  var c = nb();
+  if (!c) return;
+  var was = btn.textContent;
+  btn.disabled = true; btn.textContent = 'generating…';
+  apiJson('api/notebooks/' + c.id + '/generate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: kind }) })
+    .then(loadOutputs)
+    .catch(function (e) { alert(e.message); })
+    .then(function () { btn.disabled = false; btn.textContent = was; });
+}
+$('gensummary').addEventListener('click', function () { generate('summary', this); });
+$('genfaq').addEventListener('click', function () { generate('faq', this); });
+$('genstudy').addEventListener('click', function () { generate('study-guide', this); });
+
+/* ---- login ---- */
+function connect(key) {
+  KEY = key;
+  return apiJson('api/whoami').then(function (d) {
+    WHOAMI = d;
+    sessionStorage.setItem('piper-portal-key', KEY);
+    $('who').textContent = d.portalUsername || d.name;
+    return loadNotebooks();
+  }).then(function () {
+    showApp();
+  }).catch(function (e) {
+    KEY = '';
+    showLogin(e.message);
+  });
+}
+$('connect').addEventListener('click', function () {
+  var key = $('keyinput').value.trim();
+  if (!key) return;
+  connect(key);
+});
+$('keyinput').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('connect').click(); });
+$('newnb').addEventListener('click', newNotebook);
+
+if (KEY) connect(KEY); else showLogin();
+</script>
+</body>
+</html>
