@@ -205,7 +205,7 @@
 
 <div id="app">
   <div class="side">
-    <div class="top"><button id="newchat" title="new chat">+ new chat</button><a href="/notebook" style="margin-left:8px" title="notebooks: grounded Q&amp;A over your own sources">&#128211; Notebooks</a></div>
+    <div class="top"><button id="newchat" title="new chat">+ new chat</button><button id="gotonotebook" title="notebooks: grounded Q&amp;A over your own sources">&#128211; Notebooks</button></div>
     <div id="convlist"></div>
     <div class="bottom"><span class="who" id="who"></span><span><button id="passbtn" title="portal password">&#9881;</button><button id="logout">log out</button></span></div>
   </div>
@@ -1201,6 +1201,7 @@ $('logout').addEventListener('click', function () {
   showLogin();
 });
 $('newchat').addEventListener('click', function () { newChat(); });
+$('gotonotebook').addEventListener('click', function () { location.href = '/notebook'; });
 $('target').addEventListener('change', function () { var c = conv(); if (!c || c.messages.length) return; c.agentId = $('target').value; saveConvos(); renderAll(); });
 $('send').addEventListener('click', function () {
   var c = conv();
