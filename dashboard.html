@@ -2520,6 +2520,46 @@ function loadIntegrations() {
   });
 }
 
+/** One editable model row: context, vision/embedding/audio, reasoning + its effort level, enabled, and
+ * a save button -- shared by the Overview tab's own table and the endpoint edit panel, so capabilities
+ * and the reasoning level can be changed from either place the same way. `onSaved(data)` runs after a
+ * successful save, to re-render whatever's showing it. */
+function intModelRow(m, onSaved) {
+  var tr = el('tr');
+  tr.appendChild(el('td', m.modelId));
+  var ctx = el('input'); ctx.type = 'number'; ctx.value = m.contextWindow || ''; ctx.style.width = '90px'; ctx.className = 'rowlimit';
+  tr.appendChild(el('td')).appendChild(ctx);
+  var caps = {};
+  ['vision', 'embedding', 'audio'].forEach(function (c) {
+    var cb = el('input'); cb.type = 'checkbox'; cb.checked = Boolean(m[c]); caps[c] = cb;
+    tr.appendChild(el('td')).appendChild(cb);
+  });
+  var reasonCb = el('input'); reasonCb.type = 'checkbox'; reasonCb.checked = Boolean(m.reasoning);
+  var effortSel = el('select');
+  var none = el('option', '(default)'); none.value = ''; effortSel.appendChild(none);
+  REASONING_EFFORTS.forEach(function (lvl) { var o = el('option', lvl); o.value = lvl; effortSel.appendChild(o); });
+  effortSel.value = m.reasoningEffort || '';
+  effortSel.disabled = !reasonCb.checked;
+  reasonCb.addEventListener('change', function () { effortSel.disabled = !reasonCb.checked; });
+  var reasonTd = el('td'); reasonTd.appendChild(reasonCb); reasonTd.appendChild(effortSel);
+  tr.appendChild(reasonTd);
+  var en = el('input'); en.type = 'checkbox'; en.checked = m.enabled;
+  tr.appendChild(el('td')).appendChild(en);
+  var note = el('span'); note.className = 'hint';
+  var save = el('button', 'save');
+  save.addEventListener('click', function () {
+    save.disabled = true;
+    note.textContent = '';
+    epPost('dashboard/integrations/models/' + m.id, { contextWindow: ctx.value ? Number(ctx.value) : null, vision: caps.vision.checked, embedding: caps.embedding.checked, audio: caps.audio.checked, reasoning: reasonCb.checked, reasoningEffort: reasonCb.checked ? (effortSel.value || null) : null, enabled: en.checked })
+      .then(function (d) { onSaved(d); })
+      .catch(function (e) { note.textContent = e.message; note.className = 'hint bad'; })
+      .then(function () { save.disabled = false; });
+  });
+  var saveTd = el('td'); saveTd.appendChild(save); saveTd.appendChild(note);
+  tr.appendChild(saveTd);
+  return tr;
+}
+
 function capBadges(m) {
   var box = el('span');
   [['vision', 'Vision'], ['embedding', 'Embedding'], ['audio', 'Audio']].forEach(function (c) {
@@ -2562,15 +2602,11 @@ function renderIntOverview() {
     group.appendChild(head);
     var table = el('table');
     var thead = el('thead'); var htr = el('tr');
-    ['model', 'name', 'context', 'capabilities', ''].forEach(function (h) { htr.appendChild(el('th', h)); });
+    ['model', 'context', 'vision', 'embedding', 'audio', 'reasoning (effort)', 'enabled', '', ''].forEach(function (h) { htr.appendChild(el('th', h)); });
     thead.appendChild(htr); table.appendChild(thead);
     var tbody = el('tbody');
     ep.models.forEach(function (m) {
-      var tr = el('tr');
-      tr.appendChild(el('td', m.modelId));
-      tr.appendChild(el('td', m.name || m.modelId));
-      tr.appendChild(el('td', m.contextWindow ? m.contextWindow.toLocaleString() : '—')).className = 'num';
-      tr.appendChild(el('td')).appendChild(capBadges(m));
+      var tr = intModelRow(m, function (d) { INT_DATA = d; renderIntOverview(); renderIntEndpoints(); });
       var del = el('button', 'remove');
       del.addEventListener('click', function () {
         if (!confirm('Remove model "' + m.modelId + '"? Any key using it loses access.')) return;
@@ -2619,35 +2655,11 @@ function openIntEditor(ep) {
   var tbody = $('inteditmodels');
   tbody.replaceChildren();
   ep.models.forEach(function (m) {
-    var tr = el('tr');
-    tr.appendChild(el('td', m.modelId));
-    var ctx = el('input'); ctx.type = 'number'; ctx.value = m.contextWindow || ''; ctx.style.width = '90px'; ctx.className = 'rowlimit';
-    tr.appendChild(el('td')).appendChild(ctx);
-    var caps = {};
-    ['vision', 'embedding', 'audio'].forEach(function (c) {
-      var cb = el('input'); cb.type = 'checkbox'; cb.checked = Boolean(m[c]); caps[c] = cb;
-      tr.appendChild(el('td')).appendChild(cb);
+    var tr = intModelRow(m, function (d) {
+      INT_DATA = d; renderIntOverview(); renderIntEndpoints();
+      var fresh = INT_DATA.endpoints.find(function (e) { return e.id === ep.id; });
+      if (fresh) openIntEditor(fresh);
     });
-    var reasonCb = el('input'); reasonCb.type = 'checkbox'; reasonCb.checked = Boolean(m.reasoning);
-    var effortSel = el('select');
-    var none = el('option', '(default)'); none.value = ''; effortSel.appendChild(none);
-    REASONING_EFFORTS.forEach(function (lvl) { var o = el('option', lvl); o.value = lvl; effortSel.appendChild(o); });
-    effortSel.value = m.reasoningEffort || '';
-    effortSel.disabled = !reasonCb.checked;
-    reasonCb.addEventListener('change', function () { effortSel.disabled = !reasonCb.checked; });
-    var reasonTd = el('td'); reasonTd.appendChild(reasonCb); reasonTd.appendChild(effortSel);
-    tr.appendChild(reasonTd);
-    var en = el('input'); en.type = 'checkbox'; en.checked = m.enabled;
-    tr.appendChild(el('td')).appendChild(en);
-    var save = el('button', 'save');
-    save.addEventListener('click', function () {
-      save.disabled = true;
-      epPost('dashboard/integrations/models/' + m.id, { contextWindow: ctx.value ? Number(ctx.value) : null, vision: caps.vision.checked, embedding: caps.embedding.checked, audio: caps.audio.checked, reasoning: reasonCb.checked, reasoningEffort: reasonCb.checked ? (effortSel.value || null) : null, enabled: en.checked })
-        .then(function (d) { INT_DATA = d; renderIntOverview(); renderIntEndpoints(); var fresh = INT_DATA.endpoints.find(function (e) { return e.id === ep.id; }); if (fresh) openIntEditor(fresh); })
-        .catch(function (e) { $('inteditnote').textContent = e.message; $('inteditnote').className = 'hint bad'; })
-        .then(function () { save.disabled = false; });
-    });
-    tr.appendChild(el('td')).appendChild(save);
     tbody.appendChild(tr);
   });
   $('intedit').scrollIntoView({ block: 'nearest' });

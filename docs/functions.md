@@ -502,13 +502,14 @@ models separate from Pi's own catalogue, and which API key may use which of them
 way is **chat only** -- a direct, host-side streaming HTTP call to its own `/v1/chat/completions`
 (`lib/externalmodels.mjs`), never a Pi container session, so there are no tools, skills or extensions;
 the client portal sends the whole conversation with every turn instead, since there's no server-side
-session to keep it in. **Overview** lists every endpoint's models, their capabilities (vision,
-embedding, audio, reasoning -- chat is implied, editable here) and whether the endpoint answered last
-time it was checked (a **recheck** button, not polling); editing an endpoint's name, URL or API key
-opens an inline panel. A reasoning-flagged model also gets a configurable effort level (default, low,
-medium, high, xhigh -- the same level names as Pi's own agents, and the same `reasoning_effort` request
-field Piper's own `/v1/chat/completions` already accepts); default sends nothing at all, leaving the
-model to its own behavior. **External Endpoints** lists the
+session to keep it in. **Overview** lists every endpoint's models, each row directly editable (context
+window, vision/embedding/audio, reasoning and its effort level, enabled -- chat is always implied, a
+**save** button per row) and whether the endpoint answered last time it was checked (a **recheck**
+button, not polling); changing the endpoint's own name, URL or API key opens an inline panel (same
+per-row editing there too). A reasoning-flagged model's effort level is default, low, medium, high or
+xhigh -- the same level names as Pi's own agents, and the same `reasoning_effort` request field Piper's
+own `/v1/chat/completions` already accepts; default sends nothing at all, leaving the model to its own
+behavior. **External Endpoints** lists the
 endpoints themselves. **Wizard** adds a new one in three steps: name/URL/API key, then a **detect
 models** button (probes the endpoint's own `/v1/models`, best-effort -- always editable, and a model
 can be added by hand if detection finds nothing), then review and save. **Access Control** grants

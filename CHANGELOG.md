@@ -8,9 +8,10 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 - **Integrations: external OpenAI-compatible chat endpoints, assignable to API keys.** A new dashboard
   section (Integrations, under Infrastructure) for adding a chat endpoint outside Pi's own provider
   catalogue — self-hosted inference, a third-party API — with an optional API key. **Overview** lists
-  every endpoint's models, their capabilities (vision/embedding/audio/reasoning — chat is always
-  implied) and whether the endpoint answered last time it was checked (an on-demand **recheck**, not
-  polling); editing an endpoint opens an inline panel. A reasoning-flagged model also gets a
+  every endpoint's models, each row directly editable in place (context window, vision/embedding/audio,
+  reasoning and its effort, enabled, a **save** button per row — chat is always implied) and whether the
+  endpoint answered last time it was checked (an on-demand **recheck**, not polling); changing the
+  endpoint's own name, URL or API key opens an inline panel. A reasoning-flagged model also gets a
   configurable effort level (default, low, medium, high, xhigh — the same level names as Pi's own
   agents, and the same `reasoning_effort` field Piper's own `/v1/chat/completions` already accepts);
   default sends nothing at all. **External Endpoints** lists
