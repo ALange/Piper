@@ -50,19 +50,30 @@
 
   main { flex:1; display:flex; flex-direction:column; min-width:0; }
   .bar { padding:10px 14px; border-bottom:1px solid var(--border); display:flex; gap:8px; align-items:center; }
+  .bar select { max-width:220px; }
   .bar .sp { flex:1; }
   .bar .seg button { border-radius:0; }
-  #nbtitle { font-size:13px; font-weight:600; }
+  #nbtitle { font-size:13px; font-weight:600; white-space:nowrap; }
   .nbempty { margin:10vh auto; text-align:center; color:var(--muted); max-width:400px; }
+
+  .statusbar { padding:6px 14px; border-bottom:1px solid var(--border); background:var(--panel); font-size:11px;
+               color:var(--muted); display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .statusbar b { color:var(--fg); font-weight:600; }
+  .statusbar[hidden] { display:none; }
 
   .viewbox { flex:1; overflow:auto; padding:16px; }
   .viewbox[hidden] { display:none; }
+  .viewrow { flex:1; display:flex; min-width:0; min-height:0; }
+  #viewchatwrap { display:flex; flex-direction:column; padding:0; }
+  #viewchatwrap[hidden] { display:none; }
+  #viewchat { flex:1; overflow:auto; padding:16px; }
 
   /* sources */
   .addsrc { display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap; }
   .addsrc input[type=text] { flex:1; min-width:200px; }
   .srow { padding:8px 10px; border:1px solid var(--border); border-radius:6px; margin-bottom:6px;
-          display:flex; justify-content:space-between; align-items:center; gap:8px; }
+          display:flex; justify-content:space-between; align-items:center; gap:8px; cursor:pointer; }
+  .srow:hover { background:#141414; }
   .srow .nm { font-size:12px; }
   .srow .st { font-size:10px; color:var(--dim); }
   .srow .st.working { color:var(--amber); }
@@ -76,15 +87,58 @@
   .a { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin:0 0 20px; }
   .a.pending { color:var(--muted); }
   .cites { margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; }
-  .cite { font-size:10px; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:2px 8px; }
+  .cite { font-size:10px; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:2px 8px; cursor:pointer; }
+  .cite:hover { border-color:var(--blue); color:var(--blue); }
+  .foot { color:var(--dim); font-size:11px; margin:-14px 0 20px; }
   .askrow { display:flex; gap:8px; padding:12px 14px; border-top:1px solid var(--border); }
   .askrow textarea { flex:1; resize:none; min-height:40px; max-height:160px; }
+
+  /* markdown rendering, same as the chat portal's own */
+  .md p { margin:0 0 10px; } .md ul, .md ol { margin:0 0 10px; padding-left:22px; } .md li { margin:2px 0; }
+  .md h3, .md h4, .md h5, .md h6 { margin:14px 0 6px; } .md blockquote { margin:0 0 10px; padding:2px 12px; border-left:3px solid var(--border); color:var(--muted); }
+  .md code { background:#1a1a1a; padding:1px 5px; border-radius:4px; font-size:12px; } .md a { color:var(--blue); } .md hr { border:0; border-top:1px solid var(--border); }
+  .md p:last-child, .md ul:last-child, .md ol:last-child { margin-bottom:0; }
+  .mdcode { margin:0 0 12px; border:1px solid var(--border); border-radius:8px; overflow:hidden; background:#0b0b0b; }
+  .mdcodebar { display:flex; justify-content:space-between; align-items:center; padding:4px 10px; background:#151515; color:var(--dim); font-size:11px; }
+  .mdcodebar button { padding:2px 8px; font-size:11px; }
+  .mdcode pre { margin:0; padding:10px 12px; overflow:auto; font-size:12px; line-height:1.5; } .mdcode code { background:none; padding:0; }
+  .mdtable { overflow:auto; margin:0 0 12px; } .mdtable table { border-collapse:collapse; } .mdtable th, .mdtable td { border:1px solid var(--border); padding:4px 10px; }
 
   /* generated */
   .genbtns { display:flex; gap:8px; margin-bottom:14px; }
   .outrow { border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin-bottom:10px; }
   .outrow .k { color:var(--dim); font-size:10px; text-transform:uppercase; letter-spacing:.06em; }
-  .outrow pre { white-space:pre-wrap; word-break:break-word; margin:6px 0 0; font:inherit; }
+  .outrow .md { margin-top:6px; }
+
+  /* file browser, ported from the chat portal's own */
+  .sidebox { width:300px; flex:0 0 300px; border-left:1px solid var(--border); background:var(--side);
+             display:none; flex-direction:column; }
+  .sidebox.on { display:flex; }
+  .sidebox .top { padding:10px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  #crumb { padding:8px 10px; font-size:11px; color:var(--muted); }
+  #crumb a { margin-right:2px; }
+  #filelist { flex:1; overflow:auto; padding:0 6px 10px; }
+  .frow { padding:6px 8px; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; font-size:12px; }
+  .frow:hover { background:#161616; }
+  .frow .sz { color:var(--dim); font-size:10px; }
+  .frow .del { opacity:.5; padding:0 4px; }
+  .frow .del:hover { opacity:1; color:var(--red); }
+
+  /* a small modal for previewing/downloading a file */
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center;
+                    justify-content:center; z-index:50; }
+  .modal-overlay[hidden] { display:none; }
+  .modal-box.wide { width:min(1100px, 92vw); }
+  .modal-box { width:min(680px, 92vw); max-height:84vh; display:flex; flex-direction:column; background:var(--panel);
+               border:1px solid var(--border); border-radius:10px; padding:16px; }
+  .modal-top { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:4px; }
+  .modal-top b { font-size:13px; word-break:break-all; }
+  .modal-body { flex:1; overflow:auto; margin-top:10px; }
+  .modal-body pre { white-space:pre-wrap; word-break:break-word; margin:0; font-size:12px; }
+  .modal-body img { max-width:100%; display:block; }
+  .htmlpreview { width:100%; height:65vh; border:1px solid var(--border); border-radius:6px; background:#fff; }
+  .modal-actions { margin-top:12px; text-align:right; }
+  .modal-actions a { text-decoration:none; }
 </style>
 </head>
 <body>
@@ -107,45 +161,70 @@
   <main>
     <div class="bar">
       <span id="nbtitle"></span>
+      <select id="target"></select>
       <div class="sp"></div>
       <span class="seg">
         <button id="tabsources" class="on">Sources</button>
         <button id="tabchat">Chat</button>
         <button id="tabgen">Generated</button>
       </span>
+      <button id="filesbtn">files</button>
+    </div>
+    <div id="statusbar" class="statusbar" hidden>
+      <div id="statusstats"></div>
     </div>
 
-    <div id="viewempty" class="viewbox">
-      <div class="nbempty"><p>Pick a notebook on the left, or create a new one.</p></div>
-    </div>
-
-    <div id="viewsources" class="viewbox" hidden>
-      <div class="addsrc">
-        <input type="text" id="srcurl" placeholder="https://... (a page to fetch and extract)">
-        <button id="srcaddurl">add URL</button>
-        <button id="srcaddfile">upload a file…</button>
-        <input type="file" id="srcfile" hidden>
+    <div class="viewrow">
+      <div id="viewempty" class="viewbox">
+        <div class="nbempty"><p>Pick a notebook on the left, or create a new one.</p></div>
       </div>
-      <div id="srclist"></div>
-    </div>
 
-    <div id="viewchat" class="viewbox" hidden>
-      <div class="msgs" id="chatmsgs"></div>
-    </div>
-    <div class="askrow" id="askrow" hidden>
-      <textarea id="askinput" placeholder="Ask a question about this notebook's sources... (Enter to ask, Shift+Enter for a new line)"></textarea>
-      <button id="asksend">ask</button>
-    </div>
-
-    <div id="viewgen" class="viewbox" hidden>
-      <div class="genbtns">
-        <button id="gensummary">generate summary</button>
-        <button id="genfaq">generate FAQ</button>
-        <button id="genstudy">generate study guide</button>
+      <div id="viewsources" class="viewbox" hidden>
+        <div class="addsrc">
+          <input type="text" id="srcurl" placeholder="https://... (a page to fetch and extract)">
+          <button id="srcaddurl">add URL</button>
+          <button id="srcaddfile">upload a file…</button>
+          <input type="file" id="srcfile" hidden>
+        </div>
+        <div id="srclist"></div>
       </div>
-      <div id="genlist"></div>
+
+      <div id="viewchatwrap" class="viewbox" hidden>
+        <div id="viewchat">
+          <div class="msgs" id="chatmsgs"></div>
+        </div>
+        <div class="askrow" id="askrow">
+          <textarea id="askinput" placeholder="Ask a question about this notebook's sources... (Enter to ask, Shift+Enter for a new line)"></textarea>
+          <button id="asksend">ask</button>
+        </div>
+      </div>
+
+      <div id="viewgen" class="viewbox" hidden>
+        <div class="genbtns">
+          <button id="gensummary">generate summary</button>
+          <button id="genfaq">generate FAQ</button>
+          <button id="genstudy">generate study guide</button>
+        </div>
+        <div id="genlist"></div>
+      </div>
+
+      <div id="filesbox" class="sidebox">
+        <div class="top"><b>Files</b><div><button id="uploadbtn">upload</button><button id="filesrefresh">refresh</button></div></div>
+        <input type="file" id="uploadinput" multiple hidden>
+        <div id="crumb"></div>
+        <div id="filelist"></div>
+      </div>
     </div>
   </main>
+</div>
+
+<div id="filemodal" class="modal-overlay" hidden>
+  <div class="modal-box" id="fmbox">
+    <div class="modal-top"><b id="fmtitle"></b><button id="fmclose">close</button></div>
+    <div class="hint" id="fmmeta"></div>
+    <div id="fmbody" class="modal-body"></div>
+    <div class="modal-actions"><a id="fmdownload" download><button>download</button></a></div>
+  </div>
 </div>
 
 <script>
@@ -153,12 +232,169 @@
 function $(id) { return document.getElementById(id); }
 function el(tag, text) { var e = document.createElement(tag); if (text !== undefined) e.textContent = text; return e; }
 
+/* ---- a small markdown renderer, for the model's replies (same as the chat portal's own) ---- */
+function mdInline(text) {
+  var out = [];
+  var i = 0, buf = '';
+  function flush() { if (buf) { out.push({ t: 'text', v: buf }); buf = ''; } }
+  while (i < text.length) {
+    var c = text[i], rest = text.slice(i), m;
+    if (c === '\\' && i + 1 < text.length && /[\\`*_{}\[\]()#+\-.!~|>]/.test(text[i + 1])) { buf += text[i + 1]; i += 2; continue; }
+    if (c === '`') {
+      m = /^(`+)([\s\S]*?[^`])\1(?!`)/.exec(rest);
+      if (m) { flush(); out.push({ t: 'code', v: m[2].replace(/^ (.*) $/, '$1') }); i += m[0].length; continue; }
+    }
+    if (c === '[') {
+      m = /^\[([^\]]+)\]\(\s*([^)\s]+)(?:\s+"[^"]*")?\s*\)/.exec(rest);
+      if (m) { flush(); out.push({ t: 'a', href: m[2], c: mdInline(m[1]) }); i += m[0].length; continue; }
+    }
+    if (c === '*' || c === '_' || c === '~') {
+      m = (c === '~' ? /^~~([^~]+)~~/ : /^(\*\*|__)(?=\S)([\s\S]*?\S)\1/).exec(rest);
+      if (m) { flush(); out.push({ t: c === '~' ? 'del' : 'b', c: mdInline(c === '~' ? m[1] : m[2]) }); i += m[0].length; continue; }
+      m = /^([*_])(?=\S)([^*_\n]*?\S)\1(?![\w*_])/.exec(rest);
+      if (m && (c === '*' || i === 0 || /\W/.test(text[i - 1]))) { flush(); out.push({ t: 'i', c: mdInline(m[2]) }); i += m[0].length; continue; }
+    }
+    m = /^https?:\/\/[^\s<>)\]]+[^\s<>)\].,;:!?'"]/.exec(rest);
+    if (m && (i === 0 || /[\s(]/.test(text[i - 1]))) { flush(); out.push({ t: 'a', href: m[0], c: [{ t: 'text', v: m[0] }] }); i += m[0].length; continue; }
+    buf += c; i += 1;
+  }
+  flush();
+  return out;
+}
+function mdParse(text) {
+  var lines = String(text).replace(/\r\n?/g, '\n').split('\n');
+  var blocks = [];
+  var i = 0;
+  var listRe = /^(\s*)([-*+]|\d{1,9}[.)])\s+(.*)$/;
+  function isTableSep(l) { return /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(l) && l.indexOf('-') >= 0; }
+  function cells(l) { return l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(function (x) { return x.trim(); }); }
+  while (i < lines.length) {
+    var line = lines[i], m;
+    if (!line.trim()) { i++; continue; }
+    if ((m = /^\s*(`{3,}|~{3,})\s*([\w+#.-]*)/.exec(line))) {
+      var fence = m[1], lang = m[2], body = [];
+      i++;
+      while (i < lines.length && !new RegExp('^\\s*' + fence[0] + '{' + fence.length + ',}\\s*$').test(lines[i])) { body.push(lines[i]); i++; }
+      i++;
+      blocks.push({ t: 'code', lang: lang, text: body.join('\n') });
+      continue;
+    }
+    if ((m = /^(#{1,6})\s+(.*?)\s*#*\s*$/.exec(line))) { blocks.push({ t: 'h', n: m[1].length, c: mdInline(m[2]) }); i++; continue; }
+    if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) { blocks.push({ t: 'hr' }); i++; continue; }
+    if (/^\s*>/.test(line)) {
+      var q = [];
+      while (i < lines.length && /^\s*>/.test(lines[i])) { q.push(lines[i].replace(/^\s*> ?/, '')); i++; }
+      blocks.push({ t: 'quote', blocks: mdParse(q.join('\n')) });
+      continue;
+    }
+    if (line.indexOf('|') >= 0 && i + 1 < lines.length && isTableSep(lines[i + 1])) {
+      var head = cells(line).map(mdInline), rows = [];
+      i += 2;
+      while (i < lines.length && lines[i].trim() && lines[i].indexOf('|') >= 0) { rows.push(cells(lines[i]).map(mdInline)); i++; }
+      blocks.push({ t: 'table', head: head, rows: rows });
+      continue;
+    }
+    if ((m = listRe.exec(line))) {
+      var root = { t: m[2].length > 1 && /\d/.test(m[2]) ? 'ol' : 'ul', items: [], indent: m[1].length };
+      var stack = [root];
+      while (i < lines.length) {
+        var lm = listRe.exec(lines[i]);
+        if (!lm) {
+          if (lines[i].trim() && /^\s{2,}\S/.test(lines[i]) && stack.length) { var tail = stack[stack.length - 1].items; if (tail.length) tail[tail.length - 1].c = tail[tail.length - 1].c.concat([{ t: 'text', v: ' ' }], mdInline(lines[i].trim())); i++; continue; }
+          break;
+        }
+        var ind = lm[1].length, kind = /\d/.test(lm[2]) ? 'ol' : 'ul';
+        while (stack.length > 1 && ind < stack[stack.length - 1].indent) stack.pop();
+        var top = stack[stack.length - 1];
+        if (ind > top.indent && top.items.length) {
+          var parent = top.items[top.items.length - 1];
+          var sub = { t: kind, items: [], indent: ind };
+          (parent.sub = parent.sub || []).push(sub);
+          stack.push(sub); top = sub;
+        }
+        top.items.push({ c: mdInline(lm[3]), sub: null });
+        i++;
+      }
+      blocks.push(root);
+      continue;
+    }
+    var para = [line];
+    i++;
+    while (i < lines.length && lines[i].trim() && !/^\s*(`{3,}|~{3,}|#{1,6}\s|>|([-*_])(\s*\2){2,}\s*$)/.test(lines[i]) && !listRe.test(lines[i]) && !(lines[i].indexOf('|') >= 0 && i + 1 < lines.length && isTableSep(lines[i + 1]))) { para.push(lines[i]); i++; }
+    blocks.push({ t: 'p', c: mdInline(para.join('\n')) });
+  }
+  return blocks;
+}
+function mdSafeHref(href) { return /^(https?:\/\/|mailto:)/i.test(href) ? href : null; }
+function mdInlineNodes(nodes, parent) {
+  nodes.forEach(function (n) {
+    if (n.t === 'text') {
+      var parts = n.v.split('\n');
+      parts.forEach(function (p, i) { if (i) parent.appendChild(document.createElement('br')); if (p) parent.appendChild(document.createTextNode(p)); });
+    } else if (n.t === 'code') { var c = document.createElement('code'); c.textContent = n.v; parent.appendChild(c); }
+    else if (n.t === 'a') {
+      var href = mdSafeHref(n.href);
+      if (!href) { mdInlineNodes(n.c, parent); return; }
+      var a = document.createElement('a'); a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer'; mdInlineNodes(n.c, a); parent.appendChild(a);
+    } else { var e = document.createElement(n.t === 'b' ? 'strong' : n.t === 'i' ? 'em' : 'del'); mdInlineNodes(n.c, e); parent.appendChild(e); }
+  });
+}
+function mdBlockNodes(blocks, parent) {
+  blocks.forEach(function (b) {
+    var e;
+    if (b.t === 'p') { e = document.createElement('p'); mdInlineNodes(b.c, e); }
+    else if (b.t === 'h') { e = document.createElement('h' + Math.min(6, b.n + 2)); mdInlineNodes(b.c, e); }
+    else if (b.t === 'hr') e = document.createElement('hr');
+    else if (b.t === 'quote') { e = document.createElement('blockquote'); mdBlockNodes(b.blocks, e); }
+    else if (b.t === 'code') {
+      e = document.createElement('div'); e.className = 'mdcode';
+      var bar = document.createElement('div'); bar.className = 'mdcodebar';
+      var lab = document.createElement('span'); lab.textContent = b.lang || 'code'; bar.appendChild(lab);
+      var cp = document.createElement('button'); cp.textContent = 'copy'; cp.setAttribute('data-copy', b.text); bar.appendChild(cp);
+      var pre = document.createElement('pre'); var code = document.createElement('code'); code.textContent = b.text; pre.appendChild(code);
+      e.appendChild(bar); e.appendChild(pre);
+    }
+    else if (b.t === 'ul' || b.t === 'ol') { e = mdListNode(b); }
+    else if (b.t === 'table') {
+      e = document.createElement('div'); e.className = 'mdtable';
+      var t = document.createElement('table'), th = document.createElement('thead'), tr = document.createElement('tr');
+      b.head.forEach(function (h) { var c = document.createElement('th'); mdInlineNodes(h, c); tr.appendChild(c); });
+      th.appendChild(tr); t.appendChild(th);
+      var tb = document.createElement('tbody');
+      b.rows.forEach(function (r) { var rr = document.createElement('tr'); r.forEach(function (x) { var c = document.createElement('td'); mdInlineNodes(x, c); rr.appendChild(c); }); tb.appendChild(rr); });
+      t.appendChild(tb); e.appendChild(t);
+    }
+    if (e) parent.appendChild(e);
+  });
+}
+function mdListNode(list) {
+  var e = document.createElement(list.t);
+  list.items.forEach(function (it) {
+    var li = document.createElement('li'); mdInlineNodes(it.c, li);
+    (it.sub || []).forEach(function (s) { li.appendChild(mdListNode(s)); });
+    e.appendChild(li);
+  });
+  return e;
+}
+function mdRender(text, into) { into.className = (into.className ? into.className + ' ' : '') + 'md'; into.replaceChildren(); mdBlockNodes(mdParse(text), into); return into; }
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest && e.target.closest('[data-copy]');
+  if (!btn) return;
+  var text = btn.getAttribute('data-copy');
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function () { var was = btn.textContent; btn.textContent = 'copied'; setTimeout(function () { btn.textContent = was; }, 1200); });
+  }
+});
+
 var KEY = sessionStorage.getItem('piper-portal-key') || '';
 var WHOAMI = null;
 var NOTEBOOKS = [];
 var CUR = null;
 var TAB = 'sources';
 var ASKING = false;
+var LAST_ANSWER = null; // {usage, cost, citations} of the most recent answer, for the status bar
+var FILES_OPEN = false;
+var FILES_PATH = '';
 
 function api(path, opts) {
   opts = opts || {};
@@ -228,6 +464,8 @@ function newNotebook() {
 
 function openNotebook(id) {
   CUR = id;
+  LAST_ANSWER = null;
+  FILES_PATH = '';
   renderSide();
   renderMain();
 }
@@ -243,18 +481,70 @@ $('tabsources').addEventListener('click', function () { setTab('sources'); });
 $('tabchat').addEventListener('click', function () { setTab('chat'); });
 $('tabgen').addEventListener('click', function () { setTab('gen'); });
 
+/* ---- agent picker: which agent (or the key's own main endpoint) answers this notebook ---- */
+function renderTargets() {
+  var t = $('target');
+  t.replaceChildren();
+  var main = el('option', '(main endpoint)'); main.value = '';
+  t.appendChild(main);
+  (WHOAMI.agents || []).forEach(function (a) {
+    var o = el('option', a.name + (a.description ? ' — ' + a.description : ''));
+    o.value = a.id;
+    t.appendChild(o);
+  });
+}
+$('target').addEventListener('change', function () {
+  var c = nb();
+  if (!c) return;
+  var agentId = $('target').value;
+  apiJson('api/notebooks/' + c.id, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ agentId: agentId || null }) })
+    .then(function (updated) {
+      NOTEBOOKS = NOTEBOOKS.map(function (n) { return n.id === updated.id ? updated : n; });
+      renderSide();
+    })
+    .catch(function (e) { alert(e.message); renderMain(); });
+});
+
+function renderStatusBar() {
+  var c = nb();
+  var bar = $('statusstats');
+  bar.replaceChildren();
+  if (!c) { $('statusbar').hidden = true; return; }
+  var add = function (label, value, cls) {
+    var span = el('span');
+    span.appendChild(document.createTextNode(label + ': '));
+    var b = el('b', value);
+    if (cls) b.className = cls;
+    span.appendChild(b);
+    bar.appendChild(span);
+  };
+  var sources = (c.sourceCount != null) ? c.sourceCount : null;
+  if (sources !== null) add('sources', String(sources));
+  if (LAST_ANSWER) {
+    if (LAST_ANSWER.citations) add('last answer used', LAST_ANSWER.citations.length + ' passage(s)');
+    if (LAST_ANSWER.usage && LAST_ANSWER.usage.total_tokens) {
+      add('last answer', LAST_ANSWER.usage.total_tokens + ' tokens' + (LAST_ANSWER.cost ? ' · $' + LAST_ANSWER.cost.toFixed(4) : ''));
+    }
+  }
+  $('statusbar').hidden = !bar.children.length;
+}
+
 function renderMain() {
   var c = nb();
   $('viewempty').hidden = Boolean(c);
   $('viewsources').hidden = !c || TAB !== 'sources';
-  $('viewchat').hidden = !c || TAB !== 'chat';
-  $('askrow').hidden = !c || TAB !== 'chat';
+  $('viewchatwrap').hidden = !c || TAB !== 'chat';
   $('viewgen').hidden = !c || TAB !== 'gen';
   $('nbtitle').textContent = c ? c.title : '';
+  $('target').value = c ? (c.agentId || '') : '';
+  $('target').disabled = !c;
+  $('filesbtn').disabled = !c;
   ['tabsources', 'tabchat', 'tabgen'].forEach(function (id) { $(id).disabled = !c; });
-  if (!c) return;
+  renderStatusBar();
+  if (!c) { $('filesbox').classList.remove('on'); return; }
   if (TAB === 'sources') loadSources();
   else if (TAB === 'gen') loadOutputs();
+  if (FILES_OPEN) loadFiles();
 }
 
 /* ---- sources ---- */
@@ -264,6 +554,9 @@ function loadSources() {
   if (!c) return;
   apiJson('api/notebooks/' + c.id + '/sources').then(function (d) {
     renderSources(d.sources || []);
+    var count = (d.sources || []).length;
+    NOTEBOOKS = NOTEBOOKS.map(function (n) { return n.id === c.id ? Object.assign({}, n, { sourceCount: count }) : n; });
+    renderStatusBar();
     clearTimeout(SRC_TIMER);
     if (d.sources && d.sources.some(function (s) { return s.status !== 'done'; })) SRC_TIMER = setTimeout(loadSources, 2000);
   }).catch(function () {});
@@ -280,9 +573,11 @@ function renderSources(sources) {
     var st = left.appendChild(el('div', statusText));
     st.className = 'st' + (s.status !== 'done' ? ' working' : '');
     row.appendChild(left);
+    if (s.kind === 'upload') row.addEventListener('click', function (e) { if (e.target.tagName !== 'BUTTON') previewFile(s.origin, s.bytes || 0); });
     var rm = el('button', 'remove');
-    rm.addEventListener('click', function () {
-      apiJson('api/notebooks/' + nb().id + '/sources/' + s.id, { method: 'DELETE' }).then(loadSources).catch(function (e) { alert(e.message); });
+    rm.addEventListener('click', function (e) {
+      e.stopPropagation();
+      apiJson('api/notebooks/' + nb().id + '/sources/' + s.id, { method: 'DELETE' }).then(loadSources).catch(function (e2) { alert(e2.message); });
     });
     row.appendChild(rm);
     box.appendChild(row);
@@ -336,7 +631,12 @@ function streamInto(reader, onEvent) {
 function renderCitations(box, citations) {
   if (!citations || !citations.length) return;
   var row = el('div'); row.className = 'cites';
-  citations.forEach(function (c) { row.appendChild(el('span', '[' + c.n + '] ' + c.sourceName)).className = 'cite'; });
+  citations.forEach(function (c) {
+    var chip = el('span', '[' + c.n + '] ' + c.sourceName);
+    chip.className = 'cite';
+    if (c.sourceId) chip.addEventListener('click', function () { setTab('sources'); });
+    row.appendChild(chip);
+  });
   box.appendChild(row);
 }
 function ask() {
@@ -344,7 +644,8 @@ function ask() {
   var question = $('askinput').value.trim();
   if (!c || !question || ASKING) return;
   var box = $('chatmsgs');
-  box.appendChild(el('div', question)).className = 'q';
+  var q = el('div', question); q.className = 'q';
+  box.appendChild(q);
   var ans = el('div', ''); ans.className = 'a pending';
   box.appendChild(ans);
   $('askinput').value = '';
@@ -357,7 +658,16 @@ function ask() {
       if (!r.ok || (r.headers.get('content-type') || '').indexOf('event-stream') < 0) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error((j.error && j.error.message) || ('HTTP ' + r.status)); });
       return streamInto(r.body.getReader(), function (event, d) {
         if (event === 'delta') { text += d.text; ans.textContent = text; }
-        else if (event === 'done') { ans.textContent = d.text || text; ans.className = 'a'; renderCitations(ans, d.citations); }
+        else if (event === 'done') {
+          mdRender(d.text || text, ans);
+          ans.className = 'a';
+          renderCitations(ans, d.citations);
+          var foot = null;
+          if (d.usage && d.usage.total_tokens) { foot = el('div', d.usage.total_tokens + ' tokens' + (d.cost ? ' · $' + d.cost.toFixed(4) : '')); foot.className = 'foot'; }
+          if (foot) box.insertBefore(foot, ans.nextSibling) || box.appendChild(foot);
+          LAST_ANSWER = { usage: d.usage, cost: d.cost, citations: d.citations };
+          renderStatusBar();
+        }
         else if (event === 'error') { ans.textContent = d.message; ans.className = 'a bad'; }
       });
     })
@@ -385,7 +695,7 @@ function renderOutputs(outputs) {
   outputs.forEach(function (o) {
     var row = el('div'); row.className = 'outrow';
     row.appendChild(el('div', o.kind)).className = 'k';
-    row.appendChild(el('pre', o.text));
+    mdRender(o.text, row.appendChild(el('div')));
     box.appendChild(row);
   });
 }
@@ -403,6 +713,135 @@ $('gensummary').addEventListener('click', function () { generate('summary', this
 $('genfaq').addEventListener('click', function () { generate('faq', this); });
 $('genstudy').addEventListener('click', function () { generate('study-guide', this); });
 
+/* ---- files, ported from the chat portal's own: browse/upload/delete/preview this notebook's agent's workspace ---- */
+function filesUrl(path) {
+  var c = nb();
+  var q = c && c.agentId ? ('agentId=' + encodeURIComponent(c.agentId)) : '';
+  var p = String(path || '').split('/').filter(Boolean).map(encodeURIComponent).join('/');
+  return 'api/files/' + p + (q ? '?' + q : '');
+}
+function loadFiles() {
+  apiJson(filesUrl(FILES_PATH)).then(function (d) {
+    renderFiles(d.entries || []);
+  }).catch(function (e) {
+    $('filelist').replaceChildren(el('div', e.message));
+  });
+}
+function renderFiles(entries) {
+  var crumb = $('crumb');
+  crumb.replaceChildren();
+  var link = function (label, path) { var a = el('a', label); a.addEventListener('click', function () { FILES_PATH = path; loadFiles(); }); return a; };
+  crumb.appendChild(link('workspace', ''));
+  var parts = FILES_PATH.split('/').filter(Boolean);
+  parts.forEach(function (p, i) { crumb.appendChild(document.createTextNode(' / ')); crumb.appendChild(link(p, parts.slice(0, i + 1).join('/'))); });
+  var box = $('filelist');
+  box.replaceChildren();
+  if (parts.length) {
+    var up = el('div', '← ..');
+    up.className = 'frow';
+    up.addEventListener('click', function () { FILES_PATH = parts.slice(0, -1).join('/'); loadFiles(); });
+    box.appendChild(up);
+  }
+  entries.slice().sort(function (a, b) { return (a.type === 'dir' ? 0 : 1) - (b.type === 'dir' ? 0 : 1) || a.name.localeCompare(b.name); }).forEach(function (f) {
+    var full = (FILES_PATH ? FILES_PATH + '/' : '') + f.name;
+    var row = el('div');
+    row.className = 'frow';
+    var label = el('span', (f.type === 'dir' ? '📁 ' : '📄 ') + f.name);
+    row.appendChild(label);
+    var right = el('span');
+    if (f.type === 'file') right.appendChild(el('span', bytes(f.bytes))).className = 'sz';
+    var del = el('button', '×');
+    del.className = 'del';
+    del.title = 'delete';
+    del.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (!confirm('Delete ' + (f.type === 'dir' ? 'the folder' : 'the file') + ' "' + f.name + '"' + (f.type === 'dir' ? ' and everything in it' : '') + '?')) return;
+      api(filesUrl(full), { method: 'DELETE' }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return loadFiles(); })
+        .catch(function (err) { alert('could not delete: ' + err.message); });
+    });
+    right.appendChild(del);
+    row.appendChild(right);
+    if (f.type === 'dir') row.addEventListener('click', function () { FILES_PATH = full; loadFiles(); });
+    else row.addEventListener('click', function () { previewFile(full, f.bytes); });
+    box.appendChild(row);
+  });
+}
+function bytes(n) {
+  n = Number(n) || 0;
+  if (n >= 1048576) return (n / 1048576).toFixed(1) + ' MB';
+  if (n >= 1024) return (n / 1024).toFixed(1) + ' KB';
+  return n + ' B';
+}
+var IMG_TYPES = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml' };
+var HTML_TYPES = { html: true, htm: true };
+var PREVIEW_MAX = 300 * 1024;
+var MODAL_OBJECT_URL = null;
+function closeModal() {
+  $('filemodal').hidden = true;
+  $('fmbody').replaceChildren();
+  $('fmbox').classList.remove('wide');
+  if (MODAL_OBJECT_URL) { URL.revokeObjectURL(MODAL_OBJECT_URL); MODAL_OBJECT_URL = null; }
+}
+function previewFile(path, size) {
+  var ext = (path.split('.').pop() || '').toLowerCase();
+  $('fmtitle').textContent = path;
+  $('fmmeta').textContent = bytes(size);
+  $('fmbody').replaceChildren(el('div', 'loading…'));
+  $('filemodal').hidden = false;
+  $('fmdownload').href = filesUrl(path);
+  $('fmdownload').download = path.split('/').pop();
+  api(filesUrl(path)).then(function (r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.blob();
+  }).then(function (blob) {
+    if (IMG_TYPES[ext]) {
+      MODAL_OBJECT_URL = URL.createObjectURL(blob);
+      var img = el('img'); img.src = MODAL_OBJECT_URL; img.alt = path;
+      $('fmbody').replaceChildren(img);
+      return;
+    }
+    if (HTML_TYPES[ext]) {
+      if (size > PREVIEW_MAX) { $('fmbody').replaceChildren(el('div', 'Too large to preview (' + bytes(size) + '). Use download.')); return; }
+      blob.text().then(function (html) {
+        var frame = el('iframe');
+        frame.setAttribute('sandbox', 'allow-scripts');
+        frame.className = 'htmlpreview';
+        frame.srcdoc = html;
+        $('fmbox').classList.add('wide');
+        $('fmbody').replaceChildren(frame);
+      });
+      return;
+    }
+    if (size > PREVIEW_MAX) {
+      $('fmbody').replaceChildren(el('div', 'Too large to preview (' + bytes(size) + '). Use download.'));
+      return;
+    }
+    blob.text().then(function (text) {
+      if (text.indexOf('\u0000') >= 0) { $('fmbody').replaceChildren(el('div', 'This does not look like a text file. Use download.')); return; }
+      $('fmbody').replaceChildren(el('pre', text));
+    });
+  }).catch(function (e) { $('fmbody').replaceChildren(el('div', 'cannot show it: ' + e.message)); });
+}
+$('fmclose').addEventListener('click', closeModal);
+$('filemodal').addEventListener('click', function (e) { if (e.target === $('filemodal')) closeModal(); });
+$('filesbtn').addEventListener('click', function () {
+  FILES_OPEN = !FILES_OPEN;
+  $('filesbox').classList.toggle('on', FILES_OPEN);
+  $('filesbtn').classList.toggle('on', FILES_OPEN);
+  if (FILES_OPEN) loadFiles();
+});
+$('filesrefresh').addEventListener('click', loadFiles);
+$('uploadbtn').addEventListener('click', function () { $('uploadinput').click(); });
+$('uploadinput').addEventListener('change', function () {
+  var files = Array.prototype.slice.call(this.files || []);
+  this.value = '';
+  if (!files.length) return;
+  Promise.all(files.map(function (f) {
+    var path = (FILES_PATH ? FILES_PATH + '/' : '') + f.name;
+    return api(filesUrl(path), { method: 'PUT', body: f }).then(function (r) { if (!r.ok) throw new Error(f.name + ': HTTP ' + r.status); });
+  })).then(loadFiles).catch(function (e) { alert('could not upload: ' + e.message); loadFiles(); });
+});
+
 /* ---- login ---- */
 function connect(key) {
   KEY = key;
@@ -410,6 +849,7 @@ function connect(key) {
     WHOAMI = d;
     sessionStorage.setItem('piper-portal-key', KEY);
     $('who').textContent = d.portalUsername || d.name;
+    renderTargets();
     return loadNotebooks();
   }).then(function () {
     showApp();
