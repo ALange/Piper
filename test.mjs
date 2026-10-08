@@ -3904,6 +3904,15 @@ assert.equal(isReloadCommand(undefined), false);
 		assert.equal(flags(args, "--entrypoint")[0], "node");
 		assert.deepEqual(args.slice(args.indexOf("img")), ["img", "/opt/piper/profile.mjs", "raw", "read", "a"]);
 		assert.equal(profileHelperInvocation({ dir: "/d", extraArgs: [] }).command, "docker");
+		// memoryMb: 256 for a JSON profile op by default; a raw file read/write (filesStream) asks for
+		// more, since a workspace file has no size ceiling of its own (WORKSPACE_MAX_BYTES is 0) and
+		// running out of room mid-download is an OOM kill after the response already started -- a
+		// failed, truncated download with no clear reason, not a clean refusal.
+		assert.equal(flags(args, "--memory")[0], "256m", "the small JSON-op default, unasked");
+		const raised = helperArgs({ dir: "/p/key-k1", helperPath: "/h.mjs", extraArgs: [], memoryMb: 1024 });
+		assert.equal(flags(raised, "--memory")[0], "1024m");
+		const viaInvocation = profileHelperInvocation({ dir: "/d", extraArgs: [], memoryMb: 1024 }).args;
+		assert.equal(flags(viaInvocation, "--memory")[0], "1024m", "profileHelperInvocation forwards it too");
 	}
 
 	// ensureContainer against the fake engine: create, reuse, start, recreate on a changed signature.

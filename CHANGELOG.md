@@ -164,6 +164,16 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   an agent or a key removes its memory with it.
 
 ### Fixed
+- **A large file could fail to download from the web file browser with Chrome's "File wasn't
+  available on site," no error shown anywhere else.** Every raw file read or write (download/upload,
+  both the client portal's and the dashboard's file browser) runs through the same short-lived helper
+  container as a small JSON profile operation, and shared its fixed 256MB memory ceiling — appropriate
+  for a JSON op capped by `PROFILE_MAX_BYTES`, not for streaming a workspace file, which has no size
+  ceiling of its own (`WORKSPACE_MAX_BYTES` is 0, unlimited by default). A large enough file (a `.tar.gz`
+  export or backup, more plausibly, than anything about the `.gz` extension itself) could run the helper
+  out of room mid-transfer; it gets OOM-killed after the HTTP response has already started streaming,
+  which the browser reports as exactly this — a failed, truncated download with no clear reason. A raw
+  read/write now asks the helper container for 1GB instead of the small-op default.
 - **An unrelated settings change could cut off a chat that was actively working, with just "the chat
   was put to sleep" and no clue why.** `closeByKey`/`closeByScope` — used whenever a key's container
   settings change, a shared extension grant changes, a profile gets locked, and a few other places —
