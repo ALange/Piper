@@ -2933,6 +2933,24 @@ assert.equal(isReloadCommand(undefined), false);
 		assert.equal(snap2.sessions.find((r) => r.fingerprint === fingerprint("fresh-one-off")).expiresAction, "ends", "a first request that may be a one-off ends");
 		assert.equal(snap2.keepMs, 1e12);
 	}
+	// The displayed countdown freezes while a turn is actually running -- reap() already leaves a
+	// busy session alone no matter how stale lastUsedAt looks (above), so a countdown ticking toward
+	// zero during a long turn would be misleading: it never actually fires until the turn ends.
+	{
+		const ctl = make();
+		const { record } = ctl.acquire("still-working", { id: "k1" });
+		record.inflight = 1;
+		record.lastUsedAt = T0 - 9_000; // past the 5s one-shot window and close to the 10s idle one
+		const snap = await ctl.snapshot();
+		const row = snap.sessions.find((r) => r.fingerprint === fingerprint("still-working"));
+		assert.equal(row.idleMs, 0, "not shown as idle at all while a turn is in flight");
+		assert.equal(row.expiresInMs, 5_000, "frozen at the full one-shot window, not counted down from the stale lastUsedAt");
+		assert.equal(row.expiresBecause, "one-shot");
+		record.inflight = 0;
+		const snap2 = await ctl.snapshot();
+		const row2 = snap2.sessions.find((r) => r.fingerprint === fingerprint("still-working"));
+		assert.ok(row2.expiresInMs <= 50, "the moment it's idle again, the real (stale) clock applies");
+	}
 	// Without a store there is nothing to resume from, so a stop is an end, as before.
 	{
 		const gone = [];
