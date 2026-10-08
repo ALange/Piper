@@ -46,8 +46,10 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   Retrieval is a plain cosine-similarity scan over embeddings kept as BLOBs in the existing SQLite
   database — no new service, no vector database; the one new host-side network call is to an
   OpenAI-compatible embeddings endpoint (`NOTEBOOK_EMBEDDING_URL`/`_MODEL`/`_API_KEY`), the same trust
-  tier as RSS's own feed-fetching (a fixed, operator-configured address). `NOTEBOOK_ENABLED`,
-  `NOTEBOOK_SOURCE_MAX_BYTES`, `NOTEBOOK_MAX_SOURCES` round out the new settings.
+  tier as RSS's own feed-fetching (a fixed, operator-configured address). `NOTEBOOK_ENABLED`
+  (Settings → Sessions → Notebooks) also hides the Notebooks button in the client portal's sidebar
+  entirely when off, not just refuse the page if it's clicked. `NOTEBOOK_SOURCE_MAX_BYTES`,
+  `NOTEBOOK_MAX_SOURCES` round out the new settings.
 - **Edit an environment's Dockerfile right from Containers → Images.** An **edit Dockerfile** button
   next to each environment's **build**/**rebuild** opens it as plain text (Ctrl+S to save). Saving only
   changes the file on disk — nothing is built automatically; use the existing build/rebuild button

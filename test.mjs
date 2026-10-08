@@ -9564,6 +9564,14 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.deepEqual(who.json.agents.map((a) => a.id), [myAgent.id], "only this key's own agents, never another's");
 	assert.equal(who.json.portalUsername, null, "no portal password set yet");
 
+	// notebooksEnabled mirrors NOTEBOOK_ENABLED, so portal.html can hide the Notebooks button entirely
+	// rather than only refusing the page once clicked.
+	assert.equal(who.json.notebooksEnabled, true, "on by default");
+	const priorNotebookEnabled = config.NOTEBOOK_ENABLED;
+	config.NOTEBOOK_ENABLED = false;
+	assert.equal((await call("/api/whoami", { headers: auth })).json.notebooksEnabled, false);
+	config.NOTEBOOK_ENABLED = priorNotebookEnabled;
+
 	// Password login: an alternative to the raw key, via a username+password set up through the
 	// already-authenticated route, never handing back the raw key.
 	assert.equal((await call("/api/login-password", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ username: "nope", password: "wrong password" }) })).status, 401);

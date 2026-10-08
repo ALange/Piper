@@ -1185,6 +1185,7 @@ function connect(key) {
   KEY = key;
   return apiJson('api/whoami').then(function (d) {
     WHOAMI = d;
+    $('gotonotebook').hidden = !d.notebooksEnabled;
     sessionStorage.setItem('piper-portal-key', KEY);
     loadConvos();
     return pullHistory();
