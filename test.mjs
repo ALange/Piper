@@ -10003,6 +10003,21 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		const stolenInterrupt = await call(`/api/conversation/disco-test-convo-2/interrupt`, { method: "POST", headers: { authorization: `Bearer ${theirs.key}` } });
 		assert.deepEqual(stolenInterrupt.json, { interrupted: false, wasRunning: false }, "a different key's own session, if any, not this one");
 
+		// Deleting a chat whose container already stopped (hibernated: idle, or just not used in a
+		// while) must actually remove it, not silently no-op just because it is no longer the live
+		// session map -- it is still sitting in the resumable store otherwise, forever.
+		{
+			const hibernateCred = credentialFor(myKey.id, myAgent.id);
+			const hibernateScoped = scopedSessionId(hibernateCred, "portal:hibernate-delete-convo");
+			const { id: scopedId } = sessions.acquire(hibernateScoped, hibernateCred);
+			sessions.hibernate(scopedId);
+			assert.equal(sessions.has(scopedId), false, "no longer live");
+			assert.ok(sessions.storedRows().some((r) => r.id_hash === chatIdHash(scopedId)), "but still stored, resumable");
+			const del = await call(`/api/conversation/hibernate-delete-convo?agentId=${myAgent.id}`, { method: "DELETE", headers: auth });
+			assert.deepEqual(del.json, { ended: true });
+			assert.equal(sessions.storedRows().some((r) => r.id_hash === chatIdHash(scopedId)), false, "actually removed now, not left behind forever");
+		}
+
 		// Watcher cap: one more catch-up connection than allowed on one session is refused.
 		const capCred = credentialFor(myKey.id, myAgent.id);
 		const capScoped = scopedSessionId(capCred, "portal:watcher-cap-convo");

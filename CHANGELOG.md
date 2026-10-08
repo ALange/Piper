@@ -164,6 +164,14 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   an agent or a key removes its memory with it.
 
 ### Fixed
+- **Deleting a client portal chat silently did nothing once its container had already stopped.**
+  `DELETE /api/conversation/:id` only ever closed a *live* session; a chat left idle for a while (or
+  just not reopened in a bit) gets hibernated well before anyone deletes it — stopped, but kept,
+  resumable, in the `chats` table — and `sessions.has()` is false for one of those, so the delete
+  quietly did nothing: no error, but the row and its container were never actually removed. The portal
+  dropped it from the visible list regardless (it never checked the response), making it look deleted
+  when it was not. It now falls back to ending the stored row (and its container) the same way the
+  dashboard's own container cleanup already does for a stopped chat.
 - **One missing or broken extension took a whole chat's container down.** A shared bundle or library
   extension that was granted but whose folder is no longer actually on the host (removed by hand, a restore
   that missed it), or is there but is not a usable Pi package (a half-written edit, a file deleted out from
