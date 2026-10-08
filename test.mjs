@@ -2951,6 +2951,38 @@ assert.equal(isReloadCommand(undefined), false);
 		const row2 = snap2.sessions.find((r) => r.fingerprint === fingerprint("still-working"));
 		assert.ok(row2.expiresInMs <= 50, "the moment it's idle again, the real (stale) clock applies");
 	}
+	// closeByKey/closeByScope: an unrelated settings change (a shared grant, another chat's container
+	// limits) must never cut off a turn actually in progress -- only reap() and eviction were careful
+	// about this before; a session mid-turn now simply keeps running on its old profile until it goes
+	// idle on its own, the same as those two already guarantee. `force` opts back into the old
+	// everything-stops behaviour, for a caller about to remove the very directory or container a still
+	// running turn has mounted (resetProfile, deleteBundle, an agent's container being rebuilt, ...).
+	{
+		const ctl = make();
+		const busy = ctl.acquire("busy-scope", { id: "k1", agent: { id: "a1" }, scopeId: "k1--a1" });
+		const idle = ctl.acquire("idle-scope", { id: "k1", agent: { id: "a1" }, scopeId: "k1--a1" });
+		busy.record.inflight = 1;
+
+		assert.equal(ctl.closeByScope("k1--a1"), 1, "only the idle one, by default");
+		assert.equal(ctl.has(busy.id), true, "the busy one is untouched, still live");
+		assert.equal(ctl.has(idle.id), false, "the idle one hibernated as usual");
+
+		const busy2 = ctl.acquire("busy-key", { id: "k2" });
+		const idle2 = ctl.acquire("idle-key", { id: "k2" });
+		busy2.record.inflight = 1;
+		assert.equal(ctl.closeByKey("k2"), 1, "same rule for closeByKey");
+		assert.equal(ctl.has(busy2.id), true);
+		assert.equal(ctl.has(idle2.id), false);
+
+		// force: true is the old behaviour -- everything of that scope/key stops, busy or not, for a
+		// caller about to pull the directory or container out from under it regardless.
+		assert.equal(ctl.closeByScope("k1--a1", { force: true }), 1, "the still-busy one too, this time");
+		assert.equal(ctl.has(busy.id), false);
+		const busy3 = ctl.acquire("busy-key-2", { id: "k3" });
+		busy3.record.inflight = 1;
+		assert.equal(ctl.closeByKey("k3", { force: true }), 1);
+		assert.equal(ctl.has(busy3.id), false);
+	}
 	// Without a store there is nothing to resume from, so a stop is an end, as before.
 	{
 		const gone = [];

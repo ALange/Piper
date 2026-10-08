@@ -164,6 +164,19 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   an agent or a key removes its memory with it.
 
 ### Fixed
+- **An unrelated settings change could cut off a chat that was actively working, with just "the chat
+  was put to sleep" and no clue why.** `closeByKey`/`closeByScope` — used whenever a key's container
+  settings change, a shared extension grant changes, a profile gets locked, and a few other places —
+  hibernated every session of that key or scope unconditionally, including one in the middle of a turn
+  right now. Only `reap()` and LRU eviction were ever careful about this (a session doing real work is
+  never touched); these two call the very same `hibernate()` but had no such guard, so changing, say,
+  one key's container memory limit could silently abort a completely unrelated conversation of that
+  key that happened to be mid-answer. They now leave a session with work in flight alone by default —
+  it simply picks up the new settings whenever it next goes idle, the same deferred-but-never-lost
+  behavior `reap()`/eviction already guarantee — and only force it through (`{ force: true }`) at the
+  handful of call sites that are about to remove the very directory or container that turn is using
+  (resetting a profile, deleting a shared bundle, rebuilding an agent's container, deleting a key),
+  where leaving it running really would be the wrong kind of safe.
 - **Deleting a client portal chat silently did nothing once its container had already stopped.**
   `DELETE /api/conversation/:id` only ever closed a *live* session; a chat left idle for a while (or
   just not reopened in a bit) gets hibernated well before anyone deletes it — stopped, but kept,
