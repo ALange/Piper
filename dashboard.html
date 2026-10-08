@@ -2926,6 +2926,8 @@ var LAYOUT = {
   MEMORY_MAX_NAME_BYTES: { tab: 'sessions', section: 'Memory', label: 'Longest note name', unit: 'bytes' },
   MEMORY_MAX_VALUE_BYTES: { tab: 'sessions', section: 'Memory', label: 'Longest note', unit: 'bytes' },
   MEMORY_LOOKUP_LIMIT: { tab: 'sessions', section: 'Memory', label: 'Most notes one search returns', unit: 'notes' },
+  NOTEBOOK_ENABLED: { tab: 'sessions', section: 'Notebooks', label: 'Allow notebooks in the client portal',
+    summary: 'Upload or link sources, ask grounded questions with citations, generate summaries (NotebookLM-style, at /notebook). Off hides the feature from everyone using the web portal; nothing already stored is deleted.' },
   KNOWLEDGE_ENABLED: { tab: 'knowledge', section: 'Knowledge', label: 'Allow the knowledge base',
     summary: 'Every chat may search and read it (piper_knowledge_search, piper_knowledge_read) — read and search only, never write or delete. Off removes the tools; what is stored is kept.' },
   KNOWLEDGE_LOOKUP_LIMIT: { tab: 'knowledge', section: 'Knowledge', label: 'Most entries one search returns', unit: 'entries' },
