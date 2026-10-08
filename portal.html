@@ -1077,14 +1077,19 @@ function previewFile(path, size) {
   $('fmmeta').textContent = bytes(size);
   $('fmbody').replaceChildren(el('div', 'loading…'));
   $('filemodal').hidden = false;
-  $('fmdownload').href = filesUrl(path);
+  // Not filesUrl(path): clicking a plain <a href> is a native browser navigation, which cannot carry
+  // the Authorization header this API requires (no cookie fallback for the client portal) -- it would
+  // always answer 401, which Chrome shows as "Try to sign in to the site. Then download again." The
+  // href is set below instead, to a blob URL built from this same authenticated fetch's own bytes.
+  $('fmdownload').removeAttribute('href');
   $('fmdownload').download = path.split('/').pop();
   api(filesUrl(path)).then(function (r) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return r.blob();
   }).then(function (blob) {
+    MODAL_OBJECT_URL = URL.createObjectURL(blob);
+    $('fmdownload').href = MODAL_OBJECT_URL;
     if (IMG_TYPES[ext]) {
-      MODAL_OBJECT_URL = URL.createObjectURL(blob);
       var img = el('img'); img.src = MODAL_OBJECT_URL; img.alt = path;
       $('fmbody').replaceChildren(img);
       return;

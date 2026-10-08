@@ -164,16 +164,23 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   an agent or a key removes its memory with it.
 
 ### Fixed
-- **A large file could fail to download from the web file browser with Chrome's "File wasn't
-  available on site," no error shown anywhere else.** Every raw file read or write (download/upload,
-  both the client portal's and the dashboard's file browser) runs through the same short-lived helper
-  container as a small JSON profile operation, and shared its fixed 256MB memory ceiling — appropriate
-  for a JSON op capped by `PROFILE_MAX_BYTES`, not for streaming a workspace file, which has no size
-  ceiling of its own (`WORKSPACE_MAX_BYTES` is 0, unlimited by default). A large enough file (a `.tar.gz`
-  export or backup, more plausibly, than anything about the `.gz` extension itself) could run the helper
-  out of room mid-transfer; it gets OOM-killed after the HTTP response has already started streaming,
-  which the browser reports as exactly this — a failed, truncated download with no clear reason. A raw
-  read/write now asks the helper container for 1GB instead of the small-op default.
+- **Downloading a file from the client portal's file browser (or a notebook's) could fail outright with
+  Chrome's "Try to sign in to the site. Then download again," no error shown anywhere else.** The
+  download button was a plain `<a href="..." download>` pointing straight at `/api/files/:path` — a
+  native browser navigation, which cannot carry a custom `Authorization` header, and that endpoint has
+  no cookie fallback (unlike the dashboard's own file browser, which does and was never affected). A
+  file that can be previewed inline (an image, a small text file) never hit this, since the preview
+  itself is an authenticated `fetch()`; anything that can't be inline-previewed (too large, or a binary
+  format like a `.tar.gz`) forced the user onto the broken link, which answered 401 every single time —
+  not a size or extension bug, just a credential that structurally could never reach the server that
+  way. The download link is now built from the same already-authenticated blob the preview itself
+  fetches, the same way an attached image already worked.
+- **Raw file reads/writes also now ask the profile helper container for 1GB of memory instead of the
+  256MB a small JSON profile operation needs** (`PROFILE_MAX_BYTES`-bounded) — a workspace file has no
+  size ceiling of its own (`WORKSPACE_MAX_BYTES` is 0, unlimited by default), and running out of room
+  mid-transfer is an OOM kill after the response has already started streaming: a failed, truncated
+  download with no clear reason. Not what turned out to cause the above (that was the missing
+  `Authorization` header, not file size), but a real gap worth closing regardless.
 - **An unrelated settings change could cut off a chat that was actively working, with just "the chat
   was put to sleep" and no clue why.** `closeByKey`/`closeByScope` — used whenever a key's container
   settings change, a shared extension grant changes, a profile gets locked, and a few other places —
