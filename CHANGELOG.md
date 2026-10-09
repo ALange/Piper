@@ -164,6 +164,19 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   an agent or a key removes its memory with it.
 
 ### Fixed
+- **A portal or dashboard chat could silently lose all its context and restart from nothing partway
+  through a conversation, with no error, nothing in the audit log — just the agent suddenly acting
+  like it was hearing everything for the first time.** `ONE_SHOT_TTL_MS` ("End a session used exactly
+  once and then quiet this long") exists for genuine one-off calls like title/summary generation, which
+  get a random, throwaway session id nobody will ever ask for again. But `reap()` had no way to tell
+  those apart from a human's **first** message in a brand new portal or dashboard conversation, which
+  looks identical by the only signal it checked (`requests <= 1`, idle) — and the default window is
+  just 2 minutes, easily spent reading a reply and typing one back. Once that timer fired, the session
+  wasn't stopped-but-resumable like every other idle timeout; it was ended outright, row and all, so
+  the very next message silently started a brand new one from scratch. Sessions now carry whether their
+  id was chosen by the caller (a portal/dashboard conversation, a job, a raw API call with its own
+  `X-Session-Id`) rather than handed out at random — only the latter is ever treated as one-shot, no
+  matter how long the pause before someone's second message.
 - **Downloading a file from the client portal's file browser (or a notebook's) could fail outright with
   Chrome's "Try to sign in to the site. Then download again," no error shown anywhere else.** The
   download button was a plain `<a href="..." download>` pointing straight at `/api/files/:path` — a

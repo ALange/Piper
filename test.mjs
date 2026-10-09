@@ -274,13 +274,29 @@ assert.equal(nextTurn([{ role: "user", content: [{ type: "input_audio", input_au
 		assert.equal(disposed.length, 3);
 	}
 
-	// One-shot pruning: a session used exactly once and then left quiet is an orphan.
+	// One-shot pruning: a session with no caller-chosen id, used exactly once and then left quiet, is
+	// a genuine one-off (ONE_SHOT_TTL_MS's own target: "titles, summaries") and is pruned.
+	{
+		const { ctl } = build({ oneShotMs: 200, idleMs: 60_000, maxLifetimeMs: 60_000 });
+		const { id, record: rec } = ctl.acquire();
+		assert.equal(rec.requests, 1);
+		assert.equal(rec.named, false, "no caller-chosen id: a true one-off");
+		assert.deepEqual(ctl.reap(rec.lastUsedAt + 199), [], "inside the window it survives");
+		assert.deepEqual(ctl.reap(rec.lastUsedAt + 201), [id]);
+	}
+
+	// A session with a caller-chosen id -- a portal/dashboard conversation, a job, a raw API call with
+	// its own X-Session-Id -- is never treated as one-shot, however long the pause before its second
+	// message: only the much longer idle timeout applies. This was the actual bug: someone reading a
+	// reply and taking longer than ONE_SHOT_TTL_MS to answer had their whole conversation silently
+	// wiped and restarted from nothing, with no sign anything had gone wrong.
 	{
 		const { ctl } = build({ oneShotMs: 200, idleMs: 60_000, maxLifetimeMs: 60_000 });
 		const rec = ctl.acquire("orphan").record;
 		assert.equal(rec.requests, 1);
-		assert.deepEqual(ctl.reap(rec.lastUsedAt + 199), [], "inside the window it survives");
-		assert.deepEqual(ctl.reap(rec.lastUsedAt + 201), ["orphan"]);
+		assert.equal(rec.named, true);
+		assert.deepEqual(ctl.reap(rec.lastUsedAt + 201), [], "well past the one-shot window, but named: spared");
+		assert.deepEqual(ctl.reap(rec.lastUsedAt + 59_999), [], "spared right up to the real idle timeout too");
 	}
 
 	// A session that was actually continued is not a one-shot and must be spared.
@@ -876,7 +892,7 @@ assert.equal(isReloadCommand(undefined), false);
 // the shape of the chain is asserted here instead.
 {
 	const src = gatewaySource();
-	assert.match(src, /#spawn\(id, credential = null(, row = null)?\)/, "#spawn has to take the credential");
+	assert.match(src, /#spawn\(id, credential = null(, row = null(, named = false)?)?\)/, "#spawn has to take the credential");
 	assert.match(src, /keyId: credential\?\.id \?\? null/, "#spawn has to record it");
 	assert.match(src, /acquire\(requestId, credential = null\)/, "acquire has to take it");
 	const spawnCalls = [...src.matchAll(/this\.#spawn\(([^)]*)\)/g)].map((m) => m[1]);
@@ -2887,15 +2903,30 @@ assert.equal(isReloadCommand(undefined), false);
 		assert.equal(ctl.acquire("idle-chat", { id: "k1" }).resumed, true, "and the next message resumes it");
 	}
 
-	// A one-off request is ended: nothing will ask for it again.
+	// A one-off request -- no caller-chosen id, so nothing could ever ask for it again by name -- is ended.
 	{
 		const ctl = make();
-		const { record } = ctl.acquire("one-off", { id: "k1" });
+		const { id, record } = ctl.acquire(null, { id: "k1" });
+		assert.equal(record.named, false);
 		await ctl.run(record, async () => {});
 		record.lastUsedAt = T0 - 20_000;
 		ctl.reap(T0);
 		await settle();
-		assert.ok(ended.includes(chatIdHash("one-off")) && !rows.has(chatIdHash("one-off")), "removed, with its row");
+		assert.ok(ended.includes(chatIdHash(id)) && !rows.has(chatIdHash(id)), "removed, with its row");
+	}
+
+	// The same session, if it has a caller-chosen id -- a conversation someone intends to come back to
+	// -- is spared no matter how long the pause, and only stops (stays resumable) like any other idle one.
+	{
+		const ctl = make();
+		const { record } = ctl.acquire("not-a-one-off", { id: "k1" });
+		assert.equal(record.named, true);
+		await ctl.run(record, async () => {});
+		record.lastUsedAt = T0 - 20_000;
+		assert.deepEqual(ctl.reap(T0), ["not-a-one-off"], "still stops when idle, same as any named chat");
+		await settle();
+		assert.ok(stopped.includes(chatIdHash("not-a-one-off")) && !ended.includes(chatIdHash("not-a-one-off")), "but only stopped, not ended -- it is resumable");
+		assert.ok(rows.has(chatIdHash("not-a-one-off")), "its row is kept");
 	}
 
 	// Lifetime counts from when this Pi started, so an old chat that was just resumed is not stopped again.
@@ -2927,10 +2958,10 @@ assert.equal(isReloadCommand(undefined), false);
 		const snap = await ctl.snapshot();
 		const row = snap.sessions.find((r) => r.fingerprint === fingerprint("busy"));
 		assert.deepEqual([row.expiresBecause, row.expiresAction], ["idle", "stops"], "the page can say a stop is coming, not an end");
-		const one = ctl.acquire("fresh-one-off", { id: "k1" });
+		const one = ctl.acquire(null, { id: "k1" });
 		one.record.lastUsedAt = Date.now();
 		const snap2 = await ctl.snapshot();
-		assert.equal(snap2.sessions.find((r) => r.fingerprint === fingerprint("fresh-one-off")).expiresAction, "ends", "a first request that may be a one-off ends");
+		assert.equal(snap2.sessions.find((r) => r.fingerprint === fingerprint(one.id)).expiresAction, "ends", "a first request with no caller-chosen id, that may be a one-off, ends");
 		assert.equal(snap2.keepMs, 1e12);
 	}
 	// The displayed countdown freezes while a turn is actually running -- reap() already leaves a
@@ -2938,17 +2969,19 @@ assert.equal(isReloadCommand(undefined), false);
 	// zero during a long turn would be misleading: it never actually fires until the turn ends.
 	{
 		const ctl = make();
-		const { record } = ctl.acquire("still-working", { id: "k1" });
+		// No caller-chosen id: the one-shot window only ever applies to one of these (above), so this is
+		// the one that can still show it frozen.
+		const { id, record } = ctl.acquire(null, { id: "k1" });
 		record.inflight = 1;
 		record.lastUsedAt = T0 - 9_000; // past the 5s one-shot window and close to the 10s idle one
 		const snap = await ctl.snapshot();
-		const row = snap.sessions.find((r) => r.fingerprint === fingerprint("still-working"));
+		const row = snap.sessions.find((r) => r.fingerprint === fingerprint(id));
 		assert.equal(row.idleMs, 0, "not shown as idle at all while a turn is in flight");
 		assert.equal(row.expiresInMs, 5_000, "frozen at the full one-shot window, not counted down from the stale lastUsedAt");
 		assert.equal(row.expiresBecause, "one-shot");
 		record.inflight = 0;
 		const snap2 = await ctl.snapshot();
-		const row2 = snap2.sessions.find((r) => r.fingerprint === fingerprint("still-working"));
+		const row2 = snap2.sessions.find((r) => r.fingerprint === fingerprint(id));
 		assert.ok(row2.expiresInMs <= 50, "the moment it's idle again, the real (stale) clock applies");
 	}
 	// closeByKey/closeByScope: an unrelated settings change (a shared grant, another chat's container
