@@ -111,12 +111,13 @@
   .toolToggle { display:flex; align-items:center; gap:6px; cursor:pointer; white-space:nowrap; font-size:12.5px;
                 color:var(--muted); background:rgba(255,255,255,.08); border-radius:999px; padding:7px 12px; }
 
-  .statusbar { position:relative; z-index:10; padding:0 22px 8px; font-size:11.5px;
-               color:var(--muted); display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
-  .statusbar b { color:var(--fg); font-weight:600; }
-  .statusbar .ctxfull { color:var(--amber); }
-  #statusstats { display:flex; gap:16px; flex-wrap:wrap; }
-  #statusstats:empty { display:none; }
+  .statuspill { display:flex; align-items:center; gap:10px; font-size:11.5px; color:var(--muted);
+                background:rgba(255,255,255,.08); border-radius:999px; padding:7px 14px; white-space:nowrap; }
+  .statuspill:empty { display:none; }
+  .statuspill b { color:var(--fg); font-weight:600; }
+  .statuspill .ctxfull { color:var(--amber); }
+  .statuspill span:not(:first-child) { display:flex; align-items:center; gap:10px; }
+  .statuspill span:not(:first-child)::before { content:'·'; color:var(--dim); }
 
   #msgs { position:relative; z-index:10; flex:1; overflow-y:auto; overflow-x:hidden; padding:10px 24px 8px; }
   #msgs::-webkit-scrollbar { width:8px; }
@@ -334,10 +335,8 @@
     <div class="bar">
       <select id="target"></select>
       <div class="sp"></div>
+      <div id="statusstats" class="statuspill"></div>
       <label class="toolToggle"><input type="checkbox" id="toolToggle" style="margin:0">show tool calls</label>
-    </div>
-    <div id="statusbar" class="statusbar">
-      <div id="statusstats"></div>
     </div>
     <div id="msgs"></div>
     <div class="composer-zone">
