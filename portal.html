@@ -1028,6 +1028,7 @@ function send() {
   c.messages.push(msg);
   c.updated = Date.now();
   $('input').value = '';
+  resizeInput();
   PENDING_IMAGES = [];
   PENDING_DOCS = [];
   renderPending();
@@ -1449,6 +1450,8 @@ $('send').addEventListener('click', function () {
   var q = agentQuery(c);
   api('api/conversation/' + encodeURIComponent(c.id) + '/interrupt' + (q ? '?' + q : ''), { method: 'POST' }).catch(function () {});
 });
+function resizeInput() { var t = $('input'); t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 160) + 'px'; }
+$('input').addEventListener('input', resizeInput);
 $('input').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
 $('input').addEventListener('paste', function (e) {
   var files = (e.clipboardData && e.clipboardData.files) || [];
