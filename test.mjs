@@ -1435,6 +1435,7 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(memoryScopeOf("mem-key-1"), "mem-key-1", "a plain key's own scope: itself");
 	const ownAgent = agents.create({ keyId: "mem-key-1", name: "own-mem" });
 	assert.equal(agents.get(ownAgent.id).memoryMode, "own", "the default");
+	assert.equal(ownAgent.canSchedule, true, "a new agent may schedule its own jobs by default");
 	assert.equal(memoryScopeOf(agentScope("mem-key-1", ownAgent.id)), agentScope("mem-key-1", ownAgent.id));
 	const sharedAgent = agents.create({ keyId: "mem-key-1", name: "shared-mem", memoryMode: "shared" });
 	assert.equal(memoryScopeOf(agentScope("mem-key-1", sharedAgent.id)), "mem-key-1", "folds into its key's");
@@ -7818,7 +7819,9 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	config.AGENT_JOBS_ENABLED = true;
 	config.AGENT_JOBS_MAX_PER_AGENT = 10;
 
-	assert.equal(maySchedule(record), false, "off until the agent's own switch is on");
+	assert.equal(maySchedule(record), true, "on by default for a newly created agent");
+	agents.update(agent.id, { canSchedule: false });
+	assert.equal(maySchedule(record), false, "off once the agent's own switch is turned off");
 	agents.update(agent.id, { canSchedule: true });
 	agents.update(otherAgent.id, { canSchedule: true });
 	assert.equal(maySchedule(record), true);
