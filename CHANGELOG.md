@@ -5,6 +5,51 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
 ## [Unreleased]
 
 ### Added
+- **Integrations: external OpenAI-compatible chat endpoints, assignable to API keys.** A new dashboard
+  section (Integrations, under Infrastructure) for adding a chat endpoint outside Pi's own provider
+  catalogue — self-hosted inference, a third-party API — with an optional API key. **Overview** lists
+  every endpoint's models, each row directly editable in place (context window, vision/embedding/audio,
+  reasoning and its effort, enabled, a **save** button per row — chat is always implied) and whether the
+  endpoint answered last time it was checked (an on-demand **recheck**, not polling); changing the
+  endpoint's own name, URL or API key opens an inline panel. A reasoning-flagged model also gets a
+  configurable effort level (default, low, medium, high, xhigh — the same level names as Pi's own
+  agents, and the same `reasoning_effort` field Piper's own `/v1/chat/completions` already accepts);
+  default sends nothing at all. **External Endpoints** lists
+  the endpoints. **Wizard** adds one in three steps: name/URL/key, a **detect models** button that
+  probes the endpoint's own `/v1/models` (best-effort, always editable, or add a model by hand), then
+  review and save. **Access Control** grants specific models to specific API keys. A key with a
+  granted model sees it in the client portal's own target picker, and in the dashboard Playground's own
+  target picker too (any key the operator chooses, same as an agent there) — and can chat with it
+  exactly like an agent — except chat only: no tools, skills or extensions, since a bare completion
+  endpoint can't run them, and no container either. Both show a live "Thinking…" block when a reasoning model
+  streams its own reasoning content (`reasoning_content`/`reasoning`, whichever the endpoint sends) and
+  the same status bar (model, context, generation speed) an agent turn shows, measured around the call
+  itself. It's one direct, streaming, stateless HTTP call to the endpoint's own `/v1/chat/completions`
+  (`lib/externalmodels.mjs`) — the browser resends the whole conversation each time, since there is no
+  Pi session to keep it in.
+- **Notebooks can be processed by a granted model instead of an agent.** Creating a notebook now opens
+  a modal (title + a picker: the key's main endpoint, an agent, or a granted external model) instead of
+  a plain prompt; the same picker in the notebook's own bar changes it afterward. A model notebook's
+  **Chat** and **Generated** go straight through it (no tools, no Pi session, so a follow-up question
+  has no memory of the one before it — unlike an agent notebook's persistent session); extracting a new
+  source still always runs through the key's main endpoint either way, since a model has no
+  file-reading or URL-fetching ability at all.
+- **Notebooks: a NotebookLM-style feature in the client portal.** A new page (`/notebook`, linked from
+  the chat portal's sidebar, same login) where a key holder uploads documents or adds URLs as a
+  notebook's **sources**; each is extracted by that notebook's own agent (in its own container, the
+  same way RSS extraction already works — the gateway never parses a file or fetches a URL itself),
+  then chunked and embedded. **Chat** asks grounded questions against just those sources, with
+  citations back to which one the answer came from; a question that can't be answered from them says
+  so rather than guessing. **Generated** produces a summary, an FAQ, or a study guide from the whole
+  notebook. A failed extraction is discarded and can simply be re-added, the same tolerance this
+  session's own RSS fix already established — never a dead "failed" row.
+  Retrieval is a plain cosine-similarity scan over embeddings kept as BLOBs in the existing SQLite
+  database — no new service, no vector database; the one new host-side network call is to an
+  OpenAI-compatible embeddings endpoint (`NOTEBOOK_EMBEDDING_URL`/`_MODEL`/`_API_KEY`), the same trust
+  tier as RSS's own feed-fetching (a fixed, operator-configured address). `NOTEBOOK_ENABLED`
+  (Settings → Sessions → Notebooks) also hides the Notebooks button in the client portal's sidebar
+  entirely when off, not just refuse the page if it's clicked. `NOTEBOOK_SOURCE_MAX_BYTES`,
+  `NOTEBOOK_MAX_SOURCES` round out the new settings.
 - **Edit an environment's Dockerfile right from Containers → Images.** An **edit Dockerfile** button
   next to each environment's **build**/**rebuild** opens it as plain text (Ctrl+S to save). Saving only
   changes the file on disk — nothing is built automatically; use the existing build/rebuild button
@@ -119,6 +164,65 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   an agent or a key removes its memory with it.
 
 ### Fixed
+- **The client portal's chat history could go silently stale, making a conversation look "missing" after
+  logging in again (or from another device) — with no error anywhere.** `saveConvos()` PUT the whole
+  history to the server in the background but never checked the response status, only whether the
+  request itself failed outright; a 413 (over `PORTAL_HISTORY_MAX_BYTES`, easy to hit with a few
+  file-heavy conversations) came back as an ordinary successful response as far as the client could
+  tell, so the server-side copy just stopped updating with no sign anything was wrong. The default cap
+  is now 16 MiB (was 4 MiB), and a save that still gets refused shows a clear warning in the sidebar
+  instead of failing invisibly.
+- **A portal or dashboard chat could silently lose all its context and restart from nothing partway
+  through a conversation, with no error, nothing in the audit log — just the agent suddenly acting
+  like it was hearing everything for the first time.** `ONE_SHOT_TTL_MS` ("End a session used exactly
+  once and then quiet this long") exists for genuine one-off calls like title/summary generation, which
+  get a random, throwaway session id nobody will ever ask for again. But `reap()` had no way to tell
+  those apart from a human's **first** message in a brand new portal or dashboard conversation, which
+  looks identical by the only signal it checked (`requests <= 1`, idle) — and the default window is
+  just 2 minutes, easily spent reading a reply and typing one back. Once that timer fired, the session
+  wasn't stopped-but-resumable like every other idle timeout; it was ended outright, row and all, so
+  the very next message silently started a brand new one from scratch. Sessions now carry whether their
+  id was chosen by the caller (a portal/dashboard conversation, a job, a raw API call with its own
+  `X-Session-Id`) rather than handed out at random — only the latter is ever treated as one-shot, no
+  matter how long the pause before someone's second message.
+- **Downloading a file from the client portal's file browser (or a notebook's) could fail outright with
+  Chrome's "Try to sign in to the site. Then download again," no error shown anywhere else.** The
+  download button was a plain `<a href="..." download>` pointing straight at `/api/files/:path` — a
+  native browser navigation, which cannot carry a custom `Authorization` header, and that endpoint has
+  no cookie fallback (unlike the dashboard's own file browser, which does and was never affected). A
+  file that can be previewed inline (an image, a small text file) never hit this, since the preview
+  itself is an authenticated `fetch()`; anything that can't be inline-previewed (too large, or a binary
+  format like a `.tar.gz`) forced the user onto the broken link, which answered 401 every single time —
+  not a size or extension bug, just a credential that structurally could never reach the server that
+  way. The download link is now built from the same already-authenticated blob the preview itself
+  fetches, the same way an attached image already worked.
+- **Raw file reads/writes also now ask the profile helper container for 1GB of memory instead of the
+  256MB a small JSON profile operation needs** (`PROFILE_MAX_BYTES`-bounded) — a workspace file has no
+  size ceiling of its own (`WORKSPACE_MAX_BYTES` is 0, unlimited by default), and running out of room
+  mid-transfer is an OOM kill after the response has already started streaming: a failed, truncated
+  download with no clear reason. Not what turned out to cause the above (that was the missing
+  `Authorization` header, not file size), but a real gap worth closing regardless.
+- **An unrelated settings change could cut off a chat that was actively working, with just "the chat
+  was put to sleep" and no clue why.** `closeByKey`/`closeByScope` — used whenever a key's container
+  settings change, a shared extension grant changes, a profile gets locked, and a few other places —
+  hibernated every session of that key or scope unconditionally, including one in the middle of a turn
+  right now. Only `reap()` and LRU eviction were ever careful about this (a session doing real work is
+  never touched); these two call the very same `hibernate()` but had no such guard, so changing, say,
+  one key's container memory limit could silently abort a completely unrelated conversation of that
+  key that happened to be mid-answer. They now leave a session with work in flight alone by default —
+  it simply picks up the new settings whenever it next goes idle, the same deferred-but-never-lost
+  behavior `reap()`/eviction already guarantee — and only force it through (`{ force: true }`) at the
+  handful of call sites that are about to remove the very directory or container that turn is using
+  (resetting a profile, deleting a shared bundle, rebuilding an agent's container, deleting a key),
+  where leaving it running really would be the wrong kind of safe.
+- **Deleting a client portal chat silently did nothing once its container had already stopped.**
+  `DELETE /api/conversation/:id` only ever closed a *live* session; a chat left idle for a while (or
+  just not reopened in a bit) gets hibernated well before anyone deletes it — stopped, but kept,
+  resumable, in the `chats` table — and `sessions.has()` is false for one of those, so the delete
+  quietly did nothing: no error, but the row and its container were never actually removed. The portal
+  dropped it from the visible list regardless (it never checked the response), making it look deleted
+  when it was not. It now falls back to ending the stored row (and its container) the same way the
+  dashboard's own container cleanup already does for a stopped chat.
 - **One missing or broken extension took a whole chat's container down.** A shared bundle or library
   extension that was granted but whose folder is no longer actually on the host (removed by hand, a restore
   that missed it), or is there but is not a usable Pi package (a half-written edit, a file deleted out from

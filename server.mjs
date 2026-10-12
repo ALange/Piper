@@ -58,6 +58,7 @@ import { knowledgeDashboardRoutes } from "./lib/knowledgeroutes.mjs";
 import { rssDashboardRoutes } from "./lib/rssroutes.mjs";
 import { startJobs, stopJobs } from "./lib/jobs.mjs";
 import { startFeeds, stopFeeds } from "./lib/rssfeeds.mjs";
+import { resumeNotebookExtractions, stopNotebookExtractions } from "./lib/notebooks.mjs";
 import { startImageHousekeeping } from "./lib/images.mjs";
 import { startTeamServers, stopTeamServers } from "./lib/teams.mjs";
 import { dashboardFilesRoutes, filesRoutes, keyIdForScope, profileAdminRoutes, profileRoutes } from "./lib/profiles.mjs";
@@ -65,7 +66,7 @@ import { sessions, spendReport, startSweeps } from "./lib/sessions.mjs";
 import { chatCompletions, listModels } from "./lib/chat.mjs";
 import { startAgentServers, stopAgentServers } from "./lib/agentservers.mjs";
 import { portalPort, startPortal, stopPortal } from "./lib/portal.mjs";
-import { LOGIN_PAGE, hostPiRoutes, updateScopeRoute, agentRoutes, apiKeyRoutes, containerPiRoutes, containerRoutes, dashboardLogin, dashboardPage, dashboardSetPassword, modelCatalog, saveSettings, settingsPayload } from "./lib/dashboard.mjs";
+import { LOGIN_PAGE, hostPiRoutes, updateScopeRoute, agentRoutes, apiKeyRoutes, integrationRoutes, containerPiRoutes, containerRoutes, dashboardLogin, dashboardPage, dashboardSetPassword, modelCatalog, saveSettings, settingsPayload } from "./lib/dashboard.mjs";
 
 // Everything the modules export, re-exported: the tests, and anyone embedding the gateway, import
 // from here.
@@ -114,6 +115,8 @@ export * from "./lib/agentschedule.mjs";
 export * from "./lib/agents.mjs";
 export * from "./lib/agentservers.mjs";
 export * from "./lib/portal.mjs";
+export * from "./lib/notebooks.mjs";
+export * from "./lib/externalmodels.mjs";
 export * from "./lib/portalstore.mjs";
 export * from "./lib/updates.mjs";
 export * from "./lib/hostpi.mjs";
@@ -200,6 +203,7 @@ async function handle(req, res) {
 		}
 		if (req.method === "POST" && path === "/dashboard/password") return await dashboardSetPassword(req, res);
 		if (path.startsWith("/dashboard/api-keys")) return await apiKeyRoutes(req, res, path);
+		if (path.startsWith("/dashboard/integrations")) return await integrationRoutes(req, res, path);
 		// The Documentation page. Which files can be read comes from the docs folder, never from the request.
 		if (req.method === "GET" && (path === "/dashboard/docs.json" || path === "/dashboard/docs/search.json" || /^\/dashboard\/docs\/[a-z0-9-]+\.json$/.test(path))) {
 			const send = (status, body) => {
@@ -359,6 +363,7 @@ if (isMain) {
 		server.close();
 		stopJobs();
 		stopFeeds();
+		stopNotebookExtractions();
 		void stopAgentServers();
 		void stopTeamServers();
 		void stopPortal();
@@ -388,6 +393,7 @@ if (isMain) {
 				startSweeps();
 				startJobs();
 				startFeeds();
+				resumeNotebookExtractions();
 				startImageHousekeeping();
 				startEventWatch();
 				startDiskWatch();
@@ -398,6 +404,7 @@ if (isMain) {
 				startSweeps();
 				startJobs();
 				startFeeds();
+				resumeNotebookExtractions();
 				startPortal();
 				void startAgentServers().then(() => startTeamServers());
 			},

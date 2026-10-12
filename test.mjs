@@ -26,7 +26,10 @@ process.env.CONTAINER_PI_DIR = TEST_CONTAINER_PI;
 const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 // Seeded at startup, which is when a validator that reads a not-yet-defined constant would fail.
 process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
-const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, readDockerfile, writeDockerfile, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, portalSessionToken, readPortalSession, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, memoryScopeOf, mayRemember, memoryFor, memoryOverview, memoryEntries, deleteMemoryEntry, clearMemory, deleteMemoryOf, memoryDashboardRoutes, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, mayLookupKnowledge, knowledgeFor, addEntry, getByKey, getEntry, sourceSeen, overview: knowledgeOverview, entriesOf, removeEntry, clearSource, purgeOld, activityLog, knowledgeDashboardRoutes, RssError, SOURCE_TYPE, getFeed, listFeeds, createFeed, updateFeed, removeFeed, parseFeedXml, forcePoll, rssTick, parseExtraction, looksBlocked, parseUnblockReply, setExtractionRunner, rssPump, retryEntry, startFeeds, stopFeeds, rssDashboardRoutes, recentAudit: recentAuditRows } = await import("./server.mjs");
+const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, readDockerfile, writeDockerfile, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, portalSessionToken, readPortalSession, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, memoryScopeOf, mayRemember, memoryFor, memoryOverview, memoryEntries, deleteMemoryEntry, clearMemory, deleteMemoryOf, memoryDashboardRoutes, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, mayLookupKnowledge, knowledgeFor, addEntry, getByKey, getEntry, sourceSeen, overview: knowledgeOverview, entriesOf, removeEntry, clearSource, purgeOld, activityLog, knowledgeDashboardRoutes, RssError, SOURCE_TYPE, getFeed, listFeeds, createFeed, updateFeed, removeFeed, parseFeedXml, forcePoll, rssTick, parseExtraction, looksBlocked, parseUnblockReply, setExtractionRunner, rssPump, retryEntry, startFeeds, stopFeeds, rssDashboardRoutes,
+	NotebookError, createNotebook, listNotebooks, getNotebook, renameNotebook, setNotebookAgent, setNotebookExternalModel, deleteNotebook, listSources, getSource, addSource, removeSource, chunkText, cosine, topChunks, embedTexts, setEmbedder, setNotebookRunner, setFileReader, parseExtraction: parseNotebookExtraction, askNotebook, generateOutput, listOutputs, OUTPUT_KINDS, pumpExtract: pumpNotebookExtract, resumeNotebookExtractions, stopNotebookExtractions,
+	ExternalModelError, listEndpoints, getEndpoint, createEndpoint, updateEndpoint, deleteEndpoint, listExternalModels, getModel, addModel, updateModel, removeModel, listEndpointsWithModels, setFetch, guessCapabilities, detectModels, checkEndpointStatus, modelsForKey, setKeyModels, listAccess, splitSseLines, chatCompletion, normalizeBaseUrl, beginExternalTurn, checkedHistory,
+	recentAudit: recentAuditRows } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
 
@@ -271,13 +274,29 @@ assert.equal(nextTurn([{ role: "user", content: [{ type: "input_audio", input_au
 		assert.equal(disposed.length, 3);
 	}
 
-	// One-shot pruning: a session used exactly once and then left quiet is an orphan.
+	// One-shot pruning: a session with no caller-chosen id, used exactly once and then left quiet, is
+	// a genuine one-off (ONE_SHOT_TTL_MS's own target: "titles, summaries") and is pruned.
+	{
+		const { ctl } = build({ oneShotMs: 200, idleMs: 60_000, maxLifetimeMs: 60_000 });
+		const { id, record: rec } = ctl.acquire();
+		assert.equal(rec.requests, 1);
+		assert.equal(rec.named, false, "no caller-chosen id: a true one-off");
+		assert.deepEqual(ctl.reap(rec.lastUsedAt + 199), [], "inside the window it survives");
+		assert.deepEqual(ctl.reap(rec.lastUsedAt + 201), [id]);
+	}
+
+	// A session with a caller-chosen id -- a portal/dashboard conversation, a job, a raw API call with
+	// its own X-Session-Id -- is never treated as one-shot, however long the pause before its second
+	// message: only the much longer idle timeout applies. This was the actual bug: someone reading a
+	// reply and taking longer than ONE_SHOT_TTL_MS to answer had their whole conversation silently
+	// wiped and restarted from nothing, with no sign anything had gone wrong.
 	{
 		const { ctl } = build({ oneShotMs: 200, idleMs: 60_000, maxLifetimeMs: 60_000 });
 		const rec = ctl.acquire("orphan").record;
 		assert.equal(rec.requests, 1);
-		assert.deepEqual(ctl.reap(rec.lastUsedAt + 199), [], "inside the window it survives");
-		assert.deepEqual(ctl.reap(rec.lastUsedAt + 201), ["orphan"]);
+		assert.equal(rec.named, true);
+		assert.deepEqual(ctl.reap(rec.lastUsedAt + 201), [], "well past the one-shot window, but named: spared");
+		assert.deepEqual(ctl.reap(rec.lastUsedAt + 59_999), [], "spared right up to the real idle timeout too");
 	}
 
 	// A session that was actually continued is not a one-shot and must be spared.
@@ -873,7 +892,7 @@ assert.equal(isReloadCommand(undefined), false);
 // the shape of the chain is asserted here instead.
 {
 	const src = gatewaySource();
-	assert.match(src, /#spawn\(id, credential = null(, row = null)?\)/, "#spawn has to take the credential");
+	assert.match(src, /#spawn\(id, credential = null(, row = null(, named = false)?)?\)/, "#spawn has to take the credential");
 	assert.match(src, /keyId: credential\?\.id \?\? null/, "#spawn has to record it");
 	assert.match(src, /acquire\(requestId, credential = null\)/, "acquire has to take it");
 	const spawnCalls = [...src.matchAll(/this\.#spawn\(([^)]*)\)/g)].map((m) => m[1]);
@@ -1416,6 +1435,7 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(memoryScopeOf("mem-key-1"), "mem-key-1", "a plain key's own scope: itself");
 	const ownAgent = agents.create({ keyId: "mem-key-1", name: "own-mem" });
 	assert.equal(agents.get(ownAgent.id).memoryMode, "own", "the default");
+	assert.equal(ownAgent.canSchedule, true, "a new agent may schedule its own jobs by default");
 	assert.equal(memoryScopeOf(agentScope("mem-key-1", ownAgent.id)), agentScope("mem-key-1", ownAgent.id));
 	const sharedAgent = agents.create({ keyId: "mem-key-1", name: "shared-mem", memoryMode: "shared" });
 	assert.equal(memoryScopeOf(agentScope("mem-key-1", sharedAgent.id)), "mem-key-1", "folds into its key's");
@@ -1871,6 +1891,513 @@ assert.equal(isReloadCommand(undefined), false);
 	removeFeed(orphanFeed.id);
 	await deleteAgent(extractor.id);
 	apiKeys.remove(rkey.id);
+}
+
+// ---------------------------------------------------------------- notebooks: RAG without a vector database
+{
+	// Pure functions: chunking and the cosine-similarity math retrieval is built on.
+	assert.deepEqual(chunkText(""), []);
+	assert.deepEqual(chunkText("hello"), ["hello"]);
+	{
+		const chunks = chunkText("x".repeat(2200), 1000, 150);
+		assert.equal(chunks.length, 3, "1000 + (1000-150) + (200ish) covers 2200 chars");
+		assert.equal(chunks[0].length, 1000);
+		assert.equal(chunks[0].slice(-150), chunks[1].slice(0, 150), "consecutive chunks overlap");
+	}
+	assert.equal(cosine(Float32Array.from([1, 0]), Float32Array.from([1, 0])), 1);
+	assert.ok(Math.abs(cosine(Float32Array.from([1, 0]), Float32Array.from([0, 1]))) < 1e-9, "orthogonal vectors score ~0");
+	assert.equal(cosine(Float32Array.from([0, 0]), Float32Array.from([1, 1])), 0, "a zero vector never divides by zero");
+
+	// CRUD, scoped by key: never another key's.
+	const nkey = apiKeys.create({ name: "notebook-test" });
+	const nk = nkey.record ?? nkey;
+	const okey = apiKeys.create({ name: "notebook-other" });
+	const ok = okey.record ?? okey;
+	const nagent = await createAgent({ keyId: nk.id, name: "notebook-agent" });
+
+	assert.throws(() => createNotebook(nk.id, { agentId: "no-such-agent" }), (e) => e.status === 404);
+	const nb = createNotebook(nk.id, { title: "  My Notebook  ", agentId: nagent.id });
+	assert.equal(nb.title, "My Notebook", "trimmed");
+	assert.equal(nb.agentId, nagent.id);
+	assert.deepEqual(listNotebooks(nk.id).map((n) => n.id), [nb.id]);
+	assert.equal(getNotebook(nb.id, ok.id), null, "never another key's, even by the right id");
+	assert.equal(listNotebooks(ok.id).length, 0);
+	const renamed = renameNotebook(nb.id, nk.id, "Renamed");
+	assert.equal(renamed.title, "Renamed");
+	assert.throws(() => renameNotebook(nb.id, ok.id, "Stolen"), (e) => e.status === 404, "another key cannot rename it");
+	assert.throws(() => renameNotebook(nb.id, nk.id, "   "), /give it a title/);
+
+	// Which agent (or the key's own main endpoint) answers can be changed after creation too.
+	const unset = setNotebookAgent(nb.id, nk.id, null);
+	assert.equal(unset.agentId, null);
+	const reset = setNotebookAgent(nb.id, nk.id, nagent.id);
+	assert.equal(reset.agentId, nagent.id);
+	assert.throws(() => setNotebookAgent(nb.id, nk.id, "no-such-agent"), (e) => e.status === 404);
+	assert.throws(() => setNotebookAgent(nb.id, ok.id, nagent.id), (e) => e.status === 404, "another key cannot change it");
+
+	// A notebook can be processed by a granted external model instead of an agent -- chat and generate
+	// go through it directly (no Pi session), but extraction still always falls back to the main
+	// endpoint, since a model has no file-reading or URL-fetching ability at all.
+	const nep = createEndpoint({ name: "notebook-test-ep", baseUrl: "https://llm.notebook-test", models: [{ modelId: "nb-model" }] });
+	const [nmodel] = listExternalModels(nep.id);
+	assert.throws(() => createNotebook(nk.id, { title: "x", externalModelId: nmodel.id }), /not granted/, "not granted to this key yet");
+	assert.throws(() => createNotebook(nk.id, { title: "x", agentId: nagent.id, externalModelId: nmodel.id }), /not both/);
+	setKeyModels(nk.id, [nmodel.id]);
+	const modelNb = createNotebook(nk.id, { title: "Model notebook", externalModelId: nmodel.id });
+	assert.equal(modelNb.externalModelId, nmodel.id);
+	assert.equal(modelNb.agentId, null);
+	assert.throws(() => setNotebookExternalModel(nb.id, nk.id, "no-such-model"), (e) => e.status === 404);
+	const switched = setNotebookExternalModel(nb.id, nk.id, nmodel.id);
+	assert.equal(switched.externalModelId, nmodel.id);
+	assert.equal(switched.agentId, null, "switching to a model clears the agent");
+	const switchedBack = setNotebookAgent(switched.id, nk.id, nagent.id);
+	assert.equal(switchedBack.agentId, nagent.id);
+	assert.equal(switchedBack.externalModelId, null, "switching to an agent clears the model");
+
+	assert.throws(() => setNotebookExternalModel(nb.id, ok.id, nmodel.id), (e) => e.status === 404, "another key cannot switch it");
+
+	// Sources: validation, the per-notebook cap.
+	assert.throws(() => addSource(nb.id, nk.id, { kind: "bad", name: "x", origin: "x" }), /"upload" or "url"/);
+	assert.throws(() => addSource(nb.id, nk.id, { kind: "url", name: "x", origin: "not a url" }), /not a URL/);
+	assert.throws(() => addSource(nb.id, ok.id, { kind: "url", name: "x", origin: "https://x.test" }), (e) => e.status === 404, "another key cannot add to it");
+	const priorCap = config.NOTEBOOK_MAX_SOURCES;
+	config.NOTEBOOK_MAX_SOURCES = 1;
+	addSource(nb.id, nk.id, { kind: "url", name: "capper", origin: "https://cap.test" });
+	assert.throws(() => addSource(nb.id, nk.id, { kind: "url", name: "over", origin: "https://over.test" }), (e) => e.status === 409);
+	removeSource(listSources(nb.id)[0].id, nb.id, nk.id);
+	config.NOTEBOOK_MAX_SOURCES = priorCap;
+
+	// Extraction: one whole agent turn, same shape as RSS's own, including discard-on-failure.
+	let lastPrompt = null;
+	setNotebookRunner(async ({ prompt }) => {
+		lastPrompt = prompt;
+		if (prompt.includes("fail-me")) throw new Error("the agent could not read it");
+		if (prompt.includes("not-json-me")) return { text: "Sorry, I can't read this PDF without a tool for that." };
+		if (prompt.includes("big.pdf")) {
+			const match = prompt.match(/write the full extracted text as plain UTF-8 to a new file at "([^"]+)"/);
+			return { text: JSON.stringify({ title: "A long document", savedTo: match?.[1] ?? ".notebook-extract/missing.txt", summary: "It is long." }) };
+		}
+		return { text: JSON.stringify({ title: "Extracted", text: "The quick brown fox jumps over the lazy dog. ".repeat(40), summary: "About a fox." }) };
+	});
+	setEmbedder(async (texts) => texts.map((t, i) => Float32Array.from([t.length % 7, i, 1])));
+
+	const badSrc = addSource(nb.id, nk.id, { kind: "upload", name: "fail-me.txt", origin: "notebooks/x/sources/fail-me.txt" });
+	{
+		const end = Date.now() + 3000;
+		while (getSource(badSrc.id) && Date.now() < end) await new Promise((r) => setTimeout(r, 15));
+	}
+	assert.equal(getSource(badSrc.id), null, "a failed extraction is discarded, not kept");
+	assert.ok(recentAuditRows(20).some((r) => r.action === "notebook.extract_failed"));
+
+	// A non-JSON reply's failure detail includes what the agent actually said, so it is diagnosable.
+	const nonJsonSrc = addSource(nb.id, nk.id, { kind: "upload", name: "not-json-me.pdf", origin: "notebooks/x/sources/not-json-me.pdf" });
+	{
+		const end = Date.now() + 3000;
+		while (getSource(nonJsonSrc.id) && Date.now() < end) await new Promise((r) => setTimeout(r, 15));
+	}
+	assert.equal(getSource(nonJsonSrc.id), null, "a failed extraction is discarded, not kept");
+	assert.ok(recentAuditRows(20).some((r) => r.action === "notebook.extract_failed" && /the agent said:.*can't read this PDF/.test(r.detail)), "the raw reply is surfaced for diagnosis");
+
+	// A long source: the agent saves the text to a file instead of inlining it (avoids a reply so
+	// big it risks being cut off), and extraction reads that file back instead of the JSON's "text".
+	let readFilePath = null;
+	setFileReader(async (keyId, path) => {
+		readFilePath = { keyId, path };
+		return "A very long document's worth of extracted text. ".repeat(50);
+	});
+	const bigSrc = addSource(nb.id, nk.id, { kind: "upload", name: "big.pdf", origin: "notebooks/x/sources/big.pdf" });
+	const waitBigDone = async () => {
+		const end = Date.now() + 3000;
+		for (;;) {
+			const s = getSource(bigSrc.id);
+			if (!s || s.status === "done") return s;
+			if (Date.now() > end) throw new Error("timed out waiting for the big source to extract");
+			await new Promise((r) => setTimeout(r, 15));
+		}
+	};
+	setNotebookRunner(async ({ prompt }) => {
+		lastPrompt = prompt;
+		if (prompt.includes("big.pdf")) {
+			const match = prompt.match(/write the full extracted text as plain UTF-8 to a new file at "([^"]+)"/);
+			return { text: JSON.stringify({ title: "A long document", savedTo: match?.[1] ?? ".notebook-extract/missing.txt", summary: "It is long." }) };
+		}
+		return { text: JSON.stringify({ title: "Extracted", text: "The quick brown fox jumps over the lazy dog. ".repeat(40), summary: "About a fox." }) };
+	});
+	const bigDone = await waitBigDone();
+	assert.ok(bigDone, "a source using savedTo still reaches done");
+	assert.ok(readFilePath && /\.notebook-extract\/.*\.txt$/.test(readFilePath.path), "the saved-to path is read back by its own name");
+	setFileReader(null);
+
+	const goodSrc = addSource(nb.id, nk.id, { kind: "upload", name: "doc.txt", origin: "notebooks/x/sources/doc.txt" });
+	const waitDone = async () => {
+		const end = Date.now() + 3000;
+		for (;;) {
+			const s = getSource(goodSrc.id);
+			if (s?.status === "done") return s;
+			if (Date.now() > end) throw new Error("timed out waiting for extraction");
+			await new Promise((r) => setTimeout(r, 15));
+		}
+	};
+	const doneSrc = await waitDone();
+	assert.match(lastPrompt, /doc\.txt/, "the prompt names the uploaded file's path");
+	assert.ok(doneSrc.chunks > 0, "extraction produced at least one embedded chunk");
+
+	// Grounded Q&A: retrieval + citations, against the chunks just embedded.
+	setNotebookRunner(async ({ prompt }) => ({ text: `The fox jumps. ${prompt.includes("[1]") ? "[1]" : ""}` }));
+	const notebook = getNotebook(nb.id, nk.id);
+	const answer = await askNotebook({ notebook, question: "What does the fox do?", clientSessionId: "test-ask" });
+	assert.match(answer.text, /fox/);
+	assert.ok(answer.citations.length > 0);
+	assert.equal(answer.citations[0].sourceId, goodSrc.id);
+	await assert.rejects(askNotebook({ notebook, question: "   ", clientSessionId: "x" }), (e) => e instanceof NotebookError);
+
+	// Generated outputs: one turn over the whole notebook, persisted.
+	setNotebookRunner(async ({ prompt }) => ({ text: `A tidy ${prompt.includes("study guide") ? "study guide" : "summary"} of the fox document.` }));
+	await assert.rejects(generateOutput(notebook, "not-a-kind"), /must be one of/);
+	const out = await generateOutput(notebook, "summary");
+	assert.match(out.text, /summary/);
+	assert.deepEqual(listOutputs(nb.id).map((o) => o.id), [out.id]);
+	const out2 = await generateOutput(notebook, "study-guide");
+	assert.deepEqual(listOutputs(nb.id).map((o) => o.id).sort(), [out.id, out2.id].sort());
+
+	// A notebook with no done sources yet refuses to generate rather than send nothing useful.
+	const emptyNb = createNotebook(nk.id, { title: "Empty" });
+	await assert.rejects(generateOutput(emptyNb, "summary"), (e) => e.status === 409);
+
+	// A model notebook: extraction still runs through the main endpoint (the fake agent runner already
+	// in place), but asking a question and generating an output go through the external model instead.
+	setNotebookRunner(async ({ prompt }) => ({ text: JSON.stringify({ title: "Model doc", text: "The moon is bright tonight. ".repeat(40), summary: "About the moon." }) }));
+	const modelSrc = addSource(modelNb.id, nk.id, { kind: "upload", name: "moon.txt", origin: "notebooks/x/sources/moon.txt" });
+	const waitModelDone = async () => {
+		const end = Date.now() + 3000;
+		for (;;) {
+			const s = getSource(modelSrc.id);
+			if (s?.status === "done") return s;
+			if (Date.now() > end) throw new Error("timed out waiting for the model notebook's extraction");
+			await new Promise((r) => setTimeout(r, 15));
+		}
+	};
+	await waitModelDone();
+	let seenModelCompletion = null;
+	setFetch(async (url, opts) => {
+		if (opts?.body) seenModelCompletion = JSON.parse(opts.body);
+		return { ok: true, body: { getReader: () => { let sent = false; return { read: async () => (sent ? { done: true } : ((sent = true), { done: false, value: new TextEncoder().encode('data: {"choices":[{"delta":{"content":"The moon."}}]}\n\ndata: [DONE]\n\n') })) }; } } };
+	});
+	const modelNotebook = getNotebook(modelNb.id, nk.id);
+	const modelAnswer = await askNotebook({ notebook: modelNotebook, question: "What is bright tonight?" });
+	assert.equal(modelAnswer.text, "The moon.");
+	assert.ok(modelAnswer.citations.length > 0, "retrieval still works the same way for a model notebook");
+	assert.equal(seenModelCompletion.model, "nb-model", "the external model was actually called, not the agent runner");
+	const modelOut = await generateOutput(modelNotebook, "summary");
+	assert.equal(modelOut.text, "The moon.");
+	setFetch(null);
+	deleteNotebook(modelNb.id, nk.id);
+	setKeyModels(nk.id, []);
+	deleteEndpoint(nep.id);
+
+	// A bad embeddings reply is reported, not thrown through the extraction pipeline.
+	setNotebookRunner(async ({ prompt }) => {
+		lastPrompt = prompt;
+		return { text: JSON.stringify({ title: "Extracted 2", text: "Another document entirely, about nothing in particular. ".repeat(20), summary: "About nothing." }) };
+	});
+	setEmbedder(async () => {
+		throw new Error("the embeddings endpoint is down");
+	});
+	const unembedded = addSource(nb.id, nk.id, { kind: "upload", name: "doc2.txt", origin: "notebooks/x/sources/doc2.txt" });
+	const waitDone2 = async () => {
+		const end = Date.now() + 3000;
+		for (;;) {
+			const s = getSource(unembedded.id);
+			if (s?.status === "done") return s;
+			if (Date.now() > end) throw new Error("timed out");
+			await new Promise((r) => setTimeout(r, 15));
+		}
+	};
+	const doneButUnembedded = await waitDone2();
+	assert.equal(doneButUnembedded.chunks, 0, "extraction itself still succeeded; only embedding failed");
+	assert.ok(recentAuditRows(20).some((r) => r.action === "notebook.embed_failed"));
+
+	setEmbedder(null);
+	setNotebookRunner(null);
+	deleteNotebook(nb.id, nk.id);
+	deleteNotebook(emptyNb.id, nk.id);
+	assert.equal(getNotebook(nb.id, nk.id), null);
+	await deleteAgent(nagent.id);
+	apiKeys.remove(nk.id);
+	apiKeys.remove(ok.id);
+}
+
+// ---------------------------------------------------------------- external endpoints: operator-added OpenAI-compatible chat
+{
+	// Pure functions first.
+	assert.deepEqual(guessCapabilities("gpt-4o"), { vision: true, embedding: false, audio: false, reasoning: false });
+	assert.deepEqual(guessCapabilities("text-embedding-3-small"), { vision: false, embedding: true, audio: false, reasoning: false });
+	assert.deepEqual(guessCapabilities("whisper-1"), { vision: false, embedding: false, audio: true, reasoning: false });
+	assert.deepEqual(guessCapabilities("llama-3-70b"), { vision: false, embedding: false, audio: false, reasoning: false });
+	assert.equal(guessCapabilities("o3-mini").reasoning, true);
+	assert.equal(guessCapabilities("deepseek-r1").reasoning, true);
+	assert.equal(guessCapabilities("gpt-5").reasoning, true);
+
+	{
+		const a = splitSseLines('data: {"a":1}\ndata: {"b":2}\n\ndata: [DONE' /* no trailing newline yet */);
+		assert.deepEqual(a.lines, ['{"a":1}', '{"b":2}'], "the blank line between SSE events carries no data: prefix, so it's skipped");
+		assert.equal(a.rest, "data: [DONE");
+		const b = splitSseLines(`${a.rest}]\n`);
+		assert.deepEqual(b.lines, ["[DONE]"]);
+		assert.equal(b.rest, "");
+	}
+
+	// CRUD: validation, and an endpoint always carries at least one model.
+	assert.throws(() => createEndpoint({ name: "", baseUrl: "https://x.test", models: [{ modelId: "m" }] }), /give the endpoint a name/);
+	assert.throws(() => createEndpoint({ name: "X", baseUrl: "not a url", models: [{ modelId: "m" }] }), /not a URL/);
+	assert.throws(() => createEndpoint({ name: "X", baseUrl: "https://x.test", models: [] }), /at least one model/);
+
+	const ep = createEndpoint({
+		name: "Local vLLM",
+		baseUrl: "https://llm.internal/",
+		apiKey: "sk-test-123",
+		models: [
+			{ modelId: "llama-3-70b", name: "Llama 3 70B", contextWindow: 8192 },
+			{ modelId: "llava-7b", vision: true },
+		],
+	});
+	assert.equal(ep.baseUrl, "https://llm.internal", "a trailing slash is trimmed");
+	assert.equal(ep.hasKey, true);
+	assert.ok(!("apiKey" in ep), "the raw key is never in the returned shape");
+	const models = listExternalModels(ep.id);
+	assert.equal(models.length, 2);
+	assert.equal(models[0].contextWindow, 8192);
+	assert.equal(models[1].vision, true);
+	assert.deepEqual(listEndpointsWithModels().find((e) => e.id === ep.id).models.map((m) => m.id).sort(), models.map((m) => m.id).sort());
+
+	const updated = updateEndpoint(ep.id, { name: "Local vLLM (renamed)" });
+	assert.equal(updated.name, "Local vLLM (renamed)");
+	assert.equal(updated.hasKey, true, "omitting apiKey on update leaves it alone");
+	const cleared = updateEndpoint(ep.id, { apiKey: "" });
+	assert.equal(cleared.hasKey, false, "an explicit blank clears it");
+	assert.throws(() => updateEndpoint("no-such-id", { name: "x" }), (e) => e.status === 404);
+
+	const extraModel = addModel(ep.id, { modelId: "new-model", embedding: true });
+	assert.equal(extraModel.embedding, true);
+	const edited = updateModel(extraModel.id, { contextWindow: 4096, embedding: false, audio: true });
+	assert.equal(edited.contextWindow, 4096);
+	assert.equal(edited.embedding, false);
+	assert.equal(edited.audio, true);
+	assert.throws(() => addModel(ep.id, { modelId: "" }), /needs its id/);
+	assert.throws(() => updateModel("no-such-id", {}), (e) => e.status === 404);
+
+	// Reasoning: a capability flag plus a configured effort level (REASONING_EFFORTS), sent to the
+	// model on every call -- off by default, and the effort is dropped if reasoning itself is off.
+	const reasonModel = addModel(ep.id, { modelId: "o3-mini", reasoning: true, reasoningEffort: "high" });
+	assert.equal(reasonModel.reasoning, true);
+	assert.equal(reasonModel.reasoningEffort, "high");
+	assert.throws(() => addModel(ep.id, { modelId: "bad-effort", reasoning: true, reasoningEffort: "ultra" }), /reasoningEffort must be one of/);
+	assert.equal(addModel(ep.id, { modelId: "xhigh-effort", reasoning: true, reasoningEffort: "xhigh" }).reasoningEffort, "xhigh", "default/low/medium/high/xhigh -- xhigh is a real level too");
+	const noEffortYet = addModel(ep.id, { modelId: "o3-mini-2", reasoning: true });
+	assert.equal(noEffortYet.reasoningEffort, null, "reasoning on, no level chosen: nothing is sent");
+	const effortSet = updateModel(noEffortYet.id, { reasoningEffort: "low" });
+	assert.equal(effortSet.reasoningEffort, "low");
+	const reasonOff = updateModel(effortSet.id, { reasoning: false });
+	assert.equal(reasonOff.reasoning, false);
+	assert.equal(reasonOff.reasoningEffort, null, "turning reasoning off drops the stored effort too");
+	assert.equal(updateModel(reasonModel.id, {}).reasoningEffort, "high", "omitted fields are left alone");
+
+	// A base URL is accepted with or without a trailing /v1 -- every call here appends "/v1/..."
+	// itself, so a doubled "/v1/v1/..." would otherwise 404 silently against a real endpoint.
+	assert.equal(normalizeBaseUrl("https://x.test"), "https://x.test");
+	assert.equal(normalizeBaseUrl("https://x.test/"), "https://x.test");
+	assert.equal(normalizeBaseUrl("https://x.test/v1"), "https://x.test");
+	assert.equal(normalizeBaseUrl("https://x.test/v1/"), "https://x.test");
+	assert.equal(normalizeBaseUrl("https://x.test/V1"), "https://x.test", "case-insensitive");
+	let lastDetectUrl = null;
+	setFetch(async (url) => {
+		lastDetectUrl = url;
+		return { ok: true, status: 200, json: async () => ({ data: [{ id: "m1" }] }) };
+	});
+	await detectModels("https://x.test/v1", "");
+	assert.equal(lastDetectUrl, "https://x.test/v1/models", "a base URL already ending in /v1 is not doubled");
+	const epV1 = createEndpoint({ name: "already-v1", baseUrl: "https://x.test/v1/", models: [{ modelId: "m1" }] });
+	assert.equal(epV1.baseUrl, "https://x.test", "stored normalized, so later /v1 calls are never doubled either");
+	deleteEndpoint(epV1.id);
+
+	// Detection and status: an injectable fetch, so no real network call runs in the suite.
+	setFetch(async (url) => {
+		if (url.includes("down.test")) throw Object.assign(new Error("fetch failed"), { name: "FetchError" });
+		if (url.includes("empty.test")) return { ok: true, json: async () => ({ data: [] }) };
+		if (url.includes("bad.test")) return { ok: false, status: 401, text: async () => "nope" };
+		return { ok: true, status: 200, json: async () => ({ data: [{ id: "gpt-4o-mini" }, { id: "text-embedding-3-small", context_window: 8191 }] }) };
+	});
+	const detected = await detectModels("https://good.test", "");
+	assert.equal(detected.error, null);
+	assert.equal(detected.models.length, 2);
+	assert.equal(detected.models[1].contextWindow, 8191);
+	assert.equal(detected.models[0].vision, true, "the '4o' heuristic pre-ticks vision for gpt-4o-mini");
+	const detectedEmpty = await detectModels("https://empty.test", "");
+	assert.match(detectedEmpty.error, /no models/);
+	const detectedBad = await detectModels("https://bad.test", "");
+	assert.match(detectedBad.error, /401/);
+	const detectedDown = await detectModels("https://down.test", "");
+	assert.ok(detectedDown.error, "a network failure is reported, never thrown");
+
+	const statusOk = await checkEndpointStatus(ep);
+	assert.equal(statusOk.online, true);
+	setFetch(async () => {
+		throw new Error("connection refused");
+	});
+	const statusDown = await checkEndpointStatus(ep);
+	assert.equal(statusDown.online, false);
+	assert.match(statusDown.error, /connection refused/);
+	setFetch(null);
+	await assert.rejects(checkEndpointStatus({ id: "no-such-id" }), (e) => e.status === 404);
+
+	// Access control: assigning a model to a key, scoped and replaceable in one call.
+	const mkey = apiKeys.create({ name: "external-model-test" });
+	const mk = mkey.record ?? mkey;
+	assert.throws(() => setKeyModels("no-such-key", [models[0].id]), (e) => e.status === 404);
+	assert.throws(() => setKeyModels(mk.id, ["no-such-model"]), (e) => e.status === 404);
+	setKeyModels(mk.id, [models[0].id, models[1].id]);
+	assert.deepEqual(modelsForKey(mk.id).map((m) => m.id).sort(), [models[0].id, models[1].id].sort());
+	assert.equal(modelsForKey(mk.id)[0].endpointName, "Local vLLM (renamed)");
+	setKeyModels(mk.id, [models[0].id]);
+	assert.deepEqual(modelsForKey(mk.id).map((m) => m.id), [models[0].id], "replaces the whole set, not additive");
+	// A failed call (one transaction, delete-then-reinsert) must leave the prior set untouched, not
+	// wiped -- the whole point of wrapping it rather than running the two halves separately.
+	assert.throws(() => setKeyModels(mk.id, ["no-such-model"]), (e) => e.status === 404);
+	assert.deepEqual(modelsForKey(mk.id).map((m) => m.id), [models[0].id], "a rejected call changes nothing");
+	const access = listAccess();
+	assert.ok(access.models.some((m) => m.id === models[0].id));
+	assert.deepEqual(access.assignments[mk.id], [models[0].id]);
+
+	// The chat call itself: a fake streamed OpenAI-shaped response, no real network call.
+	const sseBody = [
+		'data: {"choices":[{"delta":{"content":"Hel"}}]}\n\n',
+		'data: {"choices":[{"delta":{"content":"lo"}}]}\n\n',
+		'data: {"choices":[{"delta":{}}],"usage":{"prompt_tokens":5,"completion_tokens":2,"total_tokens":7}}\n\n',
+		"data: [DONE]\n\n",
+	];
+	function fakeStreamFetch() {
+		let i = 0;
+		return async () => ({
+			ok: true,
+			body: {
+				getReader: () => ({
+					read: async () => {
+						if (i >= sseBody.length) return { done: true, value: undefined };
+						return { done: false, value: new TextEncoder().encode(sseBody[i++]) };
+					},
+				}),
+			},
+		});
+	}
+	setFetch(fakeStreamFetch());
+	let streamed = "";
+	const chatResult = await chatCompletion({ endpoint: ep, model: models[0], messages: [{ role: "user", content: "hi" }], onDelta: (d) => (streamed += d) });
+	assert.equal(chatResult.text, "Hello");
+	assert.equal(streamed, "Hello");
+	assert.equal(chatResult.usage.total_tokens, 7);
+
+	setFetch(async () => ({ ok: false, status: 500, text: async () => "boom" }));
+	await assert.rejects(chatCompletion({ endpoint: ep, model: models[0], messages: [] }), (e) => e instanceof ExternalModelError && /500/.test(e.message));
+	setFetch(async () => {
+		throw new Error("ECONNREFUSED");
+	});
+	await assert.rejects(chatCompletion({ endpoint: ep, model: models[0], messages: [] }), (e) => e instanceof ExternalModelError && /could not reach/.test(e.message));
+	setFetch(null);
+
+	// Reasoning content streams separately from the reply text (reasoning_content, the DeepSeek/vLLM
+	// field name), and reasoning_effort is only sent when the model is flagged reasoning AND has a level.
+	const thinkSse = [
+		'data: {"choices":[{"delta":{"reasoning_content":"Let "}}]}\n\n',
+		'data: {"choices":[{"delta":{"reasoning_content":"me think."}}]}\n\n',
+		'data: {"choices":[{"delta":{"content":"42"}}]}\n\n',
+		"data: [DONE]\n\n",
+	];
+	function fakeThinkFetch(seenBody) {
+		let i = 0;
+		return async (url, opts) => {
+			if (opts?.body) seenBody.push(JSON.parse(opts.body));
+			return { ok: true, body: { getReader: () => ({ read: async () => (i >= thinkSse.length ? { done: true } : { done: false, value: new TextEncoder().encode(thinkSse[i++]) }) }) } };
+		};
+	}
+	let seenBody1 = [];
+	setFetch(fakeThinkFetch(seenBody1));
+	let thought = "";
+	const thinkResult = await chatCompletion({ endpoint: ep, model: reasonModel, messages: [{ role: "user", content: "the answer?" }], onThinking: (d) => (thought += d) });
+	assert.equal(thought, "Let me think.");
+	assert.equal(thinkResult.reasoning, "Let me think.");
+	assert.equal(thinkResult.text, "42");
+	assert.equal(seenBody1[0].reasoning_effort, "high", "reasoning + a configured level: sent");
+	assert.equal(seenBody1[0].stream_options.include_usage, true);
+
+	let seenBody2 = [];
+	setFetch(fakeThinkFetch(seenBody2));
+	await chatCompletion({ endpoint: ep, model: models[0], messages: [{ role: "user", content: "hi" }] });
+	assert.equal("reasoning_effort" in seenBody2[0], false, "not a reasoning model: never sent");
+	setFetch(null);
+
+	// checkedHistory measures a message's size in actual UTF-8 bytes, not JS string .length (UTF-16
+	// code units) -- a CJK-heavy message can be short in .length but well over the byte limit.
+	assert.deepEqual(checkedHistory(undefined), []);
+	assert.throws(() => checkedHistory("not a list"), (e) => e instanceof ExternalModelError);
+	assert.throws(() => checkedHistory([{ role: "system", content: "x" }]), (e) => /role/.test(e.message));
+	assert.throws(() => checkedHistory([{ role: "user", content: "   " }]), (e) => /no text/.test(e.message));
+	const wide = "中".repeat(20_000); // 20,000 UTF-16 units, but 60,000 UTF-8 bytes -- over the 32 KiB limit
+	assert.throws(() => checkedHistory([{ role: "user", content: wide }]), (e) => /over 32 KB/.test(e.message), "measured in bytes, not .length");
+	assert.doesNotThrow(() => checkedHistory([{ role: "user", content: "中".repeat(5_000) }]), "well under the byte limit still passes");
+
+	// chatCompletion refuses to let a reply grow without bound: a stream that never sends [DONE] and
+	// keeps generating must be aborted once it passes the size ceiling, not held open forever.
+	setFetch(async () => ({
+		ok: true,
+		body: {
+			getReader: () => ({
+				// One chunk already over the limit -- chatCompletion must abort on it rather than keep reading.
+				read: async () => ({ done: false, value: new TextEncoder().encode(`data: {"choices":[{"delta":{"content":"${"x".repeat(9_000_000)}"}}]}\n\n`) }),
+			}),
+		},
+	}));
+	await assert.rejects(chatCompletion({ endpoint: ep, model: models[0], messages: [{ role: "user", content: "hi" }] }), (e) => e instanceof ExternalModelError && /passed \d+ MB/.test(e.message));
+	setFetch(null);
+
+	// A signal that's already aborted before the call even starts (the caller interrupted, or the
+	// client was already gone) must propagate as the caller's own abort, not be mislabeled as this
+	// function's own "did not answer in time" timeout.
+	const preAborted = new AbortController();
+	preAborted.abort();
+	setFetch(async (url, opts) => {
+		if (opts?.signal?.aborted) {
+			const err = new Error("aborted");
+			err.name = "AbortError";
+			throw err;
+		}
+		return { ok: true, body: null };
+	});
+	await assert.rejects(
+		chatCompletion({ endpoint: ep, model: models[0], messages: [], signal: preAborted.signal }),
+		(e) => e instanceof ExternalModelError && !/did not answer/.test(e.message),
+	);
+	setFetch(null);
+
+	// beginExternalTurn: a per-key cap on how many external-model turns may run at once, the equivalent
+	// of a Pi session's own concurrency limits for a chat-only path that has no session to bound it.
+	const capKey = apiKeys.create({ name: "external-cap-test" });
+	const capKeyId = (capKey.record ?? capKey).id;
+	const releases = [];
+	for (let i = 0; i < 3; i++) releases.push(beginExternalTurn(capKeyId));
+	assert.throws(() => beginExternalTurn(capKeyId), (e) => e instanceof ExternalModelError && e.status === 429, "a 4th concurrent turn for the same key is refused");
+	releases.pop()();
+	assert.doesNotThrow(() => releases.push(beginExternalTurn(capKeyId)), "releasing one slot frees it for the next turn");
+	for (const release of releases) release();
+	assert.doesNotThrow(() => beginExternalTurn(capKeyId)()); // the cap is per key: fully released, back to zero in flight
+	apiKeys.remove(capKeyId);
+
+	// Deleting an endpoint cascades: its models and any key assignments go with it.
+	deleteEndpoint(ep.id);
+	assert.equal(getEndpoint(ep.id), null);
+	assert.deepEqual(listExternalModels(ep.id), []);
+	assert.deepEqual(modelsForKey(mk.id), []);
+	assert.throws(() => deleteEndpoint(ep.id), (e) => e.status === 404);
+	apiKeys.remove(mk.id);
 }
 
 // ---------------------------------------------------------------- profile control
@@ -2437,15 +2964,30 @@ assert.equal(isReloadCommand(undefined), false);
 		assert.equal(ctl.acquire("idle-chat", { id: "k1" }).resumed, true, "and the next message resumes it");
 	}
 
-	// A one-off request is ended: nothing will ask for it again.
+	// A one-off request -- no caller-chosen id, so nothing could ever ask for it again by name -- is ended.
 	{
 		const ctl = make();
-		const { record } = ctl.acquire("one-off", { id: "k1" });
+		const { id, record } = ctl.acquire(null, { id: "k1" });
+		assert.equal(record.named, false);
 		await ctl.run(record, async () => {});
 		record.lastUsedAt = T0 - 20_000;
 		ctl.reap(T0);
 		await settle();
-		assert.ok(ended.includes(chatIdHash("one-off")) && !rows.has(chatIdHash("one-off")), "removed, with its row");
+		assert.ok(ended.includes(chatIdHash(id)) && !rows.has(chatIdHash(id)), "removed, with its row");
+	}
+
+	// The same session, if it has a caller-chosen id -- a conversation someone intends to come back to
+	// -- is spared no matter how long the pause, and only stops (stays resumable) like any other idle one.
+	{
+		const ctl = make();
+		const { record } = ctl.acquire("not-a-one-off", { id: "k1" });
+		assert.equal(record.named, true);
+		await ctl.run(record, async () => {});
+		record.lastUsedAt = T0 - 20_000;
+		assert.deepEqual(ctl.reap(T0), ["not-a-one-off"], "still stops when idle, same as any named chat");
+		await settle();
+		assert.ok(stopped.includes(chatIdHash("not-a-one-off")) && !ended.includes(chatIdHash("not-a-one-off")), "but only stopped, not ended -- it is resumable");
+		assert.ok(rows.has(chatIdHash("not-a-one-off")), "its row is kept");
 	}
 
 	// Lifetime counts from when this Pi started, so an old chat that was just resumed is not stopped again.
@@ -2477,11 +3019,63 @@ assert.equal(isReloadCommand(undefined), false);
 		const snap = await ctl.snapshot();
 		const row = snap.sessions.find((r) => r.fingerprint === fingerprint("busy"));
 		assert.deepEqual([row.expiresBecause, row.expiresAction], ["idle", "stops"], "the page can say a stop is coming, not an end");
-		const one = ctl.acquire("fresh-one-off", { id: "k1" });
+		const one = ctl.acquire(null, { id: "k1" });
 		one.record.lastUsedAt = Date.now();
 		const snap2 = await ctl.snapshot();
-		assert.equal(snap2.sessions.find((r) => r.fingerprint === fingerprint("fresh-one-off")).expiresAction, "ends", "a first request that may be a one-off ends");
+		assert.equal(snap2.sessions.find((r) => r.fingerprint === fingerprint(one.id)).expiresAction, "ends", "a first request with no caller-chosen id, that may be a one-off, ends");
 		assert.equal(snap2.keepMs, 1e12);
+	}
+	// The displayed countdown freezes while a turn is actually running -- reap() already leaves a
+	// busy session alone no matter how stale lastUsedAt looks (above), so a countdown ticking toward
+	// zero during a long turn would be misleading: it never actually fires until the turn ends.
+	{
+		const ctl = make();
+		// No caller-chosen id: the one-shot window only ever applies to one of these (above), so this is
+		// the one that can still show it frozen.
+		const { id, record } = ctl.acquire(null, { id: "k1" });
+		record.inflight = 1;
+		record.lastUsedAt = T0 - 9_000; // past the 5s one-shot window and close to the 10s idle one
+		const snap = await ctl.snapshot();
+		const row = snap.sessions.find((r) => r.fingerprint === fingerprint(id));
+		assert.equal(row.idleMs, 0, "not shown as idle at all while a turn is in flight");
+		assert.equal(row.expiresInMs, 5_000, "frozen at the full one-shot window, not counted down from the stale lastUsedAt");
+		assert.equal(row.expiresBecause, "one-shot");
+		record.inflight = 0;
+		const snap2 = await ctl.snapshot();
+		const row2 = snap2.sessions.find((r) => r.fingerprint === fingerprint(id));
+		assert.ok(row2.expiresInMs <= 50, "the moment it's idle again, the real (stale) clock applies");
+	}
+	// closeByKey/closeByScope: an unrelated settings change (a shared grant, another chat's container
+	// limits) must never cut off a turn actually in progress -- only reap() and eviction were careful
+	// about this before; a session mid-turn now simply keeps running on its old profile until it goes
+	// idle on its own, the same as those two already guarantee. `force` opts back into the old
+	// everything-stops behaviour, for a caller about to remove the very directory or container a still
+	// running turn has mounted (resetProfile, deleteBundle, an agent's container being rebuilt, ...).
+	{
+		const ctl = make();
+		const busy = ctl.acquire("busy-scope", { id: "k1", agent: { id: "a1" }, scopeId: "k1--a1" });
+		const idle = ctl.acquire("idle-scope", { id: "k1", agent: { id: "a1" }, scopeId: "k1--a1" });
+		busy.record.inflight = 1;
+
+		assert.equal(ctl.closeByScope("k1--a1"), 1, "only the idle one, by default");
+		assert.equal(ctl.has(busy.id), true, "the busy one is untouched, still live");
+		assert.equal(ctl.has(idle.id), false, "the idle one hibernated as usual");
+
+		const busy2 = ctl.acquire("busy-key", { id: "k2" });
+		const idle2 = ctl.acquire("idle-key", { id: "k2" });
+		busy2.record.inflight = 1;
+		assert.equal(ctl.closeByKey("k2"), 1, "same rule for closeByKey");
+		assert.equal(ctl.has(busy2.id), true);
+		assert.equal(ctl.has(idle2.id), false);
+
+		// force: true is the old behaviour -- everything of that scope/key stops, busy or not, for a
+		// caller about to pull the directory or container out from under it regardless.
+		assert.equal(ctl.closeByScope("k1--a1", { force: true }), 1, "the still-busy one too, this time");
+		assert.equal(ctl.has(busy.id), false);
+		const busy3 = ctl.acquire("busy-key-2", { id: "k3" });
+		busy3.record.inflight = 1;
+		assert.equal(ctl.closeByKey("k3", { force: true }), 1);
+		assert.equal(ctl.has(busy3.id), false);
 	}
 	// Without a store there is nothing to resume from, so a stop is an end, as before.
 	{
@@ -3404,6 +3998,15 @@ assert.equal(isReloadCommand(undefined), false);
 		assert.equal(flags(args, "--entrypoint")[0], "node");
 		assert.deepEqual(args.slice(args.indexOf("img")), ["img", "/opt/piper/profile.mjs", "raw", "read", "a"]);
 		assert.equal(profileHelperInvocation({ dir: "/d", extraArgs: [] }).command, "docker");
+		// memoryMb: 256 for a JSON profile op by default; a raw file read/write (filesStream) asks for
+		// more, since a workspace file has no size ceiling of its own (WORKSPACE_MAX_BYTES is 0) and
+		// running out of room mid-download is an OOM kill after the response already started -- a
+		// failed, truncated download with no clear reason, not a clean refusal.
+		assert.equal(flags(args, "--memory")[0], "256m", "the small JSON-op default, unasked");
+		const raised = helperArgs({ dir: "/p/key-k1", helperPath: "/h.mjs", extraArgs: [], memoryMb: 1024 });
+		assert.equal(flags(raised, "--memory")[0], "1024m");
+		const viaInvocation = profileHelperInvocation({ dir: "/d", extraArgs: [], memoryMb: 1024 }).args;
+		assert.equal(flags(viaInvocation, "--memory")[0], "1024m", "profileHelperInvocation forwards it too");
 	}
 
 	// ensureContainer against the fake engine: create, reuse, start, recreate on a changed signature.
@@ -4771,6 +5374,52 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.ok(engineCalls.some((c) => c[1] === "rm" && c.includes(keyContainerName(agentScope(OWNER, rid)))), "reset removes its container");
 	assert.equal((await dpost(`/dashboard/agents/${rid}`, undefined, "DELETE")).json.deleted, rid);
 	assert.equal(agents.get(rid), null);
+
+	// Integrations: external OpenAI-compatible endpoints + per-key model access, over the same dashboard HTTP shape.
+	{
+		assert.deepEqual((await dpost("/dashboard/integrations.json", undefined, "GET")).json.endpoints, []);
+
+		setFetch(async (url) => {
+			if (url.includes("/v1/models")) return { ok: true, status: 200, json: async () => ({ data: [{ id: "gpt-4o-mini" }] }) };
+			return { ok: false, status: 404 };
+		});
+		const detected = await dpost("/dashboard/integrations/detect", { baseUrl: "https://llm.test" });
+		assert.equal(detected.status, 200);
+		assert.equal(detected.json.models[0].modelId, "gpt-4o-mini");
+
+		const badWizard = await dpost("/dashboard/integrations/wizard", { name: "", baseUrl: "https://llm.test", models: [{ modelId: "x" }] });
+		assert.equal(badWizard.status, 400);
+		const made2 = await dpost("/dashboard/integrations/wizard", { name: "Local", baseUrl: "https://llm.test/", apiKey: "sk-abc", models: [{ modelId: "gpt-4o-mini", vision: true }, { modelId: "embed-1", embedding: true }] });
+		assert.equal(made2.status, 201);
+		const epId = made2.json.createdId;
+		assert.equal(made2.json.endpoints.find((e) => e.id === epId).models.length, 2);
+		assert.equal(made2.json.endpoints.find((e) => e.id === epId).hasKey, true);
+
+		assert.equal((await dpost(`/dashboard/integrations/${epId}`, { name: "Local (renamed)" })).json.endpoints.find((e) => e.id === epId).name, "Local (renamed)");
+		const recheck = await dpost(`/dashboard/integrations/${epId}/recheck`, {});
+		assert.equal(recheck.json.online, true);
+		assert.equal((await dpost("/dashboard/integrations/nope/recheck", {})).status, 404);
+
+		const modelId = made2.json.endpoints.find((e) => e.id === epId).models[0].id;
+		assert.equal((await dpost(`/dashboard/integrations/models/${modelId}`, { audio: true })).json.endpoints.find((e) => e.id === epId).models.find((m) => m.id === modelId).audio, true);
+		assert.equal((await dpost("/dashboard/integrations/models/nope", { audio: true })).status, 404);
+
+		assert.deepEqual((await dpost("/dashboard/integrations/access.json", undefined, "GET")).json.assignments, {});
+		const assignRes = await dpost(`/dashboard/integrations/access/${OWNER}`, { modelIds: [modelId] });
+		assert.equal(assignRes.status, 200);
+		assert.deepEqual(assignRes.json.assignments[OWNER], [modelId]);
+		assert.equal((await dpost("/dashboard/integrations/access/nope", { modelIds: [modelId] })).status, 404, "not a valid key id shape, same as api-keys routing");
+
+		const secondModelId = made2.json.endpoints.find((e) => e.id === epId).models[1].id;
+		assert.equal((await dpost(`/dashboard/integrations/models/${secondModelId}`, undefined, "DELETE")).status, 200);
+		assert.equal(getModel(secondModelId), null);
+
+		assert.equal((await dpost(`/dashboard/integrations/${epId}`, undefined, "DELETE")).status, 200);
+		assert.equal(getEndpoint(epId), null);
+		assert.deepEqual((await dpost("/dashboard/integrations/access.json", undefined, "GET")).json.assignments[OWNER] ?? [], [], "the assignment was cascaded away with the endpoint");
+		assert.equal((await dpost(`/dashboard/integrations/${epId}`, undefined, "DELETE")).status, 404);
+		setFetch(null);
+	}
 
 	// Deleting: port closed, container and saved state removed, profile and own workspace archived, the key's workspace untouched.
 	const keyFile = join(workspaceDir(OWNER), "keep.txt");
@@ -7170,7 +7819,9 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	config.AGENT_JOBS_ENABLED = true;
 	config.AGENT_JOBS_MAX_PER_AGENT = 10;
 
-	assert.equal(maySchedule(record), false, "off until the agent's own switch is on");
+	assert.equal(maySchedule(record), true, "on by default for a newly created agent");
+	agents.update(agent.id, { canSchedule: false });
+	assert.equal(maySchedule(record), false, "off once the agent's own switch is turned off");
 	agents.update(agent.id, { canSchedule: true });
 	agents.update(otherAgent.id, { canSchedule: true });
 	assert.equal(maySchedule(record), true);
@@ -8220,7 +8871,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	const navPages = [...navHtml.matchAll(/<a[^>]*href="#([a-z]+)"/g)].map((m) => m[1]);
 	assert.deepEqual([...navPages].sort(), Object.keys(PAGES).sort(), "every nav item is a page and every page is in the nav");
 	assert.equal(new Set(navPages).size, navPages.length, "no page twice in the nav");
-	assert.equal(navPages.length, 16, "sixteen items in the sidebar");
+	assert.equal(navPages.length, 17, "seventeen items in the sidebar");
 	assert.deepEqual([...navHtml.matchAll(/class="navgroup">([^<]+)</g)].map((m) => m[1]), ["Monitor", "Build", "Infrastructure", "Admin"]);
 
 	// Every tab shows a pane that exists, and a split pane's sections match the markup.
@@ -8818,6 +9469,45 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.equal(sessions.has(scoped), false);
 	assert.equal((await (await fetch(`${base}/conversation/conv-delete-0001?keyId=${key.id}&agentId=${agent.id}`, { method: "DELETE" })).json()).ended, false, "nothing to end twice");
 	assert.equal((await fetch(`${base}/conversation/bad%20id?keyId=${key.id}`, { method: "DELETE" })).status, 404, "an id that is not one is not a route");
+
+	// External models: chat only, through lib/externalmodels.mjs, the same as the client portal's own --
+	// but the Playground trusts keyId straight from the body, the same tier the agent path above does.
+	{
+		const ep = createEndpoint({ name: "pg-test-ep", baseUrl: "https://llm.pg-test", models: [{ modelId: "m1" }] });
+		const [model] = listExternalModels(ep.id);
+		const targetsBefore = await (await fetch(`${base}/targets.json`)).json();
+		assert.deepEqual(targetsBefore.targets.find((t) => t.keyId === key.id).externalModels, [], "nothing granted yet");
+
+		setKeyModels(key.id, [model.id]);
+		const targetsAfter = await (await fetch(`${base}/targets.json`)).json();
+		const offeredModel = targetsAfter.targets.find((t) => t.keyId === key.id).externalModels[0];
+		assert.equal(offeredModel.id, model.id);
+
+		const notGranted = await post({ keyId: key.id, externalModelId: "no-such-model", conversation: "pg-ext-1", message: "hi" });
+		assert.equal(notGranted.status, 403);
+
+		const sseBody = ['data: {"choices":[{"delta":{"content":"Hi"}}]}\n\n', "data: [DONE]\n\n"];
+		setFetch(() => {
+			let i = 0;
+			return Promise.resolve({ ok: true, body: { getReader: () => ({ read: () => (i >= sseBody.length ? Promise.resolve({ done: true }) : Promise.resolve({ done: false, value: new TextEncoder().encode(sseBody[i++]) })) }) } });
+		});
+		const granted = await post({ keyId: key.id, externalModelId: model.id, conversation: "pg-ext-2", message: "hi" });
+		assert.equal(granted.status, 200);
+		const extEv = await events(granted);
+		assert.deepEqual(extEv.map(([e]) => e).filter((e, i, a) => e !== a[i - 1]), ["item", "done"]);
+		assert.equal(extEv.find(([e]) => e === "item")[1].item.kind, "assistant");
+		const extDone = extEv.at(-1)[1];
+		assert.equal(extDone.text, "Hi");
+		assert.equal(extDone.status.model, `pg-test-ep/${model.modelId}`);
+
+		const badHistory = await post({ keyId: key.id, externalModelId: model.id, conversation: "pg-ext-3", message: "hi", history: [{ role: "nope", content: "x" }] });
+		assert.equal(badHistory.status, 400);
+
+		setFetch(null);
+		setKeyModels(key.id, []);
+		deleteEndpoint(ep.id);
+	}
+
 	G.clearPasswordHash();
 	await new Promise((r2) => srv.close(r2));
 	srv.closeAllConnections?.();
@@ -9011,6 +9701,14 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.deepEqual(who.json.agents.map((a) => a.id), [myAgent.id], "only this key's own agents, never another's");
 	assert.equal(who.json.portalUsername, null, "no portal password set yet");
 
+	// notebooksEnabled mirrors NOTEBOOK_ENABLED, so portal.html can hide the Notebooks button entirely
+	// rather than only refusing the page once clicked.
+	assert.equal(who.json.notebooksEnabled, true, "on by default");
+	const priorNotebookEnabled = config.NOTEBOOK_ENABLED;
+	config.NOTEBOOK_ENABLED = false;
+	assert.equal((await call("/api/whoami", { headers: auth })).json.notebooksEnabled, false);
+	config.NOTEBOOK_ENABLED = priorNotebookEnabled;
+
 	// Password login: an alternative to the raw key, via a username+password set up through the
 	// already-authenticated route, never handing back the raw key.
 	assert.equal((await call("/api/login-password", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ username: "nope", password: "wrong password" }) })).status, 401);
@@ -9100,6 +9798,93 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.match(badImage.text, /not a valid data: URI/);
 
 	setAgentTurnRunner(null);
+
+	// External models: chat only, through lib/externalmodels.mjs's direct HTTP call, never a Pi session.
+	{
+		const ep = createEndpoint({ name: "portal-test-ep", baseUrl: "https://llm.portal-test", models: [{ modelId: "m1", vision: true }, { modelId: "m2" }] });
+		const [visionModel, textModel] = listExternalModels(ep.id);
+		const whoBefore = await call("/api/whoami", { headers: auth });
+		assert.deepEqual(whoBefore.json.externalModels, [], "nothing granted yet");
+
+		setKeyModels(myKey.id, [visionModel.id]);
+		const whoAfter = await call("/api/whoami", { headers: auth });
+		assert.equal(whoAfter.json.externalModels.length, 1);
+		assert.equal(whoAfter.json.externalModels[0].id, visionModel.id);
+		assert.equal(whoAfter.json.externalModels[0].vision, true);
+
+		// Not granted: refused before any HTTP call is attempted.
+		const notGranted = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "ext-convo-1", message: "hi", externalModelId: textModel.id }) });
+		assert.equal(notGranted.status, 403);
+
+		// Granted: a fake streamed SSE reply from the endpoint, translated into the portal's own item/done vocabulary.
+		var sseBody = ['data: {"choices":[{"delta":{"content":"Hi"}}]}\n\n', "data: [DONE]\n\n"];
+		setFetch(function () {
+			var i = 0;
+			return Promise.resolve({ ok: true, body: { getReader: function () { return { read: function () { if (i >= sseBody.length) return Promise.resolve({ done: true }); return Promise.resolve({ done: false, value: new TextEncoder().encode(sseBody[i++]) }); } }; } } });
+		});
+		const granted = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "ext-convo-2", message: "hi", externalModelId: visionModel.id }) });
+		assert.equal(granted.status, 200);
+		assert.match(granted.text, /event: item/);
+		assert.match(granted.text, /"text":"Hi"/);
+		assert.match(granted.text, /event: done/);
+
+		// Reasoning content streams as a "thinking" item, the same kind portal.html's renderMessages
+		// already groups into the "Thinking…"/"Thought" block above an agent's own reply -- and the
+		// done event carries the same status fields (model/contextWindow/prompt/gen) an agent turn does.
+		updateModel(visionModel.id, { reasoning: true, reasoningEffort: "medium" });
+		var thinkSseBody = [
+			'data: {"choices":[{"delta":{"reasoning_content":"thinking…"}}]}\n\n',
+			'data: {"choices":[{"delta":{"content":"Hi"}}]}\n\n',
+			'data: {"choices":[{"delta":{}}],"usage":{"prompt_tokens":10,"completion_tokens":5,"total_tokens":15}}\n\n',
+			"data: [DONE]\n\n",
+		];
+		var sentReasoningEffort = null;
+		var wait = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+		setFetch(function (url, opts) {
+			if (opts && opts.body) sentReasoningEffort = JSON.parse(opts.body).reasoning_effort;
+			var i = 0;
+			return Promise.resolve({
+				ok: true,
+				body: {
+					getReader: function () {
+						return {
+							// A few ms between chunks, so the status bar's own timing (time to first
+							// token, time from first to last) has something nonzero to measure.
+							read: function () { return wait(5).then(function () { if (i >= thinkSseBody.length) return { done: true }; return { done: false, value: new TextEncoder().encode(thinkSseBody[i++]) }; }); },
+						};
+					},
+				},
+			});
+		});
+		const thinking = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "ext-convo-think", message: "hi", externalModelId: visionModel.id }) });
+		assert.equal(thinking.status, 200);
+		assert.match(thinking.text, /"kind":"thinking"/);
+		assert.match(thinking.text, /"text":"thinking…"/);
+		assert.equal(sentReasoningEffort, "medium");
+		const doneLine = thinking.text.split("\n\n").find((b) => b.includes("event: done"));
+		const doneData = JSON.parse(doneLine.split("\n").find((l) => l.startsWith("data:")).slice(5));
+		assert.equal(doneData.status.model, `portal-test-ep/${visionModel.modelId}`);
+		assert.equal(doneData.status.contextWindow, visionModel.contextWindow);
+		assert.ok(doneData.status.gen > 0, "a generation speed was computed from the stream's own timing");
+		assert.equal(doneData.usage.total_tokens, 15);
+		updateModel(visionModel.id, { reasoning: false });
+
+		// Images are refused for a non-vision model, accepted (and translated) for a vision one.
+		const imgRefused = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "ext-convo-3", message: "hi", externalModelId: textModel.id, images: [tinyPng] }) });
+		assert.equal(imgRefused.status, 403, "textModel isn't granted either -- grant it to isolate the vision check");
+		setKeyModels(myKey.id, [visionModel.id, textModel.id]);
+		const imgRefused2 = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "ext-convo-4", message: "hi", externalModelId: textModel.id, images: [tinyPng] }) });
+		assert.equal(imgRefused2.status, 400, "textModel has no vision");
+		assert.match(imgRefused2.text, /does not support images/);
+
+		// A bad history entry is refused before any HTTP call runs.
+		const badHistory = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "ext-convo-5", message: "hi", externalModelId: visionModel.id, history: [{ role: "system", content: "x" }] }) });
+		assert.equal(badHistory.status, 400);
+
+		setFetch(null);
+		setKeyModels(myKey.id, []);
+		deleteEndpoint(ep.id);
+	}
 
 	// Files: the key's own workspace by default, an agent's own with ?agentId=, never another key's.
 	writeFileSync(join(ensureWorkspace(myKey.id), "hello.txt"), "hi there");
@@ -9355,6 +10140,21 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		const stolenInterrupt = await call(`/api/conversation/disco-test-convo-2/interrupt`, { method: "POST", headers: { authorization: `Bearer ${theirs.key}` } });
 		assert.deepEqual(stolenInterrupt.json, { interrupted: false, wasRunning: false }, "a different key's own session, if any, not this one");
 
+		// Deleting a chat whose container already stopped (hibernated: idle, or just not used in a
+		// while) must actually remove it, not silently no-op just because it is no longer the live
+		// session map -- it is still sitting in the resumable store otherwise, forever.
+		{
+			const hibernateCred = credentialFor(myKey.id, myAgent.id);
+			const hibernateScoped = scopedSessionId(hibernateCred, "portal:hibernate-delete-convo");
+			const { id: scopedId } = sessions.acquire(hibernateScoped, hibernateCred);
+			sessions.hibernate(scopedId);
+			assert.equal(sessions.has(scopedId), false, "no longer live");
+			assert.ok(sessions.storedRows().some((r) => r.id_hash === chatIdHash(scopedId)), "but still stored, resumable");
+			const del = await call(`/api/conversation/hibernate-delete-convo?agentId=${myAgent.id}`, { method: "DELETE", headers: auth });
+			assert.deepEqual(del.json, { ended: true });
+			assert.equal(sessions.storedRows().some((r) => r.id_hash === chatIdHash(scopedId)), false, "actually removed now, not left behind forever");
+		}
+
 		// Watcher cap: one more catch-up connection than allowed on one session is refused.
 		const capCred = credentialFor(myKey.id, myAgent.id);
 		const capScoped = scopedSessionId(capCred, "portal:watcher-cap-convo");
@@ -9396,14 +10196,83 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	saveHistory(theirKey.id, { convs: [{ id: "x", title: "not yours", messages: [] }] });
 	assert.deepEqual((await call("/api/history", { headers: auth })).json.data, sample, "unaffected by another key's save");
 	// Oversized: refused with a clear reason, not silently truncated.
-	assert.throws(() => saveHistory(myKey.id, { big: "x".repeat(10_000_000) }), PortalStoreError);
-	const tooBig = await call("/api/history", { method: "PUT", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ big: "x".repeat(10_000_000) }) });
+	assert.throws(() => saveHistory(myKey.id, { big: "x".repeat(20_000_000) }), PortalStoreError);
+	const tooBig = await call("/api/history", { method: "PUT", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ big: "x".repeat(20_000_000) }) });
 	assert.equal(tooBig.status, 413);
 	assert.deepEqual(getHistory(myKey.id).data, sample, "the previous save is untouched by a refused one");
 	// No auth, no history.
 	assert.equal((await call("/api/history")).status, 401);
 	deleteHistoryOf(myKey.id);
 	assert.equal(getHistory(myKey.id), null);
+
+	// Notebooks: the HTTP routes are wired and ownership-scoped -- lib/notebooks.mjs's own logic
+	// (chunking, embeddings, extraction, retrieval) is already proven directly, above.
+	{
+		const nbPage = await call("/notebook");
+		assert.equal(nbPage.status, 200);
+		assert.match(nbPage.text, /<!doctype html>|<html/i);
+
+		const created = await call("/api/notebooks", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ title: "Test Notebook" }) });
+		assert.equal(created.status, 201);
+		const nbId = created.json.id;
+		assert.equal((await call("/api/notebooks", { headers: auth })).json.notebooks.some((n) => n.id === nbId), true);
+
+		const theirAuth = { authorization: `Bearer ${theirs.key}` };
+		assert.equal((await call(`/api/notebooks/${nbId}`, { headers: theirAuth })).status, 404, "never another key's, even by the right id");
+		assert.equal((await call(`/api/notebooks/${nbId}`, { method: "DELETE", headers: theirAuth })).status, 404);
+
+		const renamed = await call(`/api/notebooks/${nbId}`, { method: "PATCH", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ title: "Renamed" }) });
+		assert.equal(renamed.json.title, "Renamed");
+
+		// agentId can be changed the same way, including back to the key's own main endpoint (null).
+		const badAgent = await call(`/api/notebooks/${nbId}`, { method: "PATCH", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ agentId: "no-such-agent" }) });
+		assert.equal(badAgent.status, 404);
+		const unset = await call(`/api/notebooks/${nbId}`, { method: "PATCH", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ agentId: null }) });
+		assert.equal(unset.json.agentId, null);
+
+		// externalModelId the same way -- mutually exclusive with agentId, and only a model this key
+		// was actually granted (Integrations -> Access Control) is accepted.
+		const nbEp = createEndpoint({ name: "nb-http-test-ep", baseUrl: "https://llm.nb-http-test", models: [{ modelId: "nb-http-model" }] });
+		const [nbModel] = listExternalModels(nbEp.id);
+		const ungranted = await call(`/api/notebooks/${nbId}`, { method: "PATCH", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ externalModelId: nbModel.id }) });
+		assert.equal(ungranted.status, 404);
+		setKeyModels(myKey.id, [nbModel.id]);
+		const toModel = await call(`/api/notebooks/${nbId}`, { method: "PATCH", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ externalModelId: nbModel.id }) });
+		assert.equal(toModel.json.externalModelId, nbModel.id);
+		assert.equal(toModel.json.agentId, null, "switching to a model clears the agent");
+		const createdWithModel = await call("/api/notebooks", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ title: "Model NB", externalModelId: nbModel.id }) });
+		assert.equal(createdWithModel.status, 201);
+		assert.equal(createdWithModel.json.externalModelId, nbModel.id);
+		await call(`/api/notebooks/${createdWithModel.json.id}`, { method: "DELETE", headers: auth });
+		await call(`/api/notebooks/${nbId}`, { method: "PATCH", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ externalModelId: null }) });
+		setKeyModels(myKey.id, []);
+		deleteEndpoint(nbEp.id);
+
+		// Generating with no sources at all is refused cleanly, not a crash.
+		const tooSoon = await call(`/api/notebooks/${nbId}/generate`, { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ kind: "summary" }) });
+		assert.equal(tooSoon.status, 409);
+		assert.equal((await call(`/api/notebooks/${nbId}/outputs`, { headers: auth })).json.outputs.length, 0);
+
+		// A fake extraction so adding a source over HTTP does not depend on a real agent turn --
+		// lib/notebooks.mjs's own extraction and generation logic is already proven directly, above.
+		setNotebookRunner(async () => ({ text: JSON.stringify({ title: "A page", text: "Some extracted text. ".repeat(10), summary: "." }) }));
+		setEmbedder(async (texts) => texts.map(() => Float32Array.from([1, 0, 0])));
+		const srcAdded = await call(`/api/notebooks/${nbId}/sources`, { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ kind: "url", name: "a page", origin: "https://example.test/a" }) });
+		assert.equal(srcAdded.status, 201);
+		assert.equal((await call(`/api/notebooks/${nbId}/sources`, { headers: auth })).json.sources.length, 1);
+		setNotebookRunner(null);
+		setEmbedder(null);
+
+		assert.equal((await call(`/api/notebooks/${nbId}`, { method: "DELETE", headers: auth })).json.deleted, true);
+		assert.equal((await call(`/api/notebooks/${nbId}`, { headers: auth })).status, 404);
+
+		// NOTEBOOK_ENABLED off hides the whole feature, the page and every route both.
+		const priorNb = config.NOTEBOOK_ENABLED;
+		config.NOTEBOOK_ENABLED = false;
+		assert.equal((await call("/notebook")).status, 404);
+		assert.equal((await call("/api/notebooks", { headers: auth })).status, 404);
+		config.NOTEBOOK_ENABLED = priorNb;
+	}
 
 	await deleteAgent(myAgent.id);
 	await deleteAgent(theirAgent.id);

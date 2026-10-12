@@ -26,7 +26,11 @@ Endpoints page is now **Agents**.
 ## Playground
 
 The first item of the menu: a chat with an agent, laid out like the chat apps you know. Pick **who to talk to** (a key's main
-endpoint, or one of its agents) and optionally a **model** from what that key may use, then type. Answers stream in as they are
+endpoint, one of its agents, or -- if the key has been granted one in Integrations -> Access Control -- one of its external
+chat-only models) and optionally a **model** from what that key may use, then type. A granted external model behaves like any
+other target here: Markdown, a live "Thinking…" block if it streams reasoning content, and a token/cost footer, just without
+tools, skills or extensions and without a Pi session (lib/externalmodels.mjs) -- so the "model" dropdown next to it (which picks
+a model *inside* a Pi session) does not apply and is hidden. Answers stream in as they are
 written, with **Markdown** (headings, lists, tables, quotes, code blocks with a copy button) and, collapsed above the answer, the
 agent's **thinking** and each **tool call** with what it ran and what came back. **Enter** sends, **Shift+Enter** is a new line,
 **Stop** ends the turn (the agent's turn is stopped too), **retry** asks the last question again, **copy** copies an answer.
@@ -85,6 +89,38 @@ the agent to read with its own tools. Settings: `PORTAL_ENABLED` (off by default
 port), `PORTAL_PORT`, `PORTAL_HISTORY_MAX_BYTES` (a hard cap on one key's whole stored history; the
 browser already trims itself well under it), `PORTAL_ATTACHMENT_MAX_BYTES` (a cap on one attached
 image's decoded size), `PORTAL_SESSION_MS` (how long a password sign-in lasts).
+
+## Notebooks
+
+A NotebookLM-style feature inside the client portal — `/notebook`, same login, linked from the chat
+page's sidebar. A **notebook** is a key's own set of **sources** (an uploaded file, or a URL), each
+extracted by that notebook's own agent (its own container, whatever reading or fetch tool it has —
+the gateway itself never parses a file or fetches a URL, the same rule RSS extraction already
+follows), chunked, and embedded for retrieval. A long source's text is saved to a file in the agent's
+own workspace rather than inlined in its reply, so the extraction turn's own reply never risks being
+cut off by the model's output limit; the gateway reads that file straight back, the same way it already
+reads any other file in a key's workspace. A failed extraction is discarded, not kept, the same
+tolerance RSS's own extraction has — re-add the source to try again rather than hunting down a dead
+row. **Chat** asks a question grounded only in that notebook's sources: the question is embedded too,
+the closest chunks are found by cosine similarity (a plain scan over vectors kept as BLOBs in the same
+SQLite database — no vector database, no new service), and the agent is asked to answer only from
+them, citing which excerpt backs each claim; it says plainly when they don't answer the question
+rather than guessing. **Generated** produces a summary, an FAQ, or a study guide from the whole
+notebook on request, kept so it is not redone. **Chat** and **Generated** can instead go through a
+granted external model (Integrations) rather than an agent — creating a notebook opens a modal to set
+its title and pick who processes it (the key's main endpoint, an agent, or a granted model), and that
+can be changed afterward from the same picker in the notebook's own bar. A model answers chat only, with
+no memory between questions (there is no Pi session to keep it in, unlike an agent notebook's
+persistent one); extracting a new source still always goes through the key's main endpoint either way,
+since a model has no file-reading or URL-fetching ability at all. `notebook.html` shares the chat
+portal's own markdown renderer, status bar and file browser (the same `/api/files`, scoped to the
+notebook's own agent when it has one). The one new host-side network call this adds is to an
+embeddings endpoint (`NOTEBOOK_EMBEDDING_URL`, default an OpenAI-compatible one) — a fixed,
+operator-configured address, the same trust tier as RSS's own feed-fetching, never arbitrary content.
+Settings: `NOTEBOOK_ENABLED`, `NOTEBOOK_EMBEDDING_URL`/`_MODEL`/`_API_KEY`,
+`NOTEBOOK_SOURCE_MAX_BYTES`, `NOTEBOOK_MAX_SOURCES`, `NOTEBOOK_EXTRACT_TIMEOUT_MS`. The audio "two hosts discussing it" overview
+NotebookLM has is not part of this — it would need real text-to-speech, a capability this gateway does
+not have.
 
 ## Overview
 
@@ -463,6 +499,31 @@ such as `vi` and `top`, resizing with the window, Ctrl-C. Rules:
 
 Every model the gateway can route to, grouped by provider, from the operator's Pi and from the container
 configuration. A **reload** button re-reads them.
+
+## Integrations
+
+External OpenAI-compatible chat endpoints (self-hosted inference, a third-party API) as a source of
+models separate from Pi's own catalogue, and which API key may use which of them. A model used this
+way is **chat only** -- a direct, host-side streaming HTTP call to its own `/v1/chat/completions`
+(`lib/externalmodels.mjs`), never a Pi container session, so there are no tools, skills or extensions;
+the client portal sends the whole conversation with every turn instead, since there's no server-side
+session to keep it in. **Overview** lists every endpoint's models, each row directly editable (context
+window, vision/embedding/audio, reasoning and its effort level, enabled -- chat is always implied, a
+**save** button per row) and whether the endpoint answered last time it was checked (a **recheck**
+button, not polling); changing the endpoint's own name, URL or API key opens an inline panel (same
+per-row editing there too). A reasoning-flagged model's effort level is default, low, medium, high or
+xhigh -- the same level names as Pi's own agents, and the same `reasoning_effort` request field Piper's
+own `/v1/chat/completions` already accepts; default sends nothing at all, leaving the model to its own
+behavior. **External Endpoints** lists the
+endpoints themselves. **Wizard** adds a new one in three steps: name/URL/API key, then a **detect
+models** button (probes the endpoint's own `/v1/models`, best-effort -- always editable, and a model
+can be added by hand if detection finds nothing), then review and save. **Access Control** grants
+specific models to specific API keys; a key sees its granted models in the client portal's own agent
+picker and in the dashboard Playground's own target picker (any key the operator chooses, same as an
+agent there), usable the same way an agent is, just chat only -- including a live "Thinking…" block
+when a reasoning model streams its own reasoning content (`reasoning_content` or `reasoning`, whichever
+the endpoint sends), and the same status bar (model, context, generation speed) an agent turn shows,
+measured around the HTTP call itself since there is no Pi session to read it from.
 
 ## API keys
 

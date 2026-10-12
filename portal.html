@@ -6,87 +6,170 @@
 <title>Piper — Client Portal</title>
 <style>
   :root { color-scheme: dark;
-    --bg:#0a0a0a; --side:#0d0d0d; --panel:#101010; --card:#121212;
-    --border:#232323; --fg:#ededed; --muted:#8b8f94; --dim:#5f6368;
-    --green:#6ee7a8; --red:#f87171; --amber:#f6c177; --blue:#8ab4f8; }
+    --bg:#000; --side:#000; --panel:#15181a; --card:rgba(105,116,116,.38);
+    --border:rgba(255,255,255,.12); --fg:#fff; --muted:rgba(240,244,243,.6);
+    --dim:rgba(255,255,255,.4); --green:#6ee7a8; --red:#f87171; --amber:#f6c177; --blue:#8ab4f8; }
   * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--fg);
-         font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
-  button { background:var(--card); color:var(--fg); border:1px solid var(--border); border-radius:6px;
-            padding:6px 10px; font:inherit; cursor:pointer; }
-  button:hover { border-color:#3a3a3a; }
-  button:disabled { opacity:.5; cursor:default; }
+  html,body { height:100%; }
+  body { margin:0; background:#000; color:var(--fg); overflow:hidden;
+         font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+         font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased; }
+  button { background:rgba(255,255,255,.1); color:var(--fg); border:none; border-radius:8px;
+            padding:7px 12px; font:inherit; font-size:13px; cursor:pointer; }
+  button:hover { background:rgba(255,255,255,.18); }
+  button:disabled { opacity:.4; cursor:default; }
   input, select, textarea { background:var(--panel); color:var(--fg); border:1px solid var(--border);
-            border-radius:6px; padding:6px 8px; font:inherit; }
+            border-radius:8px; padding:7px 10px; font:inherit; }
   a { color:var(--blue); cursor:pointer; }
-  .hint { color:var(--muted); font-size:11px; }
+  .hint { color:var(--muted); font-size:11.5px; }
   .bad { color:var(--red) !important; }
 
   /* login */
-  #login { max-width:360px; margin:12vh auto; padding:24px; }
-  #login h1 { font-size:16px; margin:0 0 4px; }
-  #login p { color:var(--muted); margin:0 0 18px; }
+  #login { max-width:380px; margin:14vh auto; padding:28px; border-radius:18px;
+            background:rgba(16,18,20,.7); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+            border:1px solid var(--border); box-shadow:0 20px 60px rgba(0,0,0,.5); }
+  #login h1 { font-size:18px; margin:0 0 4px; font-weight:700; }
+  #login p { color:var(--muted); margin:0 0 18px; font-size:13px; }
   #login .row { display:flex; gap:8px; }
   #login input { flex:1; }
   #pmbody .row { display:flex; gap:8px; margin-top:8px; }
   #pmbody .row:first-child { margin-top:0; }
   #pmbody input { flex:1; }
   .logintabs { margin-bottom:14px; }
-  .logintabs .tab { flex:1; background:transparent; }
-  .logintabs .tab.on { border-color:var(--blue); color:var(--fg); }
+  .logintabs .tab { flex:1; background:transparent; border:1px solid var(--border); }
+  .logintabs .tab.on { border-color:var(--blue); color:var(--fg); background:rgba(138,180,248,.12); }
   #loginnote { min-height:16px; margin-top:10px; }
 
   /* app shell */
   #app { display:none; height:100vh; }
   #app.on { display:flex; }
-  .side { width:240px; flex:0 0 240px; background:var(--side); border-right:1px solid var(--border);
-          display:flex; flex-direction:column; }
-  .side .top { padding:12px; border-bottom:1px solid var(--border); display:flex; gap:6px; }
-  .side .top input { flex:1; min-width:0; }
-  #convlist { flex:1; overflow:auto; padding:6px; }
-  .convrow { padding:8px 32px 8px 10px; border-radius:6px; cursor:pointer; margin-bottom:2px; position:relative; }
-  .convrow:hover { background:#161616; }
-  .convrow.on { background:#1c1c1c; }
-  .convrow .t { font-size:12px; }
-  .convrow .s { color:var(--dim); font-size:10px; }
-  .livedot { color:var(--green); font-size:9px; }
-  .convclear { position:absolute; top:6px; right:6px; border:none; background:transparent; color:var(--dim);
-               padding:2px 6px; border-radius:4px; font-size:13px; line-height:1; }
-  .convclear:hover { color:var(--red); background:#201414; }
-  .side .bottom { padding:10px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
-  .side .bottom span:last-child { display:flex; gap:6px; }
-  .who { font-size:11px; color:var(--muted); }
 
-  main { flex:1; display:flex; flex-direction:column; min-width:0; }
-  .bar { padding:10px 14px; border-bottom:1px solid var(--border); display:flex; gap:8px; align-items:center; }
-  .bar select { max-width:220px; }
-  .bar button.on { border-color:var(--blue); color:var(--fg); }
+  /* thin icon rail */
+  .rail { width:64px; flex:0 0 64px; background:#000; z-index:30;
+          display:flex; flex-direction:column; align-items:center; padding:18px 0 16px; }
+  .rail-top { display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .rail-bottom { margin-top:auto; display:flex; flex-direction:column; align-items:center; gap:14px; }
+  .rail .logo { margin-bottom:10px; color:#fff; }
+  .icon-btn { width:36px; height:36px; border:none; background:transparent; cursor:pointer; border-radius:10px;
+              display:flex; align-items:center; justify-content:center; color:#e8e8e8; padding:0; }
+  .icon-btn:hover { background:rgba(255,255,255,.08); }
+  .icon-btn.on { background:rgba(255,255,255,.14); color:#fff; }
+  .icon-btn svg { width:19px; height:19px; }
+  /* drawer: conversations / files / tools / skills -- one at a time, next to the rail */
+  .sidebox { width:300px; flex:0 0 300px; background:#0a0a0a; border-right:1px solid var(--border);
+             display:none; flex-direction:column; }
+  .sidebox.on { display:flex; }
+  .sidebox-backdrop { display:none; }
+  .sidebox .top { padding:14px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+  .sidebox .top b { font-size:13.5px; font-weight:600; }
+  .sidebox .top > div { display:flex; align-items:center; gap:6px; }
+  .sideclose { border:none; background:transparent; color:var(--dim); font-size:18px; line-height:1;
+               padding:2px 7px; border-radius:6px; cursor:pointer; }
+  .sideclose:hover { color:var(--red); background:rgba(248,113,113,.14); }
+  #convlist { flex:1; overflow:auto; padding:6px; }
+  .convrow { padding:9px 32px 9px 12px; border-radius:10px; cursor:pointer; margin-bottom:2px; position:relative; }
+  .convrow:hover { background:rgba(255,255,255,.06); }
+  .convrow.on { background:rgba(255,255,255,.11); }
+  .convrow .t { font-size:12.5px; }
+  .convrow .s { color:var(--dim); font-size:10.5px; margin-top:2px; }
+  .livedot { color:var(--green); font-size:9px; }
+  .convclear { position:absolute; top:8px; right:6px; border:none; background:transparent; color:var(--dim);
+               padding:2px 6px; border-radius:4px; font-size:13px; line-height:1; }
+  .convclear:hover { color:var(--red); background:rgba(248,113,113,.14); }
+  #crumb { padding:10px 12px; font-size:11px; color:var(--muted); }
+  #crumb a { margin-right:2px; }
+  #filelist, .plist { flex:1; overflow:auto; padding:0 8px 10px; }
+  .frow { padding:7px 8px; border-radius:8px; cursor:pointer; display:flex; justify-content:space-between; font-size:12.5px; }
+  .frow:hover { background:rgba(255,255,255,.06); }
+  .frow .sz { color:var(--dim); font-size:10.5px; }
+  .frow .del { opacity:.5; padding:0 4px; background:transparent; }
+  .frow .del:hover { opacity:1; color:var(--red); }
+  .plist .psection { color:var(--dim); font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; padding:12px 8px 4px; }
+  .plist .prow { padding:7px 8px; border-radius:8px; font-size:12.5px; }
+  .plist .prow .nm { display:flex; justify-content:space-between; gap:6px; }
+  .plist .prow .nm b { font-weight:600; }
+  .plist .prow .tag { color:var(--dim); font-size:10.5px; }
+  .plist .prow .desc { color:var(--muted); font-size:11.5px; margin-top:1px; }
+  .plist .empty { padding:10px 8px; color:var(--muted); font-size:12.5px; }
+
+  /* main / background */
+  main { flex:1; display:flex; flex-direction:column; min-width:0; position:relative; }
+  .bg { position:absolute; inset:0; z-index:0;
+    background:
+      linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.45)),
+      radial-gradient(420px 260px at 4% 62%, rgba(238,226,196,.95), rgba(238,226,196,0) 65%),
+      radial-gradient(360px 240px at 12% 88%, rgba(243,232,205,.95), rgba(243,232,205,0) 60%),
+      radial-gradient(300px 200px at 26% 78%, rgba(230,219,190,.8), rgba(230,219,190,0) 60%),
+      radial-gradient(500px 300px at 96% 55%, rgba(240,229,200,.9), rgba(240,229,200,0) 60%),
+      radial-gradient(420px 300px at 88% 85%, rgba(245,234,208,.95), rgba(245,234,208,0) 62%),
+      radial-gradient(300px 220px at 70% 70%, rgba(225,214,186,.55), rgba(225,214,186,0) 60%),
+      radial-gradient(260px 180px at 45% 95%, rgba(235,224,196,.7), rgba(235,224,196,0) 60%),
+      linear-gradient(180deg,#8f9c9f 0%,#97a3a4 30%,#a4ada6 48%,#bcb9a6 62%,#ddd2b6 78%,#ece0c4 100%);
+  }
+  .bg::after {
+    content:""; position:absolute; inset:0;
+    background-image:radial-gradient(rgba(60,60,50,.14) 1px, transparent 1.4px);
+    background-size:5px 5px;
+    -webkit-mask-image:linear-gradient(180deg,transparent 30%,rgba(0,0,0,.75) 55%,#000 75%);
+            mask-image:linear-gradient(180deg,transparent 30%,rgba(0,0,0,.75) 55%,#000 75%);
+  }
+
+  .bar { position:relative; z-index:10; padding:16px 22px; display:flex; gap:12px; align-items:center; }
+  .bar select#target { appearance:none; -webkit-appearance:none; background:rgba(105,116,116,.38);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border:none; border-radius:999px;
+    padding:9px 34px 9px 16px; font-size:13.5px; font-weight:600; max-width:260px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round'><path d='M6 9 l6 6 6-6'/></svg>");
+    background-repeat:no-repeat; background-position:right 12px center; background-size:12px; }
   .bar .sp { flex:1; }
-  .statusbar { padding:6px 14px; border-bottom:1px solid var(--border); background:var(--panel); font-size:11px;
-               color:var(--muted); display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
-  .statusbar b { color:var(--fg); font-weight:600; }
-  .statusbar .ctxfull { color:var(--amber); }
-  #statusstats { display:flex; gap:16px; flex-wrap:wrap; }
-  .toolToggle { margin-left:auto; display:flex; align-items:center; gap:5px; cursor:pointer; white-space:nowrap; }
-  #msgs { flex:1; overflow:auto; padding:16px; }
-  .msg { max-width:720px; margin:0 auto 18px; }
-  .msg.user .bubble { background:#1c2a1f; border:1px solid #243329; border-radius:10px; padding:8px 12px;
-                       white-space:pre-wrap; margin-left:auto; max-width:80%; }
+  .toolToggle { display:flex; align-items:center; gap:6px; cursor:pointer; white-space:nowrap; font-size:12.5px;
+                color:var(--muted); background:rgba(255,255,255,.08); border-radius:999px; padding:7px 12px; }
+
+  .statuspill { display:flex; align-items:center; gap:10px; font-size:11.5px; color:var(--muted);
+                background:rgba(255,255,255,.08); border-radius:999px; padding:7px 14px; white-space:nowrap; }
+  .statuspill:empty { display:none; }
+  .statuspill b { color:var(--fg); font-weight:600; }
+  .statuspill .ctxfull { color:var(--amber); }
+  .statuspill span:not(:first-child) { display:flex; align-items:center; gap:10px; }
+  .statuspill span:not(:first-child)::before { content:'·'; color:var(--dim); }
+  .statuspill-mobile { display:none; }
+
+  #msgs { position:relative; z-index:10; flex:1; overflow-y:auto; overflow-x:hidden; padding:10px 24px 8px; }
+  #msgs::-webkit-scrollbar { width:8px; }
+  #msgs::-webkit-scrollbar-thumb { background:rgba(255,255,255,.14); border-radius:8px; }
+  .msg { max-width:860px; margin:0 auto 24px; }
+  .msg.user { display:flex; justify-content:flex-end; }
+  .msg.user .bubble { max-width:74%; padding:13px 17px; border-radius:18px 18px 6px 18px;
+    background:rgba(37,56,92,.6); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    color:#fff; font-size:14.5px; line-height:1.55; white-space:pre-wrap;
+    box-shadow:0 8px 24px rgba(0,0,0,.25); }
+  .msg.assistant { display:flex; gap:12px; align-items:flex-start; }
+  .bot-avatar { flex:none; width:28px; height:28px; border-radius:8px; margin-top:2px;
+    background:linear-gradient(135deg,#3b82f6,#8b5cf6); display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:12px; color:#fff; }
+  .msg.assistant .body { flex:1; min-width:0; border-radius:16px; padding:16px 20px;
+    background:rgba(24,26,27,.58); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    font-size:14.5px; line-height:1.6; color:#f0f2f1; box-shadow:0 10px 30px rgba(0,0,0,.2); }
+
   .md p { margin:0 0 10px; } .md ul, .md ol { margin:0 0 10px; padding-left:22px; } .md li { margin:2px 0; }
   .md h3, .md h4, .md h5, .md h6 { margin:14px 0 6px; } .md blockquote { margin:0 0 10px; padding:2px 12px; border-left:3px solid var(--border); color:var(--muted); }
-  .md code { background:#1a1a1a; padding:1px 5px; border-radius:4px; font-size:12px; } .md a { color:var(--blue); } .md hr { border:0; border-top:1px solid var(--border); }
+  .md code { background:rgba(0,0,0,.3); padding:1px 5px; border-radius:6px; font-size:12.5px; font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; } .md a { color:var(--blue); } .md hr { border:0; border-top:1px solid var(--border); }
   .md p:last-child, .md ul:last-child, .md ol:last-child { margin-bottom:0; }
-  .mdcode { margin:0 0 12px; border:1px solid var(--border); border-radius:8px; overflow:hidden; background:#0b0b0b; }
-  .mdcodebar { display:flex; justify-content:space-between; align-items:center; padding:4px 10px; background:#151515; color:var(--dim); font-size:11px; }
-  .mdcodebar button { padding:2px 8px; font-size:11px; }
-  .mdcode pre { margin:0; padding:10px 12px; overflow:auto; font-size:12px; line-height:1.5; } .mdcode code { background:none; padding:0; }
+  .mdcode { margin:12px 0; border-radius:14px; overflow:hidden; background:rgba(18,24,28,.55);
+            backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
+  .mdcodebar { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; color:var(--muted); font-size:11.5px; }
+  .mdcodebar button { padding:4px 10px; font-size:11.5px; border-radius:999px; background:rgba(255,255,255,.12); }
+  .mdcode pre { margin:0; padding:2px 16px 16px; overflow:auto; font-size:13px; line-height:24px;
+                font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; } .mdcode code { background:none; padding:0; }
+  .mdcode .cl { display:block; }
+  .mdcode .cl::before { display:inline-block; width:22px; margin-right:12px; color:rgba(255,255,255,.3); content:attr(data-ln); user-select:none; }
   .mdtable { overflow:auto; margin:0 0 12px; } .mdtable table { border-collapse:collapse; } .mdtable th, .mdtable td { border:1px solid var(--border); padding:4px 10px; }
   /* thinking: collapsed by default, an arrow that flips on open */
-  details.think { margin:6px 0; }
-  details.think summary { cursor:pointer; color:var(--dim); font-size:12px; list-style:none; user-select:none; }
+  details.think { margin:0 0 10px; }
+  details.think summary { cursor:pointer; color:var(--muted); font-size:12.5px; list-style:none; user-select:none;
+                           display:flex; align-items:center; gap:8px; }
   details.think summary::-webkit-details-marker { display:none; }
-  details.think summary:before { content:'▸ '; display:inline-block; width:12px; color:var(--dim); }
-  details.think[open] summary:before { content:'▾ '; }
+  details.think summary:before { content:'▸'; display:inline-block; width:10px; color:var(--dim); }
+  details.think[open] summary:before { content:'▾'; }
   /* a subtle shimmer across "Thinking..." while the turn is actually still running */
   details.think.live summary {
     background:linear-gradient(90deg, var(--dim) 0%, var(--dim) 35%, var(--fg) 50%, var(--dim) 65%, var(--dim) 100%);
@@ -94,44 +177,64 @@
     animation:thinkshimmer 1.7s linear infinite;
   }
   @keyframes thinkshimmer { 0% { background-position:200% 0; } 100% { background-position:-200% 0; } }
-  details.think .think-body { color:var(--dim); font-size:12px; border-left:2px solid var(--border);
-                               padding-left:8px; margin-top:4px; white-space:pre-wrap; }
+  details.think .think-body { color:var(--muted); font-size:12.5px; border-left:2px solid var(--border);
+                               padding-left:10px; margin-top:6px; white-space:pre-wrap; }
   .think-sub { border-left:3px solid var(--agent-c, var(--blue)); padding:2px 0 2px 8px; margin:2px 0 2px -8px; }
   .think-sub b { color:var(--agent-c, var(--blue)); }
 
   /* tool calls: <pill>name</pill>: excerpt, click the line to expand the full result */
-  .tool-line { display:flex; align-items:baseline; gap:7px; margin:5px 0; cursor:pointer; user-select:none; }
+  .tool-line { display:flex; align-items:baseline; gap:7px; margin:6px 0; cursor:pointer; user-select:none; }
   .tool-pill { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--agent-c, var(--border));
-               color:var(--agent-c, var(--fg)); border-radius:999px; padding:2px 10px; font-size:11px; flex:0 0 auto; }
-  .tool-line:hover .tool-pill { border-color:var(--agent-c, #3a3a3a); }
+               color:var(--agent-c, var(--fg)); border-radius:999px; padding:3px 11px; font-size:11.5px; flex:0 0 auto; }
+  .tool-line:hover .tool-pill { border-color:var(--agent-c, rgba(255,255,255,.35)); }
   .tool-pill .hammer { font-size:10px; filter:grayscale(.3); }
   .tool-line.error .tool-pill .hammer { filter:none; }
-  .tool-excerpt { font-size:12px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
-  .tool-body { display:none; margin:2px 0 8px 4px; padding:8px 10px; background:#0c0c0c; border:1px solid var(--border);
-               border-radius:6px; font-size:11px; white-space:pre-wrap; color:var(--muted); }
+  .tool-excerpt { font-size:12.5px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+  .tool-body { display:none; margin:2px 0 8px 4px; padding:10px 12px; background:rgba(0,0,0,.25);
+               border-radius:10px; font-size:11.5px; white-space:pre-wrap; color:var(--muted); }
   .tool-body.open { display:block; }
   .tool-body .tool-section { color:var(--dim); font-size:10px; text-transform:uppercase; letter-spacing:.06em;
                               margin:8px 0 3px; }
   .tool-body .tool-section:first-child { margin-top:0; }
 
   /* a colleague agent's own reply, folded into the caller's — a distinct colored callout per name */
-  .colleague-msg { border-left:3px solid var(--agent-c, var(--blue)); background:#111214; padding:8px 10px;
-                    border-radius:6px; margin:8px 0; }
-  .colleague-msg .who { font-weight:600; font-size:11px; margin-bottom:3px; color:var(--agent-c, var(--blue)); }
+  .colleague-msg { border-left:3px solid var(--agent-c, var(--blue)); background:rgba(0,0,0,.18); padding:9px 11px;
+                    border-radius:10px; margin:8px 0; }
+  .colleague-msg .who { font-weight:600; font-size:11.5px; margin-bottom:3px; color:var(--agent-c, var(--blue)); }
 
   .err { color:var(--red); margin-top:6px; }
-  .foot { color:var(--dim); font-size:11px; margin-top:6px; }
-  .sys-note { color:var(--dim); font-size:11px; font-style:italic; margin:6px 0; }
-  .composer { padding:12px 14px; border-top:1px solid var(--border); display:flex; gap:8px; align-items:flex-end; }
-  .composer textarea { flex:1; resize:none; min-height:40px; max-height:160px; }
-  #attachbtn { align-self:center; }
+  .sys-note { color:var(--dim); font-size:11.5px; font-style:italic; margin:6px 0; }
+
+  /* composer */
+  .composer-zone { position:relative; z-index:10; flex:none; padding:10px 24px 22px; }
+  .composer-wrap { max-width:860px; margin:0 auto; }
+  .composer { border-radius:20px; padding:1.5px;
+    background:linear-gradient(120deg,#8b3df0 0%,#3b2a6e 22%,#0a1030 45%,#06120a 62%,#1f7a2e 85%,#0c1a08 100%);
+    box-shadow:0 18px 50px rgba(0,0,0,.35); }
+  .composer-inner { border-radius:19px; background:rgba(10,14,18,.88); backdrop-filter:blur(16px);
+                     -webkit-backdrop-filter:blur(16px); padding:12px 14px 10px; display:flex; flex-direction:column; gap:10px; }
+  .composer textarea#input { width:100%; border:none; outline:none; resize:none; background:transparent;
+    color:#f2f4f3; font-family:inherit; font-size:14.5px; line-height:1.5; max-height:160px; min-height:26px; padding:0; }
+  .composer textarea#input::placeholder { color:rgba(240,244,243,.4); }
+  .comp-bar { display:flex; align-items:center; gap:8px; }
+  .comp-bar .spacer { flex:1; }
+  .round-btn { width:34px; height:34px; border-radius:50%; border:none; cursor:pointer; padding:0;
+               background:rgba(255,255,255,.1); color:#eee; display:flex; align-items:center; justify-content:center; }
+  .round-btn:hover { background:rgba(255,255,255,.18); }
+  .round-btn svg { width:16px; height:16px; }
+  #send { width:36px; height:36px; border-radius:50%; border:none; cursor:pointer; padding:0;
+          background:#5fd98b; color:#06301a; display:flex; align-items:center; justify-content:center; }
+  #send:hover { background:#55ca80; }
+  #send:disabled { background:rgba(255,255,255,.14); color:rgba(255,255,255,.45); cursor:default; }
+  #send svg { width:17px; height:17px; }
+  .composer-hint { text-align:center; margin-top:8px; font-size:11.5px; color:var(--muted); }
 
   /* pending attachments, above the composer, before send */
-  .pending { padding:8px 14px 0; display:flex; flex-wrap:wrap; gap:6px; }
+  .pending { padding:0 0 2px; display:flex; flex-wrap:wrap; gap:6px; max-width:860px; margin:0 auto; }
   .pending[hidden] { display:none; }
-  .chip { display:flex; align-items:center; gap:6px; background:var(--panel); border:1px solid var(--border);
-          border-radius:6px; padding:3px 6px; font-size:11px; max-width:220px; }
-  .chip img { width:28px; height:28px; object-fit:cover; border-radius:4px; }
+  .chip { display:flex; align-items:center; gap:6px; background:rgba(255,255,255,.08); border:1px solid var(--border);
+          border-radius:8px; padding:3px 6px; font-size:11.5px; max-width:220px; }
+  .chip img { width:28px; height:28px; object-fit:cover; border-radius:6px; }
   .chip .nm { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .chip .rm { opacity:.6; cursor:pointer; padding:0 2px; }
   .chip .rm:hover { opacity:1; color:var(--red); }
@@ -139,46 +242,51 @@
 
   /* attachments on a sent user message */
   .msg-images { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
-  .msg-images img { max-width:220px; max-height:220px; border-radius:8px; cursor:pointer; display:block; }
+  .msg-images img { max-width:220px; max-height:220px; border-radius:10px; cursor:pointer; display:block; }
   .msg-docs { margin-top:6px; display:flex; flex-direction:column; gap:3px; }
-  .msg-docs a { font-size:12px; }
-
-  /* files / tools & extensions / skills panels -- one at a time, same shape */
-  .sidebox { width:300px; flex:0 0 300px; border-left:1px solid var(--border); background:var(--side);
-             display:none; flex-direction:column; }
-  .sidebox.on { display:flex; }
-  .sidebox .top { padding:10px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
-  #crumb { padding:8px 10px; font-size:11px; color:var(--muted); }
-  #crumb a { margin-right:2px; }
-  #filelist, .plist { flex:1; overflow:auto; padding:0 6px 10px; }
-  .frow { padding:6px 8px; border-radius:6px; cursor:pointer; display:flex; justify-content:space-between; font-size:12px; }
-  .frow:hover { background:#161616; }
-  .frow .sz { color:var(--dim); font-size:10px; }
-  .frow .del { opacity:.5; padding:0 4px; }
-  .frow .del:hover { opacity:1; color:var(--red); }
-  .plist .psection { color:var(--dim); font-size:10px; text-transform:uppercase; letter-spacing:.06em; padding:10px 8px 3px; }
-  .plist .prow { padding:6px 8px; border-radius:6px; font-size:12px; }
-  .plist .prow .nm { display:flex; justify-content:space-between; gap:6px; }
-  .plist .prow .nm b { font-weight:600; }
-  .plist .prow .tag { color:var(--dim); font-size:10px; }
-  .plist .prow .desc { color:var(--muted); font-size:11px; margin-top:1px; }
-  .plist .empty { padding:10px 8px; color:var(--muted); font-size:12px; }
+  .msg-docs a { font-size:12.5px; }
 
   /* a small modal for previewing/downloading a file */
-  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center;
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.65); display:flex; align-items:center;
                     justify-content:center; z-index:50; }
   .modal-overlay[hidden] { display:none; }
   .modal-box.wide { width:min(1100px, 92vw); }
-  .modal-box { width:min(680px, 92vw); max-height:84vh; display:flex; flex-direction:column; background:var(--panel);
-               border:1px solid var(--border); border-radius:10px; padding:16px; }
+  .modal-box { width:min(680px, 92vw); max-height:84vh; display:flex; flex-direction:column;
+               background:rgba(16,18,20,.88); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+               border:1px solid var(--border); border-radius:16px; padding:18px; }
   .modal-top { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:4px; }
-  .modal-top b { font-size:13px; word-break:break-all; }
+  .modal-top b { font-size:13.5px; word-break:break-all; }
   .modal-body { flex:1; overflow:auto; margin-top:10px; }
-  .modal-body pre { white-space:pre-wrap; word-break:break-word; margin:0; font-size:12px; }
+  .modal-body pre { white-space:pre-wrap; word-break:break-word; margin:0; font-size:12.5px; }
   .modal-body img { max-width:100%; display:block; }
-  .htmlpreview { width:100%; height:65vh; border:1px solid var(--border); border-radius:6px; background:#fff; }
+  .htmlpreview { width:100%; height:65vh; border:1px solid var(--border); border-radius:10px; background:#fff; }
   .modal-actions { margin-top:12px; text-align:right; }
   .modal-actions a { text-decoration:none; }
+
+  .hamburger { display:none; }
+
+  /* Mobile: the icon rail is permanently docked and the conversation/files/tools/skills drawer is a
+     fixed-width flex sibling of main at every width above -- on a phone that is two things fighting
+     for the same screen at once (the rail plus a drawer beside it), which is what overlapped and
+     covered everything. Below this breakpoint it becomes a proper hamburger menu instead: the rail is
+     hidden until the ☰ button opens it (as its own full-height overlay, the .railopen class below), and a chosen
+     panel (.sidebox.on) takes the FULL screen rather than starting after the rail -- only ever one of
+     the two on screen together, never both. */
+  @media (max-width: 760px) {
+    .rail { display:none; position:fixed; z-index:41; top:0; left:0; bottom:0; box-shadow:4px 0 24px rgba(0,0,0,.4); }
+    .rail.railopen { display:flex; }
+    .hamburger { display:flex; }
+    .sidebox.on { position:fixed; z-index:40; top:0; left:0; right:0; bottom:0; width:auto; box-shadow:4px 0 24px rgba(0,0,0,.4); }
+    .sidebox-backdrop.show { display:block; position:fixed; z-index:39; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.45); }
+    .bar { flex-wrap:wrap; gap:8px; padding:12px 14px; }
+    .bar #statusstats { display:none; } /* replaced by the compact copy below the chat, .statuspill-mobile */
+    .bar select#target { max-width:160px; }
+    .toolToggle span { display:none; }
+    #msgs { padding:8px 12px 6px; }
+    .statuspill-mobile { display:flex; margin:0 auto 6px; max-width:calc(100% - 24px); overflow-x:auto; font-size:10.5px; padding:6px 12px; justify-content:center; }
+    .composer-zone { padding:8px 12px 16px; }
+    .msg.user .bubble { max-width:88%; }
+  }
 </style>
 </head>
 <body>
@@ -204,46 +312,96 @@
 </div>
 
 <div id="app">
-  <div class="side">
-    <div class="top"><button id="newchat" title="new chat">+ new chat</button></div>
+  <aside class="rail" id="rail">
+    <div class="rail-top">
+      <div class="logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+          <circle cx="11" cy="11" r="8"/><path d="M16.5 17.5 L21 22" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <button class="icon-btn" id="newchat" title="new chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5 v14 M5 12 h14"/></svg>
+      </button>
+      <button class="icon-btn on" id="convsbtn" title="chats">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3.5" y="5" width="17" height="14" rx="4"/><path d="M8 10.5 h8 M8 14 h5"/></svg>
+      </button>
+      <button class="icon-btn" id="filesbtn" title="files">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7.5 a2 2 0 0 1 2-2 h3.5 l2 2.3 H18 a2 2 0 0 1 2 2 v7.7 a2 2 0 0 1-2 2 H6 a2 2 0 0 1-2-2 Z"/></svg>
+      </button>
+      <button class="icon-btn" id="toolsbtn" title="tools and extensions">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M14.5 6.5 a4 4 0 0 0-5.4 5.4 L4 17 v3 h3 l5.1-5.1 a4 4 0 0 0 5.4-5.4 l-2.6 2.6-2.4-2.4 Z"/></svg>
+      </button>
+      <button class="icon-btn" id="skillsbtn" title="skills">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 6.5 C10 5 6.5 4.5 4 5 v13 c2.5 -.5 6 0 8 1.5 c2 -1.5 5.5 -2 8 -1.5 V5 c-2.5 -.5 -6 0 -8 1.5 Z"/><path d="M12 6.5 V19.5"/></svg>
+      </button>
+      <button class="icon-btn" id="gotonotebook" title="notebooks: grounded Q&amp;A over your own sources">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 16 v-3 M12 16 v-6 M15.5 16 v-4.5"/></svg>
+      </button>
+    </div>
+    <div class="rail-bottom">
+      <button class="icon-btn" id="passbtn" title="portal password">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15 a1.65 1.65 0 0 0 .33 1.82 l.06.06 a2 2 0 1 1-2.83 2.83 l-.06-.06 a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51 V21 a2 2 0 1 1-4 0 v-.09 a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33 l-.06.06 a2 2 0 1 1-2.83-2.83 l.06-.06 a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1 H3 a2 2 0 1 1 0-4 h.09 a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82 l-.06-.06 a2 2 0 1 1 2.83-2.83 l.06.06 a1.65 1.65 0 0 0 1.82.33 h0 a1.65 1.65 0 0 0 1-1.51 V3 a2 2 0 1 1 4 0 v.09 a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33 l.06-.06 a2 2 0 1 1 2.83 2.83 l-.06.06 a1.65 1.65 0 0 0-.33 1.82 v0 a1.65 1.65 0 0 0 1.51 1 H21 a2 2 0 1 1 0 4 h-.09 a1.65 1.65 0 0 0-1.51 1 Z"/></svg>
+      </button>
+      <button class="icon-btn" id="logout" title="log out">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 17 l5-5 -5-5 M20 12 H9 M13 4 H5 v16 h8"/></svg>
+      </button>
+    </div>
+  </aside>
+  <div id="sidebackdrop" class="sidebox-backdrop"></div>
+
+  <div id="convsbox" class="sidebox on">
+    <div class="top"><b>Chats</b><button class="sideclose" data-close title="close">×</button></div>
     <div id="convlist"></div>
-    <div class="bottom"><span class="who" id="who"></span><span><button id="passbtn" title="portal password">&#9881;</button><button id="logout">log out</button></span></div>
+    <p id="syncwarn" class="hint bad" hidden>Chat history is too large to save to your account — it only exists in this browser tab until it's trimmed. Delete an old chat to fix this.</p>
   </div>
-  <main>
-    <div class="bar">
-      <select id="target"></select>
-      <div class="sp"></div>
-      <button id="toolsbtn">Tools &amp; Extensions</button>
-      <button id="skillsbtn">Skills</button>
-      <button id="filesbtn" class="on">files</button>
-    </div>
-    <div id="statusbar" class="statusbar">
-      <div id="statusstats"></div>
-      <label class="toolToggle"><input type="checkbox" id="toolToggle">show tool calls</label>
-    </div>
-    <div id="msgs"></div>
-    <div id="pending" class="pending" hidden></div>
-    <div class="composer">
-      <button id="attachbtn" title="attach images or documents">📎</button>
-      <input type="file" id="attachinput" multiple hidden>
-      <textarea id="input" placeholder="Message your agent... (Enter to send, Shift+Enter for a new line, /piper for commands)"></textarea>
-      <button id="send">send</button>
-    </div>
-  </main>
   <div id="toolsbox" class="sidebox">
-    <div class="top"><b>Tools &amp; Extensions</b><button id="toolsrefresh">refresh</button></div>
+    <div class="top"><b>Tools &amp; Extensions</b><div><button id="toolsrefresh">refresh</button><button class="sideclose" data-close title="close">×</button></div></div>
     <div id="toolslist" class="plist"></div>
   </div>
   <div id="skillsbox" class="sidebox">
-    <div class="top"><b>Skills</b><button id="skillsrefresh">refresh</button></div>
+    <div class="top"><b>Skills</b><div><button id="skillsrefresh">refresh</button><button class="sideclose" data-close title="close">×</button></div></div>
     <div id="skillslist" class="plist"></div>
   </div>
-  <div id="filesbox" class="sidebox on">
-    <div class="top"><b>Files</b><div><button id="uploadbtn">upload</button><button id="filesrefresh">refresh</button></div></div>
+  <div id="filesbox" class="sidebox">
+    <div class="top"><b>Files</b><div><button id="uploadbtn">upload</button><button id="filesrefresh">refresh</button><button class="sideclose" data-close title="close">×</button></div></div>
     <input type="file" id="uploadinput" multiple hidden>
     <div id="crumb"></div>
     <div id="filelist"></div>
   </div>
+
+  <main>
+    <div class="bg"></div>
+    <div class="bar">
+      <button class="icon-btn hamburger" id="hamburger" title="menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7 h16 M4 12 h16 M4 17 h16"/></svg>
+      </button>
+      <select id="target"></select>
+      <div class="sp"></div>
+      <div id="statusstats" class="statuspill"></div>
+      <label class="toolToggle"><input type="checkbox" id="toolToggle" style="margin:0"><span>show tool calls</span></label>
+    </div>
+    <div id="msgs"></div>
+    <div id="statusstats-mobile" class="statuspill statuspill-mobile"></div>
+    <div class="composer-zone">
+      <div class="composer-wrap">
+        <div id="pending" class="pending" hidden></div>
+        <div class="composer">
+          <div class="composer-inner">
+            <textarea id="input" rows="1" placeholder="Message your agent... (Enter to send, Shift+Enter for a new line, /piper for commands)"></textarea>
+            <div class="comp-bar">
+              <button class="round-btn" id="attachbtn" title="attach images or documents">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5 v14 M5 12 h14"/></svg>
+              </button>
+              <input type="file" id="attachinput" multiple hidden>
+              <span class="spacer"></span>
+              <button id="send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19 V5 M5.5 11.5 L12 5 l6.5 6.5"/></svg></button>
+            </div>
+          </div>
+        </div>
+        <p class="composer-hint hint">Piper may produce inaccurate information. Verify before use.</p>
+      </div>
+    </div>
+  </main>
 </div>
 
 <div id="passmodal" class="modal-overlay" hidden>
@@ -386,7 +544,14 @@ function mdBlockNodes(blocks, parent) {
       var bar = document.createElement('div'); bar.className = 'mdcodebar';
       var lab = document.createElement('span'); lab.textContent = b.lang || 'code'; bar.appendChild(lab);
       var cp = document.createElement('button'); cp.textContent = 'copy'; cp.setAttribute('data-copy', b.text); bar.appendChild(cp);
-      var pre = document.createElement('pre'); var code = document.createElement('code'); code.textContent = b.text; pre.appendChild(code);
+      var pre = document.createElement('pre'); var code = document.createElement('code');
+      // Each .cl is already display:block (its own line) -- a literal "\n" text node after it would
+      // be a second, real line break inside this <pre>, on top of the block's own, doubling every gap.
+      b.text.split('\n').forEach(function (line, i) {
+        var ln = document.createElement('span'); ln.className = 'cl'; ln.setAttribute('data-ln', String(i + 1)); ln.textContent = line;
+        code.appendChild(ln);
+      });
+      pre.appendChild(code);
       e.appendChild(bar); e.appendChild(pre);
     }
     else if (b.t === 'ul' || b.t === 'ol') { e = mdListNode(b); }
@@ -429,7 +594,7 @@ var CUR = null;
 // (send() or resumeIfLive()) attached to it, so sending/switching never has to wait on a DIFFERENT
 // conversation's turn.
 var WATCHING = {};
-var SIDE_OPEN = 'files'; // 'files' | 'tools' | 'skills' | null -- one side panel at a time
+var SIDE_OPEN = 'convs'; // 'convs' | 'files' | 'tools' | 'skills' | null -- one side panel at a time
 var FILES_PATH = '';
 var PENDING_IMAGES = []; // { name, dataUrl }
 var PENDING_DOCS = []; // { name, path }
@@ -468,14 +633,33 @@ function loadConvos() {
 /* Kept server-side too (GET/PUT /api/history), so logging in from another browser or device shows the
    same chats. sessionStorage stays as the fast, offline-friendly local copy; the server sync is
    fire-and-forget and never blocks the UI. */
+var CONVOS_MAX = 60; // a hard cap on how many conversations this browser remembers at all
+var CONVOS_BYTE_BUDGET = 4 * 1024 * 1024; // headroom under sessionStorage's typical 5-10MB per-origin quota
 function saveConvos() {
+  // Unbounded growth over a long-lived account can exceed sessionStorage's quota (setItem then throws
+  // QuotaExceededError, silently stopping local persistence) and grows the server-side sync blob
+  // towards its own PORTAL_HISTORY_MAX_BYTES cap. Evict the oldest conversations first, same two-stage
+  // pattern dashboard.html's Playground already uses (pgSave()), so this never gets there.
   CONVOS.sort(function (a, b) { return b.updated - a.updated; });
-  try { sessionStorage.setItem(convKey(), JSON.stringify(CONVOS)); } catch (e) { /* storage full: not fatal */ }
-  api('api/history', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(CONVOS) }).catch(function () { /* local copy still has it */ });
+  if (CONVOS.length > CONVOS_MAX) CONVOS.length = CONVOS_MAX;
+  var packed = JSON.stringify(CONVOS);
+  while (packed.length > CONVOS_BYTE_BUDGET && CONVOS.length > 1) { CONVOS.pop(); packed = JSON.stringify(CONVOS); }
+  try { sessionStorage.setItem(convKey(), packed); } catch (e) { /* storage full: not fatal */ }
+  // r.ok must be checked explicitly: fetch only rejects on a network failure, not on a 4xx/5xx response,
+  // so a too-large save (413) would otherwise look identical to a successful one and go unnoticed --
+  // leaving the server-side copy silently stale until another device or a fresh login pulls it back.
+  api('api/history', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: packed })
+    .then(function (r) { $('syncwarn').hidden = r.ok; })
+    .catch(function () { $('syncwarn').hidden = false; /* local copy still has it */ });
 }
 function pullHistory() {
   return apiJson('api/history').then(function (d) {
-    if (Array.isArray(d.data)) { CONVOS = d.data; try { sessionStorage.setItem(convKey(), JSON.stringify(CONVOS)); } catch (e) { /* not fatal */ } }
+    // A successful response is authoritative either way: an array replaces the local copy, and
+    // null means the server genuinely has nothing saved (never saved, or cleared by an operator) --
+    // the local cache from a previous session must not keep showing chats that no longer exist
+    // server-side. Only an actual request failure (below) falls back to whatever is cached locally.
+    CONVOS = Array.isArray(d.data) ? d.data : [];
+    try { sessionStorage.setItem(convKey(), JSON.stringify(CONVOS)); } catch (e) { /* not fatal */ }
   }).catch(function () { /* the local copy, if any, is still used */ });
 }
 function newId() {
@@ -494,6 +678,8 @@ function isBusy(c) {
   return Boolean(m && m.role === 'assistant' && m.pending);
 }
 
+function externalModel(id) { return (WHOAMI.externalModels || []).filter(function (m) { return m.id === id; })[0] || null; }
+
 function renderTargets() {
   var t = $('target');
   t.replaceChildren();
@@ -504,6 +690,15 @@ function renderTargets() {
     o.value = a.id;
     t.appendChild(o);
   });
+  if ((WHOAMI.externalModels || []).length) {
+    var grp = el('optgroup'); grp.label = 'Models (chat only)';
+    WHOAMI.externalModels.forEach(function (m) {
+      var o = el('option', m.name + ' — ' + m.endpointName);
+      o.value = 'm:' + m.id;
+      grp.appendChild(o);
+    });
+    t.appendChild(grp);
+  }
 }
 
 function renderSide() {
@@ -518,8 +713,9 @@ function renderSide() {
     if (isBusy(c)) titleRow.appendChild(el('span', ' ●')).className = 'livedot';
     row.appendChild(titleRow);
     var agent = (WHOAMI.agents || []).filter(function (a) { return a.id === c.agentId; })[0];
-    row.appendChild(el('div', agent ? agent.name : '(main endpoint)')).className = 's';
-    row.addEventListener('click', function () { CUR = c.id; renderAll(); resumeIfLive(c); });
+    var model = c.externalModelId ? externalModel(c.externalModelId) : null;
+    row.appendChild(el('div', model ? (model.name + ' (model)') : agent ? agent.name : '(main endpoint)')).className = 's';
+    row.addEventListener('click', function () { CUR = c.id; renderAll(); resumeIfLive(c); closeSideOnMobile(); });
     var clear = el('button', '×');
     clear.className = 'convclear';
     clear.title = 'clear this chat';
@@ -647,66 +843,91 @@ function partNode(p) {
   if (p.kind === 'note') { var note = el('div', p.text); note.className = 'sys-note'; return note; }
   return textBlocks(p.text || '');
 }
+function botLabelFor(c) {
+  var agent = (WHOAMI.agents || []).filter(function (a) { return a.id === c.agentId; })[0];
+  var model = c.externalModelId ? externalModel(c.externalModelId) : null;
+  return (model && model.name) || (agent && agent.name) || 'Piper';
+}
+/* Builds one message's DOM node. Pulled out of renderMessages() so a live stream can redraw just the
+   last message (frameMessages() below) instead of every message in the conversation. */
+function buildMessageNode(m, botLabel) {
+  var row = el('div');
+  row.className = 'msg ' + m.role;
+  if (m.role === 'user') {
+    var bub = el('div', m.text);
+    bub.className = 'bubble';
+    if (m.images && m.images.length) {
+      var imgsBox = el('div'); imgsBox.className = 'msg-images';
+      m.images.forEach(function (dataUrl) {
+        var img = el('img'); img.src = dataUrl; img.alt = 'attached image';
+        img.addEventListener('click', function () { previewDataUrlImage(dataUrl); });
+        imgsBox.appendChild(img);
+      });
+      bub.appendChild(imgsBox);
+    }
+    if (m.docs && m.docs.length) {
+      var docsBox = el('div'); docsBox.className = 'msg-docs';
+      m.docs.forEach(function (d) {
+        var a = el('a', '📄 ' + d.name);
+        a.href = 'javascript:void(0)';
+        a.addEventListener('click', function () { previewFile(d.path, d.bytes || 0); });
+        docsBox.appendChild(a);
+      });
+      bub.appendChild(docsBox);
+    }
+    row.appendChild(bub);
+    return row;
+  }
+  row.appendChild(el('div', botLabel.charAt(0).toUpperCase())).className = 'bot-avatar';
+  var body = el('div'); body.className = 'body';
+  // A turn's thinking is naturally split by Pi into several pieces, one before each tool call
+  // (lib/livesession.mjs resets it on a tool call). Shown as one block instead, up front; tools and
+  // everything else keep their own place and order exactly as they already do.
+  var thinkText = '', thinkId = null, rest = [];
+  (m.parts || []).forEach(function (p) {
+    if (p.kind === 'thinking') {
+      if (thinkId === null) thinkId = p.id;
+      thinkText += (thinkText ? '\n' : '') + (p.text || '');
+    } else {
+      rest.push(p);
+    }
+  });
+  if (thinkId !== null) body.appendChild(partNode({ kind: 'thinking', id: thinkId, text: thinkText, pending: Boolean(m.pending) }));
+  rest.forEach(function (p) { body.appendChild(partNode(p)); });
+  if (m.pending && !(m.parts || []).length) body.appendChild(el('div', 'Thinking…'));
+  if (m.error) { var e = el('div', m.error); e.className = 'err'; body.appendChild(e); }
+  row.appendChild(body);
+  return row;
+}
 function renderMessages() {
   var box = $('msgs');
   box.replaceChildren();
   var c = conv();
   if (!c) return;
-  c.messages.forEach(function (m) {
-    var row = el('div');
-    row.className = 'msg ' + m.role;
-    if (m.role === 'user') {
-      var bub = el('div', m.text);
-      bub.className = 'bubble';
-      if (m.images && m.images.length) {
-        var imgsBox = el('div'); imgsBox.className = 'msg-images';
-        m.images.forEach(function (dataUrl) {
-          var img = el('img'); img.src = dataUrl; img.alt = 'attached image';
-          img.addEventListener('click', function () { previewDataUrlImage(dataUrl); });
-          imgsBox.appendChild(img);
-        });
-        bub.appendChild(imgsBox);
-      }
-      if (m.docs && m.docs.length) {
-        var docsBox = el('div'); docsBox.className = 'msg-docs';
-        m.docs.forEach(function (d) {
-          var a = el('a', '📄 ' + d.name);
-          a.href = 'javascript:void(0)';
-          a.addEventListener('click', function () { previewFile(d.path, d.bytes || 0); });
-          docsBox.appendChild(a);
-        });
-        bub.appendChild(docsBox);
-      }
-      row.appendChild(bub);
-      box.appendChild(row);
-      return;
-    }
-    var body = el('div'); body.className = 'body';
-    // A turn's thinking is naturally split by Pi into several pieces, one before each tool call
-    // (lib/livesession.mjs resets it on a tool call). Shown as one block instead, up front; tools and
-    // everything else keep their own place and order exactly as they already do.
-    var thinkText = '', thinkId = null, rest = [];
-    (m.parts || []).forEach(function (p) {
-      if (p.kind === 'thinking') {
-        if (thinkId === null) thinkId = p.id;
-        thinkText += (thinkText ? '\n' : '') + (p.text || '');
-      } else {
-        rest.push(p);
-      }
-    });
-    if (thinkId !== null) body.appendChild(partNode({ kind: 'thinking', id: thinkId, text: thinkText, pending: Boolean(m.pending) }));
-    rest.forEach(function (p) { body.appendChild(partNode(p)); });
-    if (m.pending && !(m.parts || []).length) body.appendChild(el('div', 'Thinking…'));
-    if (m.error) { var e = el('div', m.error); e.className = 'err'; body.appendChild(e); }
-    row.appendChild(body);
-    if (!m.pending && m.usage && m.usage.total_tokens) {
-      var f = el('div', m.usage.total_tokens + ' tokens' + (m.cost ? ' · $' + m.cost.toFixed(4) : ''));
-      f.className = 'foot';
-      row.appendChild(f);
-    }
-    box.appendChild(row);
-  });
+  var botLabel = botLabelFor(c);
+  c.messages.forEach(function (m) { box.appendChild(buildMessageNode(m, botLabel)); });
   box.scrollTop = box.scrollHeight;
+}
+var MSG_RAF = 0;
+/* While a reply streams, redraw only the LAST message's node, at most once per animation frame,
+   instead of rebuilding the whole conversation's DOM on every delta (renderMessages() above) -- that
+   full rebuild is what made long conversations visibly slow down while a reply was streaming in,
+   since each token's cost then scaled with the whole conversation's size. Mirrors dashboard.html's
+   pgFrame(). Only ever touches the current conversation's own DOM. */
+function frameMessages() {
+  if (MSG_RAF) return;
+  MSG_RAF = requestAnimationFrame(function () {
+    MSG_RAF = 0;
+    var c = conv();
+    if (!c) return;
+    var box = $('msgs');
+    var atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+    var i = c.messages.length - 1;
+    var node = box.lastChild;
+    if (node && i >= 0) box.replaceChild(buildMessageNode(c.messages[i], botLabelFor(c)), node);
+    else renderMessages();
+    if (atBottom) box.scrollTop = box.scrollHeight;
+  });
 }
 
 function fmtTok(n) {
@@ -717,8 +938,13 @@ function fmtTok(n) {
 }
 function renderStatusBar() {
   var c = conv();
+  // The same pill is shown twice: in the top bar (desktop and up) and as a compact copy just above the
+  // composer (mobile, .statuspill-mobile below 760px) -- only one of the two is ever visible at once
+  // (see the @media block), so building both here is simplest and keeps them always in sync.
   var bar = $('statusstats');
+  var barMobile = $('statusstats-mobile');
   bar.replaceChildren();
+  barMobile.replaceChildren();
   var s = c && c.status;
   if (!s || (!s.model && s.contextUsed == null)) return;
   var add = function (label, value, cls) {
@@ -728,6 +954,7 @@ function renderStatusBar() {
     if (cls) b.className = cls;
     span.appendChild(b);
     bar.appendChild(span);
+    barMobile.appendChild(span.cloneNode(true));
   };
   if (s.model) add('model', s.model);
   if (s.contextWindow) {
@@ -744,18 +971,28 @@ function renderAll() {
   renderMessages();
   renderStatusBar();
   var c = conv();
-  $('target').value = c ? (c.agentId || '') : '';
+  $('target').value = c ? (c.externalModelId ? 'm:' + c.externalModelId : (c.agentId || '')) : '';
   $('target').disabled = Boolean(c && c.messages.length) || isBusy(c);
-  $('send').textContent = isBusy(c) ? 'stop' : 'send';
+  $('send').innerHTML = isBusy(c)
+    ? '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19 V5 M5.5 11.5 L12 5 l6.5 6.5"/></svg>';
+  $('send').title = isBusy(c) ? 'stop' : 'send';
+  // A model is chat only: no tools, skills or extensions, and no vision means no attachments either.
+  var model = c && c.externalModelId ? externalModel(c.externalModelId) : null;
+  $('toolsbtn').disabled = Boolean(model);
+  $('skillsbtn').disabled = Boolean(model);
+  $('attachbtn').disabled = Boolean(model) && !model.vision;
+  $('attachbtn').title = (model && !model.vision) ? 'this model does not support images' : 'attach images or documents';
   reloadSidePanel();
 }
 
 function newChat() {
-  var c = { id: newId(), title: '', agentId: '', messages: [], updated: Date.now() };
+  var c = { id: newId(), title: '', agentId: '', externalModelId: '', messages: [], updated: Date.now() };
   CONVOS.unshift(c);
   CUR = c.id;
   saveConvos();
   renderAll();
+  closeSideOnMobile();
 }
 
 /* Ends the server-side session (so its container is freed) and drops it from the list in this browser. */
@@ -800,6 +1037,23 @@ function streamInto(reader, onEvent) {
   return pump();
 }
 
+/* A model has no server-side session (lib/portal.mjs's portalExternalChat), so the browser resends
+   the whole conversation every time -- the same full history this page already keeps for an agent
+   chat, just flattened to plain {role, content} pairs for an OpenAI-shaped messages array. */
+var EXTERNAL_HISTORY_WINDOW = 150; // comfortably under the server's own MAX_HISTORY_MESSAGES (200, lib/externalmodels.mjs)
+function historyFor(c) {
+  var h = c.messages.filter(function (m) { return !m.pending && !m.error; }).map(function (m) {
+    if (m.role === 'user') return { role: 'user', content: m.text };
+    var text = (m.parts || []).filter(function (p) { return p.kind === 'text' && p.text; }).map(function (p) { return p.text; }).join('\n\n');
+    return { role: 'assistant', content: text };
+  }).filter(function (m) { return m.content; });
+  // Without this, a long-running external-model conversation works fine for 200 turns and then hard
+  // rejects every further message once the server's own cap is hit -- windowing to the most recent
+  // turns here instead degrades to "the model forgets the oldest turns", which is always preferable
+  // to "you can no longer send messages in this conversation".
+  return h.length > EXTERNAL_HISTORY_WINDOW ? h.slice(h.length - EXTERNAL_HISTORY_WINDOW) : h;
+}
+
 function send() {
   var c = conv();
   if (!c || isBusy(c)) return;
@@ -810,12 +1064,14 @@ function send() {
   var docs = PENDING_DOCS.slice();
   var outgoing = text;
   docs.forEach(function (d) { outgoing += '\n\n[Attached: ' + d.path + ' -- read it from your workspace]'; });
+  var history = c.externalModelId ? historyFor(c) : undefined;
   if (!c.messages.length) c.title = text.slice(0, 48);
   c.messages.push({ role: 'user', text: text, images: images.length ? images : undefined, docs: docs.length ? docs : undefined });
   var msg = { role: 'assistant', parts: [], pending: true };
   c.messages.push(msg);
   c.updated = Date.now();
   $('input').value = '';
+  resizeInput();
   PENDING_IMAGES = [];
   PENDING_DOCS = [];
   renderPending();
@@ -828,14 +1084,22 @@ function send() {
   api('api/chat', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ conversation: c.id, message: outgoing, agentId: c.agentId || undefined, images: images.length ? images : undefined }),
+    body: JSON.stringify({ conversation: c.id, message: outgoing, agentId: c.externalModelId ? undefined : (c.agentId || undefined), externalModelId: c.externalModelId || undefined, history: history, images: images.length ? images : undefined }),
   }).then(function (r) {
     var type = r.headers.get('content-type') || '';
     if (!r.ok || type.indexOf('event-stream') < 0) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error((j.error && j.error.message) || ('HTTP ' + r.status)); });
+    // This conversation might not be the one on screen right now (another is running in the
+    // background) -- rendering the wrong conversation's messages/status bar over whatever the user
+    // is actually looking at would be worse than not rendering at all, and both functions read the
+    // *current* conversation internally regardless of which one's stream called them.
+    var refresh = function () { if (c.id === CUR) { renderMessages(); renderStatusBar(); } else renderSide(); };
     return streamInto(r.body.getReader(), function (event, d) {
-      if (event === 'item') { applyItem(msg, d.item); renderMessages(); }
-      else if (event === 'context') { c.status = c.status || {}; c.status.contextUsed = d.contextUsed; renderStatusBar(); }
-      else if (event === 'done') { done = true; msg.usage = d.usage; msg.cost = d.cost; if (!(msg.parts || []).some(function (p) { return p.kind === 'text' && p.text; }) && d.text) msg.parts.push({ kind: 'text', id: 'final', text: d.text }); if (d.status) { c.status = d.status; c.status.contextUsed = (d.usage && d.usage.total_tokens) || null; } renderStatusBar(); }
+      // A delta mid-stream only ever touches the last (this) message: frameMessages() redraws just
+      // that one node instead of the whole conversation (see its own comment for why). The terminal
+      // 'done' event still does a full renderMessages(), so the final state is always fully consistent.
+      if (event === 'item') { applyItem(msg, d.item); if (c.id === CUR) { frameMessages(); renderStatusBar(); } else renderSide(); }
+      else if (event === 'context') { c.status = c.status || {}; c.status.contextUsed = d.contextUsed; if (c.id === CUR) renderStatusBar(); else renderSide(); }
+      else if (event === 'done') { done = true; msg.usage = d.usage; msg.cost = d.cost; if (!(msg.parts || []).some(function (p) { return p.kind === 'text' && p.text; }) && d.text) msg.parts.push({ kind: 'text', id: 'final', text: d.text }); if (d.status) { c.status = d.status; c.status.contextUsed = (d.usage && d.usage.total_tokens) || null; } refresh(); }
       else if (event === 'error') { done = true; msg.error = d.message; }
     });
   }).catch(function (e) {
@@ -845,7 +1109,7 @@ function send() {
     if (!done && !msg.error) msg.error = 'The connection ended before the agent finished.';
     c.updated = Date.now();
     saveConvos();
-    renderAll();
+    if (c.id === CUR) renderAll(); else renderSide();
   });
 }
 
@@ -854,7 +1118,10 @@ function send() {
    for a conversation other than the one on screen: it only re-renders if it is still the one showing
    by the time something changes, so one busy conversation never blocks using another. */
 function resumeIfLive(c) {
-  if (!c || WATCHING[c.id]) return;
+  // A model has no server-side session to catch up on (lib/portal.mjs's portalExternalChat is
+  // stateless) -- if the browser closed mid-turn, that turn is simply lost, same as closing a tab
+  // mid-request to any other stateless API.
+  if (!c || WATCHING[c.id] || c.externalModelId) return;
   WATCHING[c.id] = true;
   var refresh = function () { if (c.id === CUR) renderAll(); else renderSide(); };
   var q = agentQuery(c);
@@ -873,7 +1140,7 @@ function resumeIfLive(c) {
         msg.pending = Boolean(d.state && d.state.working);
         if (d.state && d.state.contextTokens != null) { c.status = c.status || {}; c.status.contextUsed = d.state.contextTokens; }
         refresh();
-      } else if (event === 'item') { applyItem(msg, d.item); if (c.id === CUR) renderMessages(); }
+      } else if (event === 'item') { applyItem(msg, d.item); if (c.id === CUR) frameMessages(); }
       else if (event === 'context') { c.status = c.status || {}; c.status.contextUsed = d.contextUsed; if (c.id === CUR) renderStatusBar(); }
       else if (event === 'done') { if (d.usage) msg.usage = d.usage; if (d.cost) msg.cost = d.cost; }
       else if (event === 'error') { msg.error = d.message; }
@@ -892,15 +1159,37 @@ function agentQuery(c) {
   c = c || conv();
   return (c && c.agentId) ? ('agentId=' + encodeURIComponent(c.agentId)) : '';
 }
+var RAIL_OPEN = false; // the hamburger menu (the rail, shown as its own overlay on a phone -- see openRailMenu())
+function syncBackdrop() { $('sidebackdrop').classList.toggle('show', Boolean(SIDE_OPEN) || RAIL_OPEN); }
 function setSide(which) {
+  // A panel replaces the hamburger menu, never sits alongside it (that's what was overlapping).
+  if (RAIL_OPEN) { RAIL_OPEN = false; $('rail').classList.remove('railopen'); }
   SIDE_OPEN = SIDE_OPEN === which ? null : which;
+  $('convsbox').classList.toggle('on', SIDE_OPEN === 'convs');
   $('filesbox').classList.toggle('on', SIDE_OPEN === 'files');
   $('toolsbox').classList.toggle('on', SIDE_OPEN === 'tools');
   $('skillsbox').classList.toggle('on', SIDE_OPEN === 'skills');
-  $('filesbtn').className = SIDE_OPEN === 'files' ? 'on' : '';
-  $('toolsbtn').className = SIDE_OPEN === 'tools' ? 'on' : '';
-  $('skillsbtn').className = SIDE_OPEN === 'skills' ? 'on' : '';
+  $('convsbtn').className = 'icon-btn' + (SIDE_OPEN === 'convs' ? ' on' : '');
+  $('filesbtn').className = 'icon-btn' + (SIDE_OPEN === 'files' ? ' on' : '');
+  $('toolsbtn').className = 'icon-btn' + (SIDE_OPEN === 'tools' ? ' on' : '');
+  $('skillsbtn').className = 'icon-btn' + (SIDE_OPEN === 'skills' ? ' on' : '');
+  // On a phone the open drawer overlays main (see the mobile @media block) rather than sitting beside
+  // it, so it needs its own backdrop to tap-to-close -- same idea as dashboard.html's Playground drawer.
+  syncBackdrop();
   reloadSidePanel();
+}
+/* The hamburger menu itself (mobile only -- the rail is always visible on a wider screen, this is a
+   no-op there since #hamburger stays hidden and nothing calls these). */
+function openRailMenu() {
+  if (SIDE_OPEN) setSide(SIDE_OPEN); // a panel never shows at the same time as the menu that opens it
+  RAIL_OPEN = true;
+  $('rail').classList.add('railopen');
+  syncBackdrop();
+}
+function closeRailMenu() {
+  RAIL_OPEN = false;
+  $('rail').classList.remove('railopen');
+  syncBackdrop();
 }
 function reloadSidePanel() {
   if (SIDE_OPEN === 'files') loadFiles();
@@ -1044,14 +1333,19 @@ function previewFile(path, size) {
   $('fmmeta').textContent = bytes(size);
   $('fmbody').replaceChildren(el('div', 'loading…'));
   $('filemodal').hidden = false;
-  $('fmdownload').href = filesUrl(path);
+  // Not filesUrl(path): clicking a plain <a href> is a native browser navigation, which cannot carry
+  // the Authorization header this API requires (no cookie fallback for the client portal) -- it would
+  // always answer 401, which Chrome shows as "Try to sign in to the site. Then download again." The
+  // href is set below instead, to a blob URL built from this same authenticated fetch's own bytes.
+  $('fmdownload').removeAttribute('href');
   $('fmdownload').download = path.split('/').pop();
   api(filesUrl(path)).then(function (r) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return r.blob();
   }).then(function (blob) {
+    MODAL_OBJECT_URL = URL.createObjectURL(blob);
+    $('fmdownload').href = MODAL_OBJECT_URL;
     if (IMG_TYPES[ext]) {
-      MODAL_OBJECT_URL = URL.createObjectURL(blob);
       var img = el('img'); img.src = MODAL_OBJECT_URL; img.alt = path;
       $('fmbody').replaceChildren(img);
       return;
@@ -1152,6 +1446,7 @@ function connect(key) {
   KEY = key;
   return apiJson('api/whoami').then(function (d) {
     WHOAMI = d;
+    $('gotonotebook').hidden = !d.notebooksEnabled;
     sessionStorage.setItem('piper-portal-key', KEY);
     loadConvos();
     return pullHistory();
@@ -1160,6 +1455,9 @@ function connect(key) {
     renderTargets();
     showApp();
     renderAll();
+    // On a phone, land straight on the current chat rather than behind the (now full-screen overlay)
+    // conversation list -- the rail's chats button still reaches it.
+    closeSideOnMobile();
     // Every conversation, not just the one on screen: any of them might still be running from
     // before this login/reload, and each catches up (or stays quiet) independently.
     CONVOS.forEach(function (c) { resumeIfLive(c); });
@@ -1201,7 +1499,16 @@ $('logout').addEventListener('click', function () {
   showLogin();
 });
 $('newchat').addEventListener('click', function () { newChat(); });
-$('target').addEventListener('change', function () { var c = conv(); if (!c || c.messages.length) return; c.agentId = $('target').value; saveConvos(); renderAll(); });
+$('gotonotebook').addEventListener('click', function () { location.href = '/notebook'; });
+$('target').addEventListener('change', function () {
+  var c = conv();
+  if (!c || c.messages.length) return;
+  var v = $('target').value;
+  if (v.indexOf('m:') === 0) { c.externalModelId = v.slice(2); c.agentId = ''; }
+  else { c.agentId = v; c.externalModelId = ''; }
+  saveConvos();
+  renderAll();
+});
 $('send').addEventListener('click', function () {
   var c = conv();
   if (!c) return;
@@ -1209,6 +1516,8 @@ $('send').addEventListener('click', function () {
   var q = agentQuery(c);
   api('api/conversation/' + encodeURIComponent(c.id) + '/interrupt' + (q ? '?' + q : ''), { method: 'POST' }).catch(function () {});
 });
+function resizeInput() { var t = $('input'); t.style.height = 'auto'; t.style.height = Math.min(t.scrollHeight, 160) + 'px'; }
+$('input').addEventListener('input', resizeInput);
 $('input').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } });
 $('input').addEventListener('paste', function (e) {
   var files = (e.clipboardData && e.clipboardData.files) || [];
@@ -1224,9 +1533,18 @@ $('toolToggle').addEventListener('change', function () {
   try { localStorage.setItem('piper-portal-showtools', SHOW_TOOLS ? '1' : '0'); } catch (e) { /* not fatal */ }
   renderMessages();
 });
+$('convsbtn').addEventListener('click', function () { setSide('convs'); });
 $('filesbtn').addEventListener('click', function () { setSide('files'); });
 $('toolsbtn').addEventListener('click', function () { setSide('tools'); });
 $('skillsbtn').addEventListener('click', function () { setSide('skills'); });
+$('hamburger').addEventListener('click', function () { if (RAIL_OPEN) closeRailMenu(); else openRailMenu(); });
+// On a phone the open panel covers the whole screen, including the rail button that opened it (see the
+// mobile @media block), so there would otherwise be no way to close it short of reloading the page.
+document.querySelectorAll('.sideclose').forEach(function (btn) { btn.addEventListener('click', function () { if (SIDE_OPEN) setSide(SIDE_OPEN); }); });
+$('sidebackdrop').addEventListener('click', function () { if (RAIL_OPEN) closeRailMenu(); else if (SIDE_OPEN) setSide(SIDE_OPEN); });
+/* On a phone, picking something in the drawer should close it (it's covering the chat, not sitting
+   beside it); on a wider screen the drawer is the permanent sidebar, so leave it alone there. */
+function closeSideOnMobile() { if (SIDE_OPEN && window.matchMedia('(max-width: 760px)').matches) setSide(SIDE_OPEN); }
 $('toolsrefresh').addEventListener('click', loadTools);
 $('skillsrefresh').addEventListener('click', loadSkills);
 $('filesrefresh').addEventListener('click', loadFiles);
