@@ -62,6 +62,10 @@
   .sidebox-backdrop { display:none; }
   .sidebox .top { padding:14px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
   .sidebox .top b { font-size:13.5px; font-weight:600; }
+  .sidebox .top > div { display:flex; align-items:center; gap:6px; }
+  .sideclose { border:none; background:transparent; color:var(--dim); font-size:18px; line-height:1;
+               padding:2px 7px; border-radius:6px; cursor:pointer; }
+  .sideclose:hover { color:var(--red); background:rgba(248,113,113,.14); }
   #convlist { flex:1; overflow:auto; padding:6px; }
   .convrow { padding:9px 32px 9px 12px; border-radius:10px; cursor:pointer; margin-bottom:2px; position:relative; }
   .convrow:hover { background:rgba(255,255,255,.06); }
@@ -346,20 +350,20 @@
   <div id="sidebackdrop" class="sidebox-backdrop"></div>
 
   <div id="convsbox" class="sidebox on">
-    <div class="top"><b>Chats</b></div>
+    <div class="top"><b>Chats</b><button class="sideclose" data-close title="close">×</button></div>
     <div id="convlist"></div>
     <p id="syncwarn" class="hint bad" hidden>Chat history is too large to save to your account — it only exists in this browser tab until it's trimmed. Delete an old chat to fix this.</p>
   </div>
   <div id="toolsbox" class="sidebox">
-    <div class="top"><b>Tools &amp; Extensions</b><button id="toolsrefresh">refresh</button></div>
+    <div class="top"><b>Tools &amp; Extensions</b><div><button id="toolsrefresh">refresh</button><button class="sideclose" data-close title="close">×</button></div></div>
     <div id="toolslist" class="plist"></div>
   </div>
   <div id="skillsbox" class="sidebox">
-    <div class="top"><b>Skills</b><button id="skillsrefresh">refresh</button></div>
+    <div class="top"><b>Skills</b><div><button id="skillsrefresh">refresh</button><button class="sideclose" data-close title="close">×</button></div></div>
     <div id="skillslist" class="plist"></div>
   </div>
   <div id="filesbox" class="sidebox">
-    <div class="top"><b>Files</b><div><button id="uploadbtn">upload</button><button id="filesrefresh">refresh</button></div></div>
+    <div class="top"><b>Files</b><div><button id="uploadbtn">upload</button><button id="filesrefresh">refresh</button><button class="sideclose" data-close title="close">×</button></div></div>
     <input type="file" id="uploadinput" multiple hidden>
     <div id="crumb"></div>
     <div id="filelist"></div>
@@ -1534,6 +1538,9 @@ $('filesbtn').addEventListener('click', function () { setSide('files'); });
 $('toolsbtn').addEventListener('click', function () { setSide('tools'); });
 $('skillsbtn').addEventListener('click', function () { setSide('skills'); });
 $('hamburger').addEventListener('click', function () { if (RAIL_OPEN) closeRailMenu(); else openRailMenu(); });
+// On a phone the open panel covers the whole screen, including the rail button that opened it (see the
+// mobile @media block), so there would otherwise be no way to close it short of reloading the page.
+document.querySelectorAll('.sideclose').forEach(function (btn) { btn.addEventListener('click', function () { if (SIDE_OPEN) setSide(SIDE_OPEN); }); });
 $('sidebackdrop').addEventListener('click', function () { if (RAIL_OPEN) closeRailMenu(); else if (SIDE_OPEN) setSide(SIDE_OPEN); });
 /* On a phone, picking something in the drawer should close it (it's covering the chat, not sitting
    beside it); on a wider screen the drawer is the permanent sidebar, so leave it alone there. */
