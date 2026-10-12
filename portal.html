@@ -609,7 +609,12 @@ function saveConvos() {
 }
 function pullHistory() {
   return apiJson('api/history').then(function (d) {
-    if (Array.isArray(d.data)) { CONVOS = d.data; try { sessionStorage.setItem(convKey(), JSON.stringify(CONVOS)); } catch (e) { /* not fatal */ } }
+    // A successful response is authoritative either way: an array replaces the local copy, and
+    // null means the server genuinely has nothing saved (never saved, or cleared by an operator) --
+    // the local cache from a previous session must not keep showing chats that no longer exist
+    // server-side. Only an actual request failure (below) falls back to whatever is cached locally.
+    CONVOS = Array.isArray(d.data) ? d.data : [];
+    try { sessionStorage.setItem(convKey(), JSON.stringify(CONVOS)); } catch (e) { /* not fatal */ }
   }).catch(function () { /* the local copy, if any, is still used */ });
 }
 function newId() {
