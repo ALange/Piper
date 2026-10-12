@@ -998,10 +998,15 @@ function send() {
   }).then(function (r) {
     var type = r.headers.get('content-type') || '';
     if (!r.ok || type.indexOf('event-stream') < 0) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error((j.error && j.error.message) || ('HTTP ' + r.status)); });
+    // This conversation might not be the one on screen right now (another is running in the
+    // background) -- rendering the wrong conversation's messages/status bar over whatever the user
+    // is actually looking at would be worse than not rendering at all, and both functions read the
+    // *current* conversation internally regardless of which one's stream called them.
+    var refresh = function () { if (c.id === CUR) { renderMessages(); renderStatusBar(); } else renderSide(); };
     return streamInto(r.body.getReader(), function (event, d) {
-      if (event === 'item') { applyItem(msg, d.item); renderMessages(); }
-      else if (event === 'context') { c.status = c.status || {}; c.status.contextUsed = d.contextUsed; renderStatusBar(); }
-      else if (event === 'done') { done = true; msg.usage = d.usage; msg.cost = d.cost; if (!(msg.parts || []).some(function (p) { return p.kind === 'text' && p.text; }) && d.text) msg.parts.push({ kind: 'text', id: 'final', text: d.text }); if (d.status) { c.status = d.status; c.status.contextUsed = (d.usage && d.usage.total_tokens) || null; } renderStatusBar(); }
+      if (event === 'item') { applyItem(msg, d.item); refresh(); }
+      else if (event === 'context') { c.status = c.status || {}; c.status.contextUsed = d.contextUsed; refresh(); }
+      else if (event === 'done') { done = true; msg.usage = d.usage; msg.cost = d.cost; if (!(msg.parts || []).some(function (p) { return p.kind === 'text' && p.text; }) && d.text) msg.parts.push({ kind: 'text', id: 'final', text: d.text }); if (d.status) { c.status = d.status; c.status.contextUsed = (d.usage && d.usage.total_tokens) || null; } refresh(); }
       else if (event === 'error') { done = true; msg.error = d.message; }
     });
   }).catch(function (e) {
@@ -1011,7 +1016,7 @@ function send() {
     if (!done && !msg.error) msg.error = 'The connection ended before the agent finished.';
     c.updated = Date.now();
     saveConvos();
-    renderAll();
+    if (c.id === CUR) renderAll(); else renderSide();
   });
 }
 
