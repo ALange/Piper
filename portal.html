@@ -91,14 +91,18 @@
   main { flex:1; display:flex; flex-direction:column; min-width:0; position:relative; }
   .bg { position:absolute; inset:0; z-index:0;
     background:
-      radial-gradient(420px 260px at 4% 62%, rgba(238,226,196,.22), rgba(238,226,196,0) 65%),
-      radial-gradient(500px 300px at 96% 55%, rgba(240,229,200,.2), rgba(240,229,200,0) 60%),
-      radial-gradient(420px 300px at 88% 85%, rgba(245,234,208,.2), rgba(245,234,208,0) 62%),
-      linear-gradient(180deg,#14171a 0%,#15181a 30%,#17191a 55%,#121212 100%);
+      radial-gradient(420px 260px at 4% 62%, rgba(238,226,196,.95), rgba(238,226,196,0) 65%),
+      radial-gradient(360px 240px at 12% 88%, rgba(243,232,205,.95), rgba(243,232,205,0) 60%),
+      radial-gradient(300px 200px at 26% 78%, rgba(230,219,190,.8), rgba(230,219,190,0) 60%),
+      radial-gradient(500px 300px at 96% 55%, rgba(240,229,200,.9), rgba(240,229,200,0) 60%),
+      radial-gradient(420px 300px at 88% 85%, rgba(245,234,208,.95), rgba(245,234,208,0) 62%),
+      radial-gradient(300px 220px at 70% 70%, rgba(225,214,186,.55), rgba(225,214,186,0) 60%),
+      radial-gradient(260px 180px at 45% 95%, rgba(235,224,196,.7), rgba(235,224,196,0) 60%),
+      linear-gradient(180deg,#8f9c9f 0%,#97a3a4 30%,#a4ada6 48%,#bcb9a6 62%,#ddd2b6 78%,#ece0c4 100%);
   }
   .bg::after {
     content:""; position:absolute; inset:0;
-    background-image:radial-gradient(rgba(255,255,255,.1) 1px, transparent 1.4px);
+    background-image:radial-gradient(rgba(60,60,50,.14) 1px, transparent 1.4px);
     background-size:5px 5px;
     -webkit-mask-image:linear-gradient(180deg,transparent 30%,rgba(0,0,0,.75) 55%,#000 75%);
             mask-image:linear-gradient(180deg,transparent 30%,rgba(0,0,0,.75) 55%,#000 75%);
