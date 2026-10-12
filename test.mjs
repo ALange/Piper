@@ -10133,8 +10133,8 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	saveHistory(theirKey.id, { convs: [{ id: "x", title: "not yours", messages: [] }] });
 	assert.deepEqual((await call("/api/history", { headers: auth })).json.data, sample, "unaffected by another key's save");
 	// Oversized: refused with a clear reason, not silently truncated.
-	assert.throws(() => saveHistory(myKey.id, { big: "x".repeat(10_000_000) }), PortalStoreError);
-	const tooBig = await call("/api/history", { method: "PUT", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ big: "x".repeat(10_000_000) }) });
+	assert.throws(() => saveHistory(myKey.id, { big: "x".repeat(20_000_000) }), PortalStoreError);
+	const tooBig = await call("/api/history", { method: "PUT", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ big: "x".repeat(20_000_000) }) });
 	assert.equal(tooBig.status, 413);
 	assert.deepEqual(getHistory(myKey.id).data, sample, "the previous save is untouched by a refused one");
 	// No auth, no history.

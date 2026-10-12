@@ -207,6 +207,7 @@
   <div class="side">
     <div class="top"><button id="newchat" title="new chat">+ new chat</button><button id="gotonotebook" title="notebooks: grounded Q&amp;A over your own sources">&#128211; Notebooks</button></div>
     <div id="convlist"></div>
+    <p id="syncwarn" class="hint bad" hidden>Chat history is too large to save to your account — it only exists in this browser tab until it's trimmed. Delete an old chat to fix this.</p>
     <div class="bottom"><span class="who" id="who"></span><span><button id="passbtn" title="portal password">&#9881;</button><button id="logout">log out</button></span></div>
   </div>
   <main>
@@ -471,7 +472,12 @@ function loadConvos() {
 function saveConvos() {
   CONVOS.sort(function (a, b) { return b.updated - a.updated; });
   try { sessionStorage.setItem(convKey(), JSON.stringify(CONVOS)); } catch (e) { /* storage full: not fatal */ }
-  api('api/history', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(CONVOS) }).catch(function () { /* local copy still has it */ });
+  // r.ok must be checked explicitly: fetch only rejects on a network failure, not on a 4xx/5xx response,
+  // so a too-large save (413) would otherwise look identical to a successful one and go unnoticed --
+  // leaving the server-side copy silently stale until another device or a fresh login pulls it back.
+  api('api/history', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(CONVOS) })
+    .then(function (r) { $('syncwarn').hidden = r.ok; })
+    .catch(function () { $('syncwarn').hidden = false; /* local copy still has it */ });
 }
 function pullHistory() {
   return apiJson('api/history').then(function (d) {

@@ -164,6 +164,14 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   an agent or a key removes its memory with it.
 
 ### Fixed
+- **The client portal's chat history could go silently stale, making a conversation look "missing" after
+  logging in again (or from another device) — with no error anywhere.** `saveConvos()` PUT the whole
+  history to the server in the background but never checked the response status, only whether the
+  request itself failed outright; a 413 (over `PORTAL_HISTORY_MAX_BYTES`, easy to hit with a few
+  file-heavy conversations) came back as an ordinary successful response as far as the client could
+  tell, so the server-side copy just stopped updating with no sign anything was wrong. The default cap
+  is now 16 MiB (was 4 MiB), and a save that still gets refused shows a clear warning in the sidebar
+  instead of failing invisibly.
 - **A portal or dashboard chat could silently lose all its context and restart from nothing partway
   through a conversation, with no error, nothing in the audit log — just the agent suddenly acting
   like it was hearing everything for the first time.** `ONE_SHOT_TTL_MS` ("End a session used exactly
