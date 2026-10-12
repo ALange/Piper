@@ -188,7 +188,6 @@
   .colleague-msg .who { font-weight:600; font-size:11.5px; margin-bottom:3px; color:var(--agent-c, var(--blue)); }
 
   .err { color:var(--red); margin-top:6px; }
-  .foot { color:var(--dim); font-size:11.5px; margin-top:8px; }
   .sys-note { color:var(--dim); font-size:11.5px; font-style:italic; margin:6px 0; }
 
   /* composer */
@@ -844,11 +843,6 @@ function renderMessages() {
     if (m.pending && !(m.parts || []).length) body.appendChild(el('div', 'Thinking…'));
     if (m.error) { var e = el('div', m.error); e.className = 'err'; body.appendChild(e); }
     row.appendChild(body);
-    if (!m.pending && m.usage && m.usage.total_tokens) {
-      var f = el('div', m.usage.total_tokens + ' tokens' + (m.cost ? ' · $' + m.cost.toFixed(4) : ''));
-      f.className = 'foot';
-      row.appendChild(f);
-    }
     box.appendChild(row);
   });
   box.scrollTop = box.scrollHeight;
