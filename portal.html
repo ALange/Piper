@@ -509,11 +509,11 @@ function mdBlockNodes(blocks, parent) {
       var lab = document.createElement('span'); lab.textContent = b.lang || 'code'; bar.appendChild(lab);
       var cp = document.createElement('button'); cp.textContent = 'copy'; cp.setAttribute('data-copy', b.text); bar.appendChild(cp);
       var pre = document.createElement('pre'); var code = document.createElement('code');
-      var codeLines = b.text.split('\n');
-      codeLines.forEach(function (line, i) {
+      // Each .cl is already display:block (its own line) -- a literal "\n" text node after it would
+      // be a second, real line break inside this <pre>, on top of the block's own, doubling every gap.
+      b.text.split('\n').forEach(function (line, i) {
         var ln = document.createElement('span'); ln.className = 'cl'; ln.setAttribute('data-ln', String(i + 1)); ln.textContent = line;
         code.appendChild(ln);
-        if (i < codeLines.length - 1) code.appendChild(document.createTextNode('\n'));
       });
       pre.appendChild(code);
       e.appendChild(bar); e.appendChild(pre);
