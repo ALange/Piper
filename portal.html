@@ -258,13 +258,21 @@
   .modal-actions { margin-top:12px; text-align:right; }
   .modal-actions a { text-decoration:none; }
 
-  /* Mobile: the conversation/files/tools/skills drawer is a fixed-width flex sibling of main at every
-     width above, which leaves main almost no room on a phone. Below this breakpoint it becomes an
-     overlay instead -- same idea as dashboard.html's .pgside drawer -- so main keeps the full width
-     and the drawer floats above it while open. Opening/closing itself (the .on class) is unchanged. */
+  .hamburger { display:none; }
+
+  /* Mobile: the icon rail is permanently docked and the conversation/files/tools/skills drawer is a
+     fixed-width flex sibling of main at every width above -- on a phone that is two things fighting
+     for the same screen at once (the rail plus a drawer beside it), which is what overlapped and
+     covered everything. Below this breakpoint it becomes a proper hamburger menu instead: the rail is
+     hidden until the ☰ button opens it (as its own full-height overlay, the .railopen class below), and a chosen
+     panel (.sidebox.on) takes the FULL screen rather than starting after the rail -- only ever one of
+     the two on screen together, never both. */
   @media (max-width: 760px) {
-    .sidebox.on { position:fixed; z-index:40; top:0; left:64px; right:0; bottom:0; width:auto; box-shadow:4px 0 24px rgba(0,0,0,.4); }
-    .sidebox-backdrop.show { display:block; position:fixed; z-index:39; top:0; left:64px; right:0; bottom:0; background:rgba(0,0,0,.45); }
+    .rail { display:none; position:fixed; z-index:41; top:0; left:0; bottom:0; box-shadow:4px 0 24px rgba(0,0,0,.4); }
+    .rail.railopen { display:flex; }
+    .hamburger { display:flex; }
+    .sidebox.on { position:fixed; z-index:40; top:0; left:0; right:0; bottom:0; width:auto; box-shadow:4px 0 24px rgba(0,0,0,.4); }
+    .sidebox-backdrop.show { display:block; position:fixed; z-index:39; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.45); }
     .bar { flex-wrap:wrap; gap:8px; padding:12px 14px; }
     .bar select#target { max-width:160px; }
     .toolToggle span { display:none; }
@@ -297,7 +305,7 @@
 </div>
 
 <div id="app">
-  <aside class="rail">
+  <aside class="rail" id="rail">
     <div class="rail-top">
       <div class="logo">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
@@ -357,6 +365,9 @@
   <main>
     <div class="bg"></div>
     <div class="bar">
+      <button class="icon-btn hamburger" id="hamburger" title="menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7 h16 M4 12 h16 M4 17 h16"/></svg>
+      </button>
       <select id="target"></select>
       <div class="sp"></div>
       <div id="statusstats" class="statuspill"></div>
@@ -1134,7 +1145,11 @@ function agentQuery(c) {
   c = c || conv();
   return (c && c.agentId) ? ('agentId=' + encodeURIComponent(c.agentId)) : '';
 }
+var RAIL_OPEN = false; // the hamburger menu (the rail, shown as its own overlay on a phone -- see openRailMenu())
+function syncBackdrop() { $('sidebackdrop').classList.toggle('show', Boolean(SIDE_OPEN) || RAIL_OPEN); }
 function setSide(which) {
+  // A panel replaces the hamburger menu, never sits alongside it (that's what was overlapping).
+  if (RAIL_OPEN) { RAIL_OPEN = false; $('rail').classList.remove('railopen'); }
   SIDE_OPEN = SIDE_OPEN === which ? null : which;
   $('convsbox').classList.toggle('on', SIDE_OPEN === 'convs');
   $('filesbox').classList.toggle('on', SIDE_OPEN === 'files');
@@ -1146,8 +1161,21 @@ function setSide(which) {
   $('skillsbtn').className = 'icon-btn' + (SIDE_OPEN === 'skills' ? ' on' : '');
   // On a phone the open drawer overlays main (see the mobile @media block) rather than sitting beside
   // it, so it needs its own backdrop to tap-to-close -- same idea as dashboard.html's Playground drawer.
-  $('sidebackdrop').classList.toggle('show', Boolean(SIDE_OPEN));
+  syncBackdrop();
   reloadSidePanel();
+}
+/* The hamburger menu itself (mobile only -- the rail is always visible on a wider screen, this is a
+   no-op there since #hamburger stays hidden and nothing calls these). */
+function openRailMenu() {
+  if (SIDE_OPEN) setSide(SIDE_OPEN); // a panel never shows at the same time as the menu that opens it
+  RAIL_OPEN = true;
+  $('rail').classList.add('railopen');
+  syncBackdrop();
+}
+function closeRailMenu() {
+  RAIL_OPEN = false;
+  $('rail').classList.remove('railopen');
+  syncBackdrop();
 }
 function reloadSidePanel() {
   if (SIDE_OPEN === 'files') loadFiles();
@@ -1495,7 +1523,8 @@ $('convsbtn').addEventListener('click', function () { setSide('convs'); });
 $('filesbtn').addEventListener('click', function () { setSide('files'); });
 $('toolsbtn').addEventListener('click', function () { setSide('tools'); });
 $('skillsbtn').addEventListener('click', function () { setSide('skills'); });
-$('sidebackdrop').addEventListener('click', function () { if (SIDE_OPEN) setSide(SIDE_OPEN); });
+$('hamburger').addEventListener('click', function () { if (RAIL_OPEN) closeRailMenu(); else openRailMenu(); });
+$('sidebackdrop').addEventListener('click', function () { if (RAIL_OPEN) closeRailMenu(); else if (SIDE_OPEN) setSide(SIDE_OPEN); });
 /* On a phone, picking something in the drawer should close it (it's covering the chat, not sitting
    beside it); on a wider screen the drawer is the permanent sidebar, so leave it alone there. */
 function closeSideOnMobile() { if (SIDE_OPEN && window.matchMedia('(max-width: 760px)').matches) setSide(SIDE_OPEN); }
