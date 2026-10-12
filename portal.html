@@ -127,6 +127,7 @@
   .statuspill .ctxfull { color:var(--amber); }
   .statuspill span:not(:first-child) { display:flex; align-items:center; gap:10px; }
   .statuspill span:not(:first-child)::before { content:'·'; color:var(--dim); }
+  .statuspill-mobile { display:none; }
 
   #msgs { position:relative; z-index:10; flex:1; overflow-y:auto; overflow-x:hidden; padding:10px 24px 8px; }
   #msgs::-webkit-scrollbar { width:8px; }
@@ -274,9 +275,11 @@
     .sidebox.on { position:fixed; z-index:40; top:0; left:0; right:0; bottom:0; width:auto; box-shadow:4px 0 24px rgba(0,0,0,.4); }
     .sidebox-backdrop.show { display:block; position:fixed; z-index:39; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,.45); }
     .bar { flex-wrap:wrap; gap:8px; padding:12px 14px; }
+    .bar #statusstats { display:none; } /* replaced by the compact copy below the chat, .statuspill-mobile */
     .bar select#target { max-width:160px; }
     .toolToggle span { display:none; }
     #msgs { padding:8px 12px 6px; }
+    .statuspill-mobile { display:flex; margin:0 auto 6px; max-width:calc(100% - 24px); overflow-x:auto; font-size:10.5px; padding:6px 12px; justify-content:center; }
     .composer-zone { padding:8px 12px 16px; }
     .msg.user .bubble { max-width:88%; }
   }
@@ -374,6 +377,7 @@
       <label class="toolToggle"><input type="checkbox" id="toolToggle" style="margin:0"><span>show tool calls</span></label>
     </div>
     <div id="msgs"></div>
+    <div id="statusstats-mobile" class="statuspill statuspill-mobile"></div>
     <div class="composer-zone">
       <div class="composer-wrap">
         <div id="pending" class="pending" hidden></div>
@@ -930,8 +934,13 @@ function fmtTok(n) {
 }
 function renderStatusBar() {
   var c = conv();
+  // The same pill is shown twice: in the top bar (desktop and up) and as a compact copy just above the
+  // composer (mobile, .statuspill-mobile below 760px) -- only one of the two is ever visible at once
+  // (see the @media block), so building both here is simplest and keeps them always in sync.
   var bar = $('statusstats');
+  var barMobile = $('statusstats-mobile');
   bar.replaceChildren();
+  barMobile.replaceChildren();
   var s = c && c.status;
   if (!s || (!s.model && s.contextUsed == null)) return;
   var add = function (label, value, cls) {
@@ -941,6 +950,7 @@ function renderStatusBar() {
     if (cls) b.className = cls;
     span.appendChild(b);
     bar.appendChild(span);
+    barMobile.appendChild(span.cloneNode(true));
   };
   if (s.model) add('model', s.model);
   if (s.contextWindow) {
