@@ -96,6 +96,13 @@
       radial-gradient(420px 300px at 88% 85%, rgba(245,234,208,.2), rgba(245,234,208,0) 62%),
       linear-gradient(180deg,#14171a 0%,#15181a 30%,#17191a 55%,#121212 100%);
   }
+  .bg::after {
+    content:""; position:absolute; inset:0;
+    background-image:radial-gradient(rgba(255,255,255,.1) 1px, transparent 1.4px);
+    background-size:5px 5px;
+    -webkit-mask-image:linear-gradient(180deg,transparent 30%,rgba(0,0,0,.75) 55%,#000 75%);
+            mask-image:linear-gradient(180deg,transparent 30%,rgba(0,0,0,.75) 55%,#000 75%);
+  }
 
   .bar { position:relative; z-index:10; padding:16px 22px; display:flex; gap:12px; align-items:center; }
   .bar select#target { appearance:none; -webkit-appearance:none; background:rgba(105,116,116,.38);
