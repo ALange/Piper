@@ -5283,12 +5283,17 @@ function pgSend(text) {
   if (!pgTargetOf(c)) { $('pgnote').textContent = 'Pick an agent first.'; return; }
   $('pgnote').textContent = '';
   // A model has no server-side session (lib/playground.mjs's playgroundExternalChat is stateless),
-  // so the whole conversation is resent every time -- flattened to plain {role, content} pairs.
-  var history = c.externalModelId ? c.messages.filter(function (m) { return !m.pending && !m.error; }).map(function (m) {
-    if (m.role === 'user') return { role: 'user', content: m.text };
-    var t = (m.parts || []).filter(function (p) { return p.kind === 'text' && p.text; }).map(function (p) { return p.text; }).join('\n\n');
-    return { role: 'assistant', content: t };
-  }).filter(function (m) { return m.content; }) : undefined;
+  // so the whole conversation is resent every time -- flattened to plain {role, content} pairs, windowed
+  // to the most recent turns so a long conversation degrades to "the model forgets the oldest turns"
+  // instead of hard-rejecting every message once the server's MAX_HISTORY_MESSAGES cap (200) is hit.
+  var history = c.externalModelId ? (function () {
+    var h = c.messages.filter(function (m) { return !m.pending && !m.error; }).map(function (m) {
+      if (m.role === 'user') return { role: 'user', content: m.text };
+      var t = (m.parts || []).filter(function (p) { return p.kind === 'text' && p.text; }).map(function (p) { return p.text; }).join('\n\n');
+      return { role: 'assistant', content: t };
+    }).filter(function (m) { return m.content; });
+    return h.length > 150 ? h.slice(h.length - 150) : h;
+  })() : undefined;
   if (!c.messages.length) c.title = text.replace(/\s+/g, ' ').slice(0, 48);
   c.messages.push({ role: 'user', text: text, ts: Date.now() });
   var msg = { role: 'assistant', parts: [], pending: true, ts: Date.now() };

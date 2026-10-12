@@ -597,13 +597,22 @@ function loadConvos() {
 /* Kept server-side too (GET/PUT /api/history), so logging in from another browser or device shows the
    same chats. sessionStorage stays as the fast, offline-friendly local copy; the server sync is
    fire-and-forget and never blocks the UI. */
+var CONVOS_MAX = 60; // a hard cap on how many conversations this browser remembers at all
+var CONVOS_BYTE_BUDGET = 4 * 1024 * 1024; // headroom under sessionStorage's typical 5-10MB per-origin quota
 function saveConvos() {
+  // Unbounded growth over a long-lived account can exceed sessionStorage's quota (setItem then throws
+  // QuotaExceededError, silently stopping local persistence) and grows the server-side sync blob
+  // towards its own PORTAL_HISTORY_MAX_BYTES cap. Evict the oldest conversations first, same two-stage
+  // pattern dashboard.html's Playground already uses (pgSave()), so this never gets there.
   CONVOS.sort(function (a, b) { return b.updated - a.updated; });
-  try { sessionStorage.setItem(convKey(), JSON.stringify(CONVOS)); } catch (e) { /* storage full: not fatal */ }
+  if (CONVOS.length > CONVOS_MAX) CONVOS.length = CONVOS_MAX;
+  var packed = JSON.stringify(CONVOS);
+  while (packed.length > CONVOS_BYTE_BUDGET && CONVOS.length > 1) { CONVOS.pop(); packed = JSON.stringify(CONVOS); }
+  try { sessionStorage.setItem(convKey(), packed); } catch (e) { /* storage full: not fatal */ }
   // r.ok must be checked explicitly: fetch only rejects on a network failure, not on a 4xx/5xx response,
   // so a too-large save (413) would otherwise look identical to a successful one and go unnoticed --
   // leaving the server-side copy silently stale until another device or a fresh login pulls it back.
-  api('api/history', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(CONVOS) })
+  api('api/history', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: packed })
     .then(function (r) { $('syncwarn').hidden = r.ok; })
     .catch(function () { $('syncwarn').hidden = false; /* local copy still has it */ });
 }
@@ -798,65 +807,91 @@ function partNode(p) {
   if (p.kind === 'note') { var note = el('div', p.text); note.className = 'sys-note'; return note; }
   return textBlocks(p.text || '');
 }
+function botLabelFor(c) {
+  var agent = (WHOAMI.agents || []).filter(function (a) { return a.id === c.agentId; })[0];
+  var model = c.externalModelId ? externalModel(c.externalModelId) : null;
+  return (model && model.name) || (agent && agent.name) || 'Piper';
+}
+/* Builds one message's DOM node. Pulled out of renderMessages() so a live stream can redraw just the
+   last message (frameMessages() below) instead of every message in the conversation. */
+function buildMessageNode(m, botLabel) {
+  var row = el('div');
+  row.className = 'msg ' + m.role;
+  if (m.role === 'user') {
+    var bub = el('div', m.text);
+    bub.className = 'bubble';
+    if (m.images && m.images.length) {
+      var imgsBox = el('div'); imgsBox.className = 'msg-images';
+      m.images.forEach(function (dataUrl) {
+        var img = el('img'); img.src = dataUrl; img.alt = 'attached image';
+        img.addEventListener('click', function () { previewDataUrlImage(dataUrl); });
+        imgsBox.appendChild(img);
+      });
+      bub.appendChild(imgsBox);
+    }
+    if (m.docs && m.docs.length) {
+      var docsBox = el('div'); docsBox.className = 'msg-docs';
+      m.docs.forEach(function (d) {
+        var a = el('a', '📄 ' + d.name);
+        a.href = 'javascript:void(0)';
+        a.addEventListener('click', function () { previewFile(d.path, d.bytes || 0); });
+        docsBox.appendChild(a);
+      });
+      bub.appendChild(docsBox);
+    }
+    row.appendChild(bub);
+    return row;
+  }
+  row.appendChild(el('div', botLabel.charAt(0).toUpperCase())).className = 'bot-avatar';
+  var body = el('div'); body.className = 'body';
+  // A turn's thinking is naturally split by Pi into several pieces, one before each tool call
+  // (lib/livesession.mjs resets it on a tool call). Shown as one block instead, up front; tools and
+  // everything else keep their own place and order exactly as they already do.
+  var thinkText = '', thinkId = null, rest = [];
+  (m.parts || []).forEach(function (p) {
+    if (p.kind === 'thinking') {
+      if (thinkId === null) thinkId = p.id;
+      thinkText += (thinkText ? '\n' : '') + (p.text || '');
+    } else {
+      rest.push(p);
+    }
+  });
+  if (thinkId !== null) body.appendChild(partNode({ kind: 'thinking', id: thinkId, text: thinkText, pending: Boolean(m.pending) }));
+  rest.forEach(function (p) { body.appendChild(partNode(p)); });
+  if (m.pending && !(m.parts || []).length) body.appendChild(el('div', 'Thinking…'));
+  if (m.error) { var e = el('div', m.error); e.className = 'err'; body.appendChild(e); }
+  row.appendChild(body);
+  return row;
+}
 function renderMessages() {
   var box = $('msgs');
   box.replaceChildren();
   var c = conv();
   if (!c) return;
-  var agent = (WHOAMI.agents || []).filter(function (a) { return a.id === c.agentId; })[0];
-  var model = c.externalModelId ? externalModel(c.externalModelId) : null;
-  var botLabel = (model && model.name) || (agent && agent.name) || 'Piper';
-  c.messages.forEach(function (m) {
-    var row = el('div');
-    row.className = 'msg ' + m.role;
-    if (m.role === 'user') {
-      var bub = el('div', m.text);
-      bub.className = 'bubble';
-      if (m.images && m.images.length) {
-        var imgsBox = el('div'); imgsBox.className = 'msg-images';
-        m.images.forEach(function (dataUrl) {
-          var img = el('img'); img.src = dataUrl; img.alt = 'attached image';
-          img.addEventListener('click', function () { previewDataUrlImage(dataUrl); });
-          imgsBox.appendChild(img);
-        });
-        bub.appendChild(imgsBox);
-      }
-      if (m.docs && m.docs.length) {
-        var docsBox = el('div'); docsBox.className = 'msg-docs';
-        m.docs.forEach(function (d) {
-          var a = el('a', '📄 ' + d.name);
-          a.href = 'javascript:void(0)';
-          a.addEventListener('click', function () { previewFile(d.path, d.bytes || 0); });
-          docsBox.appendChild(a);
-        });
-        bub.appendChild(docsBox);
-      }
-      row.appendChild(bub);
-      box.appendChild(row);
-      return;
-    }
-    row.appendChild(el('div', botLabel.charAt(0).toUpperCase())).className = 'bot-avatar';
-    var body = el('div'); body.className = 'body';
-    // A turn's thinking is naturally split by Pi into several pieces, one before each tool call
-    // (lib/livesession.mjs resets it on a tool call). Shown as one block instead, up front; tools and
-    // everything else keep their own place and order exactly as they already do.
-    var thinkText = '', thinkId = null, rest = [];
-    (m.parts || []).forEach(function (p) {
-      if (p.kind === 'thinking') {
-        if (thinkId === null) thinkId = p.id;
-        thinkText += (thinkText ? '\n' : '') + (p.text || '');
-      } else {
-        rest.push(p);
-      }
-    });
-    if (thinkId !== null) body.appendChild(partNode({ kind: 'thinking', id: thinkId, text: thinkText, pending: Boolean(m.pending) }));
-    rest.forEach(function (p) { body.appendChild(partNode(p)); });
-    if (m.pending && !(m.parts || []).length) body.appendChild(el('div', 'Thinking…'));
-    if (m.error) { var e = el('div', m.error); e.className = 'err'; body.appendChild(e); }
-    row.appendChild(body);
-    box.appendChild(row);
-  });
+  var botLabel = botLabelFor(c);
+  c.messages.forEach(function (m) { box.appendChild(buildMessageNode(m, botLabel)); });
   box.scrollTop = box.scrollHeight;
+}
+var MSG_RAF = 0;
+/* While a reply streams, redraw only the LAST message's node, at most once per animation frame,
+   instead of rebuilding the whole conversation's DOM on every delta (renderMessages() above) -- that
+   full rebuild is what made long conversations visibly slow down while a reply was streaming in,
+   since each token's cost then scaled with the whole conversation's size. Mirrors dashboard.html's
+   pgFrame(). Only ever touches the current conversation's own DOM. */
+function frameMessages() {
+  if (MSG_RAF) return;
+  MSG_RAF = requestAnimationFrame(function () {
+    MSG_RAF = 0;
+    var c = conv();
+    if (!c) return;
+    var box = $('msgs');
+    var atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+    var i = c.messages.length - 1;
+    var node = box.lastChild;
+    if (node && i >= 0) box.replaceChild(buildMessageNode(c.messages[i], botLabelFor(c)), node);
+    else renderMessages();
+    if (atBottom) box.scrollTop = box.scrollHeight;
+  });
 }
 
 function fmtTok(n) {
@@ -962,12 +997,18 @@ function streamInto(reader, onEvent) {
 /* A model has no server-side session (lib/portal.mjs's portalExternalChat), so the browser resends
    the whole conversation every time -- the same full history this page already keeps for an agent
    chat, just flattened to plain {role, content} pairs for an OpenAI-shaped messages array. */
+var EXTERNAL_HISTORY_WINDOW = 150; // comfortably under the server's own MAX_HISTORY_MESSAGES (200, lib/externalmodels.mjs)
 function historyFor(c) {
-  return c.messages.filter(function (m) { return !m.pending && !m.error; }).map(function (m) {
+  var h = c.messages.filter(function (m) { return !m.pending && !m.error; }).map(function (m) {
     if (m.role === 'user') return { role: 'user', content: m.text };
     var text = (m.parts || []).filter(function (p) { return p.kind === 'text' && p.text; }).map(function (p) { return p.text; }).join('\n\n');
     return { role: 'assistant', content: text };
   }).filter(function (m) { return m.content; });
+  // Without this, a long-running external-model conversation works fine for 200 turns and then hard
+  // rejects every further message once the server's own cap is hit -- windowing to the most recent
+  // turns here instead degrades to "the model forgets the oldest turns", which is always preferable
+  // to "you can no longer send messages in this conversation".
+  return h.length > EXTERNAL_HISTORY_WINDOW ? h.slice(h.length - EXTERNAL_HISTORY_WINDOW) : h;
 }
 
 function send() {
@@ -1009,8 +1050,11 @@ function send() {
     // *current* conversation internally regardless of which one's stream called them.
     var refresh = function () { if (c.id === CUR) { renderMessages(); renderStatusBar(); } else renderSide(); };
     return streamInto(r.body.getReader(), function (event, d) {
-      if (event === 'item') { applyItem(msg, d.item); refresh(); }
-      else if (event === 'context') { c.status = c.status || {}; c.status.contextUsed = d.contextUsed; refresh(); }
+      // A delta mid-stream only ever touches the last (this) message: frameMessages() redraws just
+      // that one node instead of the whole conversation (see its own comment for why). The terminal
+      // 'done' event still does a full renderMessages(), so the final state is always fully consistent.
+      if (event === 'item') { applyItem(msg, d.item); if (c.id === CUR) { frameMessages(); renderStatusBar(); } else renderSide(); }
+      else if (event === 'context') { c.status = c.status || {}; c.status.contextUsed = d.contextUsed; if (c.id === CUR) renderStatusBar(); else renderSide(); }
       else if (event === 'done') { done = true; msg.usage = d.usage; msg.cost = d.cost; if (!(msg.parts || []).some(function (p) { return p.kind === 'text' && p.text; }) && d.text) msg.parts.push({ kind: 'text', id: 'final', text: d.text }); if (d.status) { c.status = d.status; c.status.contextUsed = (d.usage && d.usage.total_tokens) || null; } refresh(); }
       else if (event === 'error') { done = true; msg.error = d.message; }
     });
@@ -1052,7 +1096,7 @@ function resumeIfLive(c) {
         msg.pending = Boolean(d.state && d.state.working);
         if (d.state && d.state.contextTokens != null) { c.status = c.status || {}; c.status.contextUsed = d.state.contextTokens; }
         refresh();
-      } else if (event === 'item') { applyItem(msg, d.item); if (c.id === CUR) renderMessages(); }
+      } else if (event === 'item') { applyItem(msg, d.item); if (c.id === CUR) frameMessages(); }
       else if (event === 'context') { c.status = c.status || {}; c.status.contextUsed = d.contextUsed; if (c.id === CUR) renderStatusBar(); }
       else if (event === 'done') { if (d.usage) msg.usage = d.usage; if (d.cost) msg.cost = d.cost; }
       else if (event === 'error') { msg.error = d.message; }
