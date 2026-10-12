@@ -90,6 +90,14 @@ port), `PORTAL_PORT`, `PORTAL_HISTORY_MAX_BYTES` (a hard cap on one key's whole 
 browser already trims itself well under it), `PORTAL_ATTACHMENT_MAX_BYTES` (a cap on one attached
 image's decoded size), `PORTAL_SESSION_MS` (how long a password sign-in lasts).
 
+**On a phone.** The layout switches to a single column under 760px wide: the message box grows with what you type
+instead of scrolling inside one line, the rail of chats/files/tools/skills opens as a full-screen menu behind a ☰
+button instead of sitting docked beside the chat, and the status pill moves to a compact strip above the composer
+instead of the (too-narrow) top bar. **Long conversations** stay smooth by redrawing only the message still
+streaming in rather than the whole list on every delta, and by sending an external (non-agent) model only its most
+recent messages each turn rather than the whole history every time; the browser's own stored copy of your
+conversations is capped too, oldest trimmed first, so it never silently hits the browser's storage limit.
+
 ## Notebooks
 
 A NotebookLM-style feature inside the client portal — `/notebook`, same login, linked from the chat
@@ -296,6 +304,13 @@ shown once); a failed delivery is retried once and the outcome is written on the
 
 Settings (Settings → Jobs): `JOBS_ENABLED`, `JOBS_MAX_PARALLEL`, `JOBS_MIN_INTERVAL_MS`, `JOBS_MAX_PER_KEY`,
 `JOBS_RESULT_DAYS`, `JOBS_MAX_FAILURES`, `JOBS_NOTIFY_ALERTS`, `AGENT_JOBS_DAILY_COST`.
+
+**An agent scheduling itself.** With `AGENT_JOBS_ENABLED` on (the global switch, on by default) and the agent's own
+**may schedule recurring tasks for itself** switch on (Agents → edit; on by default for every agent created from here
+on), the agent gets scheduling tools over its own chat's bridge socket to create, list, run and remove jobs of its own
+key and scope — the same jobs this page shows, so an operator can see, disable or delete one an agent made. An agent
+may not name another key's or agent's job, or set a completion webhook; only jobs it created are visible or removable
+by it.
 
 ## Memory
 

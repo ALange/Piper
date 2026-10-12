@@ -2,7 +2,7 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.0.0] - 2026-10-12
 
 ### Added
 - **Integrations: external OpenAI-compatible chat endpoints, assignable to API keys.** A new dashboard
@@ -348,6 +348,38 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   guid is freed the moment the row is gone, so the next poll sees it as new again; the reason is still
   on record in the Log tab. `blocked` (a site deliberately refusing automated fetches) is unchanged —
   that one is worth a person's attention and is still kept, still retriable by hand.
+
+### Changed (continued)
+- **A newly created agent can now schedule its own recurring jobs from the start**, instead of needing
+  an operator to flip its "may schedule recurring tasks for itself" switch by hand on every agent, one
+  at a time, before it could use the scheduling tools at all. `agents.create()` now sets `can_schedule`
+  on by default (an operator can still turn it off per agent, same as today); the one agent that
+  already existed had its switch flipped the same way to match.
+
+### Fixed (continued)
+- **A long conversation could slow down or break in the client portal and dashboard Playground.**
+  Every streamed delta re-rendered the entire message list from scratch instead of just the message
+  still arriving, which got visibly slower the longer a chat ran; the browser's own stored copy of all
+  conversations had no cap and could silently hit the browser's storage quota; and resending the whole
+  history to a stateless external (non-agent) model every turn could eventually exceed the server's
+  history limit outright. Streaming now redraws only the last message, stored conversations are capped
+  and oldest-evicted before every save, and an external model is only ever sent its most recent 150
+  messages.
+- **The client portal was effectively unusable on a phone.** The layout never had a narrow-screen
+  breakpoint: the message input stayed a single fixed-height line no matter how much was typed, and the
+  chats/files/tools/skills rail had nowhere to go but stay permanently docked next to the chat, leaving
+  almost no room for the conversation itself. A `@media (max-width: 760px)` layout now lets the message
+  box grow with what's typed, and moves the rail behind a hamburger (☰) menu.
+- **The first mobile pass left the rail docked while a panel opened as a second, overlapping layer
+  beside it**, which looked broken and ghosted on a narrow screen — the rail and an open panel are now
+  mutually exclusive full-screen overlays, never both on screen together.
+- **Making a panel take the whole screen on mobile also covered the only things that could close it**
+  (the backdrop and the rail button that opened it), so once Files, Skills, Tools or Chats was open on a
+  phone there was no way to close it short of reloading the page. Each panel's header now has an
+  explicit × close button.
+- **The status pill overflowed the top bar on a phone**, running off the edge of the screen instead of
+  wrapping or scrolling. It now also renders into a compact, horizontally-scrollable strip shown above
+  the composer on mobile, with the original top-bar copy hidden there instead.
 
 ## [0.7.0] - 2026-10-01
 
