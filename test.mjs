@@ -28,7 +28,7 @@ const PI_AGENT = process.env.PI_CODING_AGENT_DIR || `${homedir()}/.pi/agent`;
 process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
 const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, readDockerfile, writeDockerfile, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, portalSessionToken, readPortalSession, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, memoryScopeOf, mayRemember, memoryFor, memoryOverview, memoryEntries, deleteMemoryEntry, clearMemory, deleteMemoryOf, memoryDashboardRoutes, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, mayLookupKnowledge, knowledgeFor, addEntry, getByKey, getEntry, sourceSeen, overview: knowledgeOverview, entriesOf, removeEntry, clearSource, purgeOld, activityLog, knowledgeDashboardRoutes, RssError, SOURCE_TYPE, getFeed, listFeeds, createFeed, updateFeed, removeFeed, parseFeedXml, forcePoll, rssTick, parseExtraction, looksBlocked, parseUnblockReply, setExtractionRunner, rssPump, retryEntry, startFeeds, stopFeeds, rssDashboardRoutes,
 	NotebookError, createNotebook, listNotebooks, getNotebook, renameNotebook, setNotebookAgent, setNotebookExternalModel, deleteNotebook, listSources, getSource, addSource, removeSource, chunkText, cosine, topChunks, embedTexts, setEmbedder, setNotebookRunner, setFileReader, parseExtraction: parseNotebookExtraction, askNotebook, generateOutput, listOutputs, OUTPUT_KINDS, pumpExtract: pumpNotebookExtract, resumeNotebookExtractions, stopNotebookExtractions,
-	ExternalModelError, listEndpoints, getEndpoint, createEndpoint, updateEndpoint, deleteEndpoint, listExternalModels, getModel, addModel, updateModel, removeModel, listEndpointsWithModels, setFetch, guessCapabilities, detectModels, checkEndpointStatus, modelsForKey, setKeyModels, listAccess, splitSseLines, chatCompletion, normalizeBaseUrl,
+	ExternalModelError, listEndpoints, getEndpoint, createEndpoint, updateEndpoint, deleteEndpoint, listExternalModels, getModel, addModel, updateModel, removeModel, listEndpointsWithModels, setFetch, guessCapabilities, detectModels, checkEndpointStatus, modelsForKey, setKeyModels, listAccess, splitSseLines, chatCompletion, normalizeBaseUrl, beginExternalTurn, checkedHistory,
 	recentAudit: recentAuditRows } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
@@ -2259,6 +2259,10 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(modelsForKey(mk.id)[0].endpointName, "Local vLLM (renamed)");
 	setKeyModels(mk.id, [models[0].id]);
 	assert.deepEqual(modelsForKey(mk.id).map((m) => m.id), [models[0].id], "replaces the whole set, not additive");
+	// A failed call (one transaction, delete-then-reinsert) must leave the prior set untouched, not
+	// wiped -- the whole point of wrapping it rather than running the two halves separately.
+	assert.throws(() => setKeyModels(mk.id, ["no-such-model"]), (e) => e.status === 404);
+	assert.deepEqual(modelsForKey(mk.id).map((m) => m.id), [models[0].id], "a rejected call changes nothing");
 	const access = listAccess();
 	assert.ok(access.models.some((m) => m.id === models[0].id));
 	assert.deepEqual(access.assignments[mk.id], [models[0].id]);
@@ -2329,6 +2333,62 @@ assert.equal(isReloadCommand(undefined), false);
 	await chatCompletion({ endpoint: ep, model: models[0], messages: [{ role: "user", content: "hi" }] });
 	assert.equal("reasoning_effort" in seenBody2[0], false, "not a reasoning model: never sent");
 	setFetch(null);
+
+	// checkedHistory measures a message's size in actual UTF-8 bytes, not JS string .length (UTF-16
+	// code units) -- a CJK-heavy message can be short in .length but well over the byte limit.
+	assert.deepEqual(checkedHistory(undefined), []);
+	assert.throws(() => checkedHistory("not a list"), (e) => e instanceof ExternalModelError);
+	assert.throws(() => checkedHistory([{ role: "system", content: "x" }]), (e) => /role/.test(e.message));
+	assert.throws(() => checkedHistory([{ role: "user", content: "   " }]), (e) => /no text/.test(e.message));
+	const wide = "中".repeat(20_000); // 20,000 UTF-16 units, but 60,000 UTF-8 bytes -- over the 32 KiB limit
+	assert.throws(() => checkedHistory([{ role: "user", content: wide }]), (e) => /over 32 KB/.test(e.message), "measured in bytes, not .length");
+	assert.doesNotThrow(() => checkedHistory([{ role: "user", content: "中".repeat(5_000) }]), "well under the byte limit still passes");
+
+	// chatCompletion refuses to let a reply grow without bound: a stream that never sends [DONE] and
+	// keeps generating must be aborted once it passes the size ceiling, not held open forever.
+	setFetch(async () => ({
+		ok: true,
+		body: {
+			getReader: () => ({
+				// One chunk already over the limit -- chatCompletion must abort on it rather than keep reading.
+				read: async () => ({ done: false, value: new TextEncoder().encode(`data: {"choices":[{"delta":{"content":"${"x".repeat(9_000_000)}"}}]}\n\n`) }),
+			}),
+		},
+	}));
+	await assert.rejects(chatCompletion({ endpoint: ep, model: models[0], messages: [{ role: "user", content: "hi" }] }), (e) => e instanceof ExternalModelError && /passed \d+ MB/.test(e.message));
+	setFetch(null);
+
+	// A signal that's already aborted before the call even starts (the caller interrupted, or the
+	// client was already gone) must propagate as the caller's own abort, not be mislabeled as this
+	// function's own "did not answer in time" timeout.
+	const preAborted = new AbortController();
+	preAborted.abort();
+	setFetch(async (url, opts) => {
+		if (opts?.signal?.aborted) {
+			const err = new Error("aborted");
+			err.name = "AbortError";
+			throw err;
+		}
+		return { ok: true, body: null };
+	});
+	await assert.rejects(
+		chatCompletion({ endpoint: ep, model: models[0], messages: [], signal: preAborted.signal }),
+		(e) => e instanceof ExternalModelError && !/did not answer/.test(e.message),
+	);
+	setFetch(null);
+
+	// beginExternalTurn: a per-key cap on how many external-model turns may run at once, the equivalent
+	// of a Pi session's own concurrency limits for a chat-only path that has no session to bound it.
+	const capKey = apiKeys.create({ name: "external-cap-test" });
+	const capKeyId = (capKey.record ?? capKey).id;
+	const releases = [];
+	for (let i = 0; i < 3; i++) releases.push(beginExternalTurn(capKeyId));
+	assert.throws(() => beginExternalTurn(capKeyId), (e) => e instanceof ExternalModelError && e.status === 429, "a 4th concurrent turn for the same key is refused");
+	releases.pop()();
+	assert.doesNotThrow(() => releases.push(beginExternalTurn(capKeyId)), "releasing one slot frees it for the next turn");
+	for (const release of releases) release();
+	assert.doesNotThrow(() => beginExternalTurn(capKeyId)()); // the cap is per key: fully released, back to zero in flight
+	apiKeys.remove(capKeyId);
 
 	// Deleting an endpoint cascades: its models and any key assignments go with it.
 	deleteEndpoint(ep.id);
