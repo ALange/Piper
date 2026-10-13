@@ -2,6 +2,28 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.8] - 2026-10-13
+
+### Fixed
+- **The Portal's thinking panel could still occasionally lose a click while a reply was streaming.**
+  1.0.6/1.0.7 reused the thinking `<details>` element's *content* across redraws, but every redraw
+  still built a brand-new row and `.body` wrapper and moved the reused node into it, then swapped it
+  into the live page in place of the old row -- a real (if synchronous) detach-and-reattach of the
+  exact node a click might be landing on. `buildMessageNode()` now patches an existing row and its
+  thinking block fully in place instead: once created, a message's row, its `.body` wrapper, and its
+  thinking element are never removed or reparented again for as long as that row is on screen, so a
+  click toggling it open or closed can never land on a node mid-replacement. `renderMessages()` and
+  `frameMessages()` were both updated to patch rows this way (matched by position, guarded against
+  reusing a previous conversation's rows after switching chats) instead of ever calling
+  `replaceChild()`/`replaceChildren()` on them.
+- **A chat left "Thinking..." from before a page reload could get stuck that way forever.**
+  `resumeIfLive()`'s reconnect silently swallowed two cases: the server reporting `{live:false}`
+  (the session was already gone by the time of reconnect) and the reconnect attempt itself failing
+  (a dropped connection, a bad response) -- in both cases the cached message's `pending` flag was
+  simply left `true` with nothing left to ever clear it, so the chat looked permanently hung after a
+  refresh with no error and no way to tell it was actually over. Both paths now resolve the stuck
+  message with a clear error instead of leaving it dangling.
+
 ## [1.0.7] - 2026-10-13
 
 ### Fixed

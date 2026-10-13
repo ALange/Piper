@@ -849,12 +849,16 @@ function botLabelFor(c) {
   var model = c.externalModelId ? externalModel(c.externalModelId) : null;
   return (model && model.name) || (agent && agent.name) || 'Piper';
 }
-/* Builds one message's DOM node. Pulled out of renderMessages() so a live stream can redraw just the
-   last message (frameMessages() below) instead of every message in the conversation. */
-function buildMessageNode(m, botLabel, oldBody) {
-  var row = el('div');
-  row.className = 'msg ' + m.role;
+/* Builds (or, given an existing `row`, patches in place) one message's DOM node. `row` is the live row
+   from the last render at this same position, when there is one -- passing it means the row and its
+   `.body` wrapper are mutated, never replaced, and the thinking block, once created, is never removed
+   or reparented either: only its label/text/class get updated. That matters because replacing or
+   reparenting an element a person is mid-click on (toggling it open or closed) silently drops that
+   click; patching in place can't, since the node they clicked never moves. */
+function buildMessageNode(m, botLabel, row) {
   if (m.role === 'user') {
+    if (row) return row; // a sent user message is static -- nothing about it ever changes after the fact
+    row = el('div'); row.className = 'msg ' + m.role;
     var bub = el('div', m.text);
     bub.className = 'bubble';
     if (m.images && m.images.length) {
@@ -879,8 +883,14 @@ function buildMessageNode(m, botLabel, oldBody) {
     row.appendChild(bub);
     return row;
   }
-  row.appendChild(el('div', botLabel.charAt(0).toUpperCase())).className = 'bot-avatar';
-  var body = el('div'); body.className = 'body';
+  if (!row) {
+    row = el('div'); row.className = 'msg ' + m.role;
+    row.appendChild(el('div')).className = 'bot-avatar';
+    row.appendChild(el('div')).className = 'body';
+  }
+  var avatar = row.querySelector('.bot-avatar'), body = row.querySelector('.body');
+  var avatarCh = botLabel.charAt(0).toUpperCase();
+  if (avatar.textContent !== avatarCh) avatar.textContent = avatarCh;
   // A turn's thinking is naturally split by Pi into several pieces, one before each tool call
   // (lib/livesession.mjs resets it on a tool call). Shown as one block instead, up front; tools and
   // everything else keep their own place and order exactly as they already do.
@@ -893,49 +903,54 @@ function buildMessageNode(m, botLabel, oldBody) {
       rest.push(p);
     }
   });
+  var thinkNode = thinkId !== null ? body.querySelector('details.think[data-think-id="' + thinkId + '"]') : null;
   if (thinkId !== null) {
-    // Reuse the thinking block's own <details> element in place when one already exists for this
-    // message, instead of recreating it: a click toggling it open or closed must never land on a
-    // node that is about to be (or was just) replaced by the next streamed delta.
-    var oldThink = oldBody && oldBody.querySelector && oldBody.querySelector('details.think[data-think-id="' + thinkId + '"]');
-    if (oldThink) {
-      oldThink.classList.toggle('live', Boolean(m.pending));
+    if (thinkNode) {
+      thinkNode.classList.toggle('live', Boolean(m.pending));
       var thinkLabel = m.pending ? 'Thinking…' : 'Thought';
-      var thinkSummary = oldThink.querySelector('summary');
+      var thinkSummary = thinkNode.querySelector('summary');
       if (thinkSummary && thinkSummary.textContent !== thinkLabel) thinkSummary.textContent = thinkLabel;
-      var thinkTbody = oldThink.querySelector('.think-body');
+      var thinkTbody = thinkNode.querySelector('.think-body');
       if (thinkTbody && thinkTbody.dataset.text !== thinkText) {
         thinkTbody.replaceChildren();
         thinkTbody.appendChild(thinkBody(thinkText));
         thinkTbody.dataset.text = thinkText;
       }
-      body.appendChild(oldThink);
     } else {
-      body.appendChild(partNode({ kind: 'thinking', id: thinkId, text: thinkText, pending: Boolean(m.pending) }));
+      thinkNode = partNode({ kind: 'thinking', id: thinkId, text: thinkText, pending: Boolean(m.pending) });
+      body.insertBefore(thinkNode, body.firstChild);
     }
   }
+  // Everything after the thinking block is simpler to just rebuild each time -- remove every other
+  // child, then re-append fresh. Only the thinking node above is ever spared.
+  Array.prototype.slice.call(body.children).forEach(function (ch) { if (ch !== thinkNode) body.removeChild(ch); });
   rest.forEach(function (p) { body.appendChild(partNode(p)); });
   if (m.pending && !(m.parts || []).length) body.appendChild(el('div', 'Thinking…'));
   if (m.error) { var e = el('div', m.error); e.className = 'err'; body.appendChild(e); }
-  row.appendChild(body);
   return row;
 }
+var MSG_RENDERED_CONV = null; // which conversation's rows are currently sitting in #msgs, for renderMessages() below
 function renderMessages() {
   var box = $('msgs');
   var c = conv();
-  if (!c) { box.replaceChildren(); return; }
-  // Matched to the previous render by position (messages are only ever appended, never reordered),
-  // so a message's thinking <details> survives this full rebuild too -- the 'done' event at the end
-  // of a stream calls this, which is exactly when someone is likely to be clicking the panel that
-  // just finished "Thinking…".
-  var oldRows = Array.prototype.slice.call(box.children);
+  if (!c) { box.replaceChildren(); MSG_RENDERED_CONV = null; return; }
+  // Matched to the previous render by position (messages are only ever appended, never reordered) --
+  // existing rows are patched in place, never removed and reinserted, so a message's thinking <details>
+  // survives this full rebuild too, not just the per-token one: the 'done' event at the end of a stream
+  // calls this, which is exactly when someone is likely to be clicking the panel that just finished
+  // "Thinking…". Only when this box currently holds a DIFFERENT conversation's rows (just switched to
+  // this one) is position-matching skipped, since row i here would otherwise mean something else.
+  var sameConv = MSG_RENDERED_CONV === c.id;
+  if (!sameConv) box.replaceChildren(); // a different conversation's rows, if any, don't belong here
   var botLabel = botLabelFor(c);
-  var frag = document.createDocumentFragment();
   c.messages.forEach(function (m, i) {
-    var oldBody = oldRows[i] && oldRows[i].querySelector && oldRows[i].querySelector('.body');
-    frag.appendChild(buildMessageNode(m, botLabel, oldBody));
+    var row = sameConv ? box.children[i] : null;
+    var built = buildMessageNode(m, botLabel, row);
+    if (!row) box.appendChild(built);
+    else if (built !== row) box.replaceChild(built, row); // shouldn't happen, but never silently drop a row
   });
-  box.replaceChildren(frag);
+  while (box.children.length > c.messages.length) box.removeChild(box.lastChild);
+  MSG_RENDERED_CONV = c.id;
   box.scrollTop = box.scrollHeight;
 }
 var MSG_RAF = 0;
@@ -954,7 +969,7 @@ function frameMessages() {
     var atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
     var i = c.messages.length - 1;
     var node = box.lastChild;
-    if (node && i >= 0) box.replaceChild(buildMessageNode(c.messages[i], botLabelFor(c), node.querySelector && node.querySelector('.body')), node);
+    if (node && i >= 0 && MSG_RENDERED_CONV === c.id) buildMessageNode(c.messages[i], botLabelFor(c), node);
     else renderMessages();
     if (atBottom) box.scrollTop = box.scrollHeight;
   });
@@ -1157,10 +1172,26 @@ function resumeIfLive(c) {
   WATCHING[c.id] = true;
   var refresh = function () { if (c.id === CUR) renderAll(); else renderSide(); };
   var q = agentQuery(c);
+  var msg = null;
   api('api/conversation/' + encodeURIComponent(c.id) + '/events' + (q ? '?' + q : '')).then(function (r) {
     var type = r.headers.get('content-type') || '';
-    if (type.indexOf('event-stream') < 0) { delete WATCHING[c.id]; return r.json().catch(function () { return {}; }); } // {live:false}, or an error: nothing to resume
-    var msg = c.messages[c.messages.length - 1];
+    if (type.indexOf('event-stream') < 0) {
+      // {live:false}: the server has no session record for this chat any more (it finished and was
+      // cleaned up, or was reaped, before this reconnect). If the browser's own cached copy of the
+      // last turn is still "pending" from before the reload, nothing else will ever clear that --
+      // the stream that would have sent 'done' is gone -- so it must be resolved right here.
+      delete WATCHING[c.id];
+      var last = c.messages[c.messages.length - 1];
+      if (last && last.role === 'assistant' && last.pending) {
+        last.pending = false;
+        last.error = last.error || "This chat's connection was lost and couldn't be resumed -- it may have finished already.";
+        c.updated = Date.now();
+        saveConvos();
+        refresh();
+      }
+      return r.json().catch(function () { return {}; });
+    }
+    msg = c.messages[c.messages.length - 1];
     if (!msg || msg.role !== 'assistant') { msg = { role: 'assistant', parts: [], pending: true }; c.messages.push(msg); }
     return streamInto(r.body.getReader(), function (event, d) {
       if (event === 'snapshot') {
@@ -1183,7 +1214,19 @@ function resumeIfLive(c) {
       saveConvos();
       refresh();
     });
-  }).catch(function () { delete WATCHING[c.id]; });
+  }).catch(function () {
+    // The reconnect attempt itself failed (dropped mid-stream, a bad response, anything thrown above)
+    // -- without this, a message left "pending" from before the failure stays stuck on its spinner
+    // forever: nothing else ever marks it done or tells the person it needs retrying.
+    delete WATCHING[c.id];
+    if (msg && msg.pending) {
+      msg.pending = false;
+      msg.error = msg.error || 'Lost connection catching up on this chat -- reload to try again.';
+      c.updated = Date.now();
+      saveConvos();
+    }
+    refresh();
+  });
 }
 
 /* ---- side panels: files, tools & extensions, skills -- one open at a time ---- */
