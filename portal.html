@@ -1215,10 +1215,13 @@ function resumeIfLive(c) {
       refresh();
     });
   }).catch(function () {
-    // The reconnect attempt itself failed (dropped mid-stream, a bad response, anything thrown above)
-    // -- without this, a message left "pending" from before the failure stays stuck on its spinner
-    // forever: nothing else ever marks it done or tells the person it needs retrying.
+    // The reconnect attempt itself failed (dropped mid-stream, a bad response, anything thrown above,
+    // including the very first fetch() rejecting before `msg` above was ever assigned) -- without
+    // this, a message left "pending" from before the failure stays stuck on its spinner forever:
+    // nothing else ever marks it done or tells the person it needs retrying. Re-reads the last
+    // message fresh from `c` rather than trusting the `msg` closure, since that may still be null.
     delete WATCHING[c.id];
+    msg = msg || c.messages[c.messages.length - 1];
     if (msg && msg.pending) {
       msg.pending = false;
       msg.error = msg.error || 'Lost connection catching up on this chat -- reload to try again.';

@@ -2,6 +2,18 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.9] - 2026-10-13
+
+### Fixed
+- **A chat refreshed mid-reply could stay stuck on "Thinking..." forever, with no live updates and
+  nothing clickable.** 1.0.8 handled the server reporting the session was no longer live, but
+  `resumeIfLive()`'s own reconnect fetch could reject outright (a network hiccup is especially likely
+  right at a page reload, with everything else also loading at once) *before* its `msg` variable was
+  ever assigned -- the catch handler's `if (msg && msg.pending)` guard then silently skipped doing
+  anything, since `msg` was still `null`. It now falls back to reading the conversation's last message
+  straight from `c` when that happens, so a reconnect failure always resolves the stuck message with
+  an error instead of leaving the plain, non-interactive "Thinking…" placeholder up indefinitely.
+
 ## [1.0.8] - 2026-10-13
 
 ### Fixed
