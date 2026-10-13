@@ -2,6 +2,15 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.5] - 2026-10-13
+
+### Fixed
+- **The main chat (the Portal) had the same "stuck chat can't be deleted" bug as the Playground, in a
+  separate copy of the guard.** 1.0.4 fixed this for the dashboard's Playground, but the client portal's
+  own delete ("Clear chat") is a completely separate code path with its own `isBusy` check, which was
+  still blocking it. Deleting a conversation there now also always goes through, regardless of whether
+  it still looks busy — the only real way out of one that is stuck.
+
 ## [1.0.4] - 2026-10-13
 
 ### Fixed

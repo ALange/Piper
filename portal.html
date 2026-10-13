@@ -995,10 +995,12 @@ function newChat() {
   closeSideOnMobile();
 }
 
-/* Ends the server-side session (so its container is freed) and drops it from the list in this browser. */
+/* Ends the server-side session (so its container is freed) and drops it from the list in this browser.
+   Deleting is the only way out of a chat stuck "busy" for good (a turn that never answered an abort,
+   or stuck re-attaching to one after a reload) -- so unlike sending, it is never blocked by isBusy(). */
 function clearChat(c) {
   if (c.messages.length && !confirm('Clear "' + (c.title || 'New chat') + '"?')) return;
-  if (isBusy(c)) return;
+  delete WATCHING[c.id];
   var q = c.agentId ? ('?agentId=' + encodeURIComponent(c.agentId)) : '';
   api('api/conversation/' + encodeURIComponent(c.id) + q, { method: 'DELETE' }).catch(function () {});
   CONVOS = CONVOS.filter(function (x) { return x.id !== c.id; });
