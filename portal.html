@@ -1170,16 +1170,41 @@ function resumeIfLive(c) {
   // mid-request to any other stateless API.
   if (!c || WATCHING[c.id] || c.externalModelId) return;
   WATCHING[c.id] = true;
-  var refresh = function () { if (c.id === CUR) renderAll(); else renderSide(); };
+  var refresh = function () { try { if (c.id === CUR) renderAll(); else renderSide(); } catch (e) { console.error('piper: rendering the resumed chat failed', e); } };
   var q = agentQuery(c);
   var msg = null;
+  var settled = false; // so a late watchdog firing after a normal finish (or vice versa) is a no-op
+  // If reconnecting goes quiet for too long -- no response at all, or a response that stalls mid-stream
+  // (a dropped connection the browser hasn't noticed yet, a proxy swallowing it, anything else that
+  // isn't a clean error) -- this chat must not look stuck on its last-known state forever. Any real
+  // progress below pushes the deadline back out; nothing at all for 30s gives up loudly instead.
+  var watchdog = 0;
+  var bump = function () { clearTimeout(watchdog); watchdog = setTimeout(function () { fail("This chat didn't respond in time -- reload to try again."); }, 30000); };
+  var fail = function (text) {
+    if (settled) return;
+    settled = true;
+    clearTimeout(watchdog);
+    delete WATCHING[c.id];
+    var last = msg || c.messages[c.messages.length - 1];
+    if (last && last.role === 'assistant' && last.pending) {
+      last.pending = false;
+      last.error = last.error || text;
+      c.updated = Date.now();
+      saveConvos();
+    }
+    refresh();
+  };
+  bump();
   api('api/conversation/' + encodeURIComponent(c.id) + '/events' + (q ? '?' + q : '')).then(function (r) {
+    bump();
     var type = r.headers.get('content-type') || '';
     if (type.indexOf('event-stream') < 0) {
       // {live:false}: the server has no session record for this chat any more (it finished and was
       // cleaned up, or was reaped, before this reconnect). If the browser's own cached copy of the
       // last turn is still "pending" from before the reload, nothing else will ever clear that --
       // the stream that would have sent 'done' is gone -- so it must be resolved right here.
+      clearTimeout(watchdog);
+      settled = true;
       delete WATCHING[c.id];
       var last = c.messages[c.messages.length - 1];
       if (last && last.role === 'assistant' && last.pending) {
@@ -1194,41 +1219,46 @@ function resumeIfLive(c) {
     msg = c.messages[c.messages.length - 1];
     if (!msg || msg.role !== 'assistant') { msg = { role: 'assistant', parts: [], pending: true }; c.messages.push(msg); }
     return streamInto(r.body.getReader(), function (event, d) {
-      if (event === 'snapshot') {
-        // The log may span older, already-finished turns too (capped by item count, not per-turn):
-        // only what came after the last user message belongs to the one we're catching up on.
-        var lastUserId = 0;
-        (d.items || []).forEach(function (it) { if (it.kind === 'user' && it.id > lastUserId) lastUserId = it.id; });
-        (d.items || []).forEach(function (it) { if (it.kind !== 'user' && it.id > lastUserId) applyItem(msg, it); });
-        msg.pending = Boolean(d.state && d.state.working);
-        if (d.state && d.state.contextTokens != null) { c.status = c.status || {}; c.status.contextUsed = d.state.contextTokens; }
-        refresh();
-      } else if (event === 'item') { applyItem(msg, d.item); if (c.id === CUR) frameMessages(); }
-      else if (event === 'context') { c.status = c.status || {}; c.status.contextUsed = d.contextUsed; if (c.id === CUR) renderStatusBar(); }
-      else if (event === 'done') { if (d.usage) msg.usage = d.usage; if (d.cost) msg.cost = d.cost; }
-      else if (event === 'error') { msg.error = d.message; }
+      bump();
+      // A render that throws here (an edge case in the actual data this particular turn produced,
+      // something no test anticipated) must not silently kill the rest of this stream's handling the
+      // way an uncaught exception otherwise would -- it would leave everything exactly where it was,
+      // forever, with no error and no further events ever processed.
+      try {
+        if (event === 'snapshot') {
+          // The log may span older, already-finished turns too (capped by item count, not per-turn):
+          // only what came after the last user message belongs to the one we're catching up on.
+          var lastUserId = 0;
+          (d.items || []).forEach(function (it) { if (it.kind === 'user' && it.id > lastUserId) lastUserId = it.id; });
+          (d.items || []).forEach(function (it) { if (it.kind !== 'user' && it.id > lastUserId) applyItem(msg, it); });
+          msg.pending = Boolean(d.state && d.state.working);
+          if (d.state && d.state.contextTokens != null) { c.status = c.status || {}; c.status.contextUsed = d.state.contextTokens; }
+          refresh();
+        } else if (event === 'item') { applyItem(msg, d.item); if (c.id === CUR) frameMessages(); }
+        else if (event === 'context') { c.status = c.status || {}; c.status.contextUsed = d.contextUsed; if (c.id === CUR) renderStatusBar(); }
+        else if (event === 'done') { if (d.usage) msg.usage = d.usage; if (d.cost) msg.cost = d.cost; }
+        else if (event === 'error') { msg.error = d.message; }
+      } catch (e) {
+        console.error('piper: handling a resumed chat\'s "' + event + '" event failed', e);
+        fail('Something went wrong catching up on this chat -- reload to try again.');
+      }
     }).then(function () {
+      if (settled) return;
+      settled = true;
+      clearTimeout(watchdog);
       delete WATCHING[c.id];
       msg.pending = false;
       c.updated = Date.now();
       saveConvos();
       refresh();
     });
-  }).catch(function () {
+  }).catch(function (e) {
     // The reconnect attempt itself failed (dropped mid-stream, a bad response, anything thrown above,
     // including the very first fetch() rejecting before `msg` above was ever assigned) -- without
     // this, a message left "pending" from before the failure stays stuck on its spinner forever:
-    // nothing else ever marks it done or tells the person it needs retrying. Re-reads the last
-    // message fresh from `c` rather than trusting the `msg` closure, since that may still be null.
-    delete WATCHING[c.id];
-    msg = msg || c.messages[c.messages.length - 1];
-    if (msg && msg.pending) {
-      msg.pending = false;
-      msg.error = msg.error || 'Lost connection catching up on this chat -- reload to try again.';
-      c.updated = Date.now();
-      saveConvos();
-    }
-    refresh();
+    // nothing else ever marks it done or tells the person it needs retrying.
+    console.error('piper: resuming a chat failed', e);
+    fail('Lost connection catching up on this chat -- reload to try again.');
   });
 }
 

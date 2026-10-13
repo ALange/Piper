@@ -2,6 +2,27 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.10] - 2026-10-13
+
+### Fixed
+- **A hard refresh while a reply was still coming could leave the Portal showing a dead "Thinking..."
+  with no updates, no error, and no way to tell what actually happened.** Root cause, found by tracing
+  the real reconnect path end to end (not guessed at): `GET .../events` decided whether a turn was
+  still running purely from `LiveLog`'s own `working` flag, which only flips true once Pi actually
+  emits its first event for the turn. There is a real window before that -- most visibly a cold
+  container start, which can easily take several seconds -- where a turn has been accepted and is
+  genuinely in flight (`record.inflight > 0`) but has not produced anything yet. A reconnect landing in
+  that window was wrongly told the turn was already "done": the server closed the stream right then,
+  and the actual reply -- which kept running server-side the whole time, as it always has -- finished
+  with nobody left watching. The refreshed page never heard about it again. `conversationEvents()` now
+  folds `record.inflight` into that decision, so a turn that is running but hasn't started producing
+  output yet correctly keeps the connection open (and correctly reports itself as still thinking)
+  instead of being told it already ended.
+- Hardened the same reconnect path on the client regardless: a watchdog now gives up loudly (with a
+  visible error, not a silent freeze) if a reconnect goes more than 30s without any progress at all,
+  and an exception while handling any single event from it no longer kills the rest of the stream
+  silently -- both are a safety net on top of the real fix above, not the fix itself.
+
 ## [1.0.9] - 2026-10-13
 
 ### Fixed
