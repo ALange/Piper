@@ -301,6 +301,11 @@ shown once); a failed delivery is retried once and the outcome is written on the
 - **Guards.** After `JOBS_MAX_FAILURES` scheduled runs in a row fail, the job is switched off (the row says why) and you are
   told; turning it on again resets the count. A job over its 24-hour **spend cap** skips scheduled runs (you are told once);
   manual runs ignore it. Schedules agents make get `AGENT_JOBS_DAILY_COST` unless you set a cap on the job (0 for none).
+- **A gateway restart mid-run.** A run still "running" from a previous process is only ever reported dead, never
+  blindly replayed, since there's no way to know what a tool call already did and whether redoing it is safe. But
+  that only matters once a run's turn has actually started a tool call; one that hadn't reached that point yet
+  couldn't have done anything in its container, so it's exactly as safe to run again as to start fresh — it's
+  requeued, not reported as a failure.
 
 Settings (Settings → Jobs): `JOBS_ENABLED`, `JOBS_MAX_PARALLEL`, `JOBS_MIN_INTERVAL_MS`, `JOBS_MAX_PER_KEY`,
 `JOBS_RESULT_DAYS`, `JOBS_MAX_FAILURES`, `JOBS_NOTIFY_ALERTS`, `AGENT_JOBS_DAILY_COST`.
@@ -556,6 +561,15 @@ agent there), usable the same way an agent is, just chat only -- including a liv
 when a reasoning model streams its own reasoning content (`reasoning_content` or `reasoning`, whichever
 the endpoint sends), and the same status bar (model, context, generation speed) an agent turn shows,
 measured around the HTTP call itself since there is no Pi session to read it from.
+
+**Surviving a dropped connection.** A caller (the client portal, the dashboard Playground, or a direct
+API request) may send an optional `requestId` of its own with the turn. If the turn finishes after the
+connection that started it is already gone -- a network drop, a page reload, a gateway restart
+mid-stream -- the answer is still committed, keyed by that id; resending the exact same message with
+the same `requestId` gets back the committed answer instead of the model being called (and billed) a
+second time. Entries are short-lived (10 minutes, enough for a retry, not a transcript store) and
+scoped to the same key and model, so one key can never see another's answer. Nothing changes for a
+caller that sends no `requestId` at all (`lib/externalreplay.mjs`).
 
 ## API keys
 

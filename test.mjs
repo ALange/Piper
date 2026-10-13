@@ -29,7 +29,7 @@ process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
 const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, readDockerfile, writeDockerfile, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, portalSessionToken, readPortalSession, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, memoryScopeOf, mayRemember, memoryFor, memoryOverview, memoryEntries, deleteMemoryEntry, clearMemory, deleteMemoryOf, memoryDashboardRoutes, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, mayLookupKnowledge, knowledgeFor, addEntry, getByKey, getEntry, sourceSeen, overview: knowledgeOverview, entriesOf, removeEntry, clearSource, purgeOld, activityLog, knowledgeDashboardRoutes, RssError, SOURCE_TYPE, getFeed, listFeeds, createFeed, updateFeed, removeFeed, parseFeedXml, forcePoll, rssTick, parseExtraction, looksBlocked, parseUnblockReply, setExtractionRunner, rssPump, retryEntry, startFeeds, stopFeeds, rssDashboardRoutes,
 	NotebookError, createNotebook, listNotebooks, getNotebook, renameNotebook, setNotebookAgent, setNotebookExternalModel, deleteNotebook, listSources, getSource, addSource, removeSource, chunkText, cosine, topChunks, embedTexts, setEmbedder, setNotebookRunner, setFileReader, parseExtraction: parseNotebookExtraction, askNotebook, generateOutput, listOutputs, OUTPUT_KINDS, pumpExtract: pumpNotebookExtract, resumeNotebookExtractions, stopNotebookExtractions,
 	ExternalModelError, listEndpoints, getEndpoint, createEndpoint, updateEndpoint, deleteEndpoint, listExternalModels, getModel, addModel, updateModel, removeModel, listEndpointsWithModels, setFetch, guessCapabilities, detectModels, checkEndpointStatus, modelsForKey, setKeyModels, listAccess, splitSseLines, chatCompletion, normalizeBaseUrl, beginExternalTurn, checkedHistory,
-	recentAudit: recentAuditRows, syncCompactionSettings, reserveTokensFor } = await import("./server.mjs");
+	recentAudit: recentAuditRows, syncCompactionSettings, reserveTokensFor, findReplay, commitReplay, normalizeRequestId } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
 
@@ -7861,6 +7861,49 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	J.stopJobs();
 }
 
+// A run interrupted by a restart: requeued if its turn never touched a tool, left as an error if it had.
+{
+	const J = await import("./server.mjs");
+	const { createJob, queueRun, getRun, setJobRunner, startJobs, stopJobs, LiveLog } = J;
+	const rec = apiKeys.create({ name: "touched-key" });
+	const key = rec.record ?? rec;
+	const waitFor = async (fn, ms = 3000) => { const end = Date.now() + ms; while (Date.now() < end) { const v = fn(); if (v) return v; await new Promise((r) => setTimeout(r, 15)); } throw new Error("timed out waiting"); };
+
+	// touched flips to 1 the moment the turn's first tool call starts, mid-run, not only once it finishes.
+	const job = createJob({ keyId: key.id, name: "toucher", prompt: "p" }).job;
+	let live;
+	setJobRunner(async ({ onSession }) => {
+		live = new LiveLog();
+		onSession({ live });
+		await new Promise((r) => setTimeout(r, 20));
+		live.feed({ type: "tool_execution_start", toolName: "bash", toolCallId: "t1" });
+		await new Promise((r) => setTimeout(r, 20));
+		return { text: "done", usage: { total_tokens: 1 }, cost: 0, scopedId: "s" };
+	});
+	startJobs();
+	const run = queueRun(job.id, "manual");
+	// touched is checked while the run is still going, before it answers.
+	await waitFor(() => db.prepare("SELECT touched FROM job_runs WHERE id = ?").get(run.id)?.touched === 1);
+	await waitFor(() => getRun(run.id).status === "ok");
+	stopJobs();
+
+	// The restart sweep itself: untouched is requeued and actually runs again; touched is left as an error.
+	setJobRunner(async () => ({ text: "retried", usage: { total_tokens: 1 }, cost: 0, scopedId: "s2" }));
+	const untouched = queueRun(job.id, "manual");
+	db.prepare("UPDATE job_runs SET status = 'running', touched = 0 WHERE id = ?").run(untouched.id);
+	const touched = createJob({ keyId: key.id, name: "toucher2", prompt: "p" }).job;
+	const touchedRun = queueRun(touched.id, "manual");
+	db.prepare("UPDATE job_runs SET status = 'running', touched = 1 WHERE id = ?").run(touchedRun.id);
+	startJobs();
+	// Requeued, and actually ran again.
+	await waitFor(() => getRun(untouched.id).status === "ok");
+	assert.equal(getRun(untouched.id).text, "retried");
+	assert.equal(getRun(touchedRun.id).status, "error");
+	assert.match(getRun(touchedRun.id).error, /already started a tool call/);
+	setJobRunner(null);
+	stopJobs();
+}
+
 // Phase 2: agent-created schedules (the server side of the bridge's scheduling tools).
 {
 	const { maySchedule, schedulerFor, getJob, createJob, deleteJobsOf } = await import("./server.mjs");
@@ -9556,6 +9599,34 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		const badHistory = await post({ keyId: key.id, externalModelId: model.id, conversation: "pg-ext-3", message: "hi", history: [{ role: "nope", content: "x" }] });
 		assert.equal(badHistory.status, 400);
 
+		// A requestId's answer is committed once the turn finishes, and a retry with the same id gets it
+		// back without calling the model again -- the whole point (lib/externalreplay.mjs).
+		let calls = 0;
+		setFetch(() => {
+			calls++;
+			let i = 0;
+			const body = ['data: {"choices":[{"delta":{"content":"first answer"}}]}\n\n', "data: [DONE]\n\n"];
+			return Promise.resolve({ ok: true, body: { getReader: () => ({ read: () => (i >= body.length ? Promise.resolve({ done: true }) : Promise.resolve({ done: false, value: new TextEncoder().encode(body[i++]) })) }) } });
+		});
+		const rid = "retry-test-0001";
+		const first = await post({ keyId: key.id, externalModelId: model.id, conversation: "pg-ext-rid", message: "hi", requestId: rid });
+		assert.equal((await events(first)).at(-1)[1].text, "first answer");
+		assert.equal(calls, 1);
+		// A second call with the same id must not reach the model at all -- break the fetch stub to prove it.
+		setFetch(() => Promise.reject(new Error("must not be called")));
+		const replay = await post({ keyId: key.id, externalModelId: model.id, conversation: "pg-ext-rid", message: "hi", requestId: rid });
+		assert.equal(replay.status, 200);
+		const replayEv = await events(replay);
+		assert.deepEqual(replayEv.map(([e]) => e), ["item", "done"], "replayed in one shot, no streaming deltas");
+		assert.equal(replayEv.at(-1)[1].text, "first answer");
+		assert.equal(calls, 1, "the model was never called a second time");
+		// A different key can never replay another key's answer under the same id.
+		assert.equal(findReplay(rid, "someone-else", model.id), null);
+		assert.equal(findReplay(rid, key.id, "a-different-model"), null, "and not under a different model either");
+		// No requestId at all: unaffected, exactly like before this existed -- still reaches the model.
+		const noRid = await post({ keyId: key.id, externalModelId: model.id, conversation: "pg-ext-norid", message: "hi" });
+		assert.equal((await events(noRid)).at(-1)[0], "error", "the broken fetch stub is reached when there is nothing to replay");
+
 		setFetch(null);
 		setKeyModels(key.id, []);
 		deleteEndpoint(ep.id);
@@ -9933,6 +10004,26 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		// A bad history entry is refused before any HTTP call runs.
 		const badHistory = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "ext-convo-5", message: "hi", externalModelId: visionModel.id, history: [{ role: "system", content: "x" }] }) });
 		assert.equal(badHistory.status, 400);
+
+		// A requestId's answer is committed once the turn finishes; a retry with the same id gets it
+		// back without reaching the model a second time (lib/externalreplay.mjs).
+		let calls = 0;
+		setFetch(() => {
+			calls++;
+			let i = 0;
+			const body = ['data: {"choices":[{"delta":{"content":"portal answer"}}]}\n\n', "data: [DONE]\n\n"];
+			return Promise.resolve({ ok: true, body: { getReader: () => ({ read: () => (i >= body.length ? Promise.resolve({ done: true }) : Promise.resolve({ done: false, value: new TextEncoder().encode(body[i++]) })) }) } });
+		});
+		const rid = "portal-retry-0001";
+		const firstCall = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "ext-convo-rid", message: "hi", externalModelId: visionModel.id, requestId: rid }) });
+		assert.equal(firstCall.status, 200);
+		assert.match(firstCall.text, /"text":"portal answer"/);
+		assert.equal(calls, 1);
+		setFetch(() => Promise.reject(new Error("must not be called")));
+		const replayCall = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "ext-convo-rid", message: "hi", externalModelId: visionModel.id, requestId: rid }) });
+		assert.equal(replayCall.status, 200);
+		assert.match(replayCall.text, /"text":"portal answer"/);
+		assert.equal(calls, 1, "the model was never called a second time");
 
 		setFetch(null);
 		setKeyModels(myKey.id, []);

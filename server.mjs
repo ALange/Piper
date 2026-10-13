@@ -78,6 +78,7 @@ export * from "./lib/engine.mjs";
 export * from "./lib/containerpi.mjs";
 export * from "./lib/models.mjs";
 export * from "./lib/compaction.mjs";
+export * from "./lib/externalreplay.mjs";
 export * from "./lib/http.mjs";
 export * from "./lib/profiles.mjs";
 export * from "./lib/runner.mjs";

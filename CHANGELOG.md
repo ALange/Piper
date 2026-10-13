@@ -2,7 +2,7 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.0.1] - 2026-10-13
 
 ### Added
 - **`COMPACT_AT_PERCENT`: force every agent to auto-compact at a percentage of its context, instead of
@@ -17,6 +17,27 @@ All notable changes to Piper, newest first. Versions follow [Semantic Versioning
   doesn't know about is left alone, and turning it back off removes exactly what it added. The sweep
   that keeps every profile in sync runs at startup, when the setting changes, and when the model
   catalogue reloads, so a model added later is covered too (`lib/compaction.mjs`).
+- **An external-model turn (Integrations) can now survive a dropped connection or a gateway restart
+  mid-stream without being billed twice.** That turn is one direct, stateless HTTP call with nothing
+  durable behind it; today, if the connection that started it was already gone by the time it finished,
+  the finished answer was just discarded, and the caller's only option was to resend the whole message
+  as a brand-new turn — including a brand-new call to the model. A caller may now send an optional
+  `requestId` with the turn; the answer is committed under that id the moment it's ready (even if
+  nobody is still listening), and resending the same message with the same `requestId` replays the
+  committed answer instead of calling the model again. Scoped to the same key and model, short-lived
+  (10 minutes), and fully opt-in — a caller that sends no `requestId` is completely unaffected
+  (`lib/externalreplay.mjs`).
+
+### Fixed
+- **A scheduled job's run that was still going when the gateway restarted was always reported dead,
+  even when its turn had done nothing yet.** `startJobs()` used to mark every run still `"running"` as
+  an error on restart, whether or not it had reached a tool call — true restart safety would mean
+  knowing whether a tool had already done something in the run's container, which Piper has no way to
+  verify, so blindly replaying it was never an option. A run is now marked `touched` the moment its
+  first tool call starts (not only once it finishes); one left `"running"` by a dead process that never
+  got that far couldn't have done anything, so it's requeued and actually runs again instead of being
+  reported as a failure. One that had already touched a tool keeps today's behavior exactly: reported,
+  not retried (`lib/jobs.mjs`).
 
 ## [1.0.0] - 2026-10-12
 
