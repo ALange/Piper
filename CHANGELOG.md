@@ -2,6 +2,15 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.3] - 2026-10-13
+
+### Fixed
+- **The Playground's "thinking" block sometimes couldn't be expanded.** While a reply was still streaming,
+  every incoming token rebuilt the whole message's DOM from scratch, including a brand-new `<details>` for
+  the thinking block that always defaulted to closed — so clicking it open got undone by the very next delta.
+  It now remembers which thinking blocks are open (the same approach the main chat portal already used) and
+  restores that state across rebuilds, so expanding one sticks even while the model is still generating.
+
 ## [1.0.2] - 2026-10-13
 
 ### Changed

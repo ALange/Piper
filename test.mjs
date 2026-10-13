@@ -6498,7 +6498,7 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.ok(log.length >= 4, "every release is there");
 	assert.equal(log[0].version, pkg.version, "the newest release is the current version");
 	assert.ok(log.every((r, i) => /^\d+\.\d+\.\d+$/.test(r.version) && /^\d{4}-\d{2}-\d{2}$/.test(r.date) && r.sections.length && r.sections.every((x) => x.title && x.items.length)), "each has a date, sections and items");
-	assert.ok(log[0].sections.map((x) => x.title).includes("Added"));
+	assert.ok(log.some((r) => r.sections.map((x) => x.title).includes("Added")), "parses an Added section somewhere in the log");
 	assert.ok(log.at(-1).version === "0.1.0");
 	assert.ok(log.every((r, i) => i === 0 || versionNewer(log[i - 1].version, r.version)), "newest first, strictly");
 	assert.deepEqual(parseChangelog("## [1.2.3] - 2026-01-02\n\n### Added\n- one thing that\n  wraps\n- two\n\n### Fixed\n- three\n\n## [1.0.0]\n### Added\n- x\n"), [

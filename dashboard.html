@@ -5110,7 +5110,7 @@ function mdListNode(list) {
 function mdRender(text, into) { into.replaceChildren(); mdBlockNodes(mdParse(text), into); return into; }
 
 /* ---- Playground: a chat with an agent. Conversations are kept in this browser only. ---- */
-var PG = { targets: null, convs: [], cur: null, busy: false, ctrl: null, pref: '', started: false, raf: 0 };
+var PG = { targets: null, convs: [], cur: null, busy: false, ctrl: null, pref: '', started: false, raf: 0, openThink: {} };
 var PG_KEY = 'piper-playground-v1';
 var PG_SUGGEST = ['What can you do? Answer briefly.', 'List the files in /workspace.', 'Summarize your instructions in three bullets.', 'Run a quick check of your tools and tell me what works.'];
 function pgId() { var a = new Uint8Array(12); (window.crypto || window.msCrypto).getRandomValues(a); return Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); }
@@ -5210,6 +5210,8 @@ function pgParts(msg, node) {
   (msg.parts || []).forEach(function (p) {
     if (p.kind === 'thinking') {
       var d = el('details'); d.className = 'pgthink'; d.appendChild(el('summary', msg.pending && p === msg.parts[msg.parts.length - 1] ? 'Thinking…' : 'Thought'));
+      d.open = Boolean(PG.openThink[p.id]);
+      d.addEventListener('toggle', function () { PG.openThink[p.id] = d.open; });
       var b = el('div', p.text); d.appendChild(b); node.appendChild(d);
     } else if (p.kind === 'tool') {
       var td = el('details'); td.className = 'pgtool ' + (p.state || ''); var sm = el('summary', (p.state === 'running' ? '⚙ ' : p.state === 'error' ? '✗ ' : '✓ ') + (p.summary || p.name));
