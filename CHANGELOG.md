@@ -2,6 +2,16 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.7] - 2026-10-13
+
+### Fixed
+- **The Portal's thinking panel could still lose a click right when a reply finished.** 1.0.6 fixed the
+  mid-stream redraw; the stream's `done` event (and a conversation switch) still called the plain,
+  full `renderMessages()`, which rebuilt every message's thinking block from scratch with no reuse at
+  all -- and the exact moment a reply finishes "Thinking…" is exactly when someone is likely to be
+  clicking it. `renderMessages()` now reuses each message's existing thinking element the same way the
+  mid-stream path already did, so the panel survives every re-render, not just the streaming ones.
+
 ## [1.0.6] - 2026-10-13
 
 ### Fixed

@@ -922,11 +922,20 @@ function buildMessageNode(m, botLabel, oldBody) {
 }
 function renderMessages() {
   var box = $('msgs');
-  box.replaceChildren();
   var c = conv();
-  if (!c) return;
+  if (!c) { box.replaceChildren(); return; }
+  // Matched to the previous render by position (messages are only ever appended, never reordered),
+  // so a message's thinking <details> survives this full rebuild too -- the 'done' event at the end
+  // of a stream calls this, which is exactly when someone is likely to be clicking the panel that
+  // just finished "Thinking…".
+  var oldRows = Array.prototype.slice.call(box.children);
   var botLabel = botLabelFor(c);
-  c.messages.forEach(function (m) { box.appendChild(buildMessageNode(m, botLabel)); });
+  var frag = document.createDocumentFragment();
+  c.messages.forEach(function (m, i) {
+    var oldBody = oldRows[i] && oldRows[i].querySelector && oldRows[i].querySelector('.body');
+    frag.appendChild(buildMessageNode(m, botLabel, oldBody));
+  });
+  box.replaceChildren(frag);
   box.scrollTop = box.scrollHeight;
 }
 var MSG_RAF = 0;
