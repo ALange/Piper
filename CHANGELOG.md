@@ -2,6 +2,22 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.4] - 2026-10-13
+
+### Fixed
+- **The Playground's thinking panel couldn't be closed while a reply was still streaming.** The 1.0.3
+  fix made an open panel stay open across the per-token re-renders, but every one of those re-renders
+  still recreated the `<details>` element from scratch — so a click meant to close it could land on a
+  node that was about to be (or had just been) replaced, and the browser's own default-closed state
+  for the new one lost the click entirely. The whole message body is now patched in place instead of
+  rebuilt: a part already on screen is updated where it stands, not torn down and recreated, so
+  opening and closing both stick regardless of how fast the reply is streaming.
+- **A chat stuck behind a turn that never answered an abort (closing the tab, a page refresh, mid tool
+  call) could neither be used nor deleted.** Deleting a conversation is the only way out of one that's
+  wedged, so it's no longer blocked by the same "busy" flag that disables sending — deleting now always
+  stops the in-flight request first and proceeds, which also tears the server-side session (and its
+  container) down for good, clearing whatever it was stuck on.
+
 ## [1.0.3] - 2026-10-13
 
 ### Fixed

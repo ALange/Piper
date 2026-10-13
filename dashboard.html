@@ -5206,32 +5206,64 @@ function pgRenderBar() {
   $('pgsend').textContent = PG.busy ? 'Stop' : 'Send';
   $('pgsend').className = PG.busy ? 'stop' : '';
 }
+// `node` may already hold this message's previous rendering (its DOM nodes, by `data-part-id`) --
+// those are reused and only patched in place, never recreated, so a <details> the person has open
+// or mid-click (the Thinking panel) is never swapped out from under them while a reply streams in.
 function pgParts(msg, node) {
+  var reuse = {};
+  Array.prototype.forEach.call(node.children, function (ch) { if (ch.dataset && ch.dataset.partId != null) reuse[ch.dataset.partId] = ch; });
+  var kept = [];
   (msg.parts || []).forEach(function (p) {
+    var old = reuse[p.id];
     if (p.kind === 'thinking') {
-      var d = el('details'); d.className = 'pgthink'; d.appendChild(el('summary', msg.pending && p === msg.parts[msg.parts.length - 1] ? 'Thinking…' : 'Thought'));
-      d.open = Boolean(PG.openThink[p.id]);
-      d.addEventListener('toggle', function () { PG.openThink[p.id] = d.open; });
-      var b = el('div', p.text); d.appendChild(b); node.appendChild(d);
+      var label = msg.pending && p === msg.parts[msg.parts.length - 1] ? 'Thinking…' : 'Thought';
+      var d;
+      if (old && old.classList.contains('pgthink')) {
+        d = old;
+        if (d.firstChild.textContent !== label) d.firstChild.textContent = label;
+        if (d.lastChild.textContent !== p.text) d.lastChild.textContent = p.text;
+      } else {
+        d = el('details'); d.className = 'pgthink'; d.dataset.partId = p.id;
+        d.appendChild(el('summary', label));
+        d.appendChild(el('div', p.text));
+        d.open = Boolean(PG.openThink[p.id]);
+        d.addEventListener('toggle', function () { PG.openThink[p.id] = d.open; });
+      }
+      node.appendChild(d); kept.push(d);
     } else if (p.kind === 'tool') {
-      var td = el('details'); td.className = 'pgtool ' + (p.state || ''); var sm = el('summary', (p.state === 'running' ? '⚙ ' : p.state === 'error' ? '✗ ' : '✓ ') + (p.summary || p.name));
-      td.appendChild(sm);
-      if (p.result) { var pre = el('pre', p.result); td.appendChild(pre); }
-      node.appendChild(td);
+      var label2 = (p.state === 'running' ? '⚙ ' : p.state === 'error' ? '✗ ' : '✓ ') + (p.summary || p.name);
+      var td;
+      if (old && old.classList.contains('pgtool')) {
+        td = old;
+        td.className = 'pgtool ' + (p.state || '');
+        if (td.firstChild.textContent !== label2) td.firstChild.textContent = label2;
+        var existingPre = td.querySelector('pre');
+        if (p.result) { if (existingPre) { if (existingPre.textContent !== p.result) existingPre.textContent = p.result; } else td.appendChild(el('pre', p.result)); }
+        else if (existingPre) td.removeChild(existingPre);
+      } else {
+        td = el('details'); td.className = 'pgtool ' + (p.state || ''); td.dataset.partId = p.id;
+        td.appendChild(el('summary', label2));
+        if (p.result) td.appendChild(el('pre', p.result));
+      }
+      node.appendChild(td); kept.push(td);
     } else {
-      var md = el('div'); md.className = 'pgmd'; mdRender(p.text || '', md); node.appendChild(md);
+      var md;
+      if (old && old.classList.contains('pgmd')) {
+        md = old;
+        if (md.dataset.text !== (p.text || '')) { md.replaceChildren(); mdRender(p.text || '', md); md.dataset.text = p.text || ''; }
+      } else {
+        md = el('div'); md.className = 'pgmd'; md.dataset.partId = p.id; md.dataset.text = p.text || ''; mdRender(p.text || '', md);
+      }
+      node.appendChild(md); kept.push(md);
     }
   });
+  // A part that no longer exists in msg.parts (shouldn't normally happen) is dropped.
+  Object.keys(reuse).forEach(function (id) { if (kept.indexOf(reuse[id]) < 0 && reuse[id].parentNode === node) node.removeChild(reuse[id]); });
 }
-function pgBuild(msg, idx, last) {
-  var m = el('div'); m.className = 'pgm ' + msg.role;
-  if (msg.role === 'user') {
-    var b = el('div', msg.text); b.className = 'pgbubble'; m.appendChild(b);
-    return m;
-  }
-  var av = el('div', 'P'); av.className = 'pgavatar'; m.appendChild(av);
-  var body = el('div'); body.className = 'pgbody'; m.appendChild(body);
-  pgParts(msg, body);
+// The tail bits after the parts (a spinner, a caret, an error, a footer) carry no state worth
+// keeping across a re-render, so they're simply torn down and rebuilt each time.
+function pgTail(body, msg, last) {
+  Array.prototype.slice.call(body.querySelectorAll('.pgwait,.pgcaret,.pgerr,.pgstopped,.pgfoot2')).forEach(function (n) { body.removeChild(n); });
   if (msg.pending && !(msg.parts || []).length) { var th = el('div', 'Thinking…'); th.className = 'pgwait'; body.appendChild(th); }
   if (msg.pending && (msg.parts || []).length) { var cur = el('span'); cur.className = 'pgcaret'; body.appendChild(cur); }
   if (msg.error) { var er = el('div', msg.error); er.className = 'pgerr'; body.appendChild(er); }
@@ -5244,7 +5276,28 @@ function pgBuild(msg, idx, last) {
     if (msg.usage && msg.usage.total_tokens) foot.appendChild(el('span', tok(msg.usage.total_tokens) + ' tokens' + (msg.cost ? ' · ' + money(msg.cost) : '')));
     body.appendChild(foot);
   }
+}
+function pgBuild(msg, idx, last) {
+  var m = el('div'); m.className = 'pgm ' + msg.role;
+  if (msg.role === 'user') {
+    var b = el('div', msg.text); b.className = 'pgbubble'; m.appendChild(b);
+    return m;
+  }
+  var av = el('div', 'P'); av.className = 'pgavatar'; m.appendChild(av);
+  var body = el('div'); body.className = 'pgbody'; m.appendChild(body);
+  pgParts(msg, body);
+  pgTail(body, msg, last);
   return m;
+}
+// Patches an already-rendered assistant message's body in place (reusing its part nodes via
+// pgParts) instead of recreating it, so an open/mid-click <details> survives a streamed delta.
+// Returns false (do a full pgBuild instead) when there is nothing to patch onto.
+function pgPatchLast(node, msg, last) {
+  var body = node.querySelector && node.querySelector('.pgbody');
+  if (!body) return false;
+  pgParts(msg, body);
+  pgTail(body, msg, last);
+  return true;
 }
 function pgAtBottom() { var s = $('pgscroll'); return s.scrollHeight - s.scrollTop - s.clientHeight < 80; }
 function pgRenderMessages(toBottom) {
@@ -5268,7 +5321,7 @@ function pgEmpty(c) {
   e.appendChild(row);
   return e;
 }
-function pgFrame() { if (PG.raf) return; PG.raf = requestAnimationFrame(function () { PG.raf = 0; var c = pgConv(); if (!c) return; var stick = pgAtBottom(); var box = $('pgmsgs'); var i = c.messages.length - 1; var node = box.lastChild; if (node && i >= 0) box.replaceChild(pgBuild(c.messages[i], i, true), node); if (stick) $('pgscroll').scrollTop = $('pgscroll').scrollHeight; $('pgdown').hidden = pgAtBottom(); }); }
+function pgFrame() { if (PG.raf) return; PG.raf = requestAnimationFrame(function () { PG.raf = 0; var c = pgConv(); if (!c) return; var stick = pgAtBottom(); var box = $('pgmsgs'); var i = c.messages.length - 1; var node = box.lastChild; if (node && i >= 0 && !pgPatchLast(node, c.messages[i], true)) box.replaceChild(pgBuild(c.messages[i], i, true), node); if (stick) $('pgscroll').scrollTop = $('pgscroll').scrollHeight; $('pgdown').hidden = pgAtBottom(); }); }
 function pgApply(msg, item) {
   var kind = item.kind === 'assistant' ? 'text' : item.kind;
   var p = (msg.parts || []).filter(function (x) { return x.id === item.id; })[0];
@@ -5339,8 +5392,11 @@ function pgSend(text) {
 }
 function pgStop() { if (PG.ctrl) PG.ctrl.abort(); }
 function pgDelete(c) {
-  if (PG.busy && c.id === PG.cur) return;
   if (c.messages.length && !confirm('Delete "' + c.title + '"?')) return;
+  // Deleting is the escape hatch for a chat that's stuck (its session wedged server-side, say,
+  // behind a tool call that never answered an abort) -- it must never be blocked by "busy", or
+  // there would be no way out. Stop the in-flight stream first so the browser's own fetch lets go.
+  if (PG.busy && c.id === PG.cur) { if (PG.ctrl) PG.ctrl.abort(); pgSetBusy(false); PG.ctrl = null; }
   fetch('dashboard/playground/conversation/' + encodeURIComponent(c.id) + '?keyId=' + encodeURIComponent(c.keyId) + (c.agentId ? '&agentId=' + encodeURIComponent(c.agentId) : ''), { method: 'DELETE' }).catch(function () {});
   PG.convs = PG.convs.filter(function (x) { return x.id !== c.id; });
   if (PG.cur === c.id) { PG.cur = PG.convs[0] ? PG.convs[0].id : null; if (!PG.cur) pgNew(); }
