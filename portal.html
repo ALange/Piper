@@ -792,10 +792,11 @@ function partNode(p) {
   if (p.kind === 'thinking') {
     var det = el('details');
     det.className = 'think' + (p.pending ? ' live' : '');
+    det.dataset.thinkId = p.id;
     det.open = Boolean(OPEN_THINK[p.id]);
     det.addEventListener('toggle', function () { OPEN_THINK[p.id] = det.open; });
     det.appendChild(el('summary', p.pending ? 'Thinking…' : 'Thought'));
-    var tbody = el('div'); tbody.className = 'think-body';
+    var tbody = el('div'); tbody.className = 'think-body'; tbody.dataset.text = p.text || '';
     tbody.appendChild(thinkBody(p.text));
     det.appendChild(tbody);
     return det;
@@ -850,7 +851,7 @@ function botLabelFor(c) {
 }
 /* Builds one message's DOM node. Pulled out of renderMessages() so a live stream can redraw just the
    last message (frameMessages() below) instead of every message in the conversation. */
-function buildMessageNode(m, botLabel) {
+function buildMessageNode(m, botLabel, oldBody) {
   var row = el('div');
   row.className = 'msg ' + m.role;
   if (m.role === 'user') {
@@ -892,7 +893,27 @@ function buildMessageNode(m, botLabel) {
       rest.push(p);
     }
   });
-  if (thinkId !== null) body.appendChild(partNode({ kind: 'thinking', id: thinkId, text: thinkText, pending: Boolean(m.pending) }));
+  if (thinkId !== null) {
+    // Reuse the thinking block's own <details> element in place when one already exists for this
+    // message, instead of recreating it: a click toggling it open or closed must never land on a
+    // node that is about to be (or was just) replaced by the next streamed delta.
+    var oldThink = oldBody && oldBody.querySelector && oldBody.querySelector('details.think[data-think-id="' + thinkId + '"]');
+    if (oldThink) {
+      oldThink.classList.toggle('live', Boolean(m.pending));
+      var thinkLabel = m.pending ? 'Thinking…' : 'Thought';
+      var thinkSummary = oldThink.querySelector('summary');
+      if (thinkSummary && thinkSummary.textContent !== thinkLabel) thinkSummary.textContent = thinkLabel;
+      var thinkTbody = oldThink.querySelector('.think-body');
+      if (thinkTbody && thinkTbody.dataset.text !== thinkText) {
+        thinkTbody.replaceChildren();
+        thinkTbody.appendChild(thinkBody(thinkText));
+        thinkTbody.dataset.text = thinkText;
+      }
+      body.appendChild(oldThink);
+    } else {
+      body.appendChild(partNode({ kind: 'thinking', id: thinkId, text: thinkText, pending: Boolean(m.pending) }));
+    }
+  }
   rest.forEach(function (p) { body.appendChild(partNode(p)); });
   if (m.pending && !(m.parts || []).length) body.appendChild(el('div', 'Thinking…'));
   if (m.error) { var e = el('div', m.error); e.className = 'err'; body.appendChild(e); }
@@ -924,7 +945,7 @@ function frameMessages() {
     var atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
     var i = c.messages.length - 1;
     var node = box.lastChild;
-    if (node && i >= 0) box.replaceChild(buildMessageNode(c.messages[i], botLabelFor(c)), node);
+    if (node && i >= 0) box.replaceChild(buildMessageNode(c.messages[i], botLabelFor(c), node.querySelector && node.querySelector('.body')), node);
     else renderMessages();
     if (atBottom) box.scrollTop = box.scrollHeight;
   });

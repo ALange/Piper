@@ -2,6 +2,16 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.6] - 2026-10-13
+
+### Fixed
+- **The main chat (the Portal) had the same "can't close the thinking panel while it streams" bug the
+  Playground had, in a separate implementation.** 1.0.4 fixed the Playground by patching its message
+  body in place instead of rebuilding it on every token; the Portal's own streaming redraw
+  (`frameMessages()`) still recreated the thinking `<details>` from scratch every frame, so a click to
+  close it (or open it) could land on a node already on its way out. The Portal now reuses that same
+  element across redraws instead of recreating it, so opening and closing both stick.
+
 ## [1.0.5] - 2026-10-13
 
 ### Fixed
