@@ -2,7 +2,23 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
-## [1.0.1] - 2026-10-13
+## [1.0.2] - 2026-10-13
+
+### Changed
+- **A job interrupted by a restart now tries recovery before anything else.** 1.0.1 could only classify an
+  interrupted run as safe-to-retry or not; it had no way to tell a run that had genuinely finished (no tool
+  ever needed, the model just answered) from one truly cut off mid-thought, so either could be requeued and
+  asked the same question a second time. The sweep now reopens the run's own session first and asks it for
+  nothing new — if it already has a finished answer, that's read straight back out, no retry, no second model
+  call. Only once that finds nothing does the old requeue-or-report choice apply.
+- **Not every tool call makes a run unsafe to retry.** Calling something read-only — `read`, `grep`, `find`,
+  `ls`, `piper_knowledge_search`, `piper_recall`, or any other lookup — doesn't risk a real side effect, so it
+  no longer blocks the automatic requeue; only a tool Piper can't prove is read-only (`bash`, `write`, `edit`,
+  a hand-off, a schedule, or anything it doesn't recognize at all) still does.
+- **The owner is told, not just the audit log.** A run reported after a restart (or recovered by it) now goes
+  through the job's own notify setting — the inbox and alert webhook — exactly like any other finished or
+  failed run, instead of only ever showing up for whoever happens to read the audit page
+  (`lib/jobs.mjs`, `lib/agentrun.mjs`).
 
 ### Added
 - **`COMPACT_AT_PERCENT`: force every agent to auto-compact at a percentage of its context, instead of

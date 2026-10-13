@@ -7861,15 +7861,31 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	J.stopJobs();
 }
 
-// A run interrupted by a restart: requeued if its turn never touched a tool, left as an error if it had.
+// A run interrupted by a restart: recovered if it had already finished, requeued if it hadn't touched
+// anything unsafe, left as an error (and the owner told) if it had.
 {
 	const J = await import("./server.mjs");
-	const { createJob, queueRun, getRun, setJobRunner, startJobs, stopJobs, LiveLog } = J;
+	const { createJob, queueRun, getRun, setJobRunner, setPeekAgentTurnRunner, startJobs, stopJobs, LiveLog, takeInbox, updateJob } = J;
 	const rec = apiKeys.create({ name: "touched-key" });
 	const key = rec.record ?? rec;
 	const waitFor = async (fn, ms = 3000) => { const end = Date.now() + ms; while (Date.now() < end) { const v = fn(); if (v) return v; await new Promise((r) => setTimeout(r, 15)); } throw new Error("timed out waiting"); };
 
-	// touched flips to 1 the moment the turn's first tool call starts, mid-run, not only once it finishes.
+	// A read-only tool never flips touched -- just as safe to requeue as calling nothing at all.
+	const safeJob = createJob({ keyId: key.id, name: "reader", prompt: "p" }).job;
+	setJobRunner(async ({ onSession }) => {
+		const live = new LiveLog();
+		onSession({ live });
+		live.feed({ type: "tool_execution_start", toolName: "read", toolCallId: "r1" });
+		live.feed({ type: "tool_execution_start", toolName: "piper_knowledge_search", toolCallId: "r2" });
+		return { text: "done", usage: { total_tokens: 1 }, cost: 0, scopedId: "s0" };
+	});
+	startJobs();
+	const safeRun = queueRun(safeJob.id, "manual");
+	await waitFor(() => getRun(safeRun.id).status === "ok");
+	assert.equal(db.prepare("SELECT touched FROM job_runs WHERE id = ?").get(safeRun.id).touched, 0, "read-only tools never mark a run unsafe to retry");
+	stopJobs();
+
+	// touched flips to 1 the moment the turn's first *unsafe* tool call starts, mid-run.
 	const job = createJob({ keyId: key.id, name: "toucher", prompt: "p" }).job;
 	let live;
 	setJobRunner(async ({ onSession }) => {
@@ -7887,20 +7903,40 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	await waitFor(() => getRun(run.id).status === "ok");
 	stopJobs();
 
-	// The restart sweep itself: untouched is requeued and actually runs again; touched is left as an error.
+	// The restart sweep, with recovery turned off (peek finds nothing, as a dead container would look):
+	// untouched is requeued and actually runs again; touched is left as an error and the owner is told.
 	setJobRunner(async () => ({ text: "retried", usage: { total_tokens: 1 }, cost: 0, scopedId: "s2" }));
+	setPeekAgentTurnRunner(async () => ({ text: "" }));
+	updateJob(job.id, { notify: "always" });
 	const untouched = queueRun(job.id, "manual");
 	db.prepare("UPDATE job_runs SET status = 'running', touched = 0 WHERE id = ?").run(untouched.id);
-	const touched = createJob({ keyId: key.id, name: "toucher2", prompt: "p" }).job;
+	const touched = createJob({ keyId: key.id, name: "toucher2", prompt: "p", notify: "always" }).job;
 	const touchedRun = queueRun(touched.id, "manual");
 	db.prepare("UPDATE job_runs SET status = 'running', touched = 1 WHERE id = ?").run(touchedRun.id);
 	startJobs();
 	// Requeued, and actually ran again.
 	await waitFor(() => getRun(untouched.id).status === "ok");
 	assert.equal(getRun(untouched.id).text, "retried");
-	assert.equal(getRun(touchedRun.id).status, "error");
+	await waitFor(() => getRun(touchedRun.id).status === "error");
 	assert.match(getRun(touchedRun.id).error, /already started a tool call/);
+	// The owner hears about the one that was reported, the same way any other failed run tells them.
+	assert.ok(takeInbox(key.id).some((i) => /toucher2/.test(i.title)), "the owner is told, not just the audit log");
+	stopJobs();
+
+	// Recovery: if the turn had actually finished before the gateway died, that answer is read straight
+	// back out of the session -- no retry, no second call to the model -- and the owner is told the
+	// normal way (its notify setting decides), whether or not a tool had been touched.
+	const recoverable = createJob({ keyId: key.id, name: "recoverable", prompt: "p", notify: "always" }).job;
+	const recoverRun = queueRun(recoverable.id, "manual");
+	db.prepare("UPDATE job_runs SET status = 'running', touched = 1 WHERE id = ?").run(recoverRun.id);
+	setPeekAgentTurnRunner(async () => ({ text: "the answer that already finished", scopedId: "recovered-scope" }));
+	startJobs();
+	await waitFor(() => getRun(recoverRun.id).status === "ok");
+	assert.equal(getRun(recoverRun.id).text, "the answer that already finished");
+	assert.match(getRun(recoverRun.id).note ?? "", /recovered after a restart/);
+	assert.ok(takeInbox(key.id).some((i) => i.title === "recoverable"), "recovery is told to the owner like any other successful run");
 	setJobRunner(null);
+	setPeekAgentTurnRunner(null);
 	stopJobs();
 }
 

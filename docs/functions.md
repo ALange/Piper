@@ -301,11 +301,15 @@ shown once); a failed delivery is retried once and the outcome is written on the
 - **Guards.** After `JOBS_MAX_FAILURES` scheduled runs in a row fail, the job is switched off (the row says why) and you are
   told; turning it on again resets the count. A job over its 24-hour **spend cap** skips scheduled runs (you are told once);
   manual runs ignore it. Schedules agents make get `AGENT_JOBS_DAILY_COST` unless you set a cap on the job (0 for none).
-- **A gateway restart mid-run.** A run still "running" from a previous process is only ever reported dead, never
-  blindly replayed, since there's no way to know what a tool call already did and whether redoing it is safe. But
-  that only matters once a run's turn has actually started a tool call; one that hadn't reached that point yet
-  couldn't have done anything in its container, so it's exactly as safe to run again as to start fresh — it's
-  requeued, not reported as a failure.
+- **A gateway restart mid-run.** A run still "running" from a previous process is first given a chance to recover:
+  its session is reopened and asked for nothing new, just whatever it already said — if the turn had actually
+  finished before the process died, that answer is read straight back out, with no retry and no second call to
+  the model. Only once that finds nothing does the old question matter: has the run called a tool Piper can't
+  prove is read-only (`bash`, `write`, `edit`, a hand-off, anything it doesn't recognize — an extension's own
+  tool, a skill, an MCP server, all default to unsafe)? A run that never has, or only called provably read-only
+  ones (`read`, `grep`, `piper_knowledge_search`, listing something), is exactly as safe to run again as to start
+  fresh, and is requeued rather than reported as a failure. One that has is reported, never blindly replayed,
+  through the job's own notify setting — same as any other failed run, not only in the audit log.
 
 Settings (Settings → Jobs): `JOBS_ENABLED`, `JOBS_MAX_PARALLEL`, `JOBS_MIN_INTERVAL_MS`, `JOBS_MAX_PER_KEY`,
 `JOBS_RESULT_DAYS`, `JOBS_MAX_FAILURES`, `JOBS_NOTIFY_ALERTS`, `AGENT_JOBS_DAILY_COST`.
