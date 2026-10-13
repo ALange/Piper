@@ -29,7 +29,7 @@ process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
 const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, readDockerfile, writeDockerfile, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, portalSessionToken, readPortalSession, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, memoryScopeOf, mayRemember, memoryFor, memoryOverview, memoryEntries, deleteMemoryEntry, clearMemory, deleteMemoryOf, memoryDashboardRoutes, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, mayLookupKnowledge, knowledgeFor, addEntry, getByKey, getEntry, sourceSeen, overview: knowledgeOverview, entriesOf, removeEntry, clearSource, purgeOld, activityLog, knowledgeDashboardRoutes, RssError, SOURCE_TYPE, getFeed, listFeeds, createFeed, updateFeed, removeFeed, parseFeedXml, forcePoll, rssTick, parseExtraction, looksBlocked, parseUnblockReply, setExtractionRunner, rssPump, retryEntry, startFeeds, stopFeeds, rssDashboardRoutes,
 	NotebookError, createNotebook, listNotebooks, getNotebook, renameNotebook, setNotebookAgent, setNotebookExternalModel, deleteNotebook, listSources, getSource, addSource, removeSource, chunkText, cosine, topChunks, embedTexts, setEmbedder, setNotebookRunner, setFileReader, parseExtraction: parseNotebookExtraction, askNotebook, generateOutput, listOutputs, OUTPUT_KINDS, pumpExtract: pumpNotebookExtract, resumeNotebookExtractions, stopNotebookExtractions,
 	ExternalModelError, listEndpoints, getEndpoint, createEndpoint, updateEndpoint, deleteEndpoint, listExternalModels, getModel, addModel, updateModel, removeModel, listEndpointsWithModels, setFetch, guessCapabilities, detectModels, checkEndpointStatus, modelsForKey, setKeyModels, listAccess, splitSseLines, chatCompletion, normalizeBaseUrl, beginExternalTurn, checkedHistory,
-	recentAudit: recentAuditRows } = await import("./server.mjs");
+	recentAudit: recentAuditRows, syncCompactionSettings, reserveTokensFor } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
 
@@ -4348,6 +4348,59 @@ assert.equal(isReloadCommand(undefined), false);
 		assert.equal(resolveModel(runtime, "Cloud One").id, "c1");
 		assert.equal(resolveModel(runtime, "pi"), undefined);
 		assert.deepEqual(resolveModelQuery(catalogueFor(runtime), "qwen").model?.id, "Qwen/Qwen3-Next", "pi_set_model resolves over the same list");
+	}
+
+	// COMPACT_AT_PERCENT: reserveTokens is (100-N)% of the model's own context window, floored at 1024.
+	{
+		assert.equal(reserveTokensFor(10_000, 60), 4000);
+		assert.equal(reserveTokensFor(100, 60), 1024, "never less than the floor");
+		assert.equal(reserveTokensFor(0, 60), null, "no window, no override");
+	}
+
+	// Forcing compaction at a percentage: every profile's settings.json gets a modelOverrides entry
+	// per model, and it is kept (or removed) as COMPACT_AT_PERCENT and the catalogue change.
+	{
+		// Isolated from whatever the container config's own models.json was left holding above: only
+		// the runtime's own model should show up in what gets written.
+		const modelsBefore = readFileSync(join(TEST_CONTAINER_PI, "models.json"), "utf8");
+		saveModelsText(JSON.stringify({ providers: {} }));
+		const runtime = { getAvailableSnapshot: () => [{ provider: "host", id: "big", contextWindow: 100_000 }], getModel: () => null };
+		const dirA = ensureProfile("compactA");
+		const dirB = ensureProfile("compactB");
+		// A hand-set override on another model: never touched, on or off.
+		writeFileSync(join(dirB, "settings.json"), JSON.stringify({ compaction: { enabled: false, modelOverrides: { "host/other": { reserveTokens: 999 } } } }));
+
+		config.COMPACT_AT_PERCENT = 0;
+		await syncCompactionSettings({ runtime });
+		assert.deepEqual(JSON.parse(readFileSync(join(dirA, "settings.json"), "utf8")), {}, "off: nothing written");
+
+		config.COMPACT_AT_PERCENT = 60;
+		await syncCompactionSettings({ runtime });
+		let a = JSON.parse(readFileSync(join(dirA, "settings.json"), "utf8"));
+		assert.deepEqual(a.compaction.modelOverrides, { "host/big": { reserveTokens: 40_000 } });
+		assert.equal(a.compaction.enabled, true, "left on by default, not forced where already set");
+		assert.deepEqual(a.piper.compactionManagedModels, ["host/big"]);
+		let b = JSON.parse(readFileSync(join(dirB, "settings.json"), "utf8"));
+		assert.deepEqual(b.compaction.modelOverrides, { "host/other": { reserveTokens: 999 }, "host/big": { reserveTokens: 40_000 } }, "a hand-set override for another model survives");
+		assert.equal(b.compaction.enabled, false, "an explicit enabled:false is never overridden");
+
+		// A tighter percentage recomputes the managed entry in place.
+		config.COMPACT_AT_PERCENT = 80;
+		await syncCompactionSettings({ runtime });
+		a = JSON.parse(readFileSync(join(dirA, "settings.json"), "utf8"));
+		assert.deepEqual(a.compaction.modelOverrides, { "host/big": { reserveTokens: 20_000 } });
+
+		// Turning it off again removes exactly the managed entry, leaving the hand-set one alone.
+		config.COMPACT_AT_PERCENT = 0;
+		await syncCompactionSettings({ runtime });
+		b = JSON.parse(readFileSync(join(dirB, "settings.json"), "utf8"));
+		assert.deepEqual(b.compaction.modelOverrides, { "host/other": { reserveTokens: 999 } });
+		assert.equal("piper" in b, false, "the marker goes with it");
+
+		config.COMPACT_AT_PERCENT = 0;
+		rmSync(dirA, { recursive: true, force: true });
+		rmSync(dirB, { recursive: true, force: true });
+		saveModelsText(modelsBefore);
 	}
 
 	// Direct calls are metered from the event stream, and bridged ones only by the bridge: nothing twice.

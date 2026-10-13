@@ -312,6 +312,23 @@ key and scope — the same jobs this page shows, so an operator can see, disable
 may not name another key's or agent's job, or set a completion webhook; only jobs it created are visible or removable
 by it.
 
+## Context compaction
+
+Pi's own auto-compaction (the sidebar note "the context is getting full; compacting automatically" in the client
+portal and dashboard Playground) fires once a chat's context passes a flat token count, `reserveTokens`
+(16384 by default) short of the model's own context window — the same regardless of whether that window is
+8K or 1M tokens. `COMPACT_AT_PERCENT` (Settings → Agent, 0 by default — off) replaces that flat number with a
+percentage: set it to `60` and every agent compacts once it is 60% full, whatever model it is on, including a
+model switched to mid-chat (the threshold is looked up by whichever model is actually running at the time).
+
+This is done by computing `reserveTokens` as `(100 - COMPACT_AT_PERCENT)%` of each model's own context window
+and writing it into every profile's own `settings.json` as a `compaction.modelOverrides` entry (one per model,
+keyed the same way Pi's own overrides are) — the file an agent can otherwise edit for itself with `/settings`.
+Only the entries this put there are ever touched again, so an override set by hand for a model this does not
+know about is left alone; turning `COMPACT_AT_PERCENT` back to `0` removes exactly what it added. The sweep that
+keeps every profile in sync runs at gateway startup, right after this setting is changed, and whenever the model
+catalogue reloads (Models → reload), so a model added later is covered without waiting for its next chat.
+
 ## Memory
 
 Durable notes a chat remembers across its own chats and containers, through three tools (`piper_remember`,

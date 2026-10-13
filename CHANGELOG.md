@@ -2,6 +2,22 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **`COMPACT_AT_PERCENT`: force every agent to auto-compact at a percentage of its context, instead of
+  Pi's own flat 16384-token reserve.** Pi's own auto-compaction triggers a fixed number of tokens short
+  of a model's context window, regardless of whether that window is 8K or 1M — so the same setting
+  compacts an 8K model almost immediately and a 1M model only once it's nearly full. Setting
+  `COMPACT_AT_PERCENT` (Settings → Agent, 0 by default — off) computes `reserveTokens` as a share of
+  each model's own context window and writes it into every profile's `settings.json` as a
+  `compaction.modelOverrides` entry — the same mechanism Pi's own `/settings` uses — so compaction
+  fires at the same percentage on every model, including one switched to mid-chat. Only the entries
+  this feature wrote are ever touched again, so a model-specific override set by hand for a model it
+  doesn't know about is left alone, and turning it back off removes exactly what it added. The sweep
+  that keeps every profile in sync runs at startup, when the setting changes, and when the model
+  catalogue reloads, so a model added later is covered too (`lib/compaction.mjs`).
+
 ## [1.0.0] - 2026-10-12
 
 ### Added

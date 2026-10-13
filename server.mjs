@@ -37,6 +37,7 @@ import { authNote, authRequired, clearSessionCookie, credentialOf, dashboardAuth
 import { checkEngine, inspectMany, lastEngineStatus } from "./lib/engine.mjs";
 import { diskSummary, engineOptions, hostPiVersion, migrateToContainers, startDiskWatch, startEventWatch } from "./lib/containers.mjs";
 import { reloadModelRuntime } from "./lib/models.mjs";
+import { syncCompactionSettings } from "./lib/compaction.mjs";
 import { cors, logAccess, readJson, sendError } from "./lib/http.mjs";
 import { audit, auditOnce, runWithActor } from "./lib/audit.mjs";
 import { resourceSnapshot } from "./lib/resources.mjs";
@@ -76,6 +77,7 @@ export * from "./lib/paths.mjs";
 export * from "./lib/engine.mjs";
 export * from "./lib/containerpi.mjs";
 export * from "./lib/models.mjs";
+export * from "./lib/compaction.mjs";
 export * from "./lib/http.mjs";
 export * from "./lib/profiles.mjs";
 export * from "./lib/runner.mjs";
@@ -247,6 +249,7 @@ async function handle(req, res) {
 		if (req.method === "GET" && path === "/dashboard/models.json") return await modelCatalog(res);
 		if (req.method === "POST" && path === "/dashboard/models/reload") {
 			await reloadModelRuntime();
+			await syncCompactionSettings();
 			audit("models.reload", "model catalogue", "reloaded from the host's Pi and the container config");
 			return await modelCatalog(res);
 		}
@@ -384,6 +387,9 @@ if (isMain) {
 				`limits=${config.CONTAINER_MEMORY_MB}MB/${config.CONTAINER_CPUS}cpu/${config.CONTAINER_PIDS}pids  ` +
 				`${process.getuid?.() === 0 ? "user=ROOT  " : ""}db=${GATEWAY_DB}\n`,
 		);
+		// Doesn't need docker: every profile's compaction overrides should match COMPACT_AT_PERCENT
+		// from the moment the gateway is up, not only after the first chat starts a container.
+		void syncCompactionSettings().catch((err) => process.stderr.write(`compaction sync: ${err?.message ?? err}\n`));
 		// Say now whether containers can run, instead of at the first chat, and start the sweeps.
 		void engineOptions().then((options) => checkEngine({ force: true, ...options })).then(
 			(status) => {
