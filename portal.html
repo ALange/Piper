@@ -203,6 +203,9 @@
   .colleague-msg .who { font-weight:600; font-size:11.5px; margin-bottom:3px; color:var(--agent-c, var(--blue)); }
 
   .err { color:var(--red); margin-top:6px; }
+  .err-why { margin-top:3px; }
+  .err-why summary { color:var(--dim); font-size:11px; cursor:pointer; }
+  .err-why div { color:var(--dim); font-size:11px; margin-top:3px; white-space:pre-wrap; }
   .sys-note { color:var(--dim); font-size:11.5px; font-style:italic; margin:6px 0; }
 
   /* composer */
@@ -926,8 +929,35 @@ function buildMessageNode(m, botLabel, row) {
   Array.prototype.slice.call(body.children).forEach(function (ch) { if (ch !== thinkNode) body.removeChild(ch); });
   rest.forEach(function (p) { body.appendChild(partNode(p)); });
   if (m.pending && !(m.parts || []).length) body.appendChild(el('div', 'Thinking…'));
-  if (m.error) { var e = el('div', m.error); e.className = 'err'; body.appendChild(e); }
+  if (m.error) {
+    var e = el('div', m.error); e.className = 'err'; body.appendChild(e);
+    if (m.errorDetail) {
+      var ed = el('details'); ed.className = 'err-why';
+      ed.appendChild(el('summary', 'why?'));
+      ed.appendChild(el('div', m.errorDetail));
+      body.appendChild(ed);
+    }
+  }
   return row;
+}
+/* A raw fetch()/stream failure (connection dropped, server killed mid-reply, DNS hiccup, CORS, ...) only
+   ever shows up to the browser as one generic, useless string -- "Load failed" in Safari, "Failed to
+   fetch" in Chrome, "NetworkError when attempting to fetch resource." in Firefox -- with nothing about
+   *why*. This can't recover the real cause (the browser never tells JS that), but it can report every
+   bit of context the browser does expose, so there's something to go on besides the generic string:
+   whether anything had already streamed back before it died, how long the request had been running,
+   whether the browser itself thinks it's offline, and any `cause` chain some browsers attach. */
+function describeFetchFailure(e, startedAt, gotPartial) {
+  var secs = Math.max(0, Math.round((Date.now() - startedAt) / 1000));
+  var bits = [
+    (e && e.name) || 'Error',
+    gotPartial ? 'after a partial reply had already started arriving' : 'before any reply arrived',
+    secs + 's after sending',
+    navigator.onLine === false ? 'the browser currently reports being offline' : 'the browser reports being online',
+  ];
+  if (e && e.cause) bits.push('cause: ' + (e.cause.message || String(e.cause)));
+  console.error('piper: a chat request failed', { message: e && e.message, name: e && e.name, cause: e && e.cause, elapsedMs: Date.now() - startedAt, gotPartial: gotPartial, online: navigator.onLine });
+  return bits.join(' · ');
 }
 var MSG_RENDERED_CONV = null; // which conversation's rows are currently sitting in #msgs, for renderMessages() below
 function renderMessages() {
@@ -1128,6 +1158,7 @@ function send() {
   // itself keeps running on the server regardless of this browser's connection (lib/portal.mjs).
   saveConvos();
   var done = false;
+  var sentAt = Date.now();
   api('api/chat', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -1151,6 +1182,7 @@ function send() {
     });
   }).catch(function (e) {
     msg.error = e.message;
+    msg.errorDetail = describeFetchFailure(e, sentAt, Boolean((msg.parts || []).length));
   }).then(function () {
     msg.pending = false;
     if (!done && !msg.error) msg.error = 'The connection ended before the agent finished.';
@@ -1179,8 +1211,9 @@ function resumeIfLive(c) {
   // isn't a clean error) -- this chat must not look stuck on its last-known state forever. Any real
   // progress below pushes the deadline back out; nothing at all for 30s gives up loudly instead.
   var watchdog = 0;
+  var resumeStartedAt = Date.now();
   var bump = function () { clearTimeout(watchdog); watchdog = setTimeout(function () { fail("This chat didn't respond in time -- reload to try again."); }, 30000); };
-  var fail = function (text) {
+  var fail = function (text, detail) {
     if (settled) return;
     settled = true;
     clearTimeout(watchdog);
@@ -1189,6 +1222,7 @@ function resumeIfLive(c) {
     if (last && last.role === 'assistant' && last.pending) {
       last.pending = false;
       last.error = last.error || text;
+      if (detail) last.errorDetail = detail;
       c.updated = Date.now();
       saveConvos();
     }
@@ -1240,7 +1274,7 @@ function resumeIfLive(c) {
         else if (event === 'error') { msg.error = d.message; }
       } catch (e) {
         console.error('piper: handling a resumed chat\'s "' + event + '" event failed', e);
-        fail('Something went wrong catching up on this chat -- reload to try again.');
+        fail('Something went wrong catching up on this chat -- reload to try again.', describeFetchFailure(e, resumeStartedAt, Boolean((msg.parts || []).length)));
       }
     }).then(function () {
       if (settled) return;
@@ -1258,7 +1292,7 @@ function resumeIfLive(c) {
     // this, a message left "pending" from before the failure stays stuck on its spinner forever:
     // nothing else ever marks it done or tells the person it needs retrying.
     console.error('piper: resuming a chat failed', e);
-    fail('Lost connection catching up on this chat -- reload to try again.');
+    fail('Lost connection catching up on this chat -- reload to try again.', describeFetchFailure(e, resumeStartedAt, Boolean(msg && (msg.parts || []).length)));
   });
 }
 

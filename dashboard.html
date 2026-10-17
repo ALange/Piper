@@ -123,6 +123,8 @@
   .pgtool pre { margin:6px 0 0; max-height:180px; overflow:auto; white-space:pre-wrap; color:var(--fg); }
   .pgtool.error { border-color:#5a2a2a; } .pgtool.running summary { color:var(--amber); }
   .pgwait { color:var(--dim); } .pgerr { color:var(--red); margin-top:6px; } .pgstopped { color:var(--dim); font-style:italic; }
+  .pgerrdetail { margin-top:3px; } .pgerrdetail summary { color:var(--dim); font-size:11px; cursor:pointer; }
+  .pgerrdetail div { color:var(--dim); font-size:11px; margin-top:3px; white-space:pre-wrap; }
   .pgcaret { display:inline-block; width:7px; height:14px; background:var(--fg); vertical-align:text-bottom; animation:pgblink 1s steps(2) infinite; }
   @keyframes pgblink { 50% { opacity:0; } }
   .pgfoot2 { display:flex; gap:10px; align-items:center; color:var(--dim); font-size:11px; margin-top:4px; }
@@ -5266,7 +5268,15 @@ function pgTail(body, msg, last) {
   Array.prototype.slice.call(body.querySelectorAll('.pgwait,.pgcaret,.pgerr,.pgstopped,.pgfoot2')).forEach(function (n) { body.removeChild(n); });
   if (msg.pending && !(msg.parts || []).length) { var th = el('div', 'Thinking…'); th.className = 'pgwait'; body.appendChild(th); }
   if (msg.pending && (msg.parts || []).length) { var cur = el('span'); cur.className = 'pgcaret'; body.appendChild(cur); }
-  if (msg.error) { var er = el('div', msg.error); er.className = 'pgerr'; body.appendChild(er); }
+  if (msg.error) {
+    var er = el('div', msg.error); er.className = 'pgerr'; body.appendChild(er);
+    if (msg.errorDetail) {
+      var ed = el('details'); ed.className = 'pgerrdetail';
+      ed.appendChild(el('summary', 'why?'));
+      ed.appendChild(el('div', msg.errorDetail));
+      body.appendChild(ed);
+    }
+  }
   if (msg.stopped) { var st = el('div', 'Stopped.'); st.className = 'pgstopped'; body.appendChild(st); }
   if (!msg.pending) {
     var foot = el('div'); foot.className = 'pgfoot2';
@@ -5330,6 +5340,25 @@ function pgApply(msg, item) {
   else if (kind === 'text' || kind === 'thinking') p.text = item.text;
 }
 function pgSetBusy(b) { PG.busy = b; $('pginput').disabled = false; $('pgsend').textContent = b ? 'Stop' : 'Send'; $('pgsend').className = b ? 'stop' : ''; $('pgtarget').disabled = b || Boolean(pgConv() && pgConv().messages.length); }
+/* A raw fetch()/stream failure (connection dropped, server killed mid-reply, DNS hiccup, CORS, ...) only
+   ever shows up to the browser as one generic, useless string -- "Load failed" in Safari, "Failed to
+   fetch" in Chrome, "NetworkError when attempting to fetch resource." in Firefox -- with nothing about
+   *why*. This can't recover the real cause (the browser never tells JS that), but it can report every
+   bit of context the browser does expose, so there's something to go on besides the generic string:
+   whether anything had already streamed back before it died, how long the request had been running,
+   whether the browser itself thinks it's offline, and any `cause` chain some browsers attach. */
+function pgDescribeFetchFailure(e, startedAt, gotPartial) {
+  var secs = Math.max(0, Math.round((Date.now() - startedAt) / 1000));
+  var bits = [
+    (e && e.name) || 'Error',
+    gotPartial ? 'after a partial reply had already started arriving' : 'before any reply arrived',
+    secs + 's after sending',
+    navigator.onLine === false ? 'the browser currently reports being offline' : 'the browser reports being online',
+  ];
+  if (e && e.cause) bits.push('cause: ' + (e.cause.message || String(e.cause)));
+  console.error('piper: a playground request failed', { message: e && e.message, name: e && e.name, cause: e && e.cause, elapsedMs: Date.now() - startedAt, gotPartial: gotPartial, online: navigator.onLine });
+  return bits.join(' · ');
+}
 function pgSend(text) {
   var c = pgConv();
   if (!c || PG.busy) return;
@@ -5358,6 +5387,7 @@ function pgSend(text) {
   pgSetBusy(true); pgRenderSide(); pgRenderBar(); pgRenderMessages(true);
   PG.ctrl = new AbortController();
   var done = false;
+  var sentAt = Date.now();
   fetch('dashboard/playground/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, signal: PG.ctrl.signal, body: JSON.stringify({ keyId: c.keyId, agentId: c.externalModelId ? undefined : (c.agentId || undefined), externalModelId: c.externalModelId || undefined, history: history, conversation: c.id, message: text, model: c.model || undefined }) })
     .then(function (r) {
       var type = r.headers.get('content-type') || '';
@@ -5382,7 +5412,11 @@ function pgSend(text) {
       }
       return pump();
     })
-    .catch(function (e) { if (e && e.name === 'AbortError') msg.stopped = true; else msg.error = e.message; })
+    .catch(function (e) {
+      if (e && e.name === 'AbortError') { msg.stopped = true; return; }
+      msg.error = e.message;
+      msg.errorDetail = pgDescribeFetchFailure(e, sentAt, Boolean((msg.parts || []).length));
+    })
     .then(function () {
       msg.pending = false;
       if (!done && !msg.stopped && !msg.error) msg.error = 'The connection ended before the agent finished.';

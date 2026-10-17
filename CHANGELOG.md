@@ -2,6 +2,20 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.11] - 2026-10-17
+
+### Added
+- **Chat errors in Portal and the Dashboard Playground now say why, not just that.** A dropped
+  connection, a server restart mid-reply, or a cold-start hiccup only ever reaches the browser as one
+  generic, useless string -- "Load failed" in Safari, "Failed to fetch" in Chrome, "NetworkError when
+  attempting to fetch resource." in Firefox -- with no indication of what actually went wrong. The
+  browser never hands JS the real cause, but it does expose enough around the edges to narrow it down:
+  whether any reply had already started streaming in before it died, how long the request had been
+  running, whether the browser itself currently thinks it's offline, and any `cause` chain some browsers
+  attach. Every chat error now carries this as an expandable "why?" detail line under the message, and
+  the full raw error object is also logged to the browser console (`piper: a chat request failed` /
+  `piper: a playground request failed`) for anyone digging deeper in devtools.
+
 ## [1.0.10] - 2026-10-13
 
 ### Fixed
