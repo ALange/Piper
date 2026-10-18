@@ -5444,10 +5444,10 @@ function pgSend(text) {
    at. Mirrors the client portal's own resumeIfLive (portal.html) closely -- same reconnect protocol,
    same SSE vocabulary, against the Playground's own GET .../events (lib/playground.mjs). */
 function pgResumeIfLive(c) {
-  // A model has no server-side session (lib/playground.mjs's playgroundExternalChat is stateless) --
-  // if the browser closed mid-turn, that turn is simply lost, same as closing a tab mid-request to any
-  // other stateless API.
-  if (!c || PG_WATCHING[c.id] || c.externalModelId) return;
+  // An external model's turn has no Pi session/container, but lib/playground.mjs's
+  // playgroundExternalChat still keeps a short-lived in-memory record of it (lib/externallive.mjs)
+  // precisely so this can reconnect to it too, the same as an agent chat.
+  if (!c || PG_WATCHING[c.id]) return;
   var last = c.messages[c.messages.length - 1];
   if (!last || last.role !== 'assistant' || !last.pending) return; // nothing left running to catch up on
   PG_WATCHING[c.id] = true;

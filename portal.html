@@ -1392,10 +1392,10 @@ function send() {
    for a conversation other than the one on screen: it only re-renders if it is still the one showing
    by the time something changes, so one busy conversation never blocks using another. */
 function resumeIfLive(c) {
-  // A model has no server-side session to catch up on (lib/portal.mjs's portalExternalChat is
-  // stateless) -- if the browser closed mid-turn, that turn is simply lost, same as closing a tab
-  // mid-request to any other stateless API.
-  if (!c || WATCHING[c.id] || c.externalModelId) return;
+  // An external model's turn has no Pi session/container, but lib/portal.mjs's portalExternalChat
+  // still keeps a short-lived in-memory record of it (lib/externallive.mjs) precisely so this can
+  // reconnect to it too, the same as an agent chat.
+  if (!c || WATCHING[c.id]) return;
   WATCHING[c.id] = true;
   var refresh = function () { try { if (c.id === CUR) renderAll(); else renderSide(); } catch (e) { console.error('piper: rendering the resumed chat failed', e); } };
   var q = agentQuery(c);

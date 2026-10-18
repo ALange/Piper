@@ -2,6 +2,29 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.21] - 2026-10-18
+
+### Fixed
+- **Chatting with an external model (not an agent) in the client portal or the Dashboard Playground
+  still couldn't survive a refresh mid-reply**, even after 1.0.20 fixed this for agent chats: an
+  external-model turn is just a plain streaming HTTP call with no Pi session behind it, so there was
+  nothing at all for a reconnecting tab to catch up on -- a reload left the message stuck on "Thinking…"
+  forever, even though the model had already answered and the reply was sitting unseen in the server's
+  response.
+  - New `lib/externallive.mjs`: a small in-memory record of an external-model turn in flight (built on
+    the same `LiveLog` agent sessions already use), keyed per key+conversation so one key's tabs can
+    never reconnect into another key's turn. A finished turn's record lingers for two minutes so a
+    reload landing just after "done" still sees the real answer.
+  - `portalExternalChat()`/`playgroundExternalChat()` now feed every delta into that record and no
+    longer abort on disconnect (the Playground's version used to, whenever the client didn't send a
+    `requestId` -- which it never did, so every disconnect there was actually killing the turn).
+  - The existing reconnect/interrupt routes (`GET .../events`, `POST .../interrupt`) fall back to this
+    new registry whenever there's no agent session to find, so the client's own "is this chat still
+    live?" logic needed only one change: stop skipping external-model conversations.
+  - Verified with a real headless-browser run against a real server for both the portal and the
+    Playground: a message sent to a fake external endpoint, a genuine page reload mid-stream, and the
+    full answer arriving live afterward once the endpoint finishes.
+
 ## [1.0.20] - 2026-10-18
 
 ### Added
