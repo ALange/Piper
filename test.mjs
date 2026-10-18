@@ -9480,7 +9480,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 // Phase C (0.7): the Playground's backend.
 {
 	const G = await import("./server.mjs");
-	const { playgroundRoutes, playgroundTargets, setAgentTurnRunner, LiveLog, AgentRunError, apiKeys, agents, config, scopedSessionId, credentialFor, sessions, recentAudit } = G;
+	const { playgroundRoutes, playgroundTargets, setAgentTurnRunner, LiveLog, AgentRunError, apiKeys, agents, config, scopedSessionId, credentialFor, sessions, recentAudit, setSessionSpawn, setRunner, resetEngineCheck } = G;
 	const http = await import("node:http");
 	const mk = (name) => { const c = apiKeys.create({ name, expiresAt: 0 }); return c.record ?? c; };
 	const key = mk("pg key");
@@ -9577,17 +9577,24 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	setAgentTurnRunner(async () => { throw new Error("boom"); });
 	ev = await events(await post({ ...good, conversation: "conv-errors-0002" }));
 	assert.match(ev.at(-1)[1].message, /could not answer: boom/);
-	// Stop: the client goes away, the turn is aborted.
+	// The client going away no longer aborts the turn (same as the client portal): only an explicit
+	// POST .../interrupt does, tested below against a real session. Confirm the signal this mocked
+	// runner would see on an abort never fires from a disconnect alone.
 	let aborted = null;
-	setAgentTurnRunner(async ({ signal }) => { await new Promise((resolve) => signal.addEventListener("abort", () => { aborted = true; resolve(); })); return { text: "", usage: {}, cost: 0 }; });
+	let settle = null;
+	setAgentTurnRunner(async ({ signal }) => {
+		signal.addEventListener("abort", () => (aborted = true));
+		await new Promise((resolve) => (settle = resolve));
+		return { text: "", usage: {}, cost: 0 };
+	});
 	const controller = new AbortController();
 	const pending = post({ ...good, conversation: "conv-abort-00001" }, controller.signal);
 	const res3 = await pending;
 	controller.abort();
 	await res3.body?.cancel().catch(() => {});
-	const end = Date.now() + 2000;
-	while (!aborted && Date.now() < end) await new Promise((r2) => setTimeout(r2, 20));
-	assert.equal(aborted, true, "stopping aborts the agent's turn");
+	await new Promise((r2) => setTimeout(r2, 200));
+	assert.equal(aborted, null, "disconnecting the client does not abort the agent's turn");
+	settle();
 	setAgentTurnRunner(null);
 
 	// Ending a conversation closes its session.
@@ -9666,6 +9673,125 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		setFetch(null);
 		setKeyModels(key.id, []);
 		deleteEndpoint(ep.id);
+	}
+
+	// A turn surviving disconnect, catching up on it via GET .../events, and the explicit POST
+	// .../interrupt that replaces "the connection closing aborts the turn" -- the same real-session
+	// mechanics as the client portal's own equivalent test (lib/portal.mjs), now that playgroundChat
+	// no longer aborts on res.on("close") either.
+	{
+		resetEngineCheck();
+		const priorNetwork = config.CONTAINER_NETWORK;
+		config.CONTAINER_NETWORK = "none";
+		setRunner(async (bin, args) => {
+			if (bin === "docker" && args[0] === "version") return { code: 0, stdout: "27.0.0", stderr: "" };
+			if (bin === "docker" && args[0] === "inspect") return { code: 1, stdout: "", stderr: "No such object" };
+			if (bin === "docker" && args[0] === "image") return { code: 0, stdout: "sha256:fakeimage|0.99.1", stderr: "" };
+			return { code: 0, stdout: "", stderr: "" };
+		});
+		const { EventEmitter } = await import("node:events");
+		const { PassThrough } = await import("node:stream");
+
+		let settleNow = null;
+		let promptSeenResolve = null;
+		let promptSeen = new Promise((r2) => (promptSeenResolve = r2));
+		const fakeChild = () => {
+			const child = new EventEmitter();
+			child.stdout = new PassThrough();
+			child.stderr = new PassThrough();
+			child.exitCode = null;
+			child.signalCode = null;
+			child.kill = (signal = "SIGTERM") => {
+				if (child.exitCode !== null || child.signalCode !== null) return true;
+				child.signalCode = signal;
+				setImmediate(() => child.emit("exit", null, signal));
+				return true;
+			};
+			child.stdin = new PassThrough();
+			child.stdin.on("end", () => child.exitCode === null && child.signalCode === null && setImmediate(() => child.emit("exit", 0, null)));
+			let buffer = "";
+			child.stdin.on("data", (chunk) => {
+				buffer += chunk;
+				let i;
+				while ((i = buffer.indexOf("\n")) >= 0) {
+					const command = JSON.parse(buffer.slice(0, i));
+					buffer = buffer.slice(i + 1);
+					const reply = (record) => child.stdout.write(`${JSON.stringify(record)}\n`);
+					const ok = (data) => reply({ type: "response", id: command.id, command: command.type, success: true, data });
+					if (command.type === "get_state") ok({ model: { provider: "p", id: "m", input: ["text"] }, isStreaming: false });
+					else if (command.type === "prompt") {
+						const said = String(command.message ?? "");
+						ok();
+						reply({ type: "agent_start" });
+						reply({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: `echo: ${said}` } });
+						settleNow = () => {
+							settleNow = null;
+							reply({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: `echo: ${said}` }] } });
+							reply({ type: "agent_settled" });
+						};
+						promptSeenResolve();
+					} else if (command.type === "abort") {
+						ok();
+						if (settleNow) settleNow();
+					} else ok();
+				}
+			});
+			return child;
+		};
+		setSessionSpawn(() => fakeChild());
+
+		const scoped = scopedSessionId(credentialFor(key.id, agent.id), "playground:pg-disco-convo");
+		const ctrl = new AbortController();
+		const pending = post({ ...good, conversation: "pg-disco-convo" }, ctrl.signal);
+		await promptSeen;
+		const rec = sessions.recordById(scoped);
+		assert.ok(rec, "the session exists once the turn has started");
+		assert.ok(rec.inflight > 0, "the turn is in flight");
+		ctrl.abort();
+		await pending.catch(() => {});
+		await new Promise((r2) => setTimeout(r2, 30));
+		assert.ok(sessions.recordById(scoped), "the session is still there after the client disconnected");
+		assert.ok(rec.inflight > 0, "and the turn itself was not aborted by the disconnect");
+
+		const stream = await fetch(`${base}/conversation/pg-disco-convo/events?keyId=${key.id}&agentId=${agent.id}`);
+		assert.equal(stream.headers.get("content-type"), "text/event-stream; charset=utf-8");
+		const reader = stream.body.getReader();
+		let got = "";
+		const readUntil = async (re) => {
+			const deadline = Date.now() + 3000;
+			while (!re.test(got) && Date.now() < deadline) got += new TextDecoder().decode((await reader.read()).value ?? new Uint8Array());
+		};
+		await readUntil(/event: snapshot/);
+		assert.match(got, /event: snapshot\ndata: .*"working":true/, "still working, per the snapshot");
+		assert.match(got, /echo: hello playground/, "the partial reply streamed so far is in the snapshot");
+		settleNow();
+		await readUntil(/event: done/);
+		assert.match(got, /event: done/);
+		await reader.cancel().catch(() => {});
+
+		// A finished conversation (nothing live any more) answers plainly.
+		await new Promise((r2) => setTimeout(r2, 30));
+		const afterDone = await (await fetch(`${base}/conversation/pg-disco-convo-never-started/events?keyId=${key.id}&agentId=${agent.id}`)).json();
+		assert.deepEqual(afterDone, { live: false });
+
+		// Interrupt: a real turn in flight is actually stopped, not just detached from.
+		promptSeen = new Promise((r2) => (promptSeenResolve = r2));
+		const pending2 = post({ ...good, conversation: "pg-disco-convo-2" });
+		await promptSeen;
+		const stopped = await (await fetch(`${base}/conversation/pg-disco-convo-2/interrupt?keyId=${key.id}&agentId=${agent.id}`, { method: "POST" })).json();
+		assert.deepEqual(stopped, { interrupted: true, wasRunning: true });
+		await pending2;
+		assert.ok(recentAudit(50).map((r2) => r2.action).includes("session.interrupt"), "the interrupt is audited");
+		const nothingToStop = await (await fetch(`${base}/conversation/pg-disco-convo-2/interrupt?keyId=${key.id}&agentId=${agent.id}`, { method: "POST" })).json();
+		assert.deepEqual(nothingToStop, { interrupted: false, wasRunning: false }, "nothing left running the second time");
+
+		const openRecords = sessions.allRecords();
+		sessions.closeAll();
+		await Promise.all(openRecords.map((r2) => r2.stopped ?? Promise.resolve()));
+		setSessionSpawn(null);
+		setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+		config.CONTAINER_NETWORK = priorNetwork;
+		resetEngineCheck();
 	}
 
 	G.clearPasswordHash();

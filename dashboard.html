@@ -5113,6 +5113,9 @@ function mdRender(text, into) { into.replaceChildren(); mdBlockNodes(mdParse(tex
 
 /* ---- Playground: a chat with an agent. Conversations are kept in this browser only. ---- */
 var PG = { targets: null, convs: [], cur: null, busy: false, ctrl: null, pref: '', started: false, raf: 0, openThink: {} };
+// A conversation id stays in here while this tab has a live reconnect reader attached to it (pgResumeIfLive),
+// so a conversation already left pending from before a reload is never caught up on twice.
+var PG_WATCHING = {};
 var PG_KEY = 'piper-playground-v1';
 var PG_SUGGEST = ['What can you do? Answer briefly.', 'List the files in /workspace.', 'Summarize your instructions in three bullets.', 'Run a quick check of your tools and tell me what works.'];
 function pgId() { var a = new Uint8Array(12); (window.crypto || window.msCrypto).getRandomValues(a); return Array.prototype.map.call(a, function (b) { return ('0' + b.toString(16)).slice(-2); }).join(''); }
@@ -5164,6 +5167,10 @@ function pgStart() {
       PG.targets = d.targets;
       if (!PG.convs.length || !pgConv()) { var open = PG.convs.filter(function (c) { return !c.messages.length; })[0]; if (open) PG.cur = open.id; else if (PG.convs.length) PG.cur = PG.convs[0].id; else pgNew(); }
       pgRender();
+      // Every conversation, not just the one on screen: any of them might still be running from before
+      // this page load (a reload mid-reply, a tab that was just closed and reopened), and each catches
+      // up -- or stays quiet, if it already finished -- independently.
+      PG.convs.forEach(function (c) { pgResumeIfLive(c); });
     }).catch(function (e) { PG.targets = null; $('pgmsgs').replaceChildren(pgNotice('The Playground cannot start: ' + e.message)); $('pglist').replaceChildren(); });
 }
 function pgNotice(text) { var d = el('div', text); d.className = 'pgempty bad'; return d; }
@@ -5385,6 +5392,11 @@ function pgSend(text) {
   c.updated = Date.now();
   $('pginput').value = ''; pgResize();
   pgSetBusy(true); pgRenderSide(); pgRenderBar(); pgRenderMessages(true);
+  // Durable the moment the turn starts, not just when it ends: if the tab closes or reloads mid-turn,
+  // the turn itself keeps running server-side regardless (lib/playground.mjs), but without this a
+  // reload would find nothing pending to even try reconnecting to -- pgSave() otherwise only ran once
+  // the whole fetch resolved, so the message that was about to be sent never made it to localStorage.
+  pgSave();
   PG.ctrl = new AbortController();
   var done = false;
   var sentAt = Date.now();
@@ -5424,7 +5436,118 @@ function pgSend(text) {
       $('pginput').focus();
     });
 }
-function pgStop() { if (PG.ctrl) PG.ctrl.abort(); }
+/* Catches up on a conversation that might still be running a turn from before a reload, a tab reopen,
+   or just switching away and back -- cheap and quiet when there is nothing to catch up on (its last
+   message isn't a pending assistant reply). Safe to call for a conversation other than the one on
+   screen: it only touches the busy/composer UI if it's still the current one by the time something
+   changes, so one background chat catching up never disturbs whatever the person is actually looking
+   at. Mirrors the client portal's own resumeIfLive (portal.html) closely -- same reconnect protocol,
+   same SSE vocabulary, against the Playground's own GET .../events (lib/playground.mjs). */
+function pgResumeIfLive(c) {
+  // A model has no server-side session (lib/playground.mjs's playgroundExternalChat is stateless) --
+  // if the browser closed mid-turn, that turn is simply lost, same as closing a tab mid-request to any
+  // other stateless API.
+  if (!c || PG_WATCHING[c.id] || c.externalModelId) return;
+  var last = c.messages[c.messages.length - 1];
+  if (!last || last.role !== 'assistant' || !last.pending) return; // nothing left running to catch up on
+  PG_WATCHING[c.id] = true;
+  var isCur = function () { return pgConv() === c; };
+  var msg = last;
+  var settled = false;
+  var watchdog = 0;
+  var resumeStartedAt = Date.now();
+  var bump = function () { clearTimeout(watchdog); watchdog = setTimeout(function () { fail("This chat didn't respond in time -- reload to try again."); }, 30000); };
+  var fail = function (text, detail) {
+    if (settled) return;
+    settled = true;
+    clearTimeout(watchdog);
+    delete PG_WATCHING[c.id];
+    if (msg.pending) {
+      msg.pending = false;
+      msg.error = msg.error || text;
+      if (detail) msg.errorDetail = detail;
+      c.updated = Date.now();
+      pgSave();
+    }
+    if (isCur()) pgSetBusy(false);
+    if (isCur()) { pgRenderBar(); pgRenderMessages(false); }
+    pgRenderSide();
+  };
+  if (isCur()) pgSetBusy(true);
+  bump();
+  var qs = 'keyId=' + encodeURIComponent(c.keyId) + (c.agentId ? '&agentId=' + encodeURIComponent(c.agentId) : '');
+  fetch('dashboard/playground/conversation/' + encodeURIComponent(c.id) + '/events?' + qs).then(function (r) {
+    bump();
+    var type = r.headers.get('content-type') || '';
+    if (type.indexOf('event-stream') < 0) {
+      // {live:false}: the server has no session record for this chat any more (it finished and was
+      // cleaned up, or was reaped, before this reconnect).
+      clearTimeout(watchdog);
+      settled = true;
+      delete PG_WATCHING[c.id];
+      if (msg.pending) {
+        msg.pending = false;
+        msg.error = msg.error || "This chat's connection was lost and couldn't be resumed -- it may have finished already.";
+        c.updated = Date.now();
+        pgSave();
+      }
+      if (isCur()) { pgSetBusy(false); pgRenderBar(); pgRenderMessages(false); }
+      pgRenderSide();
+      return r.json().catch(function () { return {}; });
+    }
+    var reader = r.body.getReader(), dec = new TextDecoder(), buf = '';
+    function handle(block) {
+      var ev = /^event: (.*)$/m.exec(block), data = /^data: (.*)$/m.exec(block);
+      if (!ev || !data) return;
+      var d; try { d = JSON.parse(data[1]); } catch (x) { return; }
+      bump();
+      try {
+        if (ev[1] === 'snapshot') {
+          var lastUserId = 0;
+          (d.items || []).forEach(function (it) { if (it.kind === 'user' && it.id > lastUserId) lastUserId = it.id; });
+          (d.items || []).forEach(function (it) { if (it.kind !== 'user' && it.id > lastUserId) pgApply(msg, it); });
+          msg.pending = Boolean(d.state && d.state.working);
+          if (isCur()) { pgRenderBar(); pgRenderMessages(false); }
+        } else if (ev[1] === 'item') { pgApply(msg, d.item); if (isCur()) pgFrame(); }
+        else if (ev[1] === 'done') { if (d.usage) msg.usage = d.usage; if (d.cost) msg.cost = d.cost; }
+        else if (ev[1] === 'error') { msg.error = d.message; }
+      } catch (e) {
+        console.error('piper: handling a resumed Playground chat\'s "' + ev[1] + '" event failed', e);
+        fail('Something went wrong catching up on this chat -- reload to try again.', pgDescribeFetchFailure(e, resumeStartedAt, Boolean((msg.parts || []).length)));
+      }
+    }
+    function pump() {
+      return reader.read().then(function (x) {
+        if (x.done) return;
+        buf += dec.decode(x.value, { stream: true });
+        var i;
+        while ((i = buf.indexOf('\n\n')) >= 0) { handle(buf.slice(0, i)); buf = buf.slice(i + 2); }
+        return pump();
+      });
+    }
+    return pump();
+  }).then(function () {
+    if (settled) return;
+    settled = true;
+    clearTimeout(watchdog);
+    delete PG_WATCHING[c.id];
+    msg.pending = false;
+    c.updated = Date.now();
+    pgSave();
+    if (isCur()) { pgSetBusy(false); pgRenderBar(); pgRenderMessages(false); }
+    pgRenderSide();
+  }).catch(function (e) {
+    console.error('piper: resuming a Playground chat failed', e);
+    fail('Lost connection catching up on this chat -- reload to try again.', pgDescribeFetchFailure(e, resumeStartedAt, Boolean((msg.parts || []).length)));
+  });
+}
+function pgStop() {
+  var c = pgConv();
+  if (PG.ctrl) PG.ctrl.abort();
+  // Aborting the local fetch above only stops this tab watching -- the turn itself now keeps running
+  // server-side regardless (same as the client portal), so the stop button must also say so explicitly.
+  if (c) fetch('dashboard/playground/conversation/' + encodeURIComponent(c.id) + '/interrupt?keyId=' + encodeURIComponent(c.keyId) + (c.agentId ? '&agentId=' + encodeURIComponent(c.agentId) : ''), { method: 'POST' }).catch(function () {});
+}
 function pgDelete(c) {
   if (c.messages.length && !confirm('Delete "' + c.title + '"?')) return;
   // Deleting is the escape hatch for a chat that's stuck (its session wedged server-side, say,

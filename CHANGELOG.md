@@ -2,6 +2,28 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.20] - 2026-10-18
+
+### Added
+- **A chat in the Dashboard Playground now survives a refresh mid-turn, the same way the client portal
+  already does.** Previously the Playground had no reconnect mechanism at all: a reload while the agent
+  was still thinking or replying left the cached "pending" message stuck forever, and -- worse -- the
+  browser going away actually aborted the turn server-side (`res.on("close")` called the turn's own
+  abort controller), so the reply was lost for good, not just hidden. Three changes, mirroring the
+  portal's own design (lib/portal.mjs) closely:
+  - `playgroundChat()` no longer aborts the turn on disconnect -- only this request's own plumbing comes
+    down; the turn keeps running.
+  - A new `GET /dashboard/playground/conversation/<id>/events` catches a reconnecting tab up on a turn
+    still running: the full log so far, then live updates until it settles. Folds the same cold-start
+    race fix (`record.inflight`) the portal's own reconnect route already has.
+  - A new `POST /dashboard/playground/conversation/<id>/interrupt` is the Playground's real "stop"
+    button now that disconnecting no longer doubles as one.
+  - `pgSend()` now saves to this browser's local history the moment a turn starts, not only once it
+    finishes -- without that, a reload before the first save had nothing to even try reconnecting to.
+  Verified with a real headless-browser run against a real server (not just reasoned about): a message
+  sent, a genuine page reload mid-reply, and the answer arriving live afterward, confirmed via the
+  server's own access log showing the reconnect request land.
+
 ## [1.0.19] - 2026-10-18
 
 ### Added
