@@ -133,6 +133,21 @@
   .statuspill span:not(:first-child)::before { content:'·'; color:var(--dim); }
   .statuspill-mobile { display:none; }
 
+  /* the chat column + an optional preview pane beside it, side by side -- .chat-split is the row,
+     .bg (full-bleed, position:absolute inset:0 on main) still covers both since it's a sibling, not
+     a child, of either. */
+  .chat-split { position:relative; z-index:10; flex:1; display:flex; min-width:0; overflow:hidden; }
+  .chat-col { flex:1; display:flex; flex-direction:column; min-width:0; }
+  .previewpane { flex:1 1 50%; display:flex; flex-direction:column; min-width:0; border-left:1px solid var(--border); background:rgba(10,14,12,.5); }
+  .previewpane[hidden] { display:none; }
+  .previewbar { display:flex; align-items:center; gap:8px; padding:10px 14px; border-bottom:1px solid var(--border); flex:none; }
+  .previewbar select { flex:1; min-width:0; background:rgba(255,255,255,.08); color:var(--fg); border:none;
+    border-radius:8px; padding:6px 10px; font-size:12.5px; }
+  .previewbar button { flex:none; }
+  .previewframe { flex:1; width:100%; border:0; background:#fff; }
+  .previewempty { flex:1; display:flex; align-items:center; justify-content:center; color:var(--dim);
+    font-size:13px; padding:20px; text-align:center; }
+
   #msgs { position:relative; z-index:10; flex:1; overflow-y:auto; overflow-x:hidden; padding:10px 24px 8px; }
   #msgs::-webkit-scrollbar { width:8px; }
   #msgs::-webkit-scrollbar-thumb { background:rgba(255,255,255,.14); border-radius:8px; }
@@ -289,6 +304,10 @@
     .statuspill-mobile { display:flex; margin:0 auto 6px; max-width:calc(100% - 24px); overflow-x:auto; font-size:10.5px; padding:6px 12px; justify-content:center; }
     .composer-zone { padding:8px 12px 16px; }
     .msg.user .bubble { max-width:88%; }
+    /* No room to put the preview beside the chat on a phone -- stack it below instead, each getting
+       half the height, same as .chat-split does side by side above this breakpoint. */
+    .chat-split { flex-direction:column; }
+    .previewpane { border-left:none; border-top:1px solid var(--border); }
   }
 </style>
 </head>
@@ -383,25 +402,37 @@
       <div id="statusstats" class="statuspill"></div>
       <label class="toolToggle"><input type="checkbox" id="toolToggle" style="margin:0"><span>show tool calls</span></label>
     </div>
-    <div id="msgs"></div>
-    <div id="statusstats-mobile" class="statuspill statuspill-mobile"></div>
-    <div class="composer-zone">
-      <div class="composer-wrap">
-        <div id="pending" class="pending" hidden></div>
-        <div class="composer">
-          <div class="composer-inner">
-            <textarea id="input" rows="1" placeholder="Message your agent... (Enter to send, Shift+Enter for a new line, /piper for commands)"></textarea>
-            <div class="comp-bar">
-              <button class="round-btn" id="attachbtn" title="attach images or documents">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5 v14 M5 12 h14"/></svg>
-              </button>
-              <input type="file" id="attachinput" multiple hidden>
-              <span class="spacer"></span>
-              <button id="send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19 V5 M5.5 11.5 L12 5 l6.5 6.5"/></svg></button>
+    <div class="chat-split" id="chatsplit">
+      <div class="chat-col">
+        <div id="msgs"></div>
+        <div id="statusstats-mobile" class="statuspill statuspill-mobile"></div>
+        <div class="composer-zone">
+          <div class="composer-wrap">
+            <div id="pending" class="pending" hidden></div>
+            <div class="composer">
+              <div class="composer-inner">
+                <textarea id="input" rows="1" placeholder="Message your agent... (Enter to send, Shift+Enter for a new line, /piper for commands)"></textarea>
+                <div class="comp-bar">
+                  <button class="round-btn" id="attachbtn" title="attach images or documents">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5 v14 M5 12 h14"/></svg>
+                  </button>
+                  <input type="file" id="attachinput" multiple hidden>
+                  <span class="spacer"></span>
+                  <button id="send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19 V5 M5.5 11.5 L12 5 l6.5 6.5"/></svg></button>
+                </div>
+              </div>
             </div>
+            <p class="composer-hint hint">Piper may produce inaccurate information. Verify before use.</p>
           </div>
         </div>
-        <p class="composer-hint hint">Piper may produce inaccurate information. Verify before use.</p>
+      </div>
+      <div id="previewpane" class="previewpane" hidden>
+        <div class="previewbar">
+          <select id="previewselect"></select>
+          <button id="previewtab" title="open in a new tab">↗</button>
+          <button id="previewclose" title="close preview">×</button>
+        </div>
+        <div id="previewbody"></div>
       </div>
     </div>
   </main>
@@ -547,6 +578,9 @@ function mdBlockNodes(blocks, parent) {
       var bar = document.createElement('div'); bar.className = 'mdcodebar';
       var lab = document.createElement('span'); lab.textContent = b.lang || 'code'; bar.appendChild(lab);
       var cp = document.createElement('button'); cp.textContent = 'copy'; cp.setAttribute('data-copy', b.text); bar.appendChild(cp);
+      if (/^html?$/i.test(b.lang || '') && b.text.trim()) {
+        var pv = document.createElement('button'); pv.textContent = 'preview'; pv.setAttribute('data-preview', b.text); bar.appendChild(pv);
+      }
       var pre = document.createElement('pre'); var code = document.createElement('code');
       // Each .cl is already display:block (its own line) -- a literal "\n" text node after it would
       // be a second, real line break inside this <pre>, on top of the block's own, doubling every gap.
@@ -587,6 +621,99 @@ document.addEventListener('click', function (e) {
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(text).then(function () { var was = btn.textContent; btn.textContent = 'copied'; setTimeout(function () { btn.textContent = was; }, 1200); });
   }
+});
+document.addEventListener('click', function (e) {
+  var btn = e.target.closest && e.target.closest('[data-preview]');
+  if (!btn) return;
+  openPreview(btn.getAttribute('data-preview'));
+});
+
+/* Splits the chat window to show a rendered preview of an HTML code block the model produced,
+   remembering every distinct one seen anywhere in the current conversation so switching between
+   several (a long chat can easily produce many) is a dropdown, not a scrollback hunt. Deliberately not
+   persisted across a reload -- it rebuilds instantly from the conversation's own messages, which already
+   are persisted, so there is nothing of value to additionally save. */
+var PREVIEW = { open: false, selected: null };
+function cheapHash(s) {
+  var h = 0;
+  for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+/* Every distinct (by content) ```html block anywhere in this conversation, oldest first. Re-parses the
+   conversation's own text with mdParse -- the same function that renders it -- instead of duplicating
+   its fence-matching logic, so this can never disagree with what the "preview" button is attached to. */
+function htmlVersionsFor(c) {
+  var seen = {}, out = [];
+  (c && c.messages || []).forEach(function (m) {
+    if (m.role !== 'assistant') return;
+    var text = (m.parts || []).filter(function (p) { return p.kind === 'text' && p.text; }).map(function (p) { return p.text; }).join('\n\n');
+    if (!text) return;
+    mdParse(text).forEach(function (b) {
+      if (b.t !== 'code' || !/^html?$/i.test(b.lang || '') || !b.text || !b.text.trim()) return;
+      var key = cheapHash(b.text);
+      if (seen[key]) return;
+      seen[key] = true;
+      var titleMatch = /<title[^>]*>\s*([^<]*?)\s*<\/title>/i.exec(b.text);
+      var firstLine = b.text.split('\n').map(function (l) { return l.trim(); }).filter(Boolean)[0] || '';
+      var title = (titleMatch && titleMatch[1]) || firstLine.slice(0, 48) || 'HTML preview';
+      out.push({ key: key, html: b.text, title: title });
+    });
+  });
+  return out;
+}
+function openPreview(html) {
+  PREVIEW.open = true;
+  PREVIEW.selected = cheapHash(html);
+  renderPreviewPane();
+}
+function closePreview() { PREVIEW.open = false; renderPreviewPane(); }
+function renderPreviewPane() {
+  var pane = $('previewpane');
+  pane.hidden = !PREVIEW.open;
+  if (!PREVIEW.open) return;
+  var versions = htmlVersionsFor(conv());
+  var select = $('previewselect'), body = $('previewbody');
+  if (!versions.length) {
+    select.replaceChildren();
+    select.disabled = true;
+    if (!body.querySelector('.previewempty')) {
+      var empty = el('div', 'No HTML has been generated in this chat yet.');
+      empty.className = 'previewempty';
+      body.replaceChildren(empty);
+    }
+    return;
+  }
+  var picked = versions.filter(function (v) { return v.key === PREVIEW.selected; })[0] || versions[versions.length - 1];
+  PREVIEW.selected = picked.key;
+  select.disabled = false;
+  select.replaceChildren();
+  versions.forEach(function (v, i) {
+    var opt = el('option', (i + 1) + ': ' + v.title);
+    opt.value = v.key;
+    if (v.key === picked.key) opt.selected = true;
+    select.appendChild(opt);
+  });
+  var frame = body.querySelector('iframe.previewframe');
+  if (!frame || frame.dataset.key !== picked.key) {
+    frame = el('iframe');
+    frame.className = 'previewframe';
+    frame.setAttribute('sandbox', 'allow-scripts'); // no allow-same-origin: it can run its own script, but never read this page's session or API key
+    frame.dataset.key = picked.key;
+    frame.srcdoc = picked.html;
+    body.replaceChildren(frame);
+  }
+}
+$('previewselect').addEventListener('change', function () { PREVIEW.selected = this.value; renderPreviewPane(); });
+$('previewclose').addEventListener('click', closePreview);
+$('previewtab').addEventListener('click', function () {
+  var versions = htmlVersionsFor(conv());
+  var picked = versions.filter(function (v) { return v.key === PREVIEW.selected; })[0];
+  if (!picked) return;
+  // noopener, same as every external link mdInlineNodes renders: the opened tab gets no `window.opener`
+  // back to this page at all, so agent-produced HTML there has no path to this page's session or key.
+  var url = URL.createObjectURL(new Blob([picked.html], { type: 'text/html' }));
+  window.open(url, '_blank', 'noopener');
+  setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
 });
 
 var KEY = sessionStorage.getItem('piper-portal-key') || '';
@@ -1002,6 +1129,9 @@ function frameMessages() {
     if (node && i >= 0 && MSG_RENDERED_CONV === c.id) buildMessageNode(c.messages[i], botLabelFor(c), node);
     else renderMessages();
     if (atBottom) box.scrollTop = box.scrollHeight;
+    // A fenced ```html block can close mid-stream, before the turn itself finishes -- if the preview
+    // pane is open on this conversation, let a freshly-completed one show up in the dropdown right away.
+    if (PREVIEW.open && c.id === CUR) renderPreviewPane();
   });
 }
 
@@ -1045,6 +1175,7 @@ function renderAll() {
   renderSide();
   renderMessages();
   renderStatusBar();
+  if (PREVIEW.open) renderPreviewPane();
   var c = conv();
   $('target').value = c ? (c.externalModelId ? 'm:' + c.externalModelId : (c.agentId || '')) : '';
   $('target').disabled = Boolean(c && c.messages.length) || isBusy(c);

@@ -2,6 +2,20 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.14] - 2026-10-18
+
+### Added
+- **A live HTML preview in the client portal, split beside the chat.** Any ```html code block an agent
+  produces now gets a "preview" button next to its existing "copy" one. Clicking it splits the chat
+  window to show the rendered page beside the conversation, in a sandboxed `iframe`
+  (`sandbox="allow-scripts"`, no `allow-same-origin` -- it can run its own script, but can never read
+  this page's session or API key, the same boundary the workspace file preview already uses). A long
+  chat that produces several different pages gets a dropdown to switch between every distinct one seen
+  anywhere in that conversation, oldest first, titled from the page's own `<title>` when it has one. An
+  "open in a new tab" button is also available, via a `noopener` blob URL so that tab has no way back
+  into this page either. Nothing here is separately saved -- the panel rebuilds itself from the
+  conversation's own (already persisted) messages, so there is nothing new to lose or get out of sync.
+
 ## [1.0.13] - 2026-10-18
 
 ### Fixed
