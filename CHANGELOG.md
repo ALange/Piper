@@ -2,6 +2,19 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.13] - 2026-10-18
+
+### Fixed
+- **"Pi did not answer "prompt" within 30s" could cut off a message on a long session that needed to
+  auto-compact first.** Accepting a prompt (`send({type:"prompt",...})`) was bound by
+  `PI_COMMAND_TIMEOUT_MS` (default 30s), a limit meant for quick, already-started RPCs like `get_state`
+  or `abort` -- never for accepting a new prompt, since Pi auto-compacting a long session happens
+  *before* it acks the prompt, not after, and can legitimately take longer than that. The prompt send
+  now waits however long it takes (same as `init()`'s own first command), with the existing idle
+  watchdog (`PI_IDLE_TIMEOUT_MS`, 20 minutes of total silence) still catching a genuinely wedged Pi --
+  compaction's own progress events count as activity, so a session that's actively compacting, however
+  slowly, is never mistaken for stuck.
+
 ## [1.0.12] - 2026-10-18
 
 ### Changed
