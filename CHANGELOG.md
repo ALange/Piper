@@ -2,6 +2,17 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.18] - 2026-10-18
+
+### Fixed
+- **The actual reason the HTML preview pane was still clipping content after the last fix: `#previewbody`
+  had no `class="previewbody"` on it, only the `id` -- the `.previewbody { ... }` CSS rule from that fix
+  was targeting a class the element never had, so none of it ever applied. The iframe's `position:absolute`
+  then resolved against the next positioned ancestor up the tree instead (`.chat-split`), stretching it
+  to roughly double the pane's own width while `#previewbody` itself stayed at zero height. This time
+  verified with an actual headless-browser render (not just reasoned about from the CSS) before and after
+  the fix, including confirming the iframe now scrolls its own overflow correctly.
+
 ## [1.0.17] - 2026-10-18
 
 ### Fixed

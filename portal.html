@@ -151,16 +151,17 @@
   .previewbar select { flex:1; min-width:0; background:rgba(255,255,255,.08); color:var(--fg); border:none;
     border-radius:8px; padding:6px 10px; font-size:12.5px; }
   .previewbar button { flex:none; }
-  /* #previewbody (unlike previewbar) had no rule of its own -- as a plain block it never stretched to
-     fill the pane, so .previewframe's flex:1 had nothing to flex WITHIN and fell back to the browser's
-     tiny default iframe height, silently clipping most of whatever page was actually loaded with no
-     scrollbar to reveal the rest. min-height:0 on every link in this flex chain (chat-col, previewpane,
-     now previewbody) matters too: a flex column's default min-height is auto, i.e. "at least as tall as
-     my content," which fights the very shrinking that makes the fixed split possible. */
-  .previewbody { flex:1; display:flex; min-height:0; }
-  .previewframe { flex:1; width:100%; height:100%; min-height:0; border:0; background:#fff; }
-  .previewempty { flex:1; display:flex; align-items:center; justify-content:center; color:var(--dim);
-    font-size:13px; padding:20px; text-align:center; }
+  /* #previewbody fills whatever the pane leaves below previewbar (flex:1, min-height:0 against the
+     flex column's own "at least as tall as my content" default). The iframe inside it is positioned
+     absolutely instead of trusted to stretch via flex, on purpose: a replaced element's (iframe/img)
+     cross-axis stretch inside a flex container is one of the more inconsistent corners of the flexbox
+     spec across engines, and that inconsistency is exactly what was still clipping the preview after
+     the first attempt at this fix. inset:0 on a position:relative parent has no such ambiguity -- it
+     is pixel-for-pixel the parent's own content box, full stop. */
+  .previewbody { flex:1; min-height:0; position:relative; }
+  .previewframe { position:absolute; inset:0; width:100%; height:100%; border:0; background:#fff; }
+  .previewempty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    color:var(--dim); font-size:13px; padding:20px; text-align:center; box-sizing:border-box; }
 
   #msgs { position:relative; z-index:10; flex:1; overflow-y:auto; overflow-x:hidden; padding:10px 24px 8px; }
   #msgs::-webkit-scrollbar { width:8px; }
@@ -449,7 +450,7 @@
           <button id="previewtab" title="open in a new tab">↗</button>
           <button id="previewclose" title="close preview">×</button>
         </div>
-        <div id="previewbody"></div>
+        <div id="previewbody" class="previewbody"></div>
       </div>
     </div>
   </main>
