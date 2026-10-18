@@ -2,6 +2,18 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.12] - 2026-10-18
+
+### Changed
+- **The "compaction was interrupted" note now says whether Pi is going to try again.** Pi doesn't say
+  *why* an auto-compaction attempt was aborted or failed, but it does say whether it will retry on its
+  own (`willRetry`) -- that distinction wasn't being shown. Without it, a chat doing a lot of back-to-
+  back tool calls could show the same "context is getting full; compacting automatically…" / "compaction
+  was interrupted; nothing changed" pair repeatedly and look identically broken whether Pi was about to
+  quietly succeed on a later turn or had actually given up, leaving the context to keep growing with
+  nothing left to free it. The note now ends with "; it'll try again" or "; it won't retry on its own"
+  accordingly.
+
 ## [1.0.11] - 2026-10-17
 
 ### Added
