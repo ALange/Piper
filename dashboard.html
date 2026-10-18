@@ -1167,7 +1167,7 @@
       <section data-tab="agents" class="panel" id="epeditor" hidden>
         <h3 id="epedtitle">Edit</h3>
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">name</label><input type="text" id="epedname"></div>
-        <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">model</label><input type="text" id="epedmodel" placeholder="provider/model, blank = the default"><select id="epedthink"></select></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">model</label><input type="text" id="epedmodel" list="modellist" placeholder="pick from the list or type one, blank = the default"><select id="epedthink"></select></div>
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">description</label><input type="text" id="epeddesc" placeholder="what it is for: an orchestrator (or any agent that hands off work) chooses colleagues by this" maxlength="300"></div>
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">hand-offs</label><label class="ctrl" title="Gives this agent two tools: list its colleagues and hand a task to one, then use the answer. Only agents of the same key, bounded in depth; each hand-off is a turn that counts against the key."><input type="checkbox" id="epeddeleg"> may hand work to the other agents of its key</label></div>
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px" for="epedmsgs">colleague messages</label><select id="epedmsgs" title="How this agent shows what its colleagues write while it waits for them. Follow the setting uses Settings → Agent → DELEGATE_MESSAGES."><option value="">follow the setting</option><option value="chat">in the reply, as (name): message</option><option value="thinking">first line only, in the reasoning</option><option value="off">not shown</option></select></div>
@@ -1211,7 +1211,7 @@
             <option value="own">own memory</option>
             <option value="shared">memory shared with the key</option>
           </select>
-          <input id="epmodel" placeholder="model (optional)">
+          <input id="epmodel" list="modellist" placeholder="model (optional), pick from the list or type one">
           <select id="epthink"></select>
         </div>
         <div style="margin:8px 0"><textarea id="epinstr" rows="5" placeholder="Instructions, e.g. You are the architect: design systems and review plans; never write code yourself." style="width:100%;box-sizing:border-box;background:#141414;color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:12px"></textarea></div>
@@ -5913,6 +5913,9 @@ $('epbulksave').addEventListener('click', function () {
 });
 var epReadCreate = epContainerInputs($('epctr'), null);
 epFill($('epthink'), EP_THINK, 'thinking: default');
+// So #modellist (shared by #epmodel and #epedmodel below) has options to offer right away, without
+// needing a visit to the Models tab first.
+ensureModels();
 $('epcreate').addEventListener('click', function () {
   var note = $('epcreatenote');
   note.className = 'passnote'; note.textContent = 'creating… (builds its profile in a container; a few seconds)';

@@ -2,7 +2,15 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
-## [1.0.24] - 2026-10-18
+## [1.0.25] - 2026-10-18
+
+### Changed
+- **Creating or editing an agent's default model now offers the actual model catalogue to pick from**,
+  instead of a bare free-text box: both the "Create an agent endpoint" form and the per-agent editor's
+  model field are backed by a shared, page-wide list of every model the gateway can currently reach
+  (`dashboard/models.json`), loaded as soon as the dashboard opens rather than only after visiting the
+  Models tab. Still a plain text field underneath, so a custom provider/model string typed by hand still
+  works -- the list is there to pick from, not to lock the field down.
 
 ### Added
 - **The 32 KB-per-message cap on an external model chat's history is now a dashboard setting**
