@@ -166,7 +166,7 @@
   #msgs { position:relative; z-index:10; flex:1; overflow-y:auto; overflow-x:hidden; padding:10px 24px 8px; }
   #msgs::-webkit-scrollbar { width:8px; }
   #msgs::-webkit-scrollbar-thumb { background:rgba(255,255,255,.14); border-radius:8px; }
-  .msg { max-width:860px; margin:0 auto 24px; }
+  .msg { max-width:1080px; margin:0 auto 24px; }
   .msg.user { display:flex; justify-content:flex-end; }
   .msg.user .bubble { max-width:74%; padding:13px 17px; border-radius:18px 18px 6px 18px;
     background:rgba(37,56,92,.6); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
@@ -187,6 +187,7 @@
   .mdcode { margin:12px 0; border-radius:14px; overflow:hidden; background:rgba(18,24,28,.55);
             backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
   .mdcodebar { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; color:var(--muted); font-size:11.5px; }
+  .mdcodebar.mdcodefoot { justify-content:flex-end; }
   .mdcodebtns { display:flex; align-items:center; gap:6px; }
   .mdcodebar button { padding:4px 10px; font-size:11.5px; border-radius:999px; background:rgba(255,255,255,.12); }
   .mdcode pre { margin:0; padding:2px 16px 16px; overflow:auto; font-size:13px; line-height:24px;
@@ -596,15 +597,6 @@ function mdBlockNodes(blocks, parent) {
       e = document.createElement('div'); e.className = 'mdcode';
       var bar = document.createElement('div'); bar.className = 'mdcodebar';
       var lab = document.createElement('span'); lab.textContent = b.lang || 'code'; bar.appendChild(lab);
-      // Grouped in their own wrapper so .mdcodebar's space-between puts the label at one end and this
-      // whole cluster at the other -- with 3 bare children instead, space-between spreads "copy" into
-      // the middle of the bar rather than keeping it beside the lang label and "preview".
-      var btns = document.createElement('div'); btns.className = 'mdcodebtns';
-      var cp = document.createElement('button'); cp.textContent = 'copy'; cp.setAttribute('data-copy', b.text); btns.appendChild(cp);
-      if (/^html?$/i.test(b.lang || '') && b.text.trim()) {
-        var pv = document.createElement('button'); pv.textContent = 'preview'; pv.setAttribute('data-preview', b.text); btns.appendChild(pv);
-      }
-      bar.appendChild(btns);
       var pre = document.createElement('pre'); var code = document.createElement('code');
       // Each .cl is already display:block (its own line) -- a literal "\n" text node after it would
       // be a second, real line break inside this <pre>, on top of the block's own, doubling every gap.
@@ -613,7 +605,16 @@ function mdBlockNodes(blocks, parent) {
         code.appendChild(ln);
       });
       pre.appendChild(code);
-      e.appendChild(bar); e.appendChild(pre);
+      // "copy"/"preview" live in a bar of their own BELOW the code, not above it: for anything longer
+      // than a screenful, reaching them used to mean scrolling back up past everything just read.
+      var footbar = document.createElement('div'); footbar.className = 'mdcodebar mdcodefoot';
+      var btns = document.createElement('div'); btns.className = 'mdcodebtns';
+      var cp = document.createElement('button'); cp.textContent = 'copy'; cp.setAttribute('data-copy', b.text); btns.appendChild(cp);
+      if (/^html?$/i.test(b.lang || '') && b.text.trim()) {
+        var pv = document.createElement('button'); pv.textContent = 'preview'; pv.setAttribute('data-preview', b.text); btns.appendChild(pv);
+      }
+      footbar.appendChild(btns);
+      e.appendChild(bar); e.appendChild(pre); e.appendChild(footbar);
     }
     else if (b.t === 'ul' || b.t === 'ol') { e = mdListNode(b); }
     else if (b.t === 'table') {

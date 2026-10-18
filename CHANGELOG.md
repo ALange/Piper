@@ -2,6 +2,15 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.23] - 2026-10-18
+
+### Changed
+- **A code block's "copy"/"preview" buttons now sit in a bar of their own right below the code, not
+  above it.** For anything longer than a screenful -- a full HTML page is the common case -- reaching
+  them used to mean scrolling back up past everything just read. The language label stays at the top
+  of the block as before.
+- Widened the portal's message column from 860px to 1080px.
+
 ## [1.0.22] - 2026-10-18
 
 ### Fixed
