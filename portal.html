@@ -137,8 +137,12 @@
      .bg (full-bleed, position:absolute inset:0 on main) still covers both since it's a sibling, not
      a child, of either. */
   .chat-split { position:relative; z-index:10; flex:1; display:flex; min-width:0; overflow:hidden; }
-  .chat-col { flex:1; display:flex; flex-direction:column; min-width:0; }
-  .previewpane { flex:1 1 50%; display:flex; flex-direction:column; min-width:0; border-left:1px solid var(--border); background:rgba(10,14,12,.5); }
+  /* Basis adds up to 100% with equal grow/shrink on both sides, so this split holds at roughly
+     60/40 instead of drifting wider under flex's own redistribution (which a bare flex:1 on one side
+     and flex:1 1 50% on the other does -- it was handing the preview pane most of the extra space,
+     closer to 75% than 50%). */
+  .chat-col { flex:1 1 60%; display:flex; flex-direction:column; min-width:0; }
+  .previewpane { flex:1 1 40%; display:flex; flex-direction:column; min-width:0; border-left:1px solid var(--border); background:rgba(10,14,12,.5); }
   .previewpane[hidden] { display:none; }
   .previewbar { display:flex; align-items:center; gap:8px; padding:10px 14px; border-bottom:1px solid var(--border); flex:none; }
   .previewbar select { flex:1; min-width:0; background:rgba(255,255,255,.08); color:var(--fg); border:none;
@@ -172,6 +176,7 @@
   .mdcode { margin:12px 0; border-radius:14px; overflow:hidden; background:rgba(18,24,28,.55);
             backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
   .mdcodebar { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; color:var(--muted); font-size:11.5px; }
+  .mdcodebtns { display:flex; align-items:center; gap:6px; }
   .mdcodebar button { padding:4px 10px; font-size:11.5px; border-radius:999px; background:rgba(255,255,255,.12); }
   .mdcode pre { margin:0; padding:2px 16px 16px; overflow:auto; font-size:13px; line-height:24px;
                 font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; } .mdcode code { background:none; padding:0; }
@@ -577,10 +582,15 @@ function mdBlockNodes(blocks, parent) {
       e = document.createElement('div'); e.className = 'mdcode';
       var bar = document.createElement('div'); bar.className = 'mdcodebar';
       var lab = document.createElement('span'); lab.textContent = b.lang || 'code'; bar.appendChild(lab);
-      var cp = document.createElement('button'); cp.textContent = 'copy'; cp.setAttribute('data-copy', b.text); bar.appendChild(cp);
+      // Grouped in their own wrapper so .mdcodebar's space-between puts the label at one end and this
+      // whole cluster at the other -- with 3 bare children instead, space-between spreads "copy" into
+      // the middle of the bar rather than keeping it beside the lang label and "preview".
+      var btns = document.createElement('div'); btns.className = 'mdcodebtns';
+      var cp = document.createElement('button'); cp.textContent = 'copy'; cp.setAttribute('data-copy', b.text); btns.appendChild(cp);
       if (/^html?$/i.test(b.lang || '') && b.text.trim()) {
-        var pv = document.createElement('button'); pv.textContent = 'preview'; pv.setAttribute('data-preview', b.text); bar.appendChild(pv);
+        var pv = document.createElement('button'); pv.textContent = 'preview'; pv.setAttribute('data-preview', b.text); btns.appendChild(pv);
       }
+      bar.appendChild(btns);
       var pre = document.createElement('pre'); var code = document.createElement('code');
       // Each .cl is already display:block (its own line) -- a literal "\n" text node after it would
       // be a second, real line break inside this <pre>, on top of the block's own, doubling every gap.

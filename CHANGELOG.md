@@ -2,6 +2,18 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.15] - 2026-10-18
+
+### Fixed
+- **The new HTML preview pane was taking most of the chat window, and "copy" sat stranded in the middle
+  of a code block's toolbar.** Both were flex layout bugs from the same release: the preview pane's
+  `flex:1 1 50%` against the chat column's bare `flex:1` (basis 0%) handed the pane most of the window's
+  extra space rather than splitting it evenly -- fixed with a basis split (60/40, chat/preview) that adds
+  up to 100% so there's no extra space left to redistribute. And a code block's toolbar laid out "copy"
+  and "preview" as two of three bare children under `justify-content:space-between`, which pushed the
+  middle one -- "copy" -- toward the center of the bar instead of next to "preview"; both buttons are now
+  one group at the end of the bar, the lang label the only thing at the other.
+
 ## [1.0.14] - 2026-10-18
 
 ### Added
