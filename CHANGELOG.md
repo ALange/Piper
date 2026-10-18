@@ -2,6 +2,17 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.17] - 2026-10-18
+
+### Fixed
+- **The HTML preview pane was silently clipping most of the rendered page, with no scrollbar to reveal
+  the rest.** `#previewbody` (the box holding the preview `iframe`) had no CSS rule of its own, so it
+  stayed a plain block instead of a flex container -- `.previewframe`'s `flex:1` had nothing to flex
+  *within*, and the iframe fell back to the browser's own tiny default height. Fixed by making
+  `#previewbody` a flex container that fills the pane, with `min-height:0` added through the whole
+  chat-col/previewpane/previewbody chain (a flex column's default `min-height` is "at least as tall as
+  my content," which fights the very shrinking a fixed split depends on).
+
 ## [1.0.16] - 2026-10-18
 
 ### Changed
