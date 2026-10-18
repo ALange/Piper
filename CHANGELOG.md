@@ -2,6 +2,20 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.22] - 2026-10-18
+
+### Fixed
+- **A reconnected chat (portal or Playground, agent or external model) that kept going past ~16KB of
+  reply text silently froze at that point** -- it looked like it was still streaming or had finished
+  normally, but the text just stopped growing, well short of what the model actually said. The
+  reconnect routes read a turn's answer back out of `LiveLog` (lib/livesession.mjs), which caps any
+  single message's text at `MAX_TEXT` -- a limit that only ever mattered for the dashboard's live
+  session *preview* before 1.0.20/1.0.21 made this the one place a reconnecting client's answer comes
+  from, where it has to be the complete answer, not a preview. Raised `MAX_TEXT` from 16KB to 1MB.
+  Verified with a real headless-browser run reloading mid-stream on a 40KB reply (agent chat and
+  external model both): the capped version visibly truncated at 16,385 characters; fixed, it comes back
+  whole.
+
 ## [1.0.21] - 2026-10-18
 
 ### Fixed
