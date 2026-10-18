@@ -447,6 +447,7 @@
       <div id="previewpane" class="previewpane" hidden>
         <div class="previewbar">
           <select id="previewselect"></select>
+          <button id="previewdownload" title="download this page">⬇</button>
           <button id="previewtab" title="open in a new tab">↗</button>
           <button id="previewclose" title="close preview">×</button>
         </div>
@@ -727,16 +728,28 @@ function renderPreviewPane() {
     body.replaceChildren(frame);
   }
 }
+function pickedPreview() {
+  var versions = htmlVersionsFor(conv());
+  return versions.filter(function (v) { return v.key === PREVIEW.selected; })[0] || null;
+}
 $('previewselect').addEventListener('change', function () { PREVIEW.selected = this.value; renderPreviewPane(); });
 $('previewclose').addEventListener('click', closePreview);
 $('previewtab').addEventListener('click', function () {
-  var versions = htmlVersionsFor(conv());
-  var picked = versions.filter(function (v) { return v.key === PREVIEW.selected; })[0];
+  var picked = pickedPreview();
   if (!picked) return;
   // noopener, same as every external link mdInlineNodes renders: the opened tab gets no `window.opener`
   // back to this page at all, so agent-produced HTML there has no path to this page's session or key.
   var url = URL.createObjectURL(new Blob([picked.html], { type: 'text/html' }));
   window.open(url, '_blank', 'noopener');
+  setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+});
+$('previewdownload').addEventListener('click', function () {
+  var picked = pickedPreview();
+  if (!picked) return;
+  var name = (picked.title || 'preview').toLowerCase().replace(/[^\w-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'preview';
+  var url = URL.createObjectURL(new Blob([picked.html], { type: 'text/html' }));
+  var a = el('a'); a.href = url; a.download = name + '.html';
+  document.body.appendChild(a); a.click(); a.remove();
   setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
 });
 /* Dragging #previewresizer resizes the pane by setting its flex-basis directly in px, which beats the

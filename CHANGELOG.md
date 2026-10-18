@@ -2,6 +2,14 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.19] - 2026-10-18
+
+### Added
+- **A download button in the HTML preview pane.** Sits next to "open in a new tab", next to the version
+  picker. Saves the currently selected version as a standalone `.html` file, named from its own `<title>`
+  when it has one (falling back to "preview.html"). Verified with an actual headless-browser download,
+  not just read over.
+
 ## [1.0.18] - 2026-10-18
 
 ### Fixed
