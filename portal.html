@@ -137,13 +137,16 @@
      .bg (full-bleed, position:absolute inset:0 on main) still covers both since it's a sibling, not
      a child, of either. */
   .chat-split { position:relative; z-index:10; flex:1; display:flex; min-width:0; overflow:hidden; }
-  /* Basis adds up to 100% with equal grow/shrink on both sides, so this split holds at roughly
-     60/40 instead of drifting wider under flex's own redistribution (which a bare flex:1 on one side
-     and flex:1 1 50% on the other does -- it was handing the preview pane most of the extra space,
-     closer to 75% than 50%). */
-  .chat-col { flex:1 1 60%; display:flex; flex-direction:column; min-width:0; }
-  .previewpane { flex:1 1 40%; display:flex; flex-direction:column; min-width:0; border-left:1px solid var(--border); background:rgba(10,14,12,.5); }
+  /* The preview pane gets a fixed basis (50% to start, then whatever #previewresizer last dragged it
+     to, in px) with no grow/shrink of its own -- the chat column (flex:1 1 auto) always takes up
+     whatever that leaves, so the two can never fight over space the way two percentage flex-basises
+     with their own grow do. */
+  .chat-col { flex:1 1 auto; display:flex; flex-direction:column; min-width:0; }
+  .previewpane { flex:0 0 50%; display:flex; flex-direction:column; min-width:0; border-left:1px solid var(--border); background:rgba(10,14,12,.5); }
   .previewpane[hidden] { display:none; }
+  .previewresizer { flex:none; width:6px; cursor:col-resize; background:rgba(255,255,255,.08); touch-action:none; }
+  .previewresizer:hover, .previewresizer:active { background:rgba(255,255,255,.22); }
+  .previewresizer[hidden] { display:none; }
   .previewbar { display:flex; align-items:center; gap:8px; padding:10px 14px; border-bottom:1px solid var(--border); flex:none; }
   .previewbar select { flex:1; min-width:0; background:rgba(255,255,255,.08); color:var(--fg); border:none;
     border-radius:8px; padding:6px 10px; font-size:12.5px; }
@@ -313,6 +316,7 @@
        half the height, same as .chat-split does side by side above this breakpoint. */
     .chat-split { flex-direction:column; }
     .previewpane { border-left:none; border-top:1px solid var(--border); }
+    .previewresizer { width:auto; height:6px; cursor:row-resize; }
   }
 </style>
 </head>
@@ -431,6 +435,7 @@
           </div>
         </div>
       </div>
+      <div id="previewresizer" class="previewresizer" hidden></div>
       <div id="previewpane" class="previewpane" hidden>
         <div class="previewbar">
           <select id="previewselect"></select>
@@ -680,6 +685,7 @@ function closePreview() { PREVIEW.open = false; renderPreviewPane(); }
 function renderPreviewPane() {
   var pane = $('previewpane');
   pane.hidden = !PREVIEW.open;
+  $('previewresizer').hidden = !PREVIEW.open;
   if (!PREVIEW.open) return;
   var versions = htmlVersionsFor(conv());
   var select = $('previewselect'), body = $('previewbody');
@@ -725,6 +731,33 @@ $('previewtab').addEventListener('click', function () {
   window.open(url, '_blank', 'noopener');
   setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
 });
+/* Dragging #previewresizer resizes the pane by setting its flex-basis directly in px, which beats the
+   chat column's flex:1 1 auto regardless of the default 50% split above -- same drag logic on a phone's
+   stacked layout, just along height instead of width (mobilePreview below matches the breakpoint the
+   CSS itself stacks at). Clamped to 20%-75% of the split so neither side can be dragged away entirely. */
+(function () {
+  var resizer = $('previewresizer'), pane = $('previewpane'), split = $('chatsplit');
+  var mobilePreview = window.matchMedia('(max-width: 760px)');
+  var dragging = false, startPos = 0, startSize = 0;
+  function axisSize(rect) { return mobilePreview.matches ? rect.height : rect.width; }
+  resizer.addEventListener('pointerdown', function (e) {
+    dragging = true;
+    startPos = mobilePreview.matches ? e.clientY : e.clientX;
+    startSize = axisSize(pane.getBoundingClientRect());
+    try { resizer.setPointerCapture(e.pointerId); } catch (err) { /* not critical */ }
+    e.preventDefault();
+  });
+  resizer.addEventListener('pointermove', function (e) {
+    if (!dragging) return;
+    var pos = mobilePreview.matches ? e.clientY : e.clientX;
+    var total = axisSize(split.getBoundingClientRect());
+    var size = Math.min(total * 0.75, Math.max(total * 0.2, startSize + (startPos - pos)));
+    pane.style.flexBasis = size + 'px';
+  });
+  function stopDrag(e) { if (!dragging) return; dragging = false; try { resizer.releasePointerCapture(e.pointerId); } catch (err) { /* not critical */ } }
+  resizer.addEventListener('pointerup', stopDrag);
+  resizer.addEventListener('pointercancel', stopDrag);
+})();
 
 var KEY = sessionStorage.getItem('piper-portal-key') || '';
 var WHOAMI = null;

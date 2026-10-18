@@ -2,6 +2,15 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.16] - 2026-10-18
+
+### Changed
+- **The HTML preview pane splits the chat window 50/50 again, and can now be dragged to any size.** A
+  draggable handle sits on the border between the chat and the preview (`col-resize` on desktop, stacked
+  and `row-resize` on a phone) -- drag it to whatever split suits the page you're looking at, clamped to
+  20%-75% so neither side disappears. Not persisted across a reload: it resets to 50/50 next time, same
+  as the rest of the preview pane's own state.
+
 ## [1.0.15] - 2026-10-18
 
 ### Fixed
