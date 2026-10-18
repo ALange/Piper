@@ -2345,6 +2345,15 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.throws(() => checkedHistory([{ role: "user", content: wide }]), (e) => /over 32 KB/.test(e.message), "measured in bytes, not .length");
 	assert.doesNotThrow(() => checkedHistory([{ role: "user", content: "中".repeat(5_000) }]), "well under the byte limit still passes");
 
+	// The byte limit itself is a dashboard setting (EXTERNAL_HISTORY_MESSAGE_MAX_BYTES), not a fixed
+	// constant -- a long-running chat that keeps hitting it should be able to raise it.
+	const widerMessage = "x".repeat(40_000); // over the default 32 KiB, under a raised one
+	assert.throws(() => checkedHistory([{ role: "user", content: widerMessage }]), (e) => /over 32 KB/.test(e.message));
+	config.EXTERNAL_HISTORY_MESSAGE_MAX_BYTES = 64 * 1024;
+	assert.doesNotThrow(() => checkedHistory([{ role: "user", content: widerMessage }]), "raising the setting lets a bigger message through");
+	assert.throws(() => checkedHistory([{ role: "user", content: "x".repeat(70_000) }]), (e) => /over 64 KB/.test(e.message), "the error message reflects the configured limit too");
+	delete config.EXTERNAL_HISTORY_MESSAGE_MAX_BYTES;
+
 	// chatCompletion refuses to let a reply grow without bound: a stream that never sends [DONE] and
 	// keeps generating must be aborted once it passes the size ceiling, not held open forever.
 	setFetch(async () => ({

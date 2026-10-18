@@ -2,6 +2,16 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.24] - 2026-10-18
+
+### Added
+- **The 32 KB-per-message cap on an external model chat's history is now a dashboard setting**
+  (`EXTERNAL_HISTORY_MESSAGE_MAX_BYTES`, under Limits), not a fixed constant. The client portal and
+  dashboard Playground both resend a conversation's whole history on every turn when chatting with an
+  external OpenAI-compatible model (there's no server-side session to keep it for them), so a
+  long-running chat with a long reply or a large pasted block could hit the old fixed limit with no way
+  around it.
+
 ## [1.0.23] - 2026-10-18
 
 ### Changed
