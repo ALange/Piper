@@ -2,6 +2,15 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.26] - 2026-10-20
+
+### Changed
+- **The client portal's attach button is now a paperclip**, with its tooltip updated to "attach a file
+  (image or any document)". The underlying feature was already there -- the same button has always
+  accepted any file type, not just images, uploading non-image files straight into the agent's workspace
+  for it to read -- it just looked like an image-only "+" button and wasn't clearly labelled as a general
+  file attach. No behavior change, just the icon/tooltip now matching what it already does.
+
 ## [1.0.25] - 2026-10-18
 
 ### Changed
