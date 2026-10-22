@@ -441,12 +441,29 @@ if [ -n "$SIGNAL_NUMBER" ]; then
 	SIGNAL_BIN="$(find_signal_cli)"
 	[ -n "$SIGNAL_BIN" ] || { [ -x "$TARGET_HOME/.local/signal-cli/signal-cli" ] && SIGNAL_BIN="$TARGET_HOME/.local/signal-cli/signal-cli"; }
 	[ -n "$SIGNAL_BIN" ] || { [ -x "$TARGET_HOME/.local/signal-cli/bin/signal-cli" ] && SIGNAL_BIN="$TARGET_HOME/.local/signal-cli/bin/signal-cli"; }
+	# A binary found here (not just one this run is about to install) might be a broken leftover from an
+	# earlier attempt -- e.g. a native build that was extracted fine but does not run on this CPU. Check
+	# it actually runs before trusting it, so a stale one from before this fallback logic existed (or
+	# before it was fixed) gets replaced instead of failing the same way every time this is run again.
+	FOUND_BROKEN_NATIVE=0
+	if [ -n "$SIGNAL_BIN" ] && [ "$DRY" = 0 ]; then
+		FOUND_VCHECK="$(as_target "$SIGNAL_BIN" --version 2>&1)" || if [ "$INSTALL_SIGNAL_CLI" = 1 ]; then
+			warn "$SIGNAL_BIN does not run for $TARGET: ${FOUND_VCHECK##*$'\n'}; replacing it"
+			[ "$SIGNAL_BIN" = "$TARGET_HOME/.local/signal-cli/signal-cli" ] && FOUND_BROKEN_NATIVE=1
+			SIGNAL_BIN=""
+		else
+			die "$SIGNAL_BIN does not run for $TARGET: ${FOUND_VCHECK##*$'\n'}. Run again with --install-signal-cli to replace it, or fix or remove it yourself."
+		fi
+	fi
 	if [ -n "$SIGNAL_BIN" ]; then
 		ok "signal-cli at $SIGNAL_BIN"
 	elif [ "$INSTALL_SIGNAL_CLI" = 1 ]; then
 		SIGNAL_VER="$(curl -fsSL https://api.github.com/repos/AsamK/signal-cli/releases/latest | grep '"tag_name"' | sed -E 's/.*"v?([0-9.]+)".*/\1/')"
 		[ -n "$SIGNAL_VER" ] || die "could not find the latest signal-cli release (github.com/AsamK/signal-cli); install it yourself"
-		if [ "$(uname -m)" != x86_64 ]; then
+		if [ "$FOUND_BROKEN_NATIVE" = 1 ]; then
+			say "  skipping the native build -- already confirmed it does not run here"
+			install_signal_java
+		elif [ "$(uname -m)" != x86_64 ]; then
 			say "  no native build for $(uname -m); installing the ordinary (Java) build"
 			install_signal_java
 		else

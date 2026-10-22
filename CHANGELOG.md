@@ -2,6 +2,19 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.1.4] - 2026-10-22
+
+### Fixed
+- `deploy.sh --signal-number ... --install-signal-cli`, run a second time after a native build that
+  turned out not to run on the host's CPU, kept finding that same broken leftover binary and trusting
+  it blindly -- the "already there" check never verified it actually ran, only that it existed, so the
+  Java-build fallback from the previous fix never engaged on a retry, only on the very first attempt.
+  The "already found" path (whether via `command -v` or a previous install of this script's own) now
+  runs `--version` before trusting it, same as a fresh install does; a broken one found this way is
+  replaced automatically when `--install-signal-cli` is given (skipping straight to the Java build
+  without re-downloading the native one it already knows fails, if that's what was found), or reported
+  clearly with the real error if not.
+
 ## [1.1.3] - 2026-10-22
 
 ### Fixed
