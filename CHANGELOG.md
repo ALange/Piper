@@ -2,6 +2,25 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.1.0] - 2026-10-22
+
+### Added
+- **Signal messenger integration.** An agent (or a plain key) with the new `can_signal` switch gets
+  three tools -- `piper_signal_enable`, `piper_signal_contacts`, `piper_signal_disable` -- to link a
+  phone number to itself. Linking sends that number a real message right away from Piper's own,
+  single registered Signal account; from then on, a Signal message from that exact number is routed
+  to that agent/key's own persistent conversation and answered over Signal, and every other number is
+  silently discarded. Off by default everywhere (global `SIGNAL_ENABLED`, and `can_signal` on both
+  `agents` and `api_keys`, neither on by default even for a newly created agent -- unlike scheduling,
+  this can message a real third party, so it's always an explicit opt-in). Bounded by a per-scope cap
+  on how many numbers one agent/key may link and a gateway-wide daily cap on how many get linked at
+  all, both configurable in Settings → Signal, plus a new dashboard Signal page listing every linked
+  number with a one-click revoke -- the operator's brake pedal, independent of anything an agent does.
+  Runs a supervised `signal-cli daemon --json-rpc` subprocess for the gateway's whole lifetime;
+  signal-cli itself must already be installed and the number already registered and verified on the
+  host before `SIGNAL_ENABLED` is turned on (see DEPLOYMENT.md's new Signal section) -- Piper only
+  ever drives an already-registered account's daemon mode, it never registers or verifies one.
+
 ## [1.0.29] - 2026-10-22
 
 ### Added

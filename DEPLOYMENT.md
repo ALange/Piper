@@ -326,6 +326,30 @@ next message when a mount, the image or a limit changed (what the agent installe
 workspace, profile and session are not). For bundle contents, open chats pick it up on `/reload`.
 The dashboard's Files & profiles → Profiles shows what each key's agents actually get. The **Extensions** page installs Pi packages on this host into `extensions/` (the host needs `npm`, and `git` for git sources) and grants them per key or agent.
 
+### Signal messenger (optional)
+
+Agents can link a phone number and carry on a conversation with it over Signal, from Piper's own
+Signal account -- see Settings → Signal and the dashboard's Signal page. Piper never registers or
+verifies a Signal account itself; that's a one-time step you do yourself, outside Piper, before
+turning it on:
+
+1. Install [`signal-cli`](https://github.com/AsamK/signal-cli) (and its Java dependency) on the
+   gateway's host -- this is a gateway-process dependency, like Docker or `iptables`, not something
+   that runs in a chat's container.
+2. Register and SMS/voice-verify the number you want Piper to use:
+   `signal-cli -a +15551234567 register`, then `signal-cli -a +15551234567 verify <code>`.
+3. In Settings → Signal, set `SIGNAL_PHONE_NUMBER` to that number (in `+<country code><number>`
+   form), `SIGNAL_CLI_PATH` if `signal-cli` isn't on `PATH`, and turn `SIGNAL_ENABLED` on (a restart
+   setting). The gateway then runs `signal-cli daemon --json-rpc` itself, supervised for as long as
+   the gateway runs.
+4. Grant `can_signal` to the agents (or keys) that should be able to link a number -- off by default
+   for every agent and key, even a newly created one, since linking sends a real message to a real
+   phone number from Piper's own account.
+
+A number is linked from *inside a chat*, by that agent's own `piper_signal_enable` tool, not from the
+dashboard -- the dashboard's Signal page is read-only visibility plus a revoke button, the operator's
+brake pedal if a number should not have been linked.
+
 ## 9. Check the containers
 
 Create a key, then ask an agent to run a probe:

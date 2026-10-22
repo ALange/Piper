@@ -377,6 +377,69 @@ export default async function piperBridge(pi) {
 		});
 	}
 
+	// Signal: link a phone number to this chat's own key/agent, so Piper's own Signal account carries a
+	// conversation with it from then on, over Signal, not just this chat. Sends a real message to a
+	// real phone number the moment a number is linked -- only do this when the owner has actually
+	// asked for their own number to be linked, never on a stranger's say-so.
+	if (process.env.PIPER_SIGNAL === "1") {
+		const reply = (value) => ({ content: [{ type: "text", text: value }], details: {} });
+		pi.registerTool({
+			name: "piper_signal_enable",
+			label: "Link a Signal number",
+			description:
+				"Link a phone number to this chat's agent (or key) and send it a welcome message right now from Piper's own Signal account. From then on, a Signal message from that exact number is routed here and answered over Signal; any other number is ignored. " +
+				"Use only when the user has explicitly asked you to enable Signal for their own number -- this sends a real message to a real phone number.",
+			promptSnippet: "Link a phone number to talk over Signal",
+			parameters: {
+				type: "object",
+				properties: {
+					phone_number: { type: "string", description: "The number to link, in full +<country code><number> form, e.g. +15551234567." },
+					message: { type: "string", description: "The welcome message to send. Leave out for a sensible default." },
+				},
+				required: ["phone_number"],
+			},
+			async execute(_toolCallId, params) {
+				try {
+					const answer = await readJson(await request("/signal/enable", { phoneNumber: params?.phone_number, message: params?.message }));
+					return reply(`Linked ${answer.contact.phoneNumber} and sent it a welcome message. It can now message this chat over Signal.`);
+				} catch (err) {
+					return reply(`Could not link it: ${err?.message ?? err}`);
+				}
+			},
+		});
+		pi.registerTool({
+			name: "piper_signal_contacts",
+			label: "List linked Signal numbers",
+			description: "List the phone numbers currently linked to this chat's agent (or key) over Signal.",
+			promptSnippet: "List numbers linked over Signal",
+			parameters: { type: "object", properties: {} },
+			async execute() {
+				try {
+					const { contacts } = await readJson(await request("/signal/contacts"));
+					if (!contacts.length) return reply("No phone numbers are linked.");
+					return reply(contacts.map((c) => `- ${c.phoneNumber}: ${c.enabled ? "on" : "off"}${c.lastMessageAt ? `, last message ${new Date(c.lastMessageAt).toISOString()}` : ", no messages yet"}`).join("\n"));
+				} catch (err) {
+					return reply(`Could not list them: ${err?.message ?? err}`);
+				}
+			},
+		});
+		pi.registerTool({
+			name: "piper_signal_disable",
+			label: "Unlink a Signal number",
+			description: "Stop a linked phone number from being able to message this chat over Signal.",
+			promptSnippet: "Unlink a phone number from Signal",
+			parameters: { type: "object", properties: { phone_number: { type: "string", description: "The number to unlink, from piper_signal_contacts." } }, required: ["phone_number"] },
+			async execute(_toolCallId, params) {
+				try {
+					await readJson(await request("/signal/disable", { phoneNumber: params?.phone_number }));
+					return reply(`Unlinked ${params?.phone_number}.`);
+				} catch (err) {
+					return reply(`Could not unlink it: ${err?.message ?? err}`);
+				}
+			},
+		});
+	}
+
 	// Memory: notes that outlive this one chat. A key's own chats all share one memory, and so does a
 	// named agent's — its own, or its key's, chosen when the agent was made. Never read or written
 	// through this container's own filesystem: every call crosses the bridge, bound to this chat's

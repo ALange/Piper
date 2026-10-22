@@ -520,6 +520,7 @@
       <a href="#agents"><span class="ic">&#8644;</span>Agents</a>
       <a href="#extensions"><span class="ic">&#10010;</span>Extensions</a>
       <a href="#jobs"><span class="ic">&#9201;</span>Jobs</a>
+      <a href="#signal"><span class="ic">&#9742;</span>Signal</a>
       <a href="#memory"><span class="ic">&#8734;</span>Memory</a>
       <a href="#knowledge"><span class="ic">&#9737;</span>Knowledge</a>
       <a href="#files"><span class="ic">&#9776;</span>Files &amp; profiles</a>
@@ -1019,6 +1020,24 @@
       </section>
     </div><!-- /view-jobs -->
 
+    <div class="view" id="view-signal">
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h3>Signal</h3>
+            <p class="hint" style="margin:0" id="signalnote">Piper's own Signal account, and the phone numbers currently linked to an agent or key. A number is linked from inside a chat, by its own agent's piper_signal_enable tool -- not from here. This page is for visibility and to revoke a number on the spot.</p>
+          </div>
+          <button id="signalrefresh">refresh</button>
+        </div>
+        <div id="signalstatus" class="hint small" style="margin-bottom:10px"></div>
+        <table>
+          <thead><tr><th>number</th><th>linked to</th><th>linked since</th><th>last message</th><th>on</th><th></th></tr></thead>
+          <tbody id="signalrows"></tbody>
+        </table>
+        <p class="hint" id="signalempty" hidden>No numbers linked yet.</p>
+      </section>
+    </div><!-- /view-signal -->
+
     <div class="view" id="view-memory">
       <section class="panel">
         <div class="toolbar">
@@ -1136,6 +1155,7 @@
         <div class="fieldrow" style="margin-bottom:8px"><label class="ctrl"><input type="checkbox" id="epbulkon-deleg"> hand-offs</label><select id="epbulkdeleg"><option value="1">may hand work to the other agents of its key</option><option value="0">off</option></select></div>
         <div class="fieldrow" style="margin-bottom:8px"><label class="ctrl"><input type="checkbox" id="epbulkon-msgs"> colleague messages</label><select id="epbulkmsgs"><option value="">follow the setting</option><option value="chat">in the reply, as (name): message</option><option value="thinking">first line only, in the reasoning</option><option value="off">not shown</option></select></div>
         <div class="fieldrow" style="margin-bottom:8px"><label class="ctrl"><input type="checkbox" id="epbulkon-sched"> schedules</label><select id="epbulksched"><option value="1">may schedule recurring tasks for itself</option><option value="0">off</option></select></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label class="ctrl"><input type="checkbox" id="epbulkon-signal"> Signal</label><select id="epbulksignal"><option value="1">may link phone numbers and talk over Signal</option><option value="0">off</option></select></div>
         <div class="fieldrow" style="margin-bottom:8px"><label class="ctrl"><input type="checkbox" id="epbulkon-enabled"> on/off</label><select id="epbulkenabled"><option value="1">enabled</option><option value="0">disabled</option></select></div>
         <div class="fieldrow" style="margin-bottom:8px"><label class="ctrl"><input type="checkbox" id="epbulkon-ctr"> container limits</label></div>
         <div id="epbulkctr" style="margin-left:26px"></div>
@@ -1177,6 +1197,7 @@
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">hand-offs</label><label class="ctrl" title="Gives this agent two tools: list its colleagues and hand a task to one, then use the answer. Only agents of the same key, bounded in depth; each hand-off is a turn that counts against the key."><input type="checkbox" id="epeddeleg"> may hand work to the other agents of its key</label></div>
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px" for="epedmsgs">colleague messages</label><select id="epedmsgs" title="How this agent shows what its colleagues write while it waits for them. Follow the setting uses Settings → Agent → DELEGATE_MESSAGES."><option value="">follow the setting</option><option value="chat">in the reply, as (name): message</option><option value="thinking">first line only, in the reasoning</option><option value="off">not shown</option></select></div>
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">schedules</label><label class="ctrl" title="Gives this agent tools to create, list, run and remove its own recurring tasks. A task lives on the gateway, so it runs on its schedule even when this agent's container is stopped; each run starts the container again. Needs AGENT_JOBS_ENABLED. Turning this off, or disabling the agent, pauses its schedules rather than deleting them; they resume by themselves once it is back on."><input type="checkbox" id="epedsched"> may schedule recurring tasks for itself</label></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">Signal</label><label class="ctrl" title="Gives this agent tools to link a phone number to itself and carry on a conversation with it over Signal, from Piper's own Signal account. Linking sends that number a real message right away. Needs SIGNAL_ENABLED."><input type="checkbox" id="epedsignal"> may link phone numbers and talk over Signal</label></div>
         <div style="margin-bottom:8px"><label class="hint" for="epedinstr">instructions (the agent's AGENTS.md: who it is and how it works)</label><textarea id="epedinstr" rows="9" style="width:100%;box-sizing:border-box;background:#141414;color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:12px"></textarea></div>
         <div id="epedctr"></div>
         <div class="fieldrow" style="margin-top:8px"><button id="epedsave">save</button><button id="epedcancel">close</button><span class="hint small" id="epednote"></span></div>
@@ -1389,7 +1410,8 @@
               <th class="num">last used</th><th class="num" title="live sessions / limit - blank follows the default, 0 is unlimited">sessions</th>
               <th class="num" title="spent today / daily cap in USD - blank follows the default, 0 is unlimited">today</th>
               <th title="shared bundles this key gets - blank follows the default, * is all, none for none">bundles</th>
-              <th title="lets a chat running as this key directly (no agent endpoint) schedule its own recurring tasks, from the Jobs page">schedule</th><th></th></tr></thead>
+              <th title="lets a chat running as this key directly (no agent endpoint) schedule its own recurring tasks, from the Jobs page">schedule</th>
+              <th title="lets a chat running as this key directly (no agent endpoint) link a Signal phone number and talk over Signal">Signal</th><th></th></tr></thead>
             <tbody id="keyrows"></tbody>
           </table></div>
         </section>
@@ -2089,6 +2111,19 @@ function renderKeyTable() {
     });
     scell.appendChild(schk);
     tr.appendChild(scell);
+
+    // Same idea, for linking a Signal phone number to a chat running as this key directly.
+    var sigcell = el('td');
+    var sigchk = el('input');
+    sigchk.type = 'checkbox';
+    sigchk.checked = Boolean(k.canSignal);
+    sigchk.disabled = !(KEYS.signalEnabled);
+    sigchk.title = KEYS.signalEnabled ? 'may link a Signal phone number and talk over Signal from a chat running as this key, with no agent endpoint' : 'switched off globally: Settings → Signal → SIGNAL_ENABLED';
+    sigchk.addEventListener('change', function () {
+      act('POST', 'dashboard/api-keys/' + k.id, { canSignal: sigchk.checked }, sigchk.checked ? 'may now link Signal numbers' : 'may no longer link Signal numbers');
+    });
+    sigcell.appendChild(sigchk);
+    tr.appendChild(sigcell);
 
     var actions = el('td');
     // First, so it is visible without scrolling the table: what this key's agents get.
@@ -3626,6 +3661,7 @@ var PAGES = {
     { id:'library', label:'Library', pane:'extensions', sections:'library', subtitle:'Pi extensions installed on this host, for granting to keys and agents' },
     { id:'access', label:'Access', pane:'extensions', sections:'access', subtitle:'Which keys and agents get which extensions and bundles' }] },
   jobs:       { title:'Jobs', tabs:[{ id:'jobs', pane:'jobs', subtitle:'Prompts an agent runs on a schedule, by webhook or on request' }] },
+  signal:     { title:'Signal', tabs:[{ id:'signal', pane:'signal', subtitle:'Numbers linked to an agent or key, talking over Signal through Piper’s own account' }] },
   memory:     { title:'Memory', tabs:[{ id:'memory', pane:'memory', subtitle:'Notes a key’s or an agent’s chats remember, across chats and containers' }] },
   knowledge:  { title:'Knowledge', tabs:[
     { id:'feeds', label:'Feeds', pane:'knowledge', sections:'feeds', subtitle:'RSS feeds polled for new articles, and the agent that extracts each one' },
@@ -3652,7 +3688,7 @@ var PAGES = {
     { id:'docs', label:'Documentation', pane:'docs', subtitle:'The administrator\u2019s handbook: architecture, deployment, operation, configuration, API and troubleshooting' },
     { id:'about', label:'About', pane:'about', subtitle:'Piper, its version, release notes and author' }] }
 };
-var PANES = ['playground', 'overview', 'agents', 'extensions', 'containers', 'terminal', 'files', 'endpoints', 'jobs', 'memory', 'knowledge', 'models', 'integrations', 'spend', 'apikeys', 'profiles', 'audit', 'settings', 'docs', 'about'];
+var PANES = ['playground', 'overview', 'agents', 'extensions', 'containers', 'terminal', 'files', 'endpoints', 'jobs', 'signal', 'memory', 'knowledge', 'models', 'integrations', 'spend', 'apikeys', 'profiles', 'audit', 'settings', 'docs', 'about'];
 /* Old links keep working: bookmarks and the docs' own links used the flat view names. */
 var OLD_HASHES = { endpoints: 'agents', terminal: 'containers/terminal', profiles: 'files/profiles', docs: 'help/docs', about: 'help/about' };
 function resolveHash(hash) {
@@ -4171,6 +4207,63 @@ $('jobruns').addEventListener('click', function (e) {
   });
 });
 setInterval(function () { if (JOB_OPEN && !document.hidden && location.hash === '#jobs') loadJobRuns(JOB_OPEN); }, 5000);
+
+/* ---- signal: numbers linked to an agent or key, talking over Piper's own Signal account ---- */
+var SIGNAL = null;
+function loadSignal() {
+  return fetch('dashboard/signal.json', { cache: 'no-store' }).then(readJson).then(function (d) { SIGNAL = d; renderSignal(); })
+    .catch(function (e) { $('signalnote').textContent = 'cannot load Signal: ' + e.message; });
+}
+function renderSignal() {
+  var s = SIGNAL.status;
+  var bits = [s.enabled ? 'switched on' : 'switched off (Settings → Signal → SIGNAL_ENABLED)'];
+  if (s.enabled) {
+    bits.push(s.phoneNumber ? s.phoneNumber : 'no SIGNAL_PHONE_NUMBER set');
+    bits.push(s.running ? 'daemon running' : 'daemon not running' + (s.lastError ? ': ' + s.lastError : ''));
+    bits.push(s.contacts + ' number' + (s.contacts === 1 ? '' : 's') + ' linked');
+  }
+  var note = el('span', bits.join(' · '));
+  note.className = s.enabled && s.running ? 'ok' : s.enabled ? 'bad' : '';
+  $('signalstatus').replaceChildren(note);
+
+  var body = $('signalrows');
+  body.replaceChildren();
+  $('signalempty').hidden = SIGNAL.contacts.length > 0;
+  SIGNAL.contacts.forEach(function (c) {
+    var tr = el('tr');
+    tr.appendChild(el('td', c.phoneNumber));
+    tr.appendChild(el('td', c.keyName + (c.agentName ? ' / ' + c.agentName : '')));
+    tr.appendChild(el('td', when(c.createdAt)));
+    tr.appendChild(el('td', c.lastMessageAt ? when(c.lastMessageAt) : 'never'));
+    var on = el('td', c.enabled ? 'yes' : 'no');
+    tr.appendChild(on);
+    var act = el('td');
+    var toggle = el('button', c.enabled ? 'disable' : 'enable');
+    toggle.setAttribute('data-signal', c.id);
+    toggle.setAttribute('data-act', c.enabled ? 'off' : 'on');
+    act.appendChild(toggle);
+    act.appendChild(document.createTextNode(' '));
+    var del = el('button', 'remove');
+    del.setAttribute('data-signal', c.id);
+    del.setAttribute('data-act', 'del');
+    act.appendChild(del);
+    tr.appendChild(act);
+    body.appendChild(tr);
+  });
+}
+$('signalrefresh').addEventListener('click', loadSignal);
+$('signalrows').addEventListener('click', function (e) {
+  var b = e.target.closest ? e.target.closest('button[data-signal]') : null;
+  if (!b) return;
+  var id = b.getAttribute('data-signal'), act = b.getAttribute('data-act');
+  var contact = SIGNAL.contacts.filter(function (c) { return c.id === id; })[0];
+  if (act === 'del') {
+    if (!contact || !confirm('Remove ' + contact.phoneNumber + '? It can link again later through its agent’s own tool.')) return;
+    epPost('dashboard/signal/contacts/' + id, undefined, 'DELETE').then(loadSignal);
+  } else {
+    epPost('dashboard/signal/contacts/' + id, { enabled: act === 'on' }).then(loadSignal);
+  }
+});
 
 /* ---- memory: notes a key's or an agent's chats remember ---- */
 var MEMORY = null;
@@ -5849,6 +5942,7 @@ function openEndpointEditor(a) {
   $('epeddeleg').checked = Boolean(a.canDelegate);
   $('epedmsgs').value = a.delegateMessages || '';
   $('epedsched').checked = Boolean(a.canSchedule);
+  $('epedsignal').checked = Boolean(a.canSignal);
   $('epedmodel').value = a.model || '';
   epFill($('epedthink'), EP_THINK, 'thinking: default');
   $('epedthink').value = a.thinking || '';
@@ -5864,7 +5958,7 @@ function openEndpointEditor(a) {
 }
 $('epedsave').addEventListener('click', function () {
   if (!EP_EDIT) return;
-  var body = { description: $('epeddesc').value.trim(), canDelegate: $('epeddeleg').checked, delegateMessages: $('epedmsgs').value || null, canSchedule: $('epedsched').checked, name: $('epedname').value.trim(), model: $('epedmodel').value.trim() || null, thinking: $('epedthink').value || null, container: epReadEdit() };
+  var body = { description: $('epeddesc').value.trim(), canDelegate: $('epeddeleg').checked, delegateMessages: $('epedmsgs').value || null, canSchedule: $('epedsched').checked, canSignal: $('epedsignal').checked, name: $('epedname').value.trim(), model: $('epedmodel').value.trim() || null, thinking: $('epedthink').value || null, container: epReadEdit() };
   if (!$('epedinstr').disabled) body.instructions = $('epedinstr').value;
   $('epedsave').disabled = true; $('epednote').textContent = 'saving…';
   epPost('dashboard/agents/' + EP_EDIT, body).then(function (j) { EP_DATA = j; renderEndpoints(j); $('epednote').textContent = 'saved. New chats use the new instructions and model; running chats pick the instructions up when they next start.'; })
@@ -5896,6 +5990,7 @@ $('epbulkbtn').addEventListener('click', function () {
   $('epbulkdeleg').value = '1';
   $('epbulkmsgs').value = '';
   $('epbulksched').value = '1';
+  $('epbulksignal').value = '1';
   $('epbulkenabled').value = '1';
   epReadBulkCtr = epContainerInputs($('epbulkctr'), null);
   $('epbulkctr').insertBefore(el('p', 'Blank follows the key, then the defaults, same as one at a time.'), $('epbulkctr').firstChild).className = 'hint small';
@@ -5913,6 +6008,7 @@ $('epbulksave').addEventListener('click', function () {
   if ($('epbulkon-deleg').checked) body.canDelegate = $('epbulkdeleg').value === '1';
   if ($('epbulkon-msgs').checked) body.delegateMessages = $('epbulkmsgs').value || null;
   if ($('epbulkon-sched').checked) body.canSchedule = $('epbulksched').value === '1';
+  if ($('epbulkon-signal').checked) body.canSignal = $('epbulksignal').value === '1';
   if ($('epbulkon-ctr').checked) body.container = epReadBulkCtr();
   var setEnabled = $('epbulkon-enabled').checked ? $('epbulkenabled').value === '1' : null;
   if (!Object.keys(body).length && setEnabled === null) { $('epbulknote').textContent = 'tick at least one field to change'; return; }
@@ -6812,6 +6908,7 @@ function route() {
   if (pane === 'integrations') { loadIntegrations(); if (tab.id === 'access') loadIntAccess(); if (tab.id === 'wizard') iwzStart(); }
   if (pane === 'playground') pgStart();
   if (pane === 'jobs') loadJobs();
+  if (pane === 'signal') loadSignal();
   if (pane === 'memory') loadMemory();
   if (pane === 'knowledge') { loadFeeds(); loadKnowledgeEntries(); loadKnowledgeLog(); }
   if (pane === 'extensions') loadExtensions();

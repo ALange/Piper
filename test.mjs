@@ -8050,6 +8050,146 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	config.AGENT_JOBS_MAX_PER_AGENT = 10;
 }
 
+// Phase 3: Signal -- linking a number (lib/agentsignal.mjs), permission gating, the caps, and the
+// inbound daemon routing an allowed number to a turn while silently discarding everything else.
+{
+	const { PassThrough } = await import("node:stream");
+	const { EventEmitter } = await import("node:events");
+	const {
+		maySignal, signalFor, getContactByNumber, listAllContacts, normalizePhoneNumber,
+		setSignalSpawn, setSignalRunner, startSignal, stopSignal, signalStatus,
+		agents, apiKeys, config,
+	} = await import("./server.mjs");
+
+	const rec = apiKeys.create({ name: "signal-key" });
+	const key = rec.record ?? rec;
+	const agent = agents.create({ keyId: key.id, name: "signaler" });
+	const record = { keyId: key.id, agentId: agent.id, delegateChain: [], delegateDepth: 0 };
+	config.SIGNAL_ENABLED = true;
+	config.SIGNAL_MAX_CONTACTS_PER_SCOPE = 2;
+	config.SIGNAL_MAX_NEW_CONTACTS_PER_DAY = 1000;
+
+	// Permission gating: off for a fresh agent/key (unlike schedules, this is never on by default),
+	// global switch is a kill switch, agent and bare-key branches both work.
+	assert.equal(normalizePhoneNumber("+1 (555) 123-4567"), "+15551234567");
+	assert.equal(normalizePhoneNumber("5551234567"), null, "no leading + is rejected");
+	assert.equal(maySignal(record), false, "off by default, unlike a fresh agent's schedules");
+	assert.throws(() => signalFor(record), /this agent may not link Signal numbers/);
+	agents.update(agent.id, { canSignal: true });
+	assert.equal(maySignal(record), true);
+	config.SIGNAL_ENABLED = false;
+	assert.equal(maySignal(record), false, "the global switch is a kill switch");
+	assert.throws(() => signalFor(record), /this agent may not link Signal numbers/);
+	config.SIGNAL_ENABLED = true;
+	const bareKey = apiKeys.create({ name: "signal-bare-key" }).record;
+	const bareRecord = { keyId: bareKey.id, agentId: null, delegateChain: [], delegateDepth: 0 };
+	assert.equal(maySignal(bareRecord), false, "off by default for a bare key too");
+	assert.throws(() => signalFor(bareRecord), /this key may not link Signal numbers/);
+	apiKeys.update(bareKey.id, { canSignal: true });
+	assert.equal(maySignal(bareRecord), true);
+
+	// Linking sends a real message -- stub the daemon's send, since there's no real signal-cli here.
+	const sent = [];
+	setSignalSpawn(() => {
+		const fake = new EventEmitter();
+		fake.stdout = new PassThrough();
+		fake.stderr = new PassThrough();
+		fake.stdin = { writable: true, write: (line) => {
+			const msg = JSON.parse(line);
+			if (msg.method === "send") sent.push(msg.params);
+			fake.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id: msg.id, result: { timestamp: Date.now() } })}\n`);
+		} };
+		fake.kill = () => fake.emit("exit", 0, null);
+		return fake;
+	});
+	config.SIGNAL_PHONE_NUMBER = "+15550000000";
+	startSignal();
+	assert.equal(signalStatus().running, true);
+
+	const sched = signalFor(record);
+	const linked = await sched.enable({ phoneNumber: "+1 555 111 2222" });
+	assert.equal(linked.phoneNumber, "+15551112222");
+	assert.equal(linked.enabled, true);
+	assert.equal(sent.length, 1, "linking sends exactly one welcome message");
+	assert.equal(sent[0].recipient[0], "+15551112222");
+	assert.match(sent[0].message, /signaler|Piper/);
+
+	// Re-enabling the same number for the same scope is a no-op: no second welcome message.
+	await sched.enable({ phoneNumber: "+15551112222" });
+	assert.equal(sent.length, 1, "already linked here -- idempotent, no resend");
+
+	// A number already linked to a different scope cannot be taken by another agent/key.
+	const otherAgent = agents.create({ keyId: key.id, name: "other-signaler" });
+	agents.update(otherAgent.id, { canSignal: true });
+	const otherRecord = { keyId: key.id, agentId: otherAgent.id, delegateChain: [], delegateDepth: 0 };
+	await assert.rejects(signalFor(otherRecord).enable({ phoneNumber: "+15551112222" }), /already linked elsewhere/);
+
+	// The per-scope cap.
+	await sched.enable({ phoneNumber: "+15552223333" });
+	assert.equal(sched.list().length, 2);
+	await assert.rejects(sched.enable({ phoneNumber: "+15553334444" }), /already has 2 linked numbers/);
+
+	// The gateway-wide daily cap, independent of any one scope's own cap.
+	config.SIGNAL_MAX_NEW_CONTACTS_PER_DAY = 2;
+	await assert.rejects(signalFor(otherRecord).enable({ phoneNumber: "+15559998888" }), /2 new numbers have already been linked gateway-wide/);
+	config.SIGNAL_MAX_NEW_CONTACTS_PER_DAY = 1000;
+
+	// Only the scope's own numbers are listed, and disable() cannot reach another scope's.
+	assert.equal(signalFor(otherRecord).list().length, 0);
+	assert.throws(() => signalFor(otherRecord).disable({ phoneNumber: "+15551112222" }), /no such linked number/);
+	assert.equal(sched.disable({ phoneNumber: "+15552223333" }), true);
+	assert.equal(getContactByNumber("+15552223333").enabled, false);
+
+	// Inbound routing: an unlinked number never reaches a turn; a linked one does, with a stable
+	// per-scope session id, and its reply goes back out over Signal.
+	const turns = [];
+	setSignalRunner(async ({ credential, clientSessionId, prompt }) => {
+		turns.push({ keyId: credential.id, clientSessionId, prompt });
+		return { text: `echo: ${prompt}` };
+	});
+	// Re-spawn with a fake daemon whose stdout this test can drive directly, captured via closure.
+	let liveChild = null;
+	setSignalSpawn(() => {
+		const fake = new EventEmitter();
+		fake.stdout = new PassThrough();
+		fake.stderr = new PassThrough();
+		fake.stdin = { writable: true, write: (line) => {
+			const msg = JSON.parse(line);
+			if (msg.method === "send") sent.push(msg.params);
+			fake.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id: msg.id, result: {} })}\n`);
+		} };
+		fake.kill = () => fake.emit("exit", 0, null);
+		liveChild = fake;
+		return fake;
+	});
+	stopSignal();
+	startSignal();
+	const waitFor = async (fn, ms = 2000) => { const end = Date.now() + ms; while (Date.now() < end) { const v = fn(); if (v) return v; await new Promise((r) => setTimeout(r, 15)); } throw new Error("timed out waiting"); };
+
+	sent.length = 0;
+	liveChild.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "receive", params: { envelope: { sourceNumber: "+19998887777", dataMessage: { message: "hi from a stranger" } } } })}\n`);
+	await new Promise((r) => setTimeout(r, 100));
+	assert.equal(turns.length, 0, "an unlinked number never reaches a turn");
+	assert.equal(sent.length, 0, "and never gets a reply");
+
+	liveChild.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "receive", params: { envelope: { sourceNumber: "+15551112222", dataMessage: { message: "hello agent" } } } })}\n`);
+	await waitFor(() => turns.length > 0);
+	assert.equal(turns[0].prompt, "hello agent");
+	assert.equal(turns[0].keyId, key.id);
+	assert.equal(turns[0].clientSessionId, `signal:${key.id}:${agent.id}`, "a stable per-scope session id, continue semantics");
+	await waitFor(() => sent.length > 0);
+	assert.equal(sent[0].recipient[0], "+15551112222");
+	assert.equal(sent[0].message, "echo: hello agent");
+	assert.ok(getContactByNumber("+15551112222").lastMessageAt > 0);
+
+	assert.ok(listAllContacts().length >= 2);
+	stopSignal();
+	assert.equal(signalStatus().running, false);
+	setSignalSpawn(null);
+	setSignalRunner(null);
+	config.SIGNAL_ENABLED = false;
+}
+
 // Unattended runs: delivery to the owner, the previous-report context, auto-disable and the daily cost cap.
 {
 	const J = await import("./server.mjs");
@@ -9090,7 +9230,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	const navPages = [...navHtml.matchAll(/<a[^>]*href="#([a-z]+)"/g)].map((m) => m[1]);
 	assert.deepEqual([...navPages].sort(), Object.keys(PAGES).sort(), "every nav item is a page and every page is in the nav");
 	assert.equal(new Set(navPages).size, navPages.length, "no page twice in the nav");
-	assert.equal(navPages.length, 17, "seventeen items in the sidebar");
+	assert.equal(navPages.length, 18, "eighteen items in the sidebar");
 	assert.deepEqual([...navHtml.matchAll(/class="navgroup">([^<]+)</g)].map((m) => m[1]), ["Monitor", "Build", "Infrastructure", "Admin"]);
 
 	// Every tab shows a pane that exists, and a split pane's sections match the markup.
