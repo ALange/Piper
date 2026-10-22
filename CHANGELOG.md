@@ -2,6 +2,37 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.5.0] - 2026-10-22
+
+### Fixed
+- **`COMPACT_AT_PERCENT` was a complete no-op.** It was writing to `settings.compaction.modelOverrides`,
+  a field that only exists in Pi's config under a different, unrelated area (provider connection
+  overrides) -- Pi's real `CompactionSettings` is flat, one `reserveTokens`/`keepRecentTokens` pair per
+  profile, with no per-model concept at all. Every profile has actually been running on Pi's own
+  untuned default (reserve 16384 tokens, keep the most recent 20000) the whole time, regardless of what
+  was configured. Now writes the flat shape Pi actually reads, computed against the *smallest* context
+  window in the model catalogue (the only sound approximation given Pi has no per-model setting) --
+  conservative, so compaction fires no later than the configured percentage for any model a profile
+  might use. Added `COMPACT_KEEP_RECENT_TOKENS` alongside it, Pi's other real compaction knob.
+- **`sessions.close()` silently did nothing for a hibernated session.** A chat idle long enough to have
+  been stopped and reaped from memory, but still resumable from its stored row, was not actually ended
+  by `close()` -- only a *live* record was. The caller got back `false` and the row (and whatever
+  workspace/state it pointed at) stayed, so the next message for that id resumed it as if nothing had
+  happened. `close()` now ends a hibernated session too, the same way `reap()`'s own store-only sweep
+  already does.
+
+### Added
+- **`piper_signal_reset` and automatic session rotation, for long-running Signal conversations.** Every
+  other surface (portal, dashboard Playground, API) has a "start fresh" option; a Signal conversation
+  never did, so the same Pi session could in principle run for months. `piper_signal_reset` is that
+  option for Signal -- a deliberate, final "forget what we discussed" the agent should only reach for
+  on request (anything worth keeping should go through `piper_remember` first). The new
+  `SIGNAL_SESSION_MAX_AGE_DAYS` setting (default 14, 0 disables) adds the automatic side: past that age,
+  the next inbound message first asks the *old* session for a short handoff note (3-5 bullet points),
+  ends it, then runs the real reply against a fresh session with that note carried forward. This bounds
+  a session's *age* directly; Pi's own compaction (now actually working, see above) separately bounds
+  its *size* in between rotations -- the two are complementary, not the same mechanism.
+
 ## [1.4.0] - 2026-10-22
 
 ### Added

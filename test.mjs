@@ -4366,47 +4366,63 @@ assert.equal(isReloadCommand(undefined), false);
 		assert.equal(reserveTokensFor(0, 60), null, "no window, no override");
 	}
 
-	// Forcing compaction at a percentage: every profile's settings.json gets a modelOverrides entry
-	// per model, and it is kept (or removed) as COMPACT_AT_PERCENT and the catalogue change.
+	// Forcing compaction at a percentage: every profile's settings.json gets Pi's own flat
+	// compaction.{enabled,reserveTokens,keepRecentTokens} -- the shape Pi actually reads, not a
+	// per-model modelOverrides table it never did (confirmed against Pi's own CompactionSettings
+	// interface, which has no modelOverrides field at all). Computed against the *smallest* context
+	// window among available models, since Pi has no per-model compaction setting to target.
 	{
 		// Isolated from whatever the container config's own models.json was left holding above: only
-		// the runtime's own model should show up in what gets written.
+		// the runtime's own models should show up in what gets written.
 		const modelsBefore = readFileSync(join(TEST_CONTAINER_PI, "models.json"), "utf8");
 		saveModelsText(JSON.stringify({ providers: {} }));
-		const runtime = { getAvailableSnapshot: () => [{ provider: "host", id: "big", contextWindow: 100_000 }], getModel: () => null };
+		const runtime = { getAvailableSnapshot: () => [{ provider: "host", id: "big", contextWindow: 100_000 }, { provider: "host", id: "small", contextWindow: 10_000 }], getModel: () => null };
 		const dirA = ensureProfile("compactA");
 		const dirB = ensureProfile("compactB");
-		// A hand-set override on another model: never touched, on or off.
-		writeFileSync(join(dirB, "settings.json"), JSON.stringify({ compaction: { enabled: false, modelOverrides: { "host/other": { reserveTokens: 999 } } } }));
+		// A hand-set value already there: left alone until this actually becomes managed.
+		writeFileSync(join(dirB, "settings.json"), JSON.stringify({ compaction: { enabled: false, keepRecentTokens: 5000 } }));
 
 		config.COMPACT_AT_PERCENT = 0;
+		config.COMPACT_KEEP_RECENT_TOKENS = 0;
 		await syncCompactionSettings({ runtime });
 		assert.deepEqual(JSON.parse(readFileSync(join(dirA, "settings.json"), "utf8")), {}, "off: nothing written");
 
 		config.COMPACT_AT_PERCENT = 60;
 		await syncCompactionSettings({ runtime });
 		let a = JSON.parse(readFileSync(join(dirA, "settings.json"), "utf8"));
-		assert.deepEqual(a.compaction.modelOverrides, { "host/big": { reserveTokens: 40_000 } });
+		assert.equal(a.compaction.reserveTokens, 4000, "computed against the smallest window (10000), not the largest");
 		assert.equal(a.compaction.enabled, true, "left on by default, not forced where already set");
-		assert.deepEqual(a.piper.compactionManagedModels, ["host/big"]);
+		assert.equal("keepRecentTokens" in a.compaction, false, "COMPACT_KEEP_RECENT_TOKENS is 0: Pi's own default is left alone");
+		assert.equal(a.piper.compactionManaged, true);
 		let b = JSON.parse(readFileSync(join(dirB, "settings.json"), "utf8"));
-		assert.deepEqual(b.compaction.modelOverrides, { "host/other": { reserveTokens: 999 }, "host/big": { reserveTokens: 40_000 } }, "a hand-set override for another model survives");
+		assert.equal(b.compaction.reserveTokens, 4000);
 		assert.equal(b.compaction.enabled, false, "an explicit enabled:false is never overridden");
+		assert.equal(b.compaction.keepRecentTokens, 5000, "a hand-set keepRecentTokens is kept until COMPACT_KEEP_RECENT_TOKENS says otherwise");
 
-		// A tighter percentage recomputes the managed entry in place.
+		// COMPACT_KEEP_RECENT_TOKENS, once set, does override -- same "this is now managed" contract.
+		config.COMPACT_KEEP_RECENT_TOKENS = 8000;
+		await syncCompactionSettings({ runtime });
+		b = JSON.parse(readFileSync(join(dirB, "settings.json"), "utf8"));
+		assert.equal(b.compaction.keepRecentTokens, 8000);
+
+		// A tighter percentage recomputes the managed value in place.
 		config.COMPACT_AT_PERCENT = 80;
 		await syncCompactionSettings({ runtime });
 		a = JSON.parse(readFileSync(join(dirA, "settings.json"), "utf8"));
-		assert.deepEqual(a.compaction.modelOverrides, { "host/big": { reserveTokens: 20_000 } });
+		assert.equal(a.compaction.reserveTokens, 2000);
 
-		// Turning it off again removes exactly the managed entry, leaving the hand-set one alone.
+		// Turning it off again removes exactly what this sweep itself wrote, leaving the hand-set
+		// enabled:false alone (keepRecentTokens is gone too -- the only trace left is the operator's
+		// own enabled:false, which was there before this was ever managed).
 		config.COMPACT_AT_PERCENT = 0;
+		config.COMPACT_KEEP_RECENT_TOKENS = 0;
 		await syncCompactionSettings({ runtime });
 		b = JSON.parse(readFileSync(join(dirB, "settings.json"), "utf8"));
-		assert.deepEqual(b.compaction.modelOverrides, { "host/other": { reserveTokens: 999 } });
+		assert.deepEqual(b.compaction, { enabled: false });
 		assert.equal("piper" in b, false, "the marker goes with it");
 
 		config.COMPACT_AT_PERCENT = 0;
+		config.COMPACT_KEEP_RECENT_TOKENS = 0;
 		rmSync(dirA, { recursive: true, force: true });
 		rmSync(dirB, { recursive: true, force: true });
 		saveModelsText(modelsBefore);
@@ -8283,6 +8299,59 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${profileHelper} "\${rest[@]}"
 	sched.disable({ phoneNumber: "+15552223333" });
 
 	process.env.PATH = oldPath;
+
+	// piper_signal_reset: the "+ New chat" a Signal conversation otherwise never gets. A no-op when
+	// nothing is running, and -- the case that actually matters for an idle Signal chat, since
+	// setSignalRunner's stand-in never touches the real session registry the way a real Pi turn would
+	// -- also reaches a session hibernated down to just its stored row, so the next message truly
+	// starts fresh instead of silently resuming from it.
+	{
+		const { credentialFor, chatIdHash, chatStore, sessions, scopedSessionId, signalClientSessionId } = await import("./server.mjs");
+		const credential = credentialFor(key.id, agent.id);
+		const scoped = scopedSessionId(credential, signalClientSessionId(key.id, agent.id));
+		assert.deepEqual(sched.reset(), { reset: true, wasRunning: false }, "nothing running yet");
+
+		// Hibernated (stopped, but still resumable from its row) must be reset just as fully as a live
+		// one would be -- otherwise an idle chat would survive a reset and get silently resumed later.
+		chatStore.put({ id_hash: chatIdHash(scoped), key_id: key.id, workspace: "", created_at: Date.now(), last_used_at: Date.now(), requests: 1, named: 0, state_json: "{}" });
+		assert.equal(sessions.has(scoped), false, "not live, only a stored row");
+		assert.deepEqual(sched.reset(), { reset: true, wasRunning: true }, "still reports it ended something");
+		assert.equal(chatStore.get(chatIdHash(scoped)), null, "the hibernated row is gone");
+		assert.ok(recentAudit().some((a) => a.action === "signal.session.reset"));
+	}
+
+	// Automatic rotation (SIGNAL_SESSION_MAX_AGE_DAYS): a session old enough gets one handoff turn
+	// against the *old* session, which then ends, and the handoff note is carried into the very next
+	// real turn's prompt against the fresh one.
+	{
+		const { credentialFor, chatIdHash, chatStore, scopedSessionId, signalClientSessionId } = await import("./server.mjs");
+		config.SIGNAL_SESSION_MAX_AGE_DAYS = 14;
+		const credential = credentialFor(key.id, agent.id);
+		const scoped = scopedSessionId(credential, signalClientSessionId(key.id, agent.id));
+
+		// A row already old enough, standing in for a real session that was last used weeks ago --
+		// setSignalRunner's fake never writes one itself, so this is fabricated the same way the reset
+		// test above does, rather than waiting on a real turn to persist it.
+		chatStore.put({ id_hash: chatIdHash(scoped), key_id: key.id, workspace: "", created_at: Date.now() - 20 * 24 * 60 * 60 * 1000, last_used_at: Date.now(), requests: 1, named: 0, state_json: "{}" });
+
+		turns.length = 0;
+		setSignalRunner(async ({ credential, clientSessionId, prompt, images }) => {
+			turns.push({ keyId: credential.id, clientSessionId, prompt, images });
+			return { text: turns.length === 1 ? "- likes concise replies\n- tracking order #4471" : `echo: ${prompt}` };
+		});
+
+		liveChild.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "receive", params: { envelope: { sourceNumber: "+15551112222", dataMessage: { message: "second message" } } } })}\n`);
+		await waitFor(() => turns.length >= 2, 3000);
+		assert.equal(turns.length, 2, "one handoff turn against the old session, then the real turn against the fresh one");
+		assert.equal(turns[0].clientSessionId, `signal:${key.id}:${agent.id}`, "the handoff turn runs against the same id -- Pi resumes the old session for it");
+		assert.match(turns[0].prompt, /handoff|remember|concise/i);
+		assert.match(turns[1].prompt, /likes concise replies/, "the handoff note is carried into the fresh session's first real prompt");
+		assert.match(turns[1].prompt, /second message$/, "the real message still follows it");
+		assert.ok(recentAudit().some((a) => a.action === "signal.session.rotated"));
+		assert.equal(chatStore.get(chatIdHash(scoped)), null, "the old row is gone -- setSignalRunner's fake never re-persists one");
+
+		config.SIGNAL_SESSION_MAX_AGE_DAYS = 0;
+	}
 
 	assert.ok(listAllContacts().length >= 2);
 	stopSignal();

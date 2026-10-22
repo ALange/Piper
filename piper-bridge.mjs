@@ -463,6 +463,23 @@ export default async function piperBridge(pi) {
 				}
 			},
 		});
+		pi.registerTool({
+			name: "piper_signal_reset",
+			label: "Start a fresh Signal conversation",
+			description:
+				"End this Signal conversation's own session for good, the same as closing a chat and starting a new one -- the next message over Signal begins with no memory of anything said before. " +
+				"Use it when asked to start over or forget the conversation so far. If anything from this conversation is worth keeping, remember it with piper_remember first -- this does not carry anything forward on its own.",
+			promptSnippet: "Start a fresh Signal conversation",
+			parameters: { type: "object", properties: {} },
+			async execute() {
+				try {
+					const answer = await readJson(await request("/signal/reset", {}));
+					return reply(answer.wasRunning ? "Done -- this conversation starts fresh from the next Signal message." : "Nothing was running, but it's reset: the next message starts fresh either way.");
+				} catch (err) {
+					return reply(`Could not reset it: ${err?.message ?? err}`);
+				}
+			},
+		});
 	}
 
 	// Memory: notes that outlive this one chat. A key's own chats all share one memory, and so does a
