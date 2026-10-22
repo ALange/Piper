@@ -3961,6 +3961,27 @@ assert.equal(isReloadCommand(undefined), false);
 			["the network", [{ ...spec, network: "none" }, "img1"]],
 			["the workspace path", [{ ...spec, workspace: "/elsewhere" }, "img1"]],
 		]) assert.notEqual(containerSignature(...change), base, `${what} changes the signature`);
+
+		// The bridge script's own content, not just its (fixed) path: a deploy replaces piper-bridge.mjs
+		// by rename, which never changes spec.bridgePath, so without this a long-lived persistent
+		// container would keep an existing bind mount pinned to the old, now-orphaned file forever,
+		// silently missing every later fix to it (this is exactly what broke Signal tool registration
+		// for an existing persistent container in production, tracked down 2026-10-22).
+		const bridgeTmp = join(mkdtempSync(join(tmpdir(), "bridge-sig-")), "bridge.mjs");
+		writeFileSync(bridgeTmp, "// v1");
+		const withRealBridge = { ...spec, bridgePath: bridgeTmp };
+		const sigV1 = containerSignature(withRealBridge, "img1");
+		assert.equal(containerSignature({ ...withRealBridge }, "img1"), sigV1, "unchanged file, unchanged signature");
+		writeFileSync(bridgeTmp, "// v2, same path, different content");
+		// A real deploy is seconds to minutes later; force the mtime forward rather than trust the
+		// filesystem's clock resolution to have moved between these two writes.
+		utimesSync(bridgeTmp, new Date(Date.now() + 60_000), new Date(Date.now() + 60_000));
+		assert.notEqual(containerSignature(withRealBridge, "img1"), sigV1, "the file changed under the same path -- recreate");
+		rmSync(bridgeTmp, { force: true });
+		// A path that cannot be read (as the fake "/b.mjs"-style paths the other cases above use) must
+		// not throw -- it's not what's being tested there, and a signature has to be computable even
+		// before any real file exists at that path.
+		assert.equal(containerSignature(spec, "img1"), base, "an unreadable bridgePath hashes to something stable, not an exception");
 	}
 
 	// Pi is started with docker exec: the wrapper links the container models.json unless the key has its own.

@@ -2,6 +2,20 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.5.3] - 2026-10-22
+
+### Fixed
+- **A persistent container could run a silently stale `piper-bridge.mjs` forever.** Its container
+  signature (the thing `ensureContainer` compares to decide whether a container needs recreating)
+  included the bridge script's *path*, which never changes, but not its *content*. A deploy replaces
+  `piper-bridge.mjs` by rename (git's own checkout, not an in-place edit), which orphans any existing
+  bind mount at the old inode -- so a long-lived persistent container just kept bind-mounting whatever
+  version of the file existed when it was created, missing every later fix or new tool (including, in
+  production, the whole Signal tool set) until something *else* about the container's settings changed
+  for an unrelated reason. The signature now also hashes the bridge file's own mtime, so a deploy that
+  touches it is treated the same as any other setting change: the next message recreates the
+  container, keeping what's installed in it, same as always.
+
 ## [1.5.2] - 2026-10-22
 
 ### Added
