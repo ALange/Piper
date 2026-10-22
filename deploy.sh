@@ -414,7 +414,7 @@ SIGNAL_BIN="" SIGNAL_READY=0
 if [ -n "$SIGNAL_NUMBER" ]; then
 	find_signal_cli() { as_target bash -lc 'command -v signal-cli' 2>/dev/null || true; }
 	SIGNAL_BIN="$(find_signal_cli)"
-	[ -n "$SIGNAL_BIN" ] || { [ -x "$TARGET_HOME/.local/signal-cli/bin/signal-cli" ] && SIGNAL_BIN="$TARGET_HOME/.local/signal-cli/bin/signal-cli"; }
+	[ -n "$SIGNAL_BIN" ] || { [ -x "$TARGET_HOME/.local/signal-cli/signal-cli" ] && SIGNAL_BIN="$TARGET_HOME/.local/signal-cli/signal-cli"; }
 	if [ -n "$SIGNAL_BIN" ]; then
 		ok "signal-cli at $SIGNAL_BIN"
 	elif [ "$INSTALL_SIGNAL_CLI" = 1 ]; then
@@ -425,13 +425,17 @@ if [ -n "$SIGNAL_NUMBER" ]; then
 		say "  installing signal-cli $SIGNAL_VER (native, no Java needed) to $TARGET_HOME/.local/signal-cli"
 		if [ "$DRY" = 1 ]; then
 			say "  (dry run) download $TAR, unpack"
-			SIGNAL_BIN="$TARGET_HOME/.local/signal-cli/bin/signal-cli"
+			SIGNAL_BIN="$TARGET_HOME/.local/signal-cli/signal-cli"
 		else
 			STMP="$(mktemp -d)"; trap 'rm -rf "$STMP"' EXIT
 			curl -fsSL "https://github.com/AsamK/signal-cli/releases/download/v${SIGNAL_VER}/$TAR" -o "$STMP/$TAR" || die "could not download $TAR -- check your network, or install signal-cli yourself"
 			as_target mkdir -p "$TARGET_HOME/.local/signal-cli"
-			as_target tar -xz --strip-components=1 -C "$TARGET_HOME/.local/signal-cli" -f "$STMP/$TAR"
-			SIGNAL_BIN="$TARGET_HOME/.local/signal-cli/bin/signal-cli"
+			# The native release is a single executable at the tarball's root, not inside a directory --
+			# no --strip-components here, unlike Node's tarball: with one it strips the only path
+			# component there is, so tar extracts nothing and the later exec fails with ENOENT.
+			as_target tar -xz -C "$TARGET_HOME/.local/signal-cli" -f "$STMP/$TAR"
+			SIGNAL_BIN="$TARGET_HOME/.local/signal-cli/signal-cli"
+			as_target chmod +x "$SIGNAL_BIN"
 			ok "installed signal-cli $SIGNAL_VER"
 		fi
 	else

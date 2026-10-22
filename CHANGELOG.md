@@ -2,6 +2,18 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.1.2] - 2026-10-22
+
+### Fixed
+- `deploy.sh --install-signal-cli` extracted the downloaded tarball with `--strip-components=1`,
+  copying Node's own install pattern -- but unlike Node's tarball (a top-level versioned directory),
+  signal-cli's native release is a single executable at the tarball's root, so stripping one path
+  component left nothing to extract: the install step reported success, but the binary was never
+  actually there, and the next step failed with "No such file or directory" trying to run it.
+  Extracts without `--strip-components` now, at `~/.local/signal-cli/signal-cli` (not
+  `~/.local/signal-cli/bin/signal-cli`), and `chmod +x`s it explicitly rather than trusting the
+  archive's permission bits alone.
+
 ## [1.1.1] - 2026-10-22
 
 ### Added
