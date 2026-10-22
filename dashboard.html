@@ -1387,7 +1387,8 @@
             <thead><tr><th>name</th><th>key</th><th class="num">expires</th><th>status</th>
               <th class="num">last used</th><th class="num" title="live sessions / limit - blank follows the default, 0 is unlimited">sessions</th>
               <th class="num" title="spent today / daily cap in USD - blank follows the default, 0 is unlimited">today</th>
-              <th title="shared bundles this key gets - blank follows the default, * is all, none for none">bundles</th><th></th></tr></thead>
+              <th title="shared bundles this key gets - blank follows the default, * is all, none for none">bundles</th>
+              <th title="lets a chat running as this key directly (no agent endpoint) schedule its own recurring tasks, from the Jobs page">schedule</th><th></th></tr></thead>
             <tbody id="keyrows"></tbody>
           </table></div>
         </section>
@@ -2073,6 +2074,20 @@ function renderKeyTable() {
     });
     bcell.appendChild(binput);
     tr.appendChild(bcell);
+
+    // Lets a chat running as this key directly (no agent endpoint) get the same piper_schedule tools
+    // an agent gets via its own can_schedule switch -- off by default, an explicit per-key opt-in.
+    var scell = el('td');
+    var schk = el('input');
+    schk.type = 'checkbox';
+    schk.checked = Boolean(k.canSchedule);
+    schk.disabled = !(KEYS.agentJobsEnabled);
+    schk.title = KEYS.agentJobsEnabled ? 'may schedule its own recurring tasks (Jobs page) from a chat running as this key, with no agent endpoint' : 'switched off globally: Settings → Jobs → AGENT_JOBS_ENABLED';
+    schk.addEventListener('change', function () {
+      act('POST', 'dashboard/api-keys/' + k.id, { canSchedule: schk.checked }, schk.checked ? 'may now schedule its own tasks' : 'may no longer schedule its own tasks');
+    });
+    scell.appendChild(schk);
+    tr.appendChild(scell);
 
     var actions = el('td');
     // First, so it is visible without scrolling the table: what this key's agents get.

@@ -2,6 +2,19 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.28] - 2026-10-22
+
+### Added
+- **Self-service scheduling for plain API keys, not just agent endpoints.** Previously `piper_schedule`
+  and its sibling tools only ever appeared for a chat going through a configured Agent endpoint (gated
+  on that agent's own "may schedule" switch) -- a chat running directly as a bare key had no way to get
+  them, even with `AGENT_JOBS_ENABLED` on, since there was no per-key flag to hold the setting. Added a
+  `can_schedule` column on `api_keys` (off by default, an explicit opt-in -- unlike a newly created
+  agent, an existing key should not silently gain a new capability) and a matching "schedule" checkbox
+  column on the API Keys table. A key with it on gets the same `piper_schedule`/`piper_schedules`/
+  `piper_unschedule`/`piper_run_schedule` tools an agent gets, scoped to that key's own agentless jobs
+  (an agent of the same key cannot see or touch them, and vice versa).
+
 ## [1.0.27] - 2026-10-22
 
 ### Added

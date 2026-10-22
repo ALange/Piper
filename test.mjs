@@ -8009,6 +8009,47 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	config.AGENT_JOBS_MAX_PER_AGENT = 10;
 }
 
+// Phase 2b: the same scheduling tools, but for a chat running as a plain key with no agent endpoint.
+{
+	const { maySchedule, schedulerFor, getJob, deleteJobsOf } = await import("./server.mjs");
+	const rec = apiKeys.create({ name: "sched-bare-key" });
+	const key = rec.record ?? rec;
+	const agent = agents.create({ keyId: key.id, name: "ticker-bare" });
+	// No agentId at all: this is what sessions.mjs builds for a chat running directly as the key.
+	const record = { keyId: key.id, agentId: null, delegateChain: [], delegateDepth: 0 };
+	config.AGENT_JOBS_ENABLED = true;
+	config.AGENT_JOBS_MAX_PER_AGENT = 10;
+
+	assert.equal(maySchedule(record), false, "off by default for a bare key, unlike a freshly created agent");
+	assert.throws(() => schedulerFor(record), /this key may not create schedules/);
+	apiKeys.update(key.id, { canSchedule: true });
+	assert.equal(maySchedule(record), true, "on once the key's own switch is turned on");
+
+	const sched = schedulerFor(record);
+	assert.equal(sched.list().length, 0);
+	const made = sched.create({ name: "bare check", prompt: "check the thing", schedule: { kind: "interval", every: 3, unit: "hours" } });
+	assert.equal(getJob(made.id).agent_id, null, "a bare key's own schedule has no agent");
+	assert.equal(getJob(made.id).origin, "agent", "still marked as self-service, just not an agent's");
+	assert.equal(sched.list().length, 1);
+
+	// The agent of the same key, and the key's own operator jobs, are separate: an agentless schedule
+	// does not show up for the agent, and vice versa (this is the ownJobs() null/undefined fix).
+	const agentSched = schedulerFor({ keyId: key.id, agentId: agent.id, delegateChain: [], delegateDepth: 0 });
+	agents.update(agent.id, { canSchedule: true });
+	assert.equal(agentSched.list().length, 0, "the agent does not see the key's own agentless schedule");
+	assert.throws(() => agentSched.remove({ id: made.id }), /no such schedule/);
+	assert.throws(() => sched.remove({ id: agentSched.create({ name: "agent-own", prompt: "p", schedule: { kind: "manual" } }).id }), /no such schedule/);
+
+	// Turning the key's own switch off removes the tool, same as the global switch or an agent's own.
+	apiKeys.update(key.id, { canSchedule: false });
+	assert.equal(maySchedule(record), false);
+	assert.throws(() => schedulerFor(record), /this key may not create schedules/);
+
+	assert.ok(deleteJobsOf({ keyId: key.id }) >= 2);
+	agents.remove(agent.id);
+	config.AGENT_JOBS_MAX_PER_AGENT = 10;
+}
+
 // Unattended runs: delivery to the owner, the previous-report context, auto-disable and the daily cost cap.
 {
 	const J = await import("./server.mjs");
