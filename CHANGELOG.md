@@ -2,6 +2,16 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.5.2] - 2026-10-22
+
+### Added
+- **`./deploy.sh --stop`/`--start`/`--restart`.** A plain alias for `./piper.sh [stop|start|restart]`,
+  so the same script that sets a host up can also manage the gateway on it day to day, without needing
+  to know piper.sh exists separately. Skips the rest of the deploy script entirely (no host checks, no
+  image build) and goes straight to piper.sh, which already knows whether a systemd unit owns this
+  gateway. Warns (but still runs) if combined with any other option, since every other option only
+  matters during an actual deploy.
+
 ## [1.5.1] - 2026-10-22
 
 ### Fixed

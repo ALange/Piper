@@ -27,6 +27,13 @@
 #   --no-start           set everything up but do not start the gateway
 #   --dry-run            print what would be done and change nothing
 #   --print-unit         print the systemd unit that --systemd would install, and exit
+#   --stop               stop the gateway and exit, skipping the rest of this script
+#   --start              start the gateway and exit, skipping the rest of this script
+#   --restart            restart the gateway and exit, skipping the rest of this script
+#                        These three are a convenience alias for ./piper.sh [stop|start|restart] --
+#                        same effect, including systemd awareness, since that is what runs underneath.
+#                        Combining one with any other option is pointless: every other option only
+#                        matters during a real deploy, so it is ignored and warned about.
 #   -h, --help
 #
 # Environment: DASHBOARD_PASSWORD  set on first start only (the dashboard asks for it from then on)
@@ -43,6 +50,7 @@ NODE_MIN="${NODE_MIN:-22.19}"
 SYSTEMD=0 BACKUPS=0 RUN_AS="" CREATE_USER=0 HOST_ADDR="" PORT_NUM="" INSTALL_NODE=0 SKIP_PI=0 SKIP_IMAGE=0
 REBUILD=0 NO_START=0 DRY=0 PRINT_UNIT=0
 SIGNAL_NUMBER="" INSTALL_SIGNAL_CLI=0 SIGNAL_VOICE=0
+ACTION="" OTHER_GIVEN=0
 
 say() { printf '%s\n' "$*"; }
 ok() { printf '  [ok]   %s\n' "$*"; }
@@ -62,31 +70,44 @@ const done = db.prepare("UPDATE settings SET value = ?, source = ?, updated_at =
 if (!done.changes) db.prepare("INSERT INTO settings (key, value, source, updated_at) VALUES (?, ?, ?, ?)").run(key, value, "deploy", now);' "$DIR/gateway.db" "$1" "$2"
 }
 
-usage() { sed -n '2,36p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,43p' "$0" | sed 's/^# \{0,1\}//'; }
 
 while [ $# -gt 0 ]; do
 	case "$1" in
-		--systemd) SYSTEMD=1 ;;
-		--backups) BACKUPS=1 ;;
-		--run-as) RUN_AS="${2:?--run-as needs a user}"; shift ;;
-		--create-user) CREATE_USER=1 ;;
-		--host) HOST_ADDR="${2:?--host needs an address}"; shift ;;
-		--port) PORT_NUM="${2:?--port needs a number}"; shift ;;
-		--install-node) INSTALL_NODE=1 ;;
-		--skip-pi) SKIP_PI=1 ;;
-		--skip-image) SKIP_IMAGE=1 ;;
-		--rebuild-image) REBUILD=1 ;;
-		--signal-number) SIGNAL_NUMBER="${2:?--signal-number needs a phone number, e.g. +15551234567}"; shift ;;
-		--install-signal-cli) INSTALL_SIGNAL_CLI=1 ;;
-		--signal-voice) SIGNAL_VOICE=1 ;;
-		--no-start) NO_START=1 ;;
-		--dry-run) DRY=1 ;;
-		--print-unit) PRINT_UNIT=1 ;;
+		--systemd) SYSTEMD=1; OTHER_GIVEN=1 ;;
+		--backups) BACKUPS=1; OTHER_GIVEN=1 ;;
+		--run-as) RUN_AS="${2:?--run-as needs a user}"; OTHER_GIVEN=1; shift ;;
+		--create-user) CREATE_USER=1; OTHER_GIVEN=1 ;;
+		--host) HOST_ADDR="${2:?--host needs an address}"; OTHER_GIVEN=1; shift ;;
+		--port) PORT_NUM="${2:?--port needs a number}"; OTHER_GIVEN=1; shift ;;
+		--install-node) INSTALL_NODE=1; OTHER_GIVEN=1 ;;
+		--skip-pi) SKIP_PI=1; OTHER_GIVEN=1 ;;
+		--skip-image) SKIP_IMAGE=1; OTHER_GIVEN=1 ;;
+		--rebuild-image) REBUILD=1; OTHER_GIVEN=1 ;;
+		--signal-number) SIGNAL_NUMBER="${2:?--signal-number needs a phone number, e.g. +15551234567}"; OTHER_GIVEN=1; shift ;;
+		--install-signal-cli) INSTALL_SIGNAL_CLI=1; OTHER_GIVEN=1 ;;
+		--signal-voice) SIGNAL_VOICE=1; OTHER_GIVEN=1 ;;
+		--no-start) NO_START=1; OTHER_GIVEN=1 ;;
+		--dry-run) DRY=1; OTHER_GIVEN=1 ;;
+		--print-unit) PRINT_UNIT=1; OTHER_GIVEN=1 ;;
+		--stop) [ -z "$ACTION" ] || die "--stop, --start and --restart are mutually exclusive"; ACTION=stop ;;
+		--start) [ -z "$ACTION" ] || die "--stop, --start and --restart are mutually exclusive"; ACTION=start ;;
+		--restart) [ -z "$ACTION" ] || die "--stop, --start and --restart are mutually exclusive"; ACTION=restart ;;
 		-h|--help) usage; exit 0 ;;
 		*) die "unknown option: $1 (see --help)" ;;
 	esac
 	shift
 done
+
+# --stop/--start/--restart are a plain alias for ./piper.sh [stop|start|restart]: piper.sh already
+# knows how to find the gateway (by working directory and database, not just a PID file) and whether
+# a systemd unit owns it, so there is nothing to duplicate here -- just hand the action straight to it
+# and skip the rest of this script entirely, before any of the host/option checks below even run.
+if [ -n "$ACTION" ]; then
+	[ "$OTHER_GIVEN" = 0 ] || warn "--$ACTION ignores every other option given alongside it"
+	[ -x "$DIR/piper.sh" ] || die "no piper.sh next to this script"
+	exec "$DIR/piper.sh" "$ACTION"
+fi
 
 [ -z "$PORT_NUM" ] || [[ "$PORT_NUM" =~ ^[0-9]+$ && "$PORT_NUM" -ge 1 && "$PORT_NUM" -le 65535 ]] || die "--port must be 1-65535"
 [ -z "$SIGNAL_NUMBER" ] || [[ "$SIGNAL_NUMBER" =~ ^\+[1-9][0-9]{7,14}$ ]] || die "--signal-number must be in +<country code><number> form, e.g. +15551234567"
