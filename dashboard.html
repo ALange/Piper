@@ -1001,6 +1001,7 @@
           <select id="jobnotify" title="What a finished run tells the owner: in the next chat reply of this key/agent, and on the alert webhook. changes: only when the report differs (the agent answers NO_CHANGE when nothing is new)."><option value="never">tell nobody</option><option value="changes">tell on change</option><option value="always">tell every run</option></select>
           <input id="jobcap" type="number" min="0" step="0.1" placeholder="cap" style="width:90px" title="most dollars this job may spend in 24 hours; 0 none; blank is the default (agent-made schedules: Settings → Jobs)"> <span class="hint small">$ per day</span>
           <input id="jobtimeout" type="number" min="1" max="120" value="10" style="width:90px" title="minutes before the run is stopped"> <span class="hint small">minutes at most</span>
+          <input id="jobmaxruns" type="number" min="1" step="1" placeholder="&#8734;" style="width:70px" title="stop automatically after this many scheduled runs; blank runs until removed or turned off"> <span class="hint small">runs, then stop</span>
           <input id="jobhook" placeholder="webhook URL for the result (optional)">
           <label class="ctrl"><input id="jobon" type="checkbox" checked> enabled</label>
         </div>
@@ -3993,7 +3994,13 @@ function renderJobs() {
     tr.appendChild(name);
     tr.appendChild(el('td', (key ? key.name : j.keyId.slice(0, 8)) + (j.agent ? ' / ' + j.agent : '')));
     tr.appendChild(el('td', j.scheduleText));
-    tr.appendChild(el('td', j.enabled ? when(j.nextRunAt) : '-'));
+    var nextCell = el('td', j.enabled ? when(j.nextRunAt) : '-');
+    if (j.maxRuns) {
+      var prog = el('span', ' (' + j.runCount + '/' + j.maxRuns + ' runs)');
+      prog.className = 'hint small';
+      nextCell.appendChild(prog);
+    }
+    tr.appendChild(nextCell);
     tr.appendChild(jobStatusCell(j));
     var on = el('td', j.enabled ? 'yes' : 'no');
     if (j.disabledReason) { on.title = j.disabledReason; on.appendChild(el('span', ' stopped')).className = 'badge'; }
@@ -4052,6 +4059,7 @@ function openJobForm(job) {
   $('jobnotify').value = job ? job.notify : 'never';
   $('jobcap').value = job && job.dailyCostCap !== null ? job.dailyCostCap : '';
   $('jobtimeout').value = job ? Math.round(job.timeoutMs / 60000) || 1 : 10;
+  $('jobmaxruns').value = job && job.maxRuns !== null ? job.maxRuns : '';
   $('jobhook').value = job && job.webhookUrl || '';
   $('jobon').checked = job ? job.enabled : true;
   $('jobformnote').textContent = '';
@@ -4131,7 +4139,7 @@ $('jobdetailclose').addEventListener('click', function () { JOB_OPEN = null; $('
 $('jobkind').addEventListener('change', jobKindFields);
 $('jobkey').addEventListener('change', jobAgents);
 $('jobsave').addEventListener('click', function () {
-  var body = { name: $('jobname').value.trim(), prompt: $('jobprompt').value, model: $('jobmodel').value.trim() || null, agentId: $('jobagent').value || null, schedule: jobSchedule(), sessionMode: $('jobmode').value, notify: $('jobnotify').value, dailyCostCap: $('jobcap').value === '' ? null : Number($('jobcap').value), timeoutMs: String(Number($('jobtimeout').value) * 60000), webhookUrl: $('jobhook').value.trim(), enabled: $('jobon').checked };
+  var body = { name: $('jobname').value.trim(), prompt: $('jobprompt').value, model: $('jobmodel').value.trim() || null, agentId: $('jobagent').value || null, schedule: jobSchedule(), sessionMode: $('jobmode').value, notify: $('jobnotify').value, dailyCostCap: $('jobcap').value === '' ? null : Number($('jobcap').value), timeoutMs: String(Number($('jobtimeout').value) * 60000), maxRuns: $('jobmaxruns').value === '' ? null : Number($('jobmaxruns').value), webhookUrl: $('jobhook').value.trim(), enabled: $('jobon').checked };
   var p;
   if (JOB_EDIT) p = epPost('dashboard/jobs/' + JOB_EDIT, body, 'PATCH');
   else { body.keyId = $('jobkey').value; p = epPost('dashboard/jobs', body); }

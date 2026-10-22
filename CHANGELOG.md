@@ -2,6 +2,19 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.29] - 2026-10-22
+
+### Added
+- **A recurring job can now be told to stop after N runs.** Previously an interval/daily/weekly job ran
+  forever once enabled, the same as "unlimited" -- there was no way to say "check this 5 times, then
+  stop" without remembering to disable it by hand. The Jobs tab's job form has a new "runs, then stop"
+  field (blank is unlimited, as before); the job list shows progress as "(3/5 runs)" next to its next
+  run time. Reaching the limit switches the job off exactly the way repeated failures already do --
+  `disabledReason` explains why, the owner is told, and turning it back on gives it a fresh run budget.
+  A manual or webhook-triggered run never counts against the limit, only a scheduled one. Also exposed to
+  an agent's own `piper_schedule` tool as `max_runs`, since "watch this N times then stop" is exactly the
+  kind of thing an agent books for itself.
+
 ## [1.0.28] - 2026-10-22
 
 ### Added

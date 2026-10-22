@@ -293,7 +293,7 @@ export default async function piperBridge(pi) {
 				"Use it when the user asks you to check, watch or repeat something every so often, daily or at a set time. The prompt is what you will be asked each run, so write it as a self-contained instruction. " +
 				"Forms of schedule: {kind:'interval', every:<whole number>, unit:'minutes'|'hours'} (at most 7 days), {kind:'daily', at:'HH:MM'}, {kind:'weekly', days:[0-6, 0 is Sunday], at:'HH:MM'}, {kind:'once', at:'<ISO date and time>'}. Times are the gateway's local time. " +
 				"Each run starts fresh but is shown your last few reports, so compare with them. With the default notify ('changes') the owner is told only when you have something new: if nothing changed since your last report, reply with exactly NO_CHANGE. " +
-				"Results are shown to the user at the top of their next reply in this agent's chat. A task that fails several times in a row is switched off automatically.",
+				"Results are shown to the user at the top of their next reply in this agent's chat. A task that fails several times in a row is switched off automatically, and so is one given max_runs once it reaches it.",
 			promptSnippet: "Book a recurring task that runs on the gateway",
 			parameters: {
 				type: "object",
@@ -315,12 +315,13 @@ export default async function piperBridge(pi) {
 					session_mode: { type: "string", description: "memory (default) starts each run fresh but shows it your last reports; continue keeps one growing conversation; fresh starts with no memory at all." },
 					notify: { type: "string", description: "changes (default): tell the owner only when the report differs from the last one; always: tell them every run; never: keep results on the gateway only." },
 					timeout_ms: { type: "number", description: "How long one run may take, in milliseconds. Leave out for the default (10 minutes)." },
+					max_runs: { type: "number", description: "Stop automatically after this many scheduled runs, e.g. check something 5 times then stop. Leave out to run until removed." },
 				},
 				required: ["name", "prompt", "schedule"],
 			},
 			async execute(_toolCallId, params) {
 				try {
-					const answer = await readJson(await request("/schedule", { name: params?.name, prompt: params?.prompt, schedule: params?.schedule, sessionMode: params?.session_mode, notify: params?.notify, timeoutMs: params?.timeout_ms }));
+					const answer = await readJson(await request("/schedule", { name: params?.name, prompt: params?.prompt, schedule: params?.schedule, sessionMode: params?.session_mode, notify: params?.notify, timeoutMs: params?.timeout_ms, maxRuns: params?.max_runs }));
 					const s = answer.schedule;
 					return reply(`Scheduled "${s.name}" (id ${s.id}): ${when(s.schedule)}${s.nextRunAt ? `, next run ${new Date(s.nextRunAt).toISOString()}` : ""}. It runs on the gateway, so it will run even if this chat is idle.`);
 				} catch (err) {

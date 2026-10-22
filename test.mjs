@@ -8169,6 +8169,43 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.equal(getJob(flaky.id).enabled, 1);
 	config.JOBS_MAX_FAILURES = 3;
 
+	// maxRuns: a job switches itself off once it has completed that many scheduled runs, the owner is
+	// told, manual runs do not count, and turning it on again resets the count so it gets a fresh budget.
+	reply = () => ({ text: "tick" });
+	assert.throws(() => createJob({ keyId: key.id, name: "x", prompt: "p", maxRuns: 0 }), /run limit/);
+	assert.throws(() => createJob({ keyId: key.id, name: "x", prompt: "p", maxRuns: 1.5 }), /run limit/);
+	const capped3 = createJob({ keyId: key.id, agentId: agent.id, name: "capped3", prompt: "p", schedule: { kind: "interval", every: 1, unit: "hours" }, maxRuns: 3 }).job;
+	assert.equal(capped3.maxRuns, 3);
+	assert.equal(capped3.runCount, 0);
+	await runAndWait(capped3, "manual");
+	assert.equal(getJob(capped3.id).run_count, 0, "a manual run does not count toward the limit");
+	await runAndWait(capped3, "schedule");
+	assert.equal(scheduledJobView(getJob(capped3.id)).runCount, 1);
+	assert.equal(getJob(capped3.id).enabled, 1);
+	await runAndWait(capped3, "schedule");
+	assert.equal(getJob(capped3.id).enabled, 1, "2 of 3: still on");
+	await runAndWait(capped3, "schedule");
+	const maxed = scheduledJobView(getJob(capped3.id));
+	assert.equal(maxed.runCount, 3);
+	assert.equal(maxed.enabled, false);
+	assert.equal(maxed.nextRunAt, null);
+	assert.match(maxed.disabledReason, /reached its limit of 3 runs/);
+	assert.deepEqual(takeInbox(key.id, agent.id).map((i) => i.title), ["capped3: switched off"]);
+	const resumed = updateJob(capped3.id, { enabled: true }).job;
+	assert.equal(resumed.enabled, true);
+	assert.equal(resumed.runCount, 0, "turning it on again gives it a fresh run budget");
+	assert.equal(resumed.disabledReason, null);
+	// Editing a job with maxRuns omitted leaves its limit and count alone.
+	updateJob(capped3.id, { name: "capped3 renamed" });
+	assert.equal(scheduledJobView(getJob(capped3.id)).maxRuns, 3);
+	// Clearing it back to unlimited.
+	assert.equal(updateJob(capped3.id, { maxRuns: null }).job.maxRuns, null);
+	// Exposed to the agent's own piper_schedule tool too, via schedulerFor().
+	const { schedulerFor: schedFor2 } = await import("./server.mjs");
+	const ownCapped = schedFor2({ keyId: key.id, agentId: agent.id, delegateChain: [], delegateDepth: 0 }).create({ name: "self-capped", prompt: "p", schedule: { kind: "manual" }, maxRuns: 2 });
+	assert.equal(ownCapped.maxRuns, 2);
+	assert.equal(ownCapped.runCount, 0);
+
 	// The daily cost cap skips scheduled runs once, tells the owner once, and never blocks a manual run.
 	const spendy = createJob({ keyId: key.id, agentId: agent.id, name: "spendy", prompt: "p", dailyCostCap: 0.05, schedule: { kind: "interval", every: 1, unit: "hours" } }).job;
 	assert.equal(spendy.dailyCostCap, 0.05);
