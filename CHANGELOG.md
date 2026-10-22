@@ -2,6 +2,12 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.7.1] - 2026-10-22
+
+### Fixed
+- **A steered-in message could come out garbled, or look like a second, unrelated turn, when reconnecting.** 1.7.0's fix for the Playground/portal's own live send stream (not shoving a mid-turn "user" item into the assistant's own bubble) was never applied to the separate reconnect/catch-up path (`resumeIfLive`/`pgResumeIfLive` -- used whenever a tab reattaches to a turn already running). Same fix, applied there too.
+- **A steer that failed for any reason other than "nothing is actually running" silently started a second, disconnected turn instead of reporting the failure.** Only an actual 409 ("nothing_running") response now falls back to sending the message as a normal new one; anything else (a real server error, a dropped connection) surfaces as an error instead.
+
 ## [1.7.0] - 2026-10-22
 
 ### Added

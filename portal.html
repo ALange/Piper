@@ -1342,8 +1342,20 @@ function steer(c, text) {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ message: text }),
-  }).then(function (r) { if (!r.ok) throw new Error('not running'); })
-    .catch(function () { $('input').value = text; send(); });
+  }).then(function (r) {
+    // 409 ("nothing_running") is the one case worth a quiet retry as a normal send -- the turn just
+    // finished in the moment between typing and this landing. Anything else (a real server error, a
+    // dropped connection) must not silently fall back to starting a second, independent turn: that is
+    // exactly how two unrelated reply bubbles for one message would happen.
+    if (r.ok) return;
+    if (r.status === 409) { $('input').value = text; return send(); }
+    return r.json().catch(function () { return {}; }).then(function (j) { throw new Error((j.error && j.error.message) || ('HTTP ' + r.status)); });
+  }).catch(function (e) {
+    console.error('piper: steering failed', e);
+    alert("Couldn't send that in: " + e.message + '. It was not sent.');
+    $('input').value = text;
+    resizeInput();
+  });
 }
 function send() {
   var c = conv();
@@ -1491,6 +1503,11 @@ function resumeIfLive(c) {
           msg.pending = Boolean(d.state && d.state.working);
           if (d.state && d.state.contextTokens != null) { c.status = c.status || {}; c.status.contextUsed = d.state.contextTokens; }
           refresh();
+        } else if (event === 'item' && d.item.kind === 'user') {
+          // A message steered in (POST .../steer, from this tab or another) while reconnected here --
+          // same reasoning as send()'s own stream handler: a new standalone bubble, not a part of the
+          // assistant's answer. frameMessages() only patches the last node, so this needs a full one.
+          if (d.op !== 'update') { c.messages.splice(c.messages.indexOf(msg), 0, { role: 'user', text: d.item.text }); if (c.id === CUR) renderMessages(); }
         } else if (event === 'item') { applyItem(msg, d.item); if (c.id === CUR) frameMessages(); }
         else if (event === 'context') { c.status = c.status || {}; c.status.contextUsed = d.contextUsed; if (c.id === CUR) renderStatusBar(); }
         else if (event === 'done') { if (d.usage) msg.usage = d.usage; if (d.cost) msg.cost = d.cost; }

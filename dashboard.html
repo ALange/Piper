@@ -5662,6 +5662,11 @@ function pgResumeIfLive(c) {
           (d.items || []).forEach(function (it) { if (it.kind !== 'user' && it.id > lastUserId) pgApply(msg, it); });
           msg.pending = Boolean(d.state && d.state.working);
           if (isCur()) { pgRenderBar(); pgRenderMessages(false); }
+        } else if (ev[1] === 'item' && d.item.kind === 'user') {
+          // A message steered in (POST .../steer, from this tab or another) while reconnected here --
+          // same reasoning as pgSend's own stream handler: a new standalone bubble, not a part of the
+          // assistant's answer. pgFrame() only patches the last node, so this needs a full render.
+          if (d.op !== 'update') { c.messages.splice(c.messages.indexOf(msg), 0, { role: 'user', text: d.item.text, ts: d.item.at }); if (isCur()) pgRenderMessages(false); }
         } else if (ev[1] === 'item') { pgApply(msg, d.item); if (isCur()) pgFrame(); }
         else if (ev[1] === 'done') { if (d.usage) msg.usage = d.usage; if (d.cost) msg.cost = d.cost; }
         else if (ev[1] === 'error') { msg.error = d.message; }
@@ -5715,8 +5720,20 @@ function pgSteer(text) {
   if (!c) return;
   $('pginput').value = ''; pgResize();
   fetch('dashboard/playground/conversation/' + encodeURIComponent(c.id) + '/steer?keyId=' + encodeURIComponent(c.keyId) + (c.agentId ? '&agentId=' + encodeURIComponent(c.agentId) : '') + (c.channel ? '&channel=' + encodeURIComponent(c.channel) : ''), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message: text }) })
-    .then(function (r) { if (r.ok) return; return r.json().catch(function () { return {}; }).then(function () { throw new Error('not running'); }); })
-    .catch(function () { pgSend(text); });
+    .then(function (r) {
+      // 409 ("nothing_running") is the one case worth a quiet retry as a normal send -- the turn just
+      // finished in the moment between typing and this landing. Anything else (a real server error, a
+      // dropped connection) must not silently fall back to starting a second, independent turn: that
+      // is exactly how two unrelated reply bubbles for one message would happen.
+      if (r.ok) return;
+      if (r.status === 409) { $('pginput').value = text; return pgSend(text); }
+      return r.json().catch(function () { return {}; }).then(function (j) { throw new Error((j.error && j.error.message) || ('HTTP ' + r.status)); });
+    })
+    .catch(function (e) {
+      console.error('piper: steering failed', e);
+      alert("Couldn't send that in: " + e.message + '. It was not sent.');
+      $('pginput').value = text; pgResize();
+    });
 }
 function pgDelete(c) {
   if (c.channel) { if (!confirm('Remove "' + c.title + '" from this list? The Signal conversation itself is not affected -- it still works over Signal, and can be reopened here again.')) return; }
