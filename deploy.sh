@@ -16,6 +16,14 @@
 #                        PI_AGENT_PACKAGE, the gateway setting, the pi command, npm root -g, nvm/fnm/asdf/volta
 #   --skip-image         do not build the chat image
 #   --rebuild-image      build the image even if it exists and matches
+#   --signal-number ADDR  set up Signal for this number (+<country code><number>, e.g. +15551234567):
+#                        find or install signal-cli, and if the number is not registered yet, request
+#                        a code and print the verify command to run by hand (can't be automated: the
+#                        code arrives outside this script). Run again once verified to finish and turn
+#                        SIGNAL_ENABLED on. Safe to run again at any time, not just on a first deploy.
+#   --install-signal-cli  install signal-cli's native build (no Java needed) under ~/.local/signal-cli
+#                        if it is missing, when --signal-number is given. Linux x86_64 only
+#   --signal-voice        request the verification code by voice call instead of SMS
 #   --no-start           set everything up but do not start the gateway
 #   --dry-run            print what would be done and change nothing
 #   --print-unit         print the systemd unit that --systemd would install, and exit
@@ -24,7 +32,8 @@
 # Environment: DASHBOARD_PASSWORD  set on first start only (the dashboard asks for it from then on)
 #
 # Host, port and password only take effect the first time the gateway creates its database;
-# after that they are edited on the dashboard.
+# after that they are edited on the dashboard. Signal settings, once a number is verified, are
+# applied whether this is a first start or a database that already exists.
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -33,6 +42,7 @@ NODE_MIN="${NODE_MIN:-22.19}"
 
 SYSTEMD=0 BACKUPS=0 RUN_AS="" CREATE_USER=0 HOST_ADDR="" PORT_NUM="" INSTALL_NODE=0 SKIP_PI=0 SKIP_IMAGE=0
 REBUILD=0 NO_START=0 DRY=0 PRINT_UNIT=0
+SIGNAL_NUMBER="" INSTALL_SIGNAL_CLI=0 SIGNAL_VOICE=0
 
 say() { printf '%s\n' "$*"; }
 ok() { printf '  [ok]   %s\n' "$*"; }
@@ -40,8 +50,19 @@ warn() { printf '  [warn] %s\n' "$*" >&2; }
 step() { printf '\n== %s\n' "$*"; }
 die() { printf '  [FAIL] %s\n' "$*" >&2; exit 1; }
 run() { if [ "$DRY" = 1 ]; then printf '  (dry run) %s\n' "$*"; else "$@"; fi; }
+# Write one setting straight into gateway.db, for when it already exists and a value from a later
+# step (Pi's detected path, a verified Signal number) needs to apply without waiting for a seeded
+# first start. Upserts, like the settings table's own save path.
+store_setting() {
+	as_target "$NODE_BIN" --disable-warning=ExperimentalWarning -e '
+const { DatabaseSync } = require("node:sqlite");
+const db = new DatabaseSync(process.argv[1]);
+const [key, value, now] = [process.argv[2], process.argv[3], Date.now()];
+const done = db.prepare("UPDATE settings SET value = ?, source = ?, updated_at = ? WHERE key = ?").run(value, "deploy", now, key);
+if (!done.changes) db.prepare("INSERT INTO settings (key, value, source, updated_at) VALUES (?, ?, ?, ?)").run(key, value, "deploy", now);' "$DIR/gateway.db" "$1" "$2"
+}
 
-usage() { sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,36p' "$0" | sed 's/^# \{0,1\}//'; }
 
 while [ $# -gt 0 ]; do
 	case "$1" in
@@ -55,6 +76,9 @@ while [ $# -gt 0 ]; do
 		--skip-pi) SKIP_PI=1 ;;
 		--skip-image) SKIP_IMAGE=1 ;;
 		--rebuild-image) REBUILD=1 ;;
+		--signal-number) SIGNAL_NUMBER="${2:?--signal-number needs a phone number, e.g. +15551234567}"; shift ;;
+		--install-signal-cli) INSTALL_SIGNAL_CLI=1 ;;
+		--signal-voice) SIGNAL_VOICE=1 ;;
 		--no-start) NO_START=1 ;;
 		--dry-run) DRY=1 ;;
 		--print-unit) PRINT_UNIT=1 ;;
@@ -65,6 +89,9 @@ while [ $# -gt 0 ]; do
 done
 
 [ -z "$PORT_NUM" ] || [[ "$PORT_NUM" =~ ^[0-9]+$ && "$PORT_NUM" -ge 1 && "$PORT_NUM" -le 65535 ]] || die "--port must be 1-65535"
+[ -z "$SIGNAL_NUMBER" ] || [[ "$SIGNAL_NUMBER" =~ ^\+[1-9][0-9]{7,14}$ ]] || die "--signal-number must be in +<country code><number> form, e.g. +15551234567"
+[ "$INSTALL_SIGNAL_CLI" = 0 ] || [ -n "$SIGNAL_NUMBER" ] || die "--install-signal-cli needs --signal-number"
+[ "$SIGNAL_VOICE" = 0 ] || [ -n "$SIGNAL_NUMBER" ] || die "--signal-voice needs --signal-number"
 [ -z "$RUN_AS" ] || [ "$SYSTEMD" = 1 ] || die "--run-as needs --systemd (otherwise the gateway runs as you)"
 [ "$BACKUPS" = 0 ] || [ "$SYSTEMD" = 1 ] || die "--backups needs --systemd (it installs a systemd timer)"
 [ "$CREATE_USER" = 0 ] || [ -n "$RUN_AS" ] || die "--create-user needs --run-as USER"
@@ -382,7 +409,52 @@ else
 fi
 
 # ---------------------------------------------------------------------------------------------
-step "7. First start settings"
+step "7. Signal (optional)"
+SIGNAL_BIN="" SIGNAL_READY=0
+if [ -n "$SIGNAL_NUMBER" ]; then
+	find_signal_cli() { as_target bash -lc 'command -v signal-cli' 2>/dev/null || true; }
+	SIGNAL_BIN="$(find_signal_cli)"
+	[ -n "$SIGNAL_BIN" ] || { [ -x "$TARGET_HOME/.local/signal-cli/bin/signal-cli" ] && SIGNAL_BIN="$TARGET_HOME/.local/signal-cli/bin/signal-cli"; }
+	if [ -n "$SIGNAL_BIN" ]; then
+		ok "signal-cli at $SIGNAL_BIN"
+	elif [ "$INSTALL_SIGNAL_CLI" = 1 ]; then
+		[ "$(uname -m)" = x86_64 ] || die "the native signal-cli build (no Java needed) is Linux x86_64 only; install Java and signal-cli yourself for $(uname -m): https://github.com/AsamK/signal-cli#installation"
+		SIGNAL_VER="$(curl -fsSL https://api.github.com/repos/AsamK/signal-cli/releases/latest | grep '"tag_name"' | sed -E 's/.*"v?([0-9.]+)".*/\1/')"
+		[ -n "$SIGNAL_VER" ] || die "could not find the latest signal-cli release (github.com/AsamK/signal-cli); install it yourself"
+		TAR="signal-cli-${SIGNAL_VER}-Linux-native.tar.gz"
+		say "  installing signal-cli $SIGNAL_VER (native, no Java needed) to $TARGET_HOME/.local/signal-cli"
+		if [ "$DRY" = 1 ]; then
+			say "  (dry run) download $TAR, unpack"
+			SIGNAL_BIN="$TARGET_HOME/.local/signal-cli/bin/signal-cli"
+		else
+			STMP="$(mktemp -d)"; trap 'rm -rf "$STMP"' EXIT
+			curl -fsSL "https://github.com/AsamK/signal-cli/releases/download/v${SIGNAL_VER}/$TAR" -o "$STMP/$TAR" || die "could not download $TAR -- check your network, or install signal-cli yourself"
+			as_target mkdir -p "$TARGET_HOME/.local/signal-cli"
+			as_target tar -xz --strip-components=1 -C "$TARGET_HOME/.local/signal-cli" -f "$STMP/$TAR"
+			SIGNAL_BIN="$TARGET_HOME/.local/signal-cli/bin/signal-cli"
+			ok "installed signal-cli $SIGNAL_VER"
+		fi
+	else
+		die "signal-cli was not found for $TARGET. Install it yourself (https://github.com/AsamK/signal-cli#installation), or run this again with --install-signal-cli (Linux x86_64 only)."
+	fi
+	if [ "$DRY" = 1 ]; then
+		say "  (dry run) check whether $SIGNAL_NUMBER is already registered with signal-cli"
+	elif as_target "$SIGNAL_BIN" listAccounts 2>/dev/null | grep -qF "Number: $SIGNAL_NUMBER"; then
+		ok "$SIGNAL_NUMBER is already registered with signal-cli"
+		SIGNAL_READY=1
+	else
+		say "  $SIGNAL_NUMBER is not registered yet; requesting a verification code now"
+		as_target "$SIGNAL_BIN" -a "$SIGNAL_NUMBER" register ${SIGNAL_VOICE:+--voice} || die "signal-cli could not request a code for $SIGNAL_NUMBER; see the error above"
+		say "  a code was sent (by $( [ "$SIGNAL_VOICE" = 1 ] && echo voice call || echo SMS )). Enter it with:"
+		say "    $SIGNAL_BIN -a $SIGNAL_NUMBER verify <CODE>"
+		say "  then run ./deploy.sh --signal-number $SIGNAL_NUMBER again (add --install-signal-cli only if you needed it the first time) to finish and switch SIGNAL_ENABLED on."
+	fi
+else
+	say "  skipped: pass --signal-number +<country code><number> to set up Signal for an agent to use"
+fi
+
+# ---------------------------------------------------------------------------------------------
+step "8. First start settings"
 FIRST=0; [ -f "$DIR/gateway.db" ] || FIRST=1
 if [ "$FIRST" = 1 ]; then
 	SEED=()
@@ -390,6 +462,7 @@ if [ "$FIRST" = 1 ]; then
 	[ -z "$PORT_NUM" ] || SEED+=("PORT=$PORT_NUM")
 	[ -z "${DASHBOARD_PASSWORD:-}" ] || SEED+=("DASHBOARD_PASSWORD=$DASHBOARD_PASSWORD")
 	[ "$PI_TELL" = 0 ] || SEED+=("PI_AGENT_PACKAGE=$PI_DIR")
+	if [ "$SIGNAL_READY" = 1 ]; then SEED+=("SIGNAL_PHONE_NUMBER=$SIGNAL_NUMBER" "SIGNAL_CLI_PATH=$SIGNAL_BIN" "SIGNAL_ENABLED=true"); fi
 	ok "no database yet: this is a first start (${#SEED[@]} setting(s) to seed)"
 	if [ "${HOST_ADDR:-127.0.0.1}" != 127.0.0.1 ] && [ -z "${DASHBOARD_PASSWORD:-}" ]; then
 		warn "listening on ${HOST_ADDR} with no dashboard password: anyone who can reach the port can open the dashboard. Set DASHBOARD_PASSWORD, or put a password on it at Settings → Access straight away."
@@ -401,18 +474,23 @@ else
 	# Pi is the exception: the gateway has to find it, so a detected path is stored when the setting is empty or wrong.
 	if [ "$PI_TELL" = 1 ] && [ "$(stored_pi)" != "$PI_DIR" ]; then
 		if [ "$DRY" = 1 ]; then say "  (dry run) store PI_AGENT_PACKAGE=$PI_DIR in gateway.db"; else
-			as_target "$NODE_BIN" --disable-warning=ExperimentalWarning -e '
-const { DatabaseSync } = require("node:sqlite");
-const db = new DatabaseSync(process.argv[1]);
-const [dir, now] = [process.argv[2], Date.now()];
-const done = db.prepare("UPDATE settings SET value = ?, source = ?, updated_at = ? WHERE key = ?").run(dir, "deploy", now, "PI_AGENT_PACKAGE");
-if (!done.changes) db.prepare("INSERT INTO settings (key, value, source, updated_at) VALUES (?, ?, ?, ?)").run("PI_AGENT_PACKAGE", dir, "deploy", now);' "$DIR/gateway.db" "$PI_DIR" && ok "stored the Pi path in the gateway settings (PI_AGENT_PACKAGE)"
+			store_setting PI_AGENT_PACKAGE "$PI_DIR" && ok "stored the Pi path in the gateway settings (PI_AGENT_PACKAGE)"
+		fi
+	fi
+	# Signal, once a number is verified: applies now rather than waiting for a seeded first start,
+	# since --signal-number is just as likely to be run against an existing deployment as a new one.
+	if [ "$SIGNAL_READY" = 1 ]; then
+		if [ "$DRY" = 1 ]; then say "  (dry run) store SIGNAL_PHONE_NUMBER/SIGNAL_CLI_PATH/SIGNAL_ENABLED in gateway.db"; else
+			store_setting SIGNAL_PHONE_NUMBER "$SIGNAL_NUMBER"
+			store_setting SIGNAL_CLI_PATH "$SIGNAL_BIN"
+			store_setting SIGNAL_ENABLED true
+			ok "stored Signal settings in gateway.db (SIGNAL_ENABLED=true); the restart below picks it up"
 		fi
 	fi
 fi
 
 # ---------------------------------------------------------------------------------------------
-step "8. Start"
+step "9. Start"
 PORT_USED="${PORT_NUM:-8787}"
 if [ "$NO_START" = 1 ]; then
 	say "  --no-start: leaving it stopped. Start it with $( [ "$SYSTEMD" = 1 ] && echo "systemctl start piper" || echo "./piper.sh start" )"
@@ -457,7 +535,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------------------------
-step "9. Check"
+step "10. Check"
 if [ "$NO_START" = 1 ] || [ "$DRY" = 1 ]; then
 	say "  skipped (the gateway is not started)"
 else

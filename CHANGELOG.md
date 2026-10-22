@@ -2,6 +2,23 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.1.1] - 2026-10-22
+
+### Added
+- **`deploy.sh` can now set up Signal for you.** New `--signal-number +<country code><number>`: finds
+  (or, with `--install-signal-cli`, installs signal-cli's native Linux x86_64 build, no Java needed)
+  signal-cli, and if the number isn't registered yet, requests a verification code and prints the
+  exact command to run by hand once it arrives (that part can't be automated -- the code comes over
+  SMS or a voice call, outside the script). Run again after verifying to store `SIGNAL_PHONE_NUMBER`/
+  `SIGNAL_CLI_PATH`/`SIGNAL_ENABLED` and finish. Works against a fresh deploy or an existing one --
+  it writes straight into `gateway.db` when one already exists, the same way `PI_AGENT_PACKAGE`
+  detection already does, rather than only ever seeding a first start. New `--signal-voice` requests
+  the code by voice call instead of SMS. See DEPLOYMENT.md's new Signal section.
+
+### Fixed
+- `deploy.sh --help` was printing a stray `set -euo pipefail` line at the end of its usage text (the
+  extraction range included one line past the actual help comment).
+
 ## [1.1.0] - 2026-10-22
 
 ### Added

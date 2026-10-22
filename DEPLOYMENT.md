@@ -36,6 +36,7 @@ DASHBOARD_PASSWORD='a-long-one' ./deploy.sh --install-node --host 0.0.0.0    # e
 sudo ./deploy.sh --systemd --run-as piper --create-user --install-node       # a service, as its own user
 sudo ./deploy.sh --systemd --backups                                          # ... and a daily backup timer
 ./deploy.sh --systemd --print-unit                                            # just show the unit it would install
+./deploy.sh --signal-number +15551234567 --install-signal-cli                # set up Signal too -- see below
 ```
 
 What it does, in order: checks Linux, Docker (24+ and answering), `iptables` and free disk; with
@@ -331,7 +332,23 @@ The dashboard's Files & profiles → Profiles shows what each key's agents actua
 Agents can link a phone number and carry on a conversation with it over Signal, from Piper's own
 Signal account -- see Settings → Signal and the dashboard's Signal page. Piper never registers or
 verifies a Signal account itself; that's a one-time step you do yourself, outside Piper, before
-turning it on:
+turning it on.
+
+**The easy way** -- `deploy.sh` can find or install `signal-cli` and request the verification code
+for you:
+
+```
+./deploy.sh --signal-number +15551234567 --install-signal-cli   # installs signal-cli's native build if missing
+#  -> requests a code and prints the verify command to run by hand (the code arrives outside this script)
+signal-cli -a +15551234567 verify <code the SMS gave you>
+./deploy.sh --signal-number +15551234567                        # run again: sees it's verified, turns SIGNAL_ENABLED on
+```
+Safe to run against an existing deployment, not just a first install -- it stores the Signal settings
+straight into `gateway.db` either way. `--install-signal-cli` only supports Linux x86_64 (the native
+build needs no Java); elsewhere, install `signal-cli` and Java yourself first, then run without it.
+`--signal-voice` requests the code by voice call instead of SMS.
+
+**By hand**, the equivalent steps:
 
 1. Install [`signal-cli`](https://github.com/AsamK/signal-cli) (and its Java dependency) on the
    gateway's host -- this is a gateway-process dependency, like Docker or `iptables`, not something
