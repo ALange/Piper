@@ -232,7 +232,7 @@ async function handle(req, res) {
 			res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
 			return res.end(JSON.stringify(await aboutInfo()));
 		}
-		if (path === "/dashboard/hostpi.json" || path === "/dashboard/hostpi/update") return await hostPiRoutes(req, res, path);
+		if (path === "/dashboard/hostpi.json" || path === "/dashboard/hostpi/update" || path === "/dashboard/hostpi/restart") return await hostPiRoutes(req, res, path);
 		if (path === "/dashboard/agents.json" || path === "/dashboard/wizard.json" || path === "/dashboard/templates.json" || path === "/dashboard/teams.json" || path === "/dashboard/teams" || path.startsWith("/dashboard/teams/") || path === "/dashboard/templates" || path.startsWith("/dashboard/templates/") || path === "/dashboard/agents" || path.startsWith("/dashboard/agents/")) return await agentRoutes(req, res, path);
 		const updateMatch = /^\/dashboard\/profiles\/([A-Za-z0-9_-]+)\/update-container$/.exec(path);
 		if (updateMatch) return await updateScopeRoute(req, res, updateMatch[1]);

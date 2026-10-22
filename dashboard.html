@@ -679,6 +679,10 @@
           <button id="hpupdate">update</button>
         </div>
         <p class="hint small" id="hpwarn"></p>
+        <div class="fieldrow" style="margin-top:8px">
+          <button id="hprestart" title="restart the gateway process, e.g. after updating Pi on this host or rebuilding the image">restart gateway</button>
+        </div>
+        <p class="hint small" id="hprestartnote">Open chats hibernate (their containers stop, spend is recorded) and resume on their next message once the gateway is back.</p>
         <div id="hpext-box" hidden>
           <h3 style="margin:12px 0 6px" id="hpext-title">Extensions</h3>
           <table>
@@ -6493,6 +6497,25 @@ $('hpupdate').addEventListener('click', function () {
   if (!confirm('Update ' + (self && ext ? 'Pi and its extensions' : self ? 'Pi' : 'the extensions') + ' on this host? This runs pi update' + (ext ? ' and pi update --extensions' : '') + ' as the gateway’s user and installs software from the registry. The gateway keeps running the old Pi until you restart it.')) return;
   startUpdateJob('dashboard/hostpi/update', 'Update Pi on this host', { self: self, extensions: ext });
 });
+$('hprestart').addEventListener('click', function () {
+  if (!confirm('Restart the gateway process now? Open chats hibernate and resume on their next message; anyone using the dashboard or API is briefly disconnected.')) return;
+  $('hprestart').disabled = true;
+  $('hprestartnote').textContent = 'restarting…';
+  fetch('dashboard/hostpi/restart', { method: 'POST' })
+    .then(function (r) { if (!r.ok) return r.json().then(function (j) { throw new Error((j.error && j.error.message) || ('HTTP ' + r.status)); }); })
+    .then(function () { pollGatewayBack(60); })
+    .catch(function (e) { $('hprestart').disabled = false; $('hprestartnote').textContent = 'could not start the restart: ' + e.message; });
+});
+function pollGatewayBack(triesLeft) {
+  setTimeout(function () {
+    fetch('health', { cache: 'no-store' }).then(function (r) { return r.ok; }, function () { return false; }).then(function (up) {
+      if (up) { $('hprestartnote').textContent = 'back up — reloading…'; setTimeout(function () { location.reload(); }, 400); return; }
+      if (triesLeft <= 1) { $('hprestart').disabled = false; $('hprestartnote').textContent = 'did not come back within a minute; check it by hand.'; return; }
+      $('hprestartnote').textContent = 'restarting…';
+      pollGatewayBack(triesLeft - 1);
+    });
+  }, 1000);
+}
 
 /* Audit: what was recorded, filtered, in pages, with the categories from Settings -> Audit. */
 var AUD = { cats: {}, rows: [], next: null, timer: null, stats: null };

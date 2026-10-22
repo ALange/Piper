@@ -2,6 +2,20 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.0.27] - 2026-10-22
+
+### Added
+- **"restart gateway" button on the dashboard's Containers → Pi on this host panel.** Handy after
+  updating Pi on the host or rebuilding the chat image -- previously the only way to pick up either was
+  `./piper.sh restart` over SSH. The new `POST /dashboard/hostpi/restart` route spawns `./piper.sh
+  restart` as a detached child and returns immediately; that script's own `stop()` then finds this very
+  process (by PID, the way it always has) and sends it SIGTERM, so the restart goes through the gateway's
+  ordinary graceful-shutdown path (open chats hibernate, spend is recorded) rather than a bare
+  `process.exit()`. Works the same whether the install is a plain background process or a systemd unit,
+  since piper.sh already handles both. Gated the same way Pi updates are: refuses with a clear message if
+  no dashboard password is set. The button disables itself and polls `/health` until the new process
+  answers, then reloads the page.
+
 ## [1.0.26] - 2026-10-20
 
 ### Changed
