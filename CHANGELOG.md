@@ -2,6 +2,22 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.7.0] - 2026-10-22
+
+### Added
+- **Steering a turn already running, in the dashboard Playground, the client portal, and over Signal.**
+  Previously sending a second message while the agent was still working on the first just blocked (the
+  Playground even stopped accepting input into the box at all) until the first reply finished --
+  there was no way to correct or add to what was just asked without waiting it out. Now it's sent into
+  the turn already running instead of queued behind it (Pi's own `steer` RPC command, which its agent
+  loop injects at the next tool-call boundary and continues the same turn with): the Playground and
+  portal's send button keeps working while "Stop" is showing, and a second inbound Signal message
+  while the first is still being answered is folded into the one eventual reply rather than getting
+  its own queued-up turn (and its own separate reply) once the gateway finally gets to it.
+  `POST /dashboard/playground/conversation/<id>/steer` and `POST /api/conversation/<id>/steer` are the
+  new routes behind it; a conversation with nothing actually running answers 409 rather than silently
+  queuing or losing the message, and the caller falls back to sending it as an ordinary new message.
+
 ## [1.6.0] - 2026-10-22
 
 ### Added

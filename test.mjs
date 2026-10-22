@@ -8422,6 +8422,113 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${profileHelper} "\${rest[@]}"
 		config.SIGNAL_SESSION_MAX_AGE_DAYS = 0;
 	}
 
+	// Steering: a second message arriving while the first is still being answered is folded into that
+	// same turn (lib/chat.mjs's steerSession) instead of queued behind it -- the real point, same as the
+	// Playground and portal's own steer tests, just reached over Signal's own inbound path instead of
+	// an HTTP route. Needs a real session (setSignalRunner's lightweight stand-in never touches one),
+	// so this swaps it out for the real runAgentTurn against a faked container, the same harness the
+	// Playground/portal real-session tests already use.
+	{
+		const { credentialFor, scopedSessionId, signalClientSessionId, sessions, setSessionSpawn, setRunner, resetEngineCheck, recentAudit: recentAuditS } = await import("./server.mjs");
+		resetEngineCheck();
+		const priorNetwork = config.CONTAINER_NETWORK;
+		config.CONTAINER_NETWORK = "none";
+		setRunner(async (bin, args) => {
+			if (bin === "docker" && args[0] === "version") return { code: 0, stdout: "27.0.0", stderr: "" };
+			if (bin === "docker" && args[0] === "inspect") return { code: 1, stdout: "", stderr: "No such object" };
+			if (bin === "docker" && args[0] === "image") return { code: 0, stdout: "sha256:fakeimage|0.99.1", stderr: "" };
+			return { code: 0, stdout: "", stderr: "" };
+		});
+
+		let settleNow = null;
+		let promptSeenResolve = null;
+		let promptSeen = new Promise((r2) => (promptSeenResolve = r2));
+		let steerSeenResolve = null;
+		let steerSeen = new Promise((r2) => (steerSeenResolve = r2));
+		let spawnCount = 0;
+		const fakeChild = () => {
+			spawnCount++;
+			const child = new EventEmitter();
+			child.stdout = new PassThrough();
+			child.stderr = new PassThrough();
+			child.exitCode = null;
+			child.signalCode = null;
+			child.kill = (sig = "SIGTERM") => {
+				if (child.exitCode !== null || child.signalCode !== null) return true;
+				child.signalCode = sig;
+				setImmediate(() => child.emit("exit", null, sig));
+				return true;
+			};
+			child.stdin = new PassThrough();
+			child.stdin.on("end", () => child.exitCode === null && child.signalCode === null && setImmediate(() => child.emit("exit", 0, null)));
+			let buffer = "";
+			child.stdin.on("data", (chunk) => {
+				buffer += chunk;
+				let i;
+				while ((i = buffer.indexOf("\n")) >= 0) {
+					const command = JSON.parse(buffer.slice(0, i));
+					buffer = buffer.slice(i + 1);
+					const reply = (r2) => child.stdout.write(`${JSON.stringify(r2)}\n`);
+					const ok = (data) => reply({ type: "response", id: command.id, command: command.type, success: true, data });
+					if (command.type === "get_state") ok({ model: { provider: "p", id: "m", input: ["text"] }, isStreaming: false });
+					else if (command.type === "prompt") {
+						const said = String(command.message ?? "");
+						ok();
+						reply({ type: "agent_start" });
+						reply({ type: "message_start", message: { role: "user", content: said } });
+						reply({ type: "message_end", message: { role: "user", content: said } });
+						reply({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: `echo: ${said}` } });
+						settleNow = () => {
+							settleNow = null;
+							reply({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: `echo: ${said}` }] } });
+							reply({ type: "agent_settled" });
+						};
+						promptSeenResolve();
+					} else if (command.type === "steer") {
+						ok();
+						const steered = String(command.message ?? "");
+						reply({ type: "message_start", message: { role: "user", content: steered } });
+						reply({ type: "message_end", message: { role: "user", content: steered } });
+						reply({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: ` (and: ${steered})` } });
+						settleNow = () => {
+							settleNow = null;
+							reply({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: `echo: first signal message (and: ${steered})` }] } });
+							reply({ type: "agent_settled" });
+						};
+						steerSeenResolve();
+					} else ok();
+				}
+			});
+			return child;
+		};
+		setSessionSpawn(() => fakeChild());
+
+		const credential = credentialFor(key.id, agent.id);
+		const scoped = scopedSessionId(credential, signalClientSessionId(key.id, agent.id));
+		setSignalRunner(null); // the real runAgentTurn, against the faked container above
+
+		sent.length = 0;
+		liveChild.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "receive", params: { envelope: { sourceNumber: "+15551112222", dataMessage: { message: "first signal message" } } } })}\n`);
+		await promptSeen;
+		const rec = sessions.recordById(scoped);
+		assert.ok(rec && rec.inflight > 0, "the first message's turn is in flight");
+
+		liveChild.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "receive", params: { envelope: { sourceNumber: "+15551112222", dataMessage: { message: "actually also do X" } } } })}\n`);
+		await steerSeen;
+		assert.equal(spawnCount, 1, "folded into the one turn already running -- no second container exec");
+		await waitFor(() => recentAuditS(50).some((a) => a.action === "signal.session.steer"));
+
+		settleNow();
+		await waitFor(() => sent.length > 0);
+		assert.equal(sent.length, 1, "one reply, not two separate ones for two separate messages");
+		assert.equal(sent[0].message, "echo: first signal message (and: actually also do X)", "the one reply reflects both messages");
+
+		setSessionSpawn(null);
+		setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+		config.CONTAINER_NETWORK = priorNetwork;
+		sessions.closeAll();
+	}
+
 	assert.ok(listAllContacts().length >= 2);
 	stopSignal();
 	assert.equal(signalStatus().running, false);
@@ -10037,6 +10144,26 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	const audits = recentAudit(200).filter((a) => a.action === "session.playground");
 	assert.equal(audits.length, 1, "a conversation is audited once, however many turns");
 	assert.equal(JSON.stringify(audits).includes("hello playground"), false, "never the message");
+
+	// Steering: the FIRST "user" item after onSession's own snapshot is this request's own prompt
+	// (whatever its exact timing -- here fed after onSession, matching the real race, not before it as
+	// the fixture above happens to) and must still be skipped, the same as ever. A SECOND one arriving
+	// later in the same stream is new to this request -- a message steered in from elsewhere -- and has
+	// to reach the client, or there would be no way to see that it landed.
+	setAgentTurnRunner(async ({ prompt, onSession }) => {
+		const live = new LiveLog();
+		onSession({ live });
+		live.feed({ type: "message_start", message: { role: "user", content: prompt } });
+		live.feed({ type: "message_start", message: { role: "assistant" } });
+		live.feed({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "Hello" } });
+		live.feed({ type: "message_start", message: { role: "user", content: "actually, also do X" } });
+		live.feed({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: " and more" } });
+		return { text: "Hello and more", reasoning: "", usage: { total_tokens: 1 }, cost: 0 };
+	});
+	ev = await events(await post({ ...good, conversation: "conv-steer-filter" }));
+	const items = ev.filter(([e]) => e === "item").map(([, d]) => d.item);
+	assert.equal(items.filter((i) => i.kind === "user").length, 1, "only the steered-in message, not the request's own prompt");
+	assert.equal(items.find((i) => i.kind === "user").text, "actually, also do X");
 	// Errors mid-stream are events.
 	setAgentTurnRunner(async () => { throw new AgentRunError("daily spend limit reached", 429, "spend_limit_exceeded", "rate_limit_error"); });
 	ev = await events(await post({ ...good, conversation: "conv-errors-0001" }));
@@ -10182,6 +10309,9 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		let settleNow = null;
 		let promptSeenResolve = null;
 		let promptSeen = new Promise((r2) => (promptSeenResolve = r2));
+		let steerSeenResolve = null;
+		let steerSeen = new Promise((r2) => (steerSeenResolve = r2));
+		let lastSteered = null;
 		const fakeChild = () => {
 			const child = new EventEmitter();
 			child.stdout = new PassThrough();
@@ -10210,6 +10340,13 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 						const said = String(command.message ?? "");
 						ok();
 						reply({ type: "agent_start" });
+						// Pi's own real agent loop emits this for the prompt that started the turn too, not
+						// only for a later steered-in message (packages/agent/src/agent-loop.ts's
+						// runAgentLoop) -- matched here so a test actually exercises the "skip the first
+						// one, show any later one" logic rather than trivially passing because this fake
+						// never fed a first one at all.
+						reply({ type: "message_start", message: { role: "user", content: said } });
+						reply({ type: "message_end", message: { role: "user", content: said } });
 						reply({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: `echo: ${said}` } });
 						settleNow = () => {
 							settleNow = null;
@@ -10220,6 +10357,21 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 					} else if (command.type === "abort") {
 						ok();
 						if (settleNow) settleNow();
+					} else if (command.type === "steer") {
+						// Mirrors what Pi's own agent loop really does (packages/agent/src/agent-loop.ts):
+						// the injected message gets its own message_start/message_end -- a "user" item, the
+						// same path the request's own prompt took -- before the turn continues.
+						ok();
+						lastSteered = String(command.message ?? "");
+						reply({ type: "message_start", message: { role: "user", content: lastSteered } });
+						reply({ type: "message_end", message: { role: "user", content: lastSteered } });
+						reply({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: ` (and: ${lastSteered})` } });
+						settleNow = () => {
+							settleNow = null;
+							reply({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: `echo: hello playground (and: ${lastSteered})` }] } });
+							reply({ type: "agent_settled" });
+						};
+						steerSeenResolve();
 					} else ok();
 				}
 			});
@@ -10271,6 +10423,40 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		assert.ok(recentAudit(50).map((r2) => r2.action).includes("session.interrupt"), "the interrupt is audited");
 		const nothingToStop = await (await fetch(`${base}/conversation/pg-disco-convo-2/interrupt?keyId=${key.id}&agentId=${agent.id}`, { method: "POST" })).json();
 		assert.deepEqual(nothingToStop, { interrupted: false, wasRunning: false }, "nothing left running the second time");
+
+		// Steer: a message sent into a turn already running reaches the request's own open stream as a
+		// "user" item, and the one eventual reply reflects both messages -- not two separate ones, and
+		// not a wait for the first to finish before the second is even heard.
+		promptSeen = new Promise((r2) => (promptSeenResolve = r2));
+		const pending3 = post({ ...good, conversation: "pg-disco-convo-3" });
+		await promptSeen;
+		const steerPost = () =>
+			fetch(`${base}/conversation/pg-disco-convo-3/steer?keyId=${key.id}&agentId=${agent.id}`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ message: "actually, also do X" }),
+			});
+		const steered = await (await steerPost()).json();
+		assert.deepEqual(steered, { steered: true });
+		await steerSeen;
+		assert.ok(recentAudit(50).map((r2) => r2.action).includes("session.steer"), "the steer is audited");
+		settleNow();
+		const resp3 = await pending3;
+		const reader3 = resp3.body.getReader();
+		let got3 = "";
+		const readUntil3 = async (re) => {
+			const deadline = Date.now() + 3000;
+			while (!re.test(got3) && Date.now() < deadline) got3 += new TextDecoder().decode((await reader3.read()).value ?? new Uint8Array());
+		};
+		await readUntil3(/event: done/);
+		assert.match(got3, /"kind":"user"[^}]*"text":"actually, also do X"/, "the steered message shows up as its own item in the same stream");
+		assert.match(got3, /echo: hello playground \(and: actually, also do X\)/, "one reply reflecting both messages, not two separate turns");
+		await reader3.cancel().catch(() => {});
+
+		// Nothing left running: steering an idle conversation is refused, not silently queued or lost.
+		const notRunning = await steerPost();
+		assert.equal(notRunning.status, 409);
+		assert.equal((await notRunning.json()).error.code, "nothing_running");
 
 		// channel=signal resolves to that key/agent's own Signal session regardless of the url's own <id>
 		// segment -- the real point of it: the browser doesn't need to know or carry the real session id.
@@ -10817,6 +11003,10 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		let settleNow = null;
 		let promptSeenResolve = null;
 		let promptSeen = new Promise((r) => (promptSeenResolve = r));
+		let steerSeenResolve = null;
+		let steerSeen = new Promise((r) => (steerSeenResolve = r));
+		let lastSteered = null;
+		let lastSaid = null;
 		const fakeChild = () => {
 			const child = new EventEmitter();
 			child.stdout = new PassThrough();
@@ -10843,8 +11033,15 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 					if (command.type === "get_state") ok({ model: { provider: "p", id: "m", input: ["text"] }, isStreaming: false });
 					else if (command.type === "prompt") {
 						const said = String(command.message ?? "");
+						lastSaid = said;
 						ok();
 						reply({ type: "agent_start" });
+						// Pi's own real agent loop emits this for the prompt that started the turn too
+						// (packages/agent/src/agent-loop.ts's runAgentLoop), not only for a later steered-in
+						// message -- matched here so a steer test exercises the real "skip the first one,
+						// show any later one" filter rather than trivially passing with nothing to skip.
+						reply({ type: "message_start", message: { role: "user", content: said } });
+						reply({ type: "message_end", message: { role: "user", content: said } });
 						reply({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: `echo: ${said}` } });
 						if (said === "please compact") {
 							reply({ type: "compaction_start", reason: "threshold" });
@@ -10859,6 +11056,18 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 					} else if (command.type === "abort") {
 						ok();
 						if (settleNow) settleNow();
+					} else if (command.type === "steer") {
+						ok();
+						lastSteered = String(command.message ?? "");
+						reply({ type: "message_start", message: { role: "user", content: lastSteered } });
+						reply({ type: "message_end", message: { role: "user", content: lastSteered } });
+						reply({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: ` (and: ${lastSteered})` } });
+						settleNow = () => {
+							settleNow = null;
+							reply({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: `echo: ${lastSaid} (and: ${lastSteered})` }] } });
+							reply({ type: "agent_settled" });
+						};
+						steerSeenResolve();
 					} else ok();
 				}
 			});
@@ -10937,6 +11146,35 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		assert.equal(resp2.status, 200);
 		const kinds = recentAudit(50).map((r) => r.action);
 		assert.ok(kinds.includes("session.interrupt"), "the interrupt is audited");
+
+		// Steer: a message sent into a turn already running reaches the request's own open stream as a
+		// "user" item, and the one eventual reply reflects both messages -- not two separate ones, and
+		// not a wait for the first to finish before the second is even heard.
+		promptSeen = new Promise((r) => (promptSeenResolve = r));
+		const pending3 = fetch(`${base}/api/chat`, { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "disco-test-convo-3", message: "hi once more", agentId: myAgent.id }) });
+		await promptSeen;
+		const steerPost = () => call(`/api/conversation/disco-test-convo-3/steer?agentId=${myAgent.id}`, { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ message: "actually, also do X" }) });
+		const steered = await steerPost();
+		assert.deepEqual(steered.json, { steered: true });
+		await steerSeen;
+		assert.ok(recentAudit(50).map((r) => r.action).includes("session.steer"), "the steer is audited");
+		settleNow();
+		const resp3 = await pending3;
+		const reader3 = resp3.body.getReader();
+		let got3 = "";
+		const readUntil3 = async (re) => {
+			const deadline = Date.now() + 3000;
+			while (!re.test(got3) && Date.now() < deadline) got3 += new TextDecoder().decode((await reader3.read()).value ?? new Uint8Array());
+		};
+		await readUntil3(/event: done/);
+		assert.match(got3, /"kind":"user"[^}]*"text":"actually, also do X"/, "the steered message shows up as its own item in the same stream");
+		assert.match(got3, /echo: hi once more \(and: actually, also do X\)/, "one reply reflecting both messages, not two separate turns");
+		await reader3.cancel().catch(() => {});
+
+		// Nothing left running: steering an idle conversation is refused, not silently queued or lost.
+		const notRunning = await steerPost();
+		assert.equal(notRunning.status, 409);
+		assert.equal(notRunning.json.error.code, "nothing_running");
 
 		// Ownership on interrupt too: another key's agentId is refused, the same as every other route.
 		const stolenInterrupt = await call(`/api/conversation/disco-test-convo-2/interrupt`, { method: "POST", headers: { authorization: `Bearer ${theirs.key}` } });

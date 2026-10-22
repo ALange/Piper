@@ -5516,9 +5516,12 @@ function pgDescribeFetchFailure(e, startedAt, gotPartial) {
 }
 function pgSend(text) {
   var c = pgConv();
-  if (!c || PG.busy) return;
+  if (!c) return;
   text = String(text == null ? $('pginput').value : text).trim();
   if (!text) return;
+  // Busy and a real agent chat (not a stateless external model, which has no session to steer): send
+  // it into the turn already running instead of just sitting there until it's done.
+  if (PG.busy) { if (!c.externalModelId) pgSteer(text); return; }
   if (!pgTargetOf(c)) { $('pgnote').textContent = 'Pick an agent first.'; return; }
   $('pgnote').textContent = '';
   // A model has no server-side session (lib/playground.mjs's playgroundExternalChat is stateless),
@@ -5557,7 +5560,10 @@ function pgSend(text) {
         var ev = /^event: (.*)$/m.exec(block), data = /^data: (.*)$/m.exec(block);
         if (!ev || !data) return;
         var d; try { d = JSON.parse(data[1]); } catch (x) { return; }
-        if (ev[1] === 'item') { pgApply(msg, d.item); pgFrame(); }
+        // A steered-in message (POST .../steer, this tab or another) arrives on this same stream as an
+        // ordinary item -- a new standalone user bubble, not another part of the assistant's answer.
+        if (ev[1] === 'item' && d.item.kind === 'user') { if (d.op !== 'update') { c.messages.splice(c.messages.indexOf(msg), 0, { role: 'user', text: d.item.text, ts: d.item.at }); pgRenderMessages(true); } }
+        else if (ev[1] === 'item') { pgApply(msg, d.item); pgFrame(); }
         else if (ev[1] === 'done') { done = true; msg.usage = d.usage; msg.cost = d.cost; if (!(msg.parts || []).some(function (p) { return p.kind === 'text' && p.text; }) && d.text) (msg.parts = msg.parts || []).push({ kind: 'text', id: 'final', text: d.text }); }
         else if (ev[1] === 'error') { done = true; msg.error = d.message; }
       }
@@ -5696,6 +5702,22 @@ function pgStop() {
   // server-side regardless (same as the client portal), so the stop button must also say so explicitly.
   if (c) fetch('dashboard/playground/conversation/' + encodeURIComponent(c.id) + '/interrupt?keyId=' + encodeURIComponent(c.keyId) + (c.agentId ? '&agentId=' + encodeURIComponent(c.agentId) : '') + (c.channel ? '&channel=' + encodeURIComponent(c.channel) : ''), { method: 'POST' }).catch(function () {});
 }
+/* Sending while the agent is still working "steers" it (lib/chat.mjs's steerSession) instead of
+   queuing a whole new turn behind it -- this is what lets someone correct or add to what they just
+   asked without first waiting for the reply. The resulting user message is not added here: the
+   stream already open for the turn being steered (pgSend's own fetch, still pumping) sees it come
+   back as an ordinary "item" event once the server accepts it (LiveLog records it the same as any
+   other message), and the 'item' handler there renders it in place -- adding it twice would just
+   duplicate it. If nothing turns out to still be running (it finished in the moment between typing
+   and this landing), it falls back to sending it as a normal new message instead of losing it. */
+function pgSteer(text) {
+  var c = pgConv();
+  if (!c) return;
+  $('pginput').value = ''; pgResize();
+  fetch('dashboard/playground/conversation/' + encodeURIComponent(c.id) + '/steer?keyId=' + encodeURIComponent(c.keyId) + (c.agentId ? '&agentId=' + encodeURIComponent(c.agentId) : '') + (c.channel ? '&channel=' + encodeURIComponent(c.channel) : ''), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message: text }) })
+    .then(function (r) { if (r.ok) return; return r.json().catch(function () { return {}; }).then(function () { throw new Error('not running'); }); })
+    .catch(function () { pgSend(text); });
+}
 function pgDelete(c) {
   if (c.channel) { if (!confirm('Remove "' + c.title + '" from this list? The Signal conversation itself is not affected -- it still works over Signal, and can be reopened here again.')) return; }
   else if (c.messages.length && !confirm('Delete "' + c.title + '"?')) return;
@@ -5739,7 +5761,7 @@ $('pgtarget').addEventListener('change', function () {
 $('pgmodel').addEventListener('change', function () { var c = pgConv(); if (c) { c.model = $('pgmodel').value; pgSave(); } });
 $('pgsend').addEventListener('click', function () { if (PG.busy) pgStop(); else pgSend(); });
 $('pginput').addEventListener('input', pgResize);
-$('pginput').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); if (!PG.busy) pgSend(); } });
+$('pginput').addEventListener('keydown', function (e) { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); pgSend(); } });
 $('pgexport').addEventListener('click', pgExport);
 $('pgclear').addEventListener('click', function () { if (PG.busy || !confirm('Delete every chat kept in this browser?')) return; PG.convs.forEach(function (c) { fetch('dashboard/playground/conversation/' + encodeURIComponent(c.id) + '?keyId=' + encodeURIComponent(c.keyId) + (c.agentId ? '&agentId=' + encodeURIComponent(c.agentId) : ''), { method: 'DELETE' }).catch(function () {}); }); PG.convs = []; PG.cur = null; pgNew(); pgRender(); });
 $('pgdown').addEventListener('click', function () { $('pgscroll').scrollTop = $('pgscroll').scrollHeight; });

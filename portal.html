@@ -1327,11 +1327,33 @@ function historyFor(c) {
   return h.length > EXTERNAL_HISTORY_WINDOW ? h.slice(h.length - EXTERNAL_HISTORY_WINDOW) : h;
 }
 
+/* Sending while the agent is still working "steers" it (lib/chat.mjs's steerSession) instead of
+   queuing a whole new turn behind it, letting someone correct or add to what they just asked without
+   first waiting for the reply. The resulting user message is not added here: the stream already open
+   for the turn being steered (send()'s own fetch, still pumping) sees it come back as an ordinary
+   "item" event once the server accepts it and renders it in place there -- adding it twice would just
+   duplicate it. If nothing turns out to still be running, falls back to a normal send. An external
+   model (no Pi session) is never steered -- isBusy(c) only calls this for a real agent chat. */
+function steer(c, text) {
+  $('input').value = '';
+  resizeInput();
+  var q = agentQuery(c);
+  api('api/conversation/' + encodeURIComponent(c.id) + '/steer' + (q ? '?' + q : ''), {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ message: text }),
+  }).then(function (r) { if (!r.ok) throw new Error('not running'); })
+    .catch(function () { $('input').value = text; send(); });
+}
 function send() {
   var c = conv();
-  if (!c || isBusy(c)) return;
+  if (!c) return;
   var text = $('input').value.trim();
   if (!text) return;
+  // An external model has no Pi session to steer -- isBusy(c) for one just means its own stateless
+  // turn is still streaming, which this falls through to as a plain no-op, same as before.
+  if (isBusy(c) && !c.externalModelId) { steer(c, text); return; }
+  if (isBusy(c)) return;
   if (PENDING_DOCS.some(function (d) { return d.uploading; })) { alert('still uploading an attachment -- wait a moment and send again'); return; }
   var images = PENDING_IMAGES.map(function (img) { return img.dataUrl; });
   var docs = PENDING_DOCS.slice();
@@ -1371,7 +1393,12 @@ function send() {
       // A delta mid-stream only ever touches the last (this) message: frameMessages() redraws just
       // that one node instead of the whole conversation (see its own comment for why). The terminal
       // 'done' event still does a full renderMessages(), so the final state is always fully consistent.
-      if (event === 'item') { applyItem(msg, d.item); if (c.id === CUR) { frameMessages(); renderStatusBar(); } else renderSide(); }
+      // A steered-in message (POST .../steer, this tab or another) arrives on this same stream as an
+      // ordinary item -- a new standalone user bubble, not another part of the assistant's answer.
+      // frameMessages() only ever patches the last node, which would miss one spliced in before it, so
+      // this needs the full renderMessages() the terminal 'done' event below also uses.
+      if (event === 'item' && d.item.kind === 'user') { if (d.op !== 'update') { c.messages.splice(c.messages.indexOf(msg), 0, { role: 'user', text: d.item.text }); if (c.id === CUR) renderMessages(); else renderSide(); } }
+      else if (event === 'item') { applyItem(msg, d.item); if (c.id === CUR) { frameMessages(); renderStatusBar(); } else renderSide(); }
       else if (event === 'context') { c.status = c.status || {}; c.status.contextUsed = d.contextUsed; if (c.id === CUR) renderStatusBar(); else renderSide(); }
       else if (event === 'done') { done = true; msg.usage = d.usage; msg.cost = d.cost; if (!(msg.parts || []).some(function (p) { return p.kind === 'text' && p.text; }) && d.text) msg.parts.push({ kind: 'text', id: 'final', text: d.text }); if (d.status) { c.status = d.status; c.status.contextUsed = (d.usage && d.usage.total_tokens) || null; } refresh(); }
       else if (event === 'error') { done = true; msg.error = d.message; }
