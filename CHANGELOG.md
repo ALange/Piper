@@ -2,6 +2,19 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.1.5] - 2026-10-22
+
+### Fixed
+- **The Signal daemon was never actually starting.** It was invoked as `signal-cli -a <number> daemon
+  --json-rpc`, but signal-cli's `daemon` subcommand is for its dbus/socket/tcp/http service modes and
+  does not accept a `--json-rpc` flag at all -- it refused with "unrecognized arguments: '--json-rpc'"
+  and exited immediately, every single time, crash-looping on respawn forever. The real subcommand for
+  reading JSON-RPC requests on stdin and writing responses on stdout is `jsonRpc`, not `daemon`. Linking
+  a number or sending a message would fail with "the signal-cli daemon is not running" the entire time
+  this was broken -- which was always, since v1.1.0. Added a test asserting the actual command line
+  passed to the subprocess, since the existing test coverage mocked the spawn away entirely and would
+  never have caught a wrong command regardless of how it was invoked.
+
 ## [1.1.4] - 2026-10-22
 
 ### Fixed

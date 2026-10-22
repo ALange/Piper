@@ -8090,7 +8090,9 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 
 	// Linking sends a real message -- stub the daemon's send, since there's no real signal-cli here.
 	const sent = [];
-	setSignalSpawn(() => {
+	let spawnedWith = null;
+	setSignalSpawn((bin, args) => {
+		spawnedWith = { bin, args };
 		const fake = new EventEmitter();
 		fake.stdout = new PassThrough();
 		fake.stderr = new PassThrough();
@@ -8105,6 +8107,9 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	config.SIGNAL_PHONE_NUMBER = "+15550000000";
 	startSignal();
 	assert.equal(signalStatus().running, true);
+	// The actual command line matters: signal-cli's "daemon" subcommand does not take --json-rpc at
+	// all (it's for dbus/socket/tcp/http service modes) -- "jsonRpc" is the real stdio subcommand.
+	assert.deepEqual(spawnedWith.args, ["-a", "+15550000000", "jsonRpc"], "the real signal-cli subcommand for stdio JSON-RPC, not daemon --json-rpc");
 
 	const sched = signalFor(record);
 	const linked = await sched.enable({ phoneNumber: "+1 555 111 2222" });

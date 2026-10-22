@@ -363,7 +363,7 @@ anything other than Linux x86_64 it goes straight to the Java build, since there
    `signal-cli -a +15551234567 register`, then `signal-cli -a +15551234567 verify <code>`.
 3. In Settings → Signal, set `SIGNAL_PHONE_NUMBER` to that number (in `+<country code><number>`
    form), `SIGNAL_CLI_PATH` if `signal-cli` isn't on `PATH`, and turn `SIGNAL_ENABLED` on (a restart
-   setting). The gateway then runs `signal-cli daemon --json-rpc` itself, supervised for as long as
+   setting). The gateway then runs `signal-cli jsonRpc` itself, supervised for as long as
    the gateway runs.
 4. Grant `can_signal` to the agents (or keys) that should be able to link a number -- off by default
    for every agent and key, even a newly created one, since linking sends a real message to a real
