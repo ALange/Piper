@@ -344,9 +344,15 @@ signal-cli -a +15551234567 verify <code the SMS gave you>
 ./deploy.sh --signal-number +15551234567                        # run again: sees it's verified, turns SIGNAL_ENABLED on
 ```
 Safe to run against an existing deployment, not just a first install -- it stores the Signal settings
-straight into `gateway.db` either way. `--install-signal-cli` only supports Linux x86_64 (the native
-build needs no Java); elsewhere, install `signal-cli` and Java yourself first, then run without it.
-`--signal-voice` requests the code by voice call instead of SMS.
+straight into `gateway.db` either way. `--signal-voice` requests the code by voice call instead of SMS.
+
+`--install-signal-cli` tries signal-cli's native build first (no Java needed), and falls back to its
+ordinary Java build automatically if the native one doesn't actually run -- its CPU requirement (the
+native build needs a fairly modern x86-64) can't be checked in advance, only by trying it. The Java
+build needs a JRE already on the host, and a recent one: if it's missing or too old, the command fails
+with a clear message (check signal-cli's own release notes for the Java version a given release
+needs -- it has been known to require a newer JDK than what ships by default on most distros). On
+anything other than Linux x86_64 it goes straight to the Java build, since there's no native one.
 
 **By hand**, the equivalent steps:
 

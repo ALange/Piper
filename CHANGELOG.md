@@ -2,6 +2,22 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.1.3] - 2026-10-22
+
+### Fixed
+- `deploy.sh --install-signal-cli` now falls back to signal-cli's ordinary Java build when the native
+  one (correctly extracted since the last fix) actually fails to run -- its native build is compiled
+  for a specific, fairly modern x86-64 microarchitecture and refuses to start ("CPU ISA level is lower
+  than required") on an older or more constrained CPU, common on budget or heavily virtualized hosts.
+  There's no reliable way to detect this in advance, so it tries the native build and switches to the
+  Java one the moment that attempt fails, rather than leaving the operator stuck. On non-x86_64 hosts
+  (no native build exists) it goes straight to the Java build. If the Java build also can't run --
+  missing or too old a JRE -- the failure message now includes the actual error (e.g. the exact class
+  file version mismatch), instead of a generic "does not run here", so the operator knows precisely
+  what to fix. The same final check now also runs for a pre-existing `signal-cli` this script merely
+  found rather than installed, so a broken one is caught before the (confusing) registration step
+  rather than during it.
+
 ## [1.1.2] - 2026-10-22
 
 ### Fixed

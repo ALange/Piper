@@ -411,35 +411,69 @@ fi
 # ---------------------------------------------------------------------------------------------
 step "7. Signal (optional)"
 SIGNAL_BIN="" SIGNAL_READY=0
+# The native build (no Java needed) is a GraalVM image compiled for a specific x86-64 microarchitecture
+# level (roughly AVX2/BMI/FMA, "x86-64-v3"): it downloads and extracts fine on any x86_64 host, but
+# refuses to even run ("CPU ISA level is lower than required") on an older or more limited CPU --
+# common on budget or heavily virtualized hosts. There is no reliable way to tell in advance from
+# /proc/cpuinfo alone (GraalVM's own requirement is not just "has avx2"), so this tries it and falls
+# back to the ordinary Java build, which runs anywhere a JVM does, the moment it actually fails.
+install_signal_java() {
+	JAVA_BIN="$(as_target bash -lc 'command -v java' 2>/dev/null || true)"
+	[ -n "$JAVA_BIN" ] || die "signal-cli's native build does not run on this CPU, and no Java was found for its ordinary build. Install a recent JRE (Debian/Ubuntu: apt-get install -y default-jre-headless, or a specific openjdk-N-jre-headless -- check signal-cli's release notes for the Java version it needs), then run this again."
+	TAR="signal-cli-${SIGNAL_VER}.tar.gz"
+	say "  installing signal-cli $SIGNAL_VER's ordinary (Java) build instead, to $TARGET_HOME/.local/signal-cli"
+	if [ "$DRY" = 1 ]; then
+		say "  (dry run) download $TAR, unpack"
+		SIGNAL_BIN="$TARGET_HOME/.local/signal-cli/bin/signal-cli"
+	else
+		STMP2="$(mktemp -d)"; trap 'rm -rf "$STMP2"' EXIT
+		curl -fsSL "https://github.com/AsamK/signal-cli/releases/download/v${SIGNAL_VER}/$TAR" -o "$STMP2/$TAR" || die "could not download $TAR -- check your network, or install signal-cli yourself"
+		as_target rm -rf "$TARGET_HOME/.local/signal-cli"
+		as_target mkdir -p "$TARGET_HOME/.local/signal-cli"
+		# Unlike the native release, this one IS a top-level versioned directory, so it does need stripping.
+		as_target tar -xz --strip-components=1 -C "$TARGET_HOME/.local/signal-cli" -f "$STMP2/$TAR"
+		SIGNAL_BIN="$TARGET_HOME/.local/signal-cli/bin/signal-cli"
+		ok "installed signal-cli $SIGNAL_VER (Java build)"
+	fi
+}
 if [ -n "$SIGNAL_NUMBER" ]; then
 	find_signal_cli() { as_target bash -lc 'command -v signal-cli' 2>/dev/null || true; }
 	SIGNAL_BIN="$(find_signal_cli)"
 	[ -n "$SIGNAL_BIN" ] || { [ -x "$TARGET_HOME/.local/signal-cli/signal-cli" ] && SIGNAL_BIN="$TARGET_HOME/.local/signal-cli/signal-cli"; }
+	[ -n "$SIGNAL_BIN" ] || { [ -x "$TARGET_HOME/.local/signal-cli/bin/signal-cli" ] && SIGNAL_BIN="$TARGET_HOME/.local/signal-cli/bin/signal-cli"; }
 	if [ -n "$SIGNAL_BIN" ]; then
 		ok "signal-cli at $SIGNAL_BIN"
 	elif [ "$INSTALL_SIGNAL_CLI" = 1 ]; then
-		[ "$(uname -m)" = x86_64 ] || die "the native signal-cli build (no Java needed) is Linux x86_64 only; install Java and signal-cli yourself for $(uname -m): https://github.com/AsamK/signal-cli#installation"
 		SIGNAL_VER="$(curl -fsSL https://api.github.com/repos/AsamK/signal-cli/releases/latest | grep '"tag_name"' | sed -E 's/.*"v?([0-9.]+)".*/\1/')"
 		[ -n "$SIGNAL_VER" ] || die "could not find the latest signal-cli release (github.com/AsamK/signal-cli); install it yourself"
-		TAR="signal-cli-${SIGNAL_VER}-Linux-native.tar.gz"
-		say "  installing signal-cli $SIGNAL_VER (native, no Java needed) to $TARGET_HOME/.local/signal-cli"
-		if [ "$DRY" = 1 ]; then
-			say "  (dry run) download $TAR, unpack"
-			SIGNAL_BIN="$TARGET_HOME/.local/signal-cli/signal-cli"
+		if [ "$(uname -m)" != x86_64 ]; then
+			say "  no native build for $(uname -m); installing the ordinary (Java) build"
+			install_signal_java
 		else
-			STMP="$(mktemp -d)"; trap 'rm -rf "$STMP"' EXIT
-			curl -fsSL "https://github.com/AsamK/signal-cli/releases/download/v${SIGNAL_VER}/$TAR" -o "$STMP/$TAR" || die "could not download $TAR -- check your network, or install signal-cli yourself"
-			as_target mkdir -p "$TARGET_HOME/.local/signal-cli"
-			# The native release is a single executable at the tarball's root, not inside a directory --
-			# no --strip-components here, unlike Node's tarball: with one it strips the only path
-			# component there is, so tar extracts nothing and the later exec fails with ENOENT.
-			as_target tar -xz -C "$TARGET_HOME/.local/signal-cli" -f "$STMP/$TAR"
-			SIGNAL_BIN="$TARGET_HOME/.local/signal-cli/signal-cli"
-			as_target chmod +x "$SIGNAL_BIN"
-			ok "installed signal-cli $SIGNAL_VER"
+			TAR="signal-cli-${SIGNAL_VER}-Linux-native.tar.gz"
+			say "  installing signal-cli $SIGNAL_VER (native, no Java needed) to $TARGET_HOME/.local/signal-cli"
+			if [ "$DRY" = 1 ]; then
+				say "  (dry run) download $TAR, unpack"
+				SIGNAL_BIN="$TARGET_HOME/.local/signal-cli/signal-cli"
+			else
+				STMP="$(mktemp -d)"; trap 'rm -rf "$STMP"' EXIT
+				curl -fsSL "https://github.com/AsamK/signal-cli/releases/download/v${SIGNAL_VER}/$TAR" -o "$STMP/$TAR" || die "could not download $TAR -- check your network, or install signal-cli yourself"
+				as_target mkdir -p "$TARGET_HOME/.local/signal-cli"
+				# The native release is a single executable at the tarball's root, not inside a directory --
+				# no --strip-components here, unlike Node's tarball: with one it strips the only path
+				# component there is, so tar extracts nothing and the later exec fails with ENOENT.
+				as_target tar -xz -C "$TARGET_HOME/.local/signal-cli" -f "$STMP/$TAR"
+				SIGNAL_BIN="$TARGET_HOME/.local/signal-cli/signal-cli"
+				as_target chmod +x "$SIGNAL_BIN"
+				ok "installed signal-cli $SIGNAL_VER"
+				VCHECK="$(as_target "$SIGNAL_BIN" --version 2>&1)" || { warn "the native build does not run here: ${VCHECK##*$'\n'}"; install_signal_java; }
+			fi
 		fi
 	else
-		die "signal-cli was not found for $TARGET. Install it yourself (https://github.com/AsamK/signal-cli#installation), or run this again with --install-signal-cli (Linux x86_64 only)."
+		die "signal-cli was not found for $TARGET. Install it yourself (https://github.com/AsamK/signal-cli#installation), or run this again with --install-signal-cli."
+	fi
+	if [ "$DRY" = 0 ]; then
+		FINAL_VCHECK="$(as_target "$SIGNAL_BIN" --version 2>&1)" || die "$SIGNAL_BIN does not run for $TARGET: ${FINAL_VCHECK##*$'\n'}"
 	fi
 	if [ "$DRY" = 1 ]; then
 		say "  (dry run) check whether $SIGNAL_NUMBER is already registered with signal-cli"
