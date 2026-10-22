@@ -439,6 +439,30 @@ export default async function piperBridge(pi) {
 			},
 		});
 		pi.registerTool({
+			name: "piper_signal_send_message",
+			label: "Send a message over Signal",
+			description:
+				"Send a plain text message right now to one of the phone numbers linked to you, outside of answering an inbound Signal message -- e.g. a status update, something you were asked to report back once it's ready, or an alert. " +
+				"Use it only when the owner has asked for a message to be sent, or set up a task that does; piper_signal_enable's own welcome message is enough when you're only just linking the number.",
+			promptSnippet: "Send a message over Signal",
+			parameters: {
+				type: "object",
+				properties: {
+					message: { type: "string", description: "The text to send." },
+					phone_number: { type: "string", description: "Which linked number to send it to. Only needed if more than one number is linked to you; from piper_signal_contacts." },
+				},
+				required: ["message"],
+			},
+			async execute(_toolCallId, params) {
+				try {
+					const answer = await readJson(await request("/signal/send-message", { message: params?.message, phoneNumber: params?.phone_number }));
+					return reply(`Sent to ${answer.phoneNumber} over Signal.`);
+				} catch (err) {
+					return reply(`Could not send it: ${err?.message ?? err}`);
+				}
+			},
+		});
+		pi.registerTool({
 			name: "piper_signal_send_file",
 			label: "Send a file over Signal",
 			description:

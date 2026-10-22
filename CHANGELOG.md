@@ -2,6 +2,16 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.6.0] - 2026-10-22
+
+### Added
+- **`piper_signal_send_message`: a plain text message, outside of answering an inbound one.**
+  Previously the only ways an agent could get outbound text onto Signal were `piper_signal_enable`'s
+  one-time welcome message and `piper_signal_send_file`'s optional caption -- there was no way to just
+  push a status update or an alert. Picks the linked number the same way `piper_signal_send_file`
+  already does: the one it's asked for, or its only one, or an error naming all of them if there's
+  more than one to choose from.
+
 ## [1.5.3] - 2026-10-22
 
 ### Fixed

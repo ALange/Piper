@@ -8328,6 +8328,18 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${profileHelper} "\${rest[@]}"
 	delete config.SIGNAL_IMAGE_MAX_BYTES;
 	delete config.SIGNAL_CLI_DATA_DIR;
 
+	// Sending a plain message outside of answering an inbound one: the agent's own way to push a
+	// status update or an alert, auto-picking the one linked number the same way sendFile does.
+	sent.length = 0;
+	const msgResult = await sched.sendMessage({ message: "your report is ready" });
+	assert.equal(msgResult.phoneNumber, "+15551112222");
+	assert.equal(sent.length, 1);
+	assert.equal(sent[0].recipient[0], "+15551112222");
+	assert.equal(sent[0].message, "your report is ready");
+	assert.equal(sent[0].attachment, undefined, "a plain message is not sent as a file attachment");
+	await assert.rejects(sched.sendMessage({ message: "" }), /say what to send/);
+	await assert.rejects(sched.sendMessage({}), /say what to send/);
+
 	// Sending a file back: reads it from the chat's own workspace (the "doc.pdf" an earlier attachment
 	// already landed there), sends it as a real attachment, auto-picks the one linked number when there
 	// is only one (the +15552223333 contact above was disabled, leaving exactly this one).
