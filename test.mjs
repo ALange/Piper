@@ -9926,6 +9926,26 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	settle();
 	setAgentTurnRunner(null);
 
+	// channel: "signal" resumes that key's (and agent's) own Signal session -- lib/signal.mjs's exact
+	// `signal:${keyId}:${agentId}` string -- regardless of the browser's own (arbitrary) conversation id,
+	// so continuing a Signal conversation here lands on the very same Pi session, not a new one.
+	let signalSeenSession = null;
+	setAgentTurnRunner(async ({ clientSessionId, prompt }) => {
+		signalSeenSession = clientSessionId;
+		return { text: `echo: ${prompt}`, usage: {}, cost: 0 };
+	});
+	await events(await post({ ...good, channel: "signal", conversation: "pg-browser-id-aaaa" }));
+	assert.equal(signalSeenSession, `signal:${key.id}:${agent.id}`);
+	// A completely different browser-chosen conversation id, same channel/key/agent: the same session.
+	await events(await post({ ...good, channel: "signal", conversation: "pg-browser-id-bbbb" }));
+	assert.equal(signalSeenSession, `signal:${key.id}:${agent.id}`, "the browser's own id does not matter for a signal-channel conversation");
+	// No channel (the ordinary case) still keys off the browser's own id, as before.
+	await events(await post({ ...good, conversation: "pg-browser-id-cccc" }));
+	assert.equal(signalSeenSession, "playground:pg-browser-id-cccc");
+	setAgentTurnRunner(null);
+	const eventsForNoSuchId = await (await fetch(`${base}/conversation/pg-some-other-browser-id/events?keyId=${key.id}&agentId=${agent.id}&channel=signal`)).json();
+	assert.ok("live" in eventsForNoSuchId, "a channel=signal events request is answered (not a 500), regardless of the url id");
+
 	// Ending a conversation closes its session.
 	const credential = credentialFor(key.id, agent.id);
 	const scoped = scopedSessionId(credential, "playground:conv-delete-0001");
@@ -10113,6 +10133,15 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		assert.ok(recentAudit(50).map((r2) => r2.action).includes("session.interrupt"), "the interrupt is audited");
 		const nothingToStop = await (await fetch(`${base}/conversation/pg-disco-convo-2/interrupt?keyId=${key.id}&agentId=${agent.id}`, { method: "POST" })).json();
 		assert.deepEqual(nothingToStop, { interrupted: false, wasRunning: false }, "nothing left running the second time");
+
+		// channel=signal resolves to that key/agent's own Signal session regardless of the url's own <id>
+		// segment -- the real point of it: the browser doesn't need to know or carry the real session id.
+		promptSeen = new Promise((r2) => (promptSeenResolve = r2));
+		const pendingSignal = post({ ...good, channel: "signal", conversation: "pg-browser-local-id" });
+		await promptSeen;
+		const stoppedSignal = await (await fetch(`${base}/conversation/whatever-the-browser-calls-it/interrupt?keyId=${key.id}&agentId=${agent.id}&channel=signal`, { method: "POST" })).json();
+		assert.deepEqual(stoppedSignal, { interrupted: true, wasRunning: true }, "found and stopped via the derived signal: session, not the url's own id");
+		await pendingSignal;
 
 		const openRecords = sessions.allRecords();
 		sessions.closeAll();

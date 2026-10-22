@@ -2,6 +2,24 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] - 2026-10-22
+
+### Added
+- **Continue a Signal conversation from the dashboard.** The Signal panel's contacts table now has a
+  "continue in playground" action per linked number: it opens that key's (and agent's) own Signal
+  session in the dashboard Playground -- the exact same Pi session and memory Signal itself uses, not a
+  copy -- so a conversation that started over Signal can carry on from the web when that's easier.
+  Replies sent from here don't also go back out over Signal. The Playground's key/agent picker is
+  locked for a conversation opened this way (switching it would silently point at a different session),
+  and "delete" on one of these only forgets the browser's own local pointer to it -- the Signal
+  conversation itself is never ended from here, only from Signal's own side. New `channel: "signal"`
+  support on the Playground's chat/interrupt/events routes makes this work: the browser's own
+  conversation id is irrelevant for a signal-channel conversation, the server always derives the real
+  session from the chosen key and agent.
+- **The Signal panel's contacts table was otherwise previously undiscoverable from Live Chats** -- a
+  live Signal session showed up there only as an anonymous row (a fingerprint hash, no key/agent/kind
+  label), impossible to pick out or act on; this gives it a real, labeled way in.
+
 ## [1.3.0] - 2026-10-22
 
 ### Added

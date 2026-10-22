@@ -4243,6 +4243,13 @@ function renderSignal() {
     toggle.setAttribute('data-act', c.enabled ? 'off' : 'on');
     act.appendChild(toggle);
     act.appendChild(document.createTextNode(' '));
+    act.appendChild(document.createTextNode(' '));
+    var cont = el('button', 'continue in playground');
+    cont.title = 'open (or reopen) this agent’s own Signal conversation here, so you can carry it on from the web — replies here do not also go back out over Signal';
+    cont.setAttribute('data-signal', c.id);
+    cont.setAttribute('data-act', 'playground');
+    act.appendChild(cont);
+    act.appendChild(document.createTextNode(' '));
     var del = el('button', 'remove');
     del.setAttribute('data-signal', c.id);
     del.setAttribute('data-act', 'del');
@@ -4260,6 +4267,8 @@ $('signalrows').addEventListener('click', function (e) {
   if (act === 'del') {
     if (!contact || !confirm('Remove ' + contact.phoneNumber + '? It can link again later through its agent’s own tool.')) return;
     epPost('dashboard/signal/contacts/' + id, undefined, 'DELETE').then(loadSignal);
+  } else if (act === 'playground') {
+    if (contact) pgOpenSignal(contact.keyId, contact.agentId, contact.phoneNumber);
   } else {
     epPost('dashboard/signal/contacts/' + id, { enabled: act === 'on' }).then(loadSignal);
   }
@@ -5267,6 +5276,23 @@ function pgTargetOf(c) {
   if (c.agentId && !a) return null;
   return { key: k, agent: a, label: k.key + (a ? ' / ' + a.name : ''), description: a ? a.description : '' };
 }
+/** Open (or reopen) a key's (and agent's) own Signal conversation in the Playground -- called from the
+ * Signal panel's "continue in playground" button. Finds the existing local conversation for this
+ * key/agent if one was already opened before, rather than minting a new browser-side id every time,
+ * since the server-side session it resumes (channel: "signal") is the same one either way. */
+function pgOpenSignal(keyId, agentId, phoneNumber) {
+  if (!PG.started) { pgLoad(); PG.started = true; }
+  var existing = PG.convs.filter(function (c) { return c.channel === 'signal' && c.keyId === keyId && (c.agentId || null) === (agentId || null); })[0];
+  var c = existing;
+  if (!c) {
+    c = { id: pgId(), title: 'Signal: ' + phoneNumber, keyId: keyId, agentId: agentId || null, externalModelId: null, model: '', messages: [], updated: Date.now(), channel: 'signal' };
+    PG.convs.unshift(c);
+  }
+  PG.cur = c.id;
+  pgSave();
+  location.hash = '#playground';
+  pgStart();
+}
 function pgNew() {
   var pref = PG.pref ? PG.pref.split('|') : null;
   var prefSub = pref && pref[1] || '';
@@ -5322,7 +5348,9 @@ function pgRenderBar() {
     sel.appendChild(g);
   });
   sel.value = c.externalModelId ? (c.keyId + '|m:' + c.externalModelId) : (c.keyId + '|' + (c.agentId || ''));
-  sel.disabled = c.messages.length > 0 || PG.busy;
+  // A channel-bound conversation (e.g. Signal) is locked from the start, even with no messages yet:
+  // switching key/agent here would silently point it at a different session than the one it's for.
+  sel.disabled = c.messages.length > 0 || PG.busy || Boolean(c.channel);
   var t = pgTargetOf(c);
   // An external model has no Pi model-within-it to pick -- it IS the model.
   msel.hidden = Boolean(c.externalModelId);
@@ -5520,7 +5548,7 @@ function pgSend(text) {
   PG.ctrl = new AbortController();
   var done = false;
   var sentAt = Date.now();
-  fetch('dashboard/playground/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, signal: PG.ctrl.signal, body: JSON.stringify({ keyId: c.keyId, agentId: c.externalModelId ? undefined : (c.agentId || undefined), externalModelId: c.externalModelId || undefined, history: history, conversation: c.id, message: text, model: c.model || undefined }) })
+  fetch('dashboard/playground/chat', { method: 'POST', headers: { 'content-type': 'application/json' }, signal: PG.ctrl.signal, body: JSON.stringify({ keyId: c.keyId, agentId: c.externalModelId ? undefined : (c.agentId || undefined), externalModelId: c.externalModelId || undefined, history: history, conversation: c.id, message: text, model: c.model || undefined, channel: c.channel || undefined }) })
     .then(function (r) {
       var type = r.headers.get('content-type') || '';
       if (!r.ok || type.indexOf('event-stream') < 0) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error((j.error && j.error.message) || 'HTTP ' + r.status); });
@@ -5595,7 +5623,7 @@ function pgResumeIfLive(c) {
   };
   if (isCur()) pgSetBusy(true);
   bump();
-  var qs = 'keyId=' + encodeURIComponent(c.keyId) + (c.agentId ? '&agentId=' + encodeURIComponent(c.agentId) : '');
+  var qs = 'keyId=' + encodeURIComponent(c.keyId) + (c.agentId ? '&agentId=' + encodeURIComponent(c.agentId) : '') + (c.channel ? '&channel=' + encodeURIComponent(c.channel) : '');
   fetch('dashboard/playground/conversation/' + encodeURIComponent(c.id) + '/events?' + qs).then(function (r) {
     bump();
     var type = r.headers.get('content-type') || '';
@@ -5666,15 +5694,19 @@ function pgStop() {
   if (PG.ctrl) PG.ctrl.abort();
   // Aborting the local fetch above only stops this tab watching -- the turn itself now keeps running
   // server-side regardless (same as the client portal), so the stop button must also say so explicitly.
-  if (c) fetch('dashboard/playground/conversation/' + encodeURIComponent(c.id) + '/interrupt?keyId=' + encodeURIComponent(c.keyId) + (c.agentId ? '&agentId=' + encodeURIComponent(c.agentId) : ''), { method: 'POST' }).catch(function () {});
+  if (c) fetch('dashboard/playground/conversation/' + encodeURIComponent(c.id) + '/interrupt?keyId=' + encodeURIComponent(c.keyId) + (c.agentId ? '&agentId=' + encodeURIComponent(c.agentId) : '') + (c.channel ? '&channel=' + encodeURIComponent(c.channel) : ''), { method: 'POST' }).catch(function () {});
 }
 function pgDelete(c) {
-  if (c.messages.length && !confirm('Delete "' + c.title + '"?')) return;
+  if (c.channel) { if (!confirm('Remove "' + c.title + '" from this list? The Signal conversation itself is not affected -- it still works over Signal, and can be reopened here again.')) return; }
+  else if (c.messages.length && !confirm('Delete "' + c.title + '"?')) return;
   // Deleting is the escape hatch for a chat that's stuck (its session wedged server-side, say,
   // behind a tool call that never answered an abort) -- it must never be blocked by "busy", or
   // there would be no way out. Stop the in-flight stream first so the browser's own fetch lets go.
   if (PG.busy && c.id === PG.cur) { if (PG.ctrl) PG.ctrl.abort(); pgSetBusy(false); PG.ctrl = null; }
-  fetch('dashboard/playground/conversation/' + encodeURIComponent(c.id) + '?keyId=' + encodeURIComponent(c.keyId) + (c.agentId ? '&agentId=' + encodeURIComponent(c.agentId) : ''), { method: 'DELETE' }).catch(function () {});
+  // A channel-bound conversation (e.g. Signal) is never ended server-side from here: this is just the
+  // browser's own pointer to that session, not the session's owner. Only its own channel (lib/signal.mjs
+  // itself, for Signal) gets to end it; deleting it here only forgets it locally, reopenable any time.
+  if (!c.channel) fetch('dashboard/playground/conversation/' + encodeURIComponent(c.id) + '?keyId=' + encodeURIComponent(c.keyId) + (c.agentId ? '&agentId=' + encodeURIComponent(c.agentId) : ''), { method: 'DELETE' }).catch(function () {});
   PG.convs = PG.convs.filter(function (x) { return x.id !== c.id; });
   if (PG.cur === c.id) { PG.cur = PG.convs[0] ? PG.convs[0].id : null; if (!PG.cur) pgNew(); }
   pgSave(); pgRender();
