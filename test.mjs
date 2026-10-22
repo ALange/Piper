@@ -8254,6 +8254,34 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${profileHelper} "\${rest[@]}"
 	assert.match(turns[0].prompt, /\[Attached: uploads\/big-photo\.jpg -- read it from your workspace\]/);
 	delete config.SIGNAL_IMAGE_MAX_BYTES;
 	delete config.SIGNAL_CLI_DATA_DIR;
+
+	// Sending a file back: reads it from the chat's own workspace (the "doc.pdf" an earlier attachment
+	// already landed there), sends it as a real attachment, auto-picks the one linked number when there
+	// is only one (the +15552223333 contact above was disabled, leaving exactly this one).
+	sent.length = 0;
+	const sendResult = await sched.sendFile({ path: "uploads/doc.pdf", message: "here it is" });
+	assert.equal(sendResult.phoneNumber, "+15551112222");
+	assert.equal(sent.length, 1);
+	assert.equal(sent[0].recipient[0], "+15551112222");
+	assert.equal(sent[0].message, "here it is");
+	assert.equal(sent[0].attachment.length, 1);
+	assert.match(sent[0].attachment[0], /^data:application\/pdf;base64,/);
+	assert.equal(Buffer.from(sent[0].attachment[0].split(",")[1], "base64").toString(), pdfBytes.toString(), "the real workspace file bytes, not a placeholder");
+
+	// A file outside the workspace, or that just doesn't exist, is refused, not silently skipped.
+	await assert.rejects(sched.sendFile({ path: "no-such-file.pdf" }), /.+/);
+	await assert.rejects(sched.sendFile({ path: "../../etc/passwd" }), /.+/, "the usual workspace traversal guard still applies");
+
+	// More than one linked number needs an explicit choice. Re-enable the one disabled above rather than
+	// linking a new one, to stay under this scope's own cap (already at it).
+	sent.length = 0;
+	await sched.enable({ phoneNumber: "+15552223333" }); // reactivating a disabled number re-sends a welcome, same as a brand-new link
+	assert.equal(sent.length, 1);
+	sent.length = 0;
+	await assert.rejects(sched.sendFile({ path: "uploads/doc.pdf" }), /more than one number is linked/);
+	assert.equal((await sched.sendFile({ path: "uploads/doc.pdf", phoneNumber: "+15552223333" })).phoneNumber, "+15552223333");
+	sched.disable({ phoneNumber: "+15552223333" });
+
 	process.env.PATH = oldPath;
 
 	assert.ok(listAllContacts().length >= 2);

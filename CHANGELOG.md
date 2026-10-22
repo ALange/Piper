@@ -2,6 +2,18 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] - 2026-10-22
+
+### Added
+- **`piper_signal_send_file`: the agent can send a file back over Signal.** Previously outbound Signal
+  was text-only; an agent could receive a file (as of the last release) but had no way to send one back.
+  The new tool takes a path in the agent's own workspace, reads it through the same sandboxed,
+  symlink-safe helper the portal's own file download route uses, and sends it as a real Signal
+  attachment (a data URI, so no temp file is written to or cleaned up on the host) to one of the
+  numbers linked to that same agent/key -- never an arbitrary one, same ownership scoping as every
+  other `piper_signal_*` tool. If more than one number is linked, it asks the agent to say which one;
+  with exactly one, it's picked automatically. An optional caption goes out alongside the file.
+
 ## [1.2.0] - 2026-10-22
 
 ### Added

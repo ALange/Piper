@@ -438,6 +438,31 @@ export default async function piperBridge(pi) {
 				}
 			},
 		});
+		pi.registerTool({
+			name: "piper_signal_send_file",
+			label: "Send a file over Signal",
+			description:
+				"Send a file from your own workspace as a Signal attachment, to one of the phone numbers linked to you. " +
+				"Use it when the owner asks you to send them a file over Signal -- a report you wrote, something they attached earlier, anything already in your workspace.",
+			promptSnippet: "Send a workspace file over Signal",
+			parameters: {
+				type: "object",
+				properties: {
+					path: { type: "string", description: "The file's path in your own workspace, e.g. \"report.pdf\" or \"uploads/photo.jpg\"." },
+					phone_number: { type: "string", description: "Which linked number to send it to. Only needed if more than one number is linked to you; from piper_signal_contacts." },
+					message: { type: "string", description: "An optional caption to send alongside the file." },
+				},
+				required: ["path"],
+			},
+			async execute(_toolCallId, params) {
+				try {
+					const answer = await readJson(await request("/signal/send-file", { path: params?.path, phoneNumber: params?.phone_number, message: params?.message }));
+					return reply(`Sent ${params?.path} to ${answer.phoneNumber} over Signal.`);
+				} catch (err) {
+					return reply(`Could not send it: ${err?.message ?? err}`);
+				}
+			},
+		});
 	}
 
 	// Memory: notes that outlive this one chat. A key's own chats all share one memory, and so does a
