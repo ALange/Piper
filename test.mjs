@@ -8058,7 +8058,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	const {
 		maySignal, signalFor, getContactByNumber, listAllContacts, normalizePhoneNumber,
 		setSignalSpawn, setSignalRunner, startSignal, stopSignal, signalStatus,
-		agents, apiKeys, config,
+		agents, apiKeys, config, agentScope, ensureWorkspace,
 	} = await import("./server.mjs");
 
 	const rec = apiKeys.create({ name: "signal-key" });
@@ -8148,8 +8148,8 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	// Inbound routing: an unlinked number never reaches a turn; a linked one does, with a stable
 	// per-scope session id, and its reply goes back out over Signal.
 	const turns = [];
-	setSignalRunner(async ({ credential, clientSessionId, prompt }) => {
-		turns.push({ keyId: credential.id, clientSessionId, prompt });
+	setSignalRunner(async ({ credential, clientSessionId, prompt, images }) => {
+		turns.push({ keyId: credential.id, clientSessionId, prompt, images });
 		return { text: `echo: ${prompt}` };
 	});
 	// Re-spawn with a fake daemon whose stdout this test can drive directly, captured via closure.
@@ -8186,6 +8186,75 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.equal(sent[0].recipient[0], "+15551112222");
 	assert.equal(sent[0].message, "echo: hello agent");
 	assert.ok(getContactByNumber("+15551112222").lastMessageAt > 0);
+
+	// Attachments: images read from where signal-cli itself already saved them (matched by id prefix,
+	// since the exact filename depends on an extension guess this test doesn't need to replicate) go to
+	// the model inline; any other file is copied into the chat's own workspace, same as the client
+	// portal's own "doc" attach -- exercised here against a real (sandboxed, local) copy of the profile
+	// helper, standing in for `docker run`, the same technique the file-browser-route tests use.
+	const fakeDataDir = mkdtempSync(join(tmpdir(), "signal-test-"));
+	mkdirSync(join(fakeDataDir, "attachments"));
+	const imageBytes = Buffer.from("not a real jpeg, just test bytes");
+	const pdfBytes = Buffer.from("%PDF-1.4 not a real pdf, just test bytes");
+	writeFileSync(join(fakeDataDir, "attachments", "att-123.jpg"), imageBytes);
+	writeFileSync(join(fakeDataDir, "attachments", "att-456.pdf"), pdfBytes);
+	config.SIGNAL_CLI_DATA_DIR = fakeDataDir;
+
+	const dockerBin = mkdtempSync(join(tmpdir(), "signal-fakedocker-"));
+	const profileHelper = fileURLToPath(new URL("./piper-profile.mjs", import.meta.url));
+	writeFileSync(join(dockerBin, "docker"), `#!/usr/bin/env bash
+dir=""; max=0; args=("$@"); rest=(); i=0
+while [ $i -lt $# ]; do
+  a="\${args[$i]}"
+  case "$a" in
+    -v) v="\${args[$((i+1))]}"; case "$v" in *:/data) dir="\${v%:/data}";; esac;;
+    -e) e="\${args[$((i+1))]}"; case "$e" in PROFILE_MAX_BYTES=*) max="\${e#*=}";; esac;;
+    /opt/piper/profile.mjs) rest=("\${args[@]:$((i+1))}"); break;;
+  esac
+  i=$((i+1))
+done
+cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${profileHelper} "\${rest[@]}"
+`);
+	(await import("node:fs")).chmodSync(join(dockerBin, "docker"), 0o755);
+	const oldPath = process.env.PATH;
+	process.env.PATH = `${dockerBin}:${oldPath}`;
+
+	turns.length = 0; sent.length = 0;
+	liveChild.stdout.write(`${JSON.stringify({
+		jsonrpc: "2.0", method: "receive",
+		params: { envelope: { sourceNumber: "+15551112222", dataMessage: {
+			message: "look at this",
+			attachments: [
+				{ id: "att-123", contentType: "image/jpeg", filename: "photo.jpg" },
+				{ id: "att-456", contentType: "application/pdf", filename: "doc.pdf" },
+			],
+		} } },
+	})}\n`);
+	await waitFor(() => turns.length > 0);
+	assert.equal(turns[0].images.length, 1, "only the image attachment goes inline");
+	assert.equal(turns[0].images[0].mimeType, "image/jpeg");
+	assert.equal(Buffer.from(turns[0].images[0].data, "base64").toString(), imageBytes.toString(), "the actual file bytes, base64-encoded");
+	assert.match(turns[0].prompt, /^look at this/);
+	assert.match(turns[0].prompt, /\[Attached: uploads\/doc\.pdf -- read it from your workspace\]/, "the non-image attachment is copied in and noted, same wording as the portal's own doc attach");
+	const scope = agentScope(key.id, agent.id);
+	assert.equal(readFileSync(join(ensureWorkspace(scope), "uploads", "doc.pdf")).toString(), pdfBytes.toString(), "actually landed in the chat's own workspace");
+
+	// An image too large to read (SIGNAL_IMAGE_MAX_BYTES) falls through to the same workspace copy a
+	// non-image attachment gets -- not silently dropped, just not sent inline to the model.
+	config.SIGNAL_IMAGE_MAX_BYTES = 10;
+	turns.length = 0;
+	liveChild.stdout.write(`${JSON.stringify({
+		jsonrpc: "2.0", method: "receive",
+		params: { envelope: { sourceNumber: "+15551112222", dataMessage: {
+			attachments: [{ id: "att-123", contentType: "image/jpeg", filename: "big-photo.jpg" }],
+		} } },
+	})}\n`);
+	await waitFor(() => turns.length > 0);
+	assert.equal(turns[0].images.length, 0);
+	assert.match(turns[0].prompt, /\[Attached: uploads\/big-photo\.jpg -- read it from your workspace\]/);
+	delete config.SIGNAL_IMAGE_MAX_BYTES;
+	delete config.SIGNAL_CLI_DATA_DIR;
+	process.env.PATH = oldPath;
 
 	assert.ok(listAllContacts().length >= 2);
 	stopSignal();

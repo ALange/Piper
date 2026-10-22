@@ -2,6 +2,21 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-10-22
+
+### Added
+- **Signal attachments.** An inbound Signal message's attachments are now handled the same way the
+  client portal's own attach button already splits them: an image goes to the model inline (vision,
+  gated by the new `SIGNAL_IMAGE_MAX_BYTES` setting, default 8MB); anything else -- a PDF, a document,
+  any file type -- is copied into the chat's own workspace under `uploads/<name>`, with a note in the
+  prompt (`[Attached: uploads/<name> -- read it from your workspace]`, identical wording to the portal's
+  own) so the agent discovers and reads it itself. Previously only the text of a Signal message was
+  ever looked at; an attachment with no caption text was silently ignored. Copying reuses the same
+  sandboxed, symlink-safe helper the portal's own file upload route runs (driven directly rather than
+  over HTTP, since there's no live request here), not a raw filesystem write -- the workspace is
+  writable by the agent's own container, so a naive write would need to reimplement that helper's
+  symlink-walk guard itself to stay as safe.
+
 ## [1.1.5] - 2026-10-22
 
 ### Fixed
