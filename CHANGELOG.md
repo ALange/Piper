@@ -2,6 +2,17 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.5.1] - 2026-10-22
+
+### Fixed
+- **Leftover cruft from the previous version's `COMPACT_AT_PERCENT` bug wasn't being cleaned up.** A
+  profile still carrying the earlier, broken module's `compaction.modelOverrides` and
+  `piper.compactionManagedModels` (dead weight Pi never read) kept them indefinitely, sitting alongside
+  the new, correct flat keys instead of being replaced. Confirmed against a real profile on the live
+  deployment after shipping 1.5.0 -- the new flat `reserveTokens`/`enabled` were there as expected, but
+  the old per-model table hadn't been removed. Now cleaned up the first time the sweep runs again,
+  whether or not compaction stays on.
+
 ## [1.5.0] - 2026-10-22
 
 ### Fixed

@@ -4428,6 +4428,42 @@ assert.equal(isReloadCommand(undefined), false);
 		saveModelsText(modelsBefore);
 	}
 
+	// A profile left over from the earlier, broken version of this module (per-model
+	// compaction.modelOverrides, piper.compactionManagedModels) gets that cruft cleaned up the first
+	// time this runs again -- Pi never read it, but it shouldn't linger forever either.
+	{
+		const modelsBefore = readFileSync(join(TEST_CONTAINER_PI, "models.json"), "utf8");
+		saveModelsText(JSON.stringify({ providers: {} }));
+		const runtime = { getAvailableSnapshot: () => [{ provider: "host", id: "big", contextWindow: 100_000 }], getModel: () => null };
+		const dirC = ensureProfile("compactLegacy");
+		writeFileSync(join(dirC, "settings.json"), JSON.stringify({
+			compaction: { modelOverrides: { "host/big": { reserveTokens: 300000 } } },
+			piper: { compactionManagedModels: ["host/big"] },
+		}));
+
+		config.COMPACT_AT_PERCENT = 60;
+		await syncCompactionSettings({ runtime });
+		let c = JSON.parse(readFileSync(join(dirC, "settings.json"), "utf8"));
+		assert.equal("modelOverrides" in c.compaction, false, "the dead field is gone");
+		assert.equal("compactionManagedModels" in c.piper, false, "the old marker is gone");
+		assert.equal(c.compaction.reserveTokens, 40000, "replaced by the real flat value");
+		assert.equal(c.piper.compactionManaged, true);
+
+		// Cleanup still happens even if the feature is off by the time this runs.
+		writeFileSync(join(dirC, "settings.json"), JSON.stringify({
+			compaction: { modelOverrides: { "host/big": { reserveTokens: 300000 } } },
+			piper: { compactionManagedModels: ["host/big"] },
+		}));
+		config.COMPACT_AT_PERCENT = 0;
+		await syncCompactionSettings({ runtime });
+		c = JSON.parse(readFileSync(join(dirC, "settings.json"), "utf8"));
+		assert.equal("modelOverrides" in (c.compaction ?? {}), false);
+		assert.equal("piper" in c, false, "nothing left to mark as managed");
+
+		rmSync(dirC, { recursive: true, force: true });
+		saveModelsText(modelsBefore);
+	}
+
 	// Direct calls are metered from the event stream, and bridged ones only by the bridge: nothing twice.
 	{
 		const child = new EventEmitter();
