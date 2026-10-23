@@ -390,7 +390,7 @@
   <div id="sidebackdrop" class="sidebox-backdrop"></div>
 
   <div id="convsbox" class="sidebox on">
-    <div class="top"><b>Chats</b><button class="sideclose" data-close title="close">×</button></div>
+    <div class="top"><b>Chats</b><div><button id="signalcontinuebtn" hidden title="pick up a chat you started on Signal">from Signal</button><button class="sideclose" data-close title="close">×</button></div></div>
     <div id="convlist"></div>
     <p id="syncwarn" class="hint bad" hidden>Chat history is too large to save to your account — it only exists in this browser tab until it's trimmed. Delete an old chat to fix this.</p>
   </div>
@@ -471,6 +471,14 @@
     <div class="hint" id="fmmeta"></div>
     <div id="fmbody" class="modal-body"></div>
     <div class="modal-actions"><a id="fmdownload" download><button>download</button></a></div>
+  </div>
+</div>
+
+<div id="signalmodal" class="modal-overlay" hidden>
+  <div class="modal-box">
+    <div class="modal-top"><b>Continue a Signal chat</b><button id="smclose">close</button></div>
+    <div class="hint">Pick up where you left off on Signal -- the agent remembers what you've already discussed.</div>
+    <div id="smbody" class="modal-body"></div>
   </div>
 </div>
 
@@ -1172,6 +1180,10 @@ function renderMessages() {
     else if (built !== row) box.replaceChild(built, row); // shouldn't happen, but never silently drop a row
   });
   while (box.children.length > c.messages.length) box.removeChild(box.lastChild);
+  // A Signal-linked conversation that came up with nothing to show (nothing was still live to pull
+  // in) isn't actually empty -- the agent's own memory of it is intact -- so say so, rather than
+  // leaving what looks like a blank, brand new chat. Clears itself the moment a real message exists.
+  if (!c.messages.length && c.signalNote) box.appendChild(el('div', c.signalNote)).className = 'hint';
   MSG_RENDERED_CONV = c.id;
   box.scrollTop = box.scrollHeight;
 }
@@ -1270,13 +1282,57 @@ function newChat() {
    Deleting is the only way out of a chat stuck "busy" for good (a turn that never answered an abort,
    or stuck re-attaching to one after a reload) -- so unlike sending, it is never blocked by isBusy(). */
 function clearChat(c) {
-  if (c.messages.length && !confirm('Clear "' + (c.title || 'New chat') + '"?')) return;
+  // A Signal-linked conversation shares its session with the real Signal chat -- clearing it here
+  // ends that too (the agent forgets everything discussed there), not just this browser's own view.
+  var prompt = c.signalChannel
+    ? 'This also ends your Signal conversation with ' + (c.title || 'this agent').replace(/^Signal:\s*/, '') + ' -- it will forget everything discussed. Continue?'
+    : (c.messages.length ? 'Clear "' + (c.title || 'New chat') + '"?' : null);
+  if (prompt && !confirm(prompt)) return;
   delete WATCHING[c.id];
-  var q = c.agentId ? ('?agentId=' + encodeURIComponent(c.agentId)) : '';
-  api('api/conversation/' + encodeURIComponent(c.id) + q, { method: 'DELETE' }).catch(function () {});
+  var q = agentQuery(c);
+  api('api/conversation/' + encodeURIComponent(c.id) + (q ? '?' + q : ''), { method: 'DELETE' }).catch(function () {});
   CONVOS = CONVOS.filter(function (x) { return x.id !== c.id; });
   if (CUR === c.id) CUR = CONVOS[0] ? CONVOS[0].id : null;
   if (!CUR) newChat(); else { saveConvos(); renderAll(); }
+}
+
+/* ---- continuing a chat that started on Signal: lib/portal.mjs's own channel="signal" support
+   reattaches to the exact same session Signal itself uses (lib/signal.mjs's signalClientSessionId),
+   so this is never a parallel conversation -- just this browser catching up on the real one. ---- */
+var SIGNAL_CONTACTS = null;
+function refreshSignalContacts() {
+  apiJson('api/signal/contacts').then(function (d) {
+    SIGNAL_CONTACTS = d.contacts || [];
+    $('signalcontinuebtn').hidden = !SIGNAL_CONTACTS.length;
+  }).catch(function () { SIGNAL_CONTACTS = []; $('signalcontinuebtn').hidden = true; });
+}
+function openSignalPicker() {
+  var box = $('smbody');
+  box.replaceChildren();
+  (SIGNAL_CONTACTS || []).forEach(function (sc) {
+    var row = el('div'); row.className = 'row';
+    var label = (sc.agentName || 'agent') + ' — ' + sc.phoneNumber;
+    var btn = el('button', label);
+    btn.addEventListener('click', function () { $('signalmodal').hidden = true; startSignalChat(sc); });
+    row.appendChild(btn);
+    box.appendChild(row);
+  });
+  $('signalmodal').hidden = false;
+}
+function startSignalChat(sc) {
+  var c = {
+    id: newId(), title: 'Signal: ' + (sc.agentName || 'agent'), agentId: sc.agentId || '', externalModelId: '',
+    signalChannel: true, signalNote: "Earlier messages sent over Signal aren't shown here, but the agent still remembers them.",
+    messages: [], updated: Date.now(),
+  };
+  CONVOS.unshift(c);
+  CUR = c.id;
+  saveConvos();
+  renderAll();
+  closeSideOnMobile();
+  // Pulls in whatever's still live (recent Signal activity not yet hibernated); if nothing is, the
+  // note above keeps showing -- the agent's own memory of older messages is unaffected either way.
+  resumeIfLive(c);
 }
 
 function applyItem(msg, item) {
@@ -1392,7 +1448,7 @@ function send() {
   api('api/chat', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ conversation: c.id, message: outgoing, agentId: c.externalModelId ? undefined : (c.agentId || undefined), externalModelId: c.externalModelId || undefined, history: history, images: images.length ? images : undefined }),
+    body: JSON.stringify({ conversation: c.id, message: outgoing, agentId: c.externalModelId ? undefined : (c.agentId || undefined), channel: c.signalChannel ? 'signal' : undefined, externalModelId: c.externalModelId || undefined, history: history, images: images.length ? images : undefined }),
   }).then(function (r) {
     var type = r.headers.get('content-type') || '';
     if (!r.ok || type.indexOf('event-stream') < 0) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error((j.error && j.error.message) || ('HTTP ' + r.status)); });
@@ -1546,7 +1602,10 @@ function resumeIfLive(c) {
 /* ---- side panels: files, tools & extensions, skills -- one open at a time ---- */
 function agentQuery(c) {
   c = c || conv();
-  return (c && c.agentId) ? ('agentId=' + encodeURIComponent(c.agentId)) : '';
+  var parts = [];
+  if (c && c.agentId) parts.push('agentId=' + encodeURIComponent(c.agentId));
+  if (c && c.signalChannel) parts.push('channel=signal');
+  return parts.join('&');
 }
 var RAIL_OPEN = false; // the hamburger menu (the rail, shown as its own overlay on a phone -- see openRailMenu())
 function syncBackdrop() { $('sidebackdrop').classList.toggle('show', Boolean(SIDE_OPEN) || RAIL_OPEN); }
@@ -1838,6 +1897,7 @@ function connect(key) {
     $('gotonotebook').hidden = !d.notebooksEnabled;
     sessionStorage.setItem('piper-portal-key', KEY);
     loadConvos();
+    refreshSignalContacts();
     return pullHistory();
   }).then(function () {
     if (!CONVOS.length) newChat(); else CUR = CONVOS[0].id;
@@ -1914,6 +1974,9 @@ $('input').addEventListener('paste', function (e) {
   e.preventDefault();
   addAttachments(files);
 });
+$('signalcontinuebtn').addEventListener('click', openSignalPicker);
+$('smclose').addEventListener('click', function () { $('signalmodal').hidden = true; });
+$('signalmodal').addEventListener('click', function (e) { if (e.target === $('signalmodal')) $('signalmodal').hidden = true; });
 $('attachbtn').addEventListener('click', function () { $('attachinput').click(); });
 $('attachinput').addEventListener('change', function () { addAttachments(this.files); this.value = ''; });
 $('toolToggle').checked = SHOW_TOOLS;

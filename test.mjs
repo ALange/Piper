@@ -11211,6 +11211,75 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		for (const r of opened) await r.body.cancel().catch(() => {});
 		sessions.close(capScoped);
 
+		// Continuing a Signal-started chat from the portal: lib/portal.mjs's own channel="signal"
+		// support reattaches to the exact same session Signal itself would use (lib/signal.mjs's
+		// signalClientSessionId), regardless of which local conversation id the browser happens to pick
+		// for it -- proving this is the real shared session, not a parallel one.
+		{
+			const { signalClientSessionId, linkContact } = await import("./server.mjs");
+			const priorSignalEnabled = config.SIGNAL_ENABLED;
+			config.SIGNAL_ENABLED = true;
+			linkContact({ keyId: myKey.id, agentId: myAgent.id, phoneNumber: "+15559990001" });
+
+			const contactsRes = await call("/api/signal/contacts", { headers: auth });
+			assert.equal(contactsRes.status, 200);
+			assert.equal(contactsRes.json.contacts.length, 1);
+			assert.equal(contactsRes.json.contacts[0].phoneNumber, "+15559990001");
+			assert.equal(contactsRes.json.contacts[0].agentId, myAgent.id);
+			assert.equal(contactsRes.json.contacts[0].agentName, "portal-agent");
+
+			const theirContacts = await call("/api/signal/contacts", { headers: { authorization: `Bearer ${theirs.key}` } });
+			assert.deepEqual(theirContacts.json.contacts, [], "never another key's linked numbers");
+
+			config.SIGNAL_ENABLED = false;
+			assert.deepEqual((await call("/api/signal/contacts", { headers: auth })).json.contacts, [], "the feature switch is a kill switch for this route too");
+			config.SIGNAL_ENABLED = true;
+
+			promptSeen = new Promise((r) => (promptSeenResolve = r));
+			const signalChatPending = fetch(`${base}/api/chat`, {
+				method: "POST",
+				headers: { ...auth, "content-type": "application/json" },
+				body: JSON.stringify({ conversation: "signal-via-portal-a", message: "hi from the portal", agentId: myAgent.id, channel: "signal" }),
+			});
+			await promptSeen;
+			const sigCred = credentialFor(myKey.id, myAgent.id);
+			const sigScoped = scopedSessionId(sigCred, signalClientSessionId(myKey.id, myAgent.id));
+			const sigRec = sessions.recordById(sigScoped);
+			assert.ok(sigRec && sigRec.inflight > 0, "really is Signal's own session, not a new one scoped to the local conversation id");
+
+			// A completely different local conversation id, still channel=signal, still the same agent --
+			// reaches the identical in-progress turn (proving the local id never mattered for this channel).
+			const sameSessionEvents = await fetch(`${base}/api/conversation/signal-via-portal-b/events?agentId=${myAgent.id}&channel=signal`, { headers: auth });
+			assert.equal(sameSessionEvents.headers.get("content-type"), "text/event-stream; charset=utf-8");
+			const sameReader = sameSessionEvents.body.getReader();
+			let sameGot = "";
+			const readSameUntil = async (re) => {
+				const deadline = Date.now() + 3000;
+				while (!re.test(sameGot) && Date.now() < deadline) sameGot += new TextDecoder().decode((await sameReader.read()).value ?? new Uint8Array());
+			};
+			await readSameUntil(/event: snapshot/);
+			assert.match(sameGot, /echo: hi from the portal/, "a different local conversation id reconnects to the exact same live turn");
+			await sameReader.cancel().catch(() => {});
+
+			// Steering through that second, different local id still reaches the one real turn.
+			steerSeen = new Promise((r) => (steerSeenResolve = r));
+			const sigSteered = await call(`/api/conversation/signal-via-portal-b/steer?agentId=${myAgent.id}&channel=signal`, {
+				method: "POST",
+				headers: { ...auth, "content-type": "application/json" },
+				body: JSON.stringify({ message: "and also this" }),
+			});
+			assert.deepEqual(sigSteered.json, { steered: true });
+			await steerSeen;
+
+			settleNow();
+			const signalChatResp = await signalChatPending;
+			assert.equal(signalChatResp.status, 200);
+			await signalChatResp.body?.cancel?.().catch(() => {});
+
+			sessions.close(sigScoped);
+			config.SIGNAL_ENABLED = priorSignalEnabled;
+		}
+
 		const openRecords = sessions.allRecords();
 		sessions.closeAll();
 		await Promise.all(openRecords.map((r) => r.stopped ?? Promise.resolve()));

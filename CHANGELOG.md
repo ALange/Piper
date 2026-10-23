@@ -2,6 +2,21 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.8.0] - 2026-10-23
+
+### Added
+- **Continuing a chat that started on Signal, in the client portal.** A conversation begun over
+  Signal and one begun in the portal used to be completely separate: the portal had no way to even
+  know a Signal chat existed, let alone pick it back up. The portal's "from Signal" picker (next to
+  the chats list) now lists the key's own linked Signal numbers (`GET /api/signal/contacts`) and, on
+  picking one, reattaches to the exact same underlying session Signal itself uses -- not a parallel
+  one -- so a reply typed in the portal is something the agent (and a later Signal message to that
+  same number) remembers, and vice versa. If the Signal session is still live, the portal pulls in
+  its recent messages; if it has already gone idle, the portal opens empty with a note explaining
+  that older Signal messages aren't shown here even though the agent still remembers them. Clearing
+  one of these conversations in the portal ends the real, shared session too (the Signal side would
+  forget everything as well) -- the confirmation says so explicitly before it happens.
+
 ## [1.7.2] - 2026-10-23
 
 ### Fixed
