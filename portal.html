@@ -390,7 +390,7 @@
   <div id="sidebackdrop" class="sidebox-backdrop"></div>
 
   <div id="convsbox" class="sidebox on">
-    <div class="top"><b>Chats</b><div><button id="signalcontinuebtn" hidden title="pick up a chat you started on Signal">from Signal</button><button class="sideclose" data-close title="close">×</button></div></div>
+    <div class="top"><b>Chats</b><button class="sideclose" data-close title="close">×</button></div>
     <div id="convlist"></div>
     <p id="syncwarn" class="hint bad" hidden>Chat history is too large to save to your account — it only exists in this browser tab until it's trimmed. Delete an old chat to fix this.</p>
   </div>
@@ -471,14 +471,6 @@
     <div class="hint" id="fmmeta"></div>
     <div id="fmbody" class="modal-body"></div>
     <div class="modal-actions"><a id="fmdownload" download><button>download</button></a></div>
-  </div>
-</div>
-
-<div id="signalmodal" class="modal-overlay" hidden>
-  <div class="modal-box">
-    <div class="modal-top"><b>Continue a Signal chat</b><button id="smclose">close</button></div>
-    <div class="hint">Pick up where you left off on Signal -- the agent remembers what you've already discussed.</div>
-    <div id="smbody" class="modal-body"></div>
   </div>
 </div>
 
@@ -917,7 +909,8 @@ function renderSide() {
     row.appendChild(titleRow);
     var agent = (WHOAMI.agents || []).filter(function (a) { return a.id === c.agentId; })[0];
     var model = c.externalModelId ? externalModel(c.externalModelId) : null;
-    row.appendChild(el('div', model ? (model.name + ' (model)') : agent ? agent.name : '(main endpoint)')).className = 's';
+    var subLabel = c.signalChannel ? ('📱 ' + c.signalPhone) : model ? (model.name + ' (model)') : agent ? agent.name : '(main endpoint)';
+    row.appendChild(el('div', subLabel)).className = 's';
     row.addEventListener('click', function () { CUR = c.id; renderAll(); resumeIfLive(c); closeSideOnMobile(); });
     var clear = el('button', '×');
     clear.className = 'convclear';
@@ -1296,43 +1289,32 @@ function clearChat(c) {
   if (!CUR) newChat(); else { saveConvos(); renderAll(); }
 }
 
-/* ---- continuing a chat that started on Signal: lib/portal.mjs's own channel="signal" support
-   reattaches to the exact same session Signal itself uses (lib/signal.mjs's signalClientSessionId),
-   so this is never a parallel conversation -- just this browser catching up on the real one. ---- */
-var SIGNAL_CONTACTS = null;
+/* ---- chats that started on Signal show up here by themselves, no button needed: every linked
+   number (GET /api/signal/contacts) gets its own row in the ordinary chat list, the same as any
+   portal-only chat, just labelled with the phone number instead of the agent/model name. Sending
+   into one reattaches to the exact same session Signal itself uses (lib/portal.mjs's own
+   channel="signal" support, lib/signal.mjs's signalClientSessionId) -- never a parallel chat. ---- */
 function refreshSignalContacts() {
-  apiJson('api/signal/contacts').then(function (d) {
-    SIGNAL_CONTACTS = d.contacts || [];
-    $('signalcontinuebtn').hidden = !SIGNAL_CONTACTS.length;
-  }).catch(function () { SIGNAL_CONTACTS = []; $('signalcontinuebtn').hidden = true; });
-}
-function openSignalPicker() {
-  var box = $('smbody');
-  box.replaceChildren();
-  (SIGNAL_CONTACTS || []).forEach(function (sc) {
-    var row = el('div'); row.className = 'row';
-    var label = (sc.agentName || 'agent') + ' — ' + sc.phoneNumber;
-    var btn = el('button', label);
-    btn.addEventListener('click', function () { $('signalmodal').hidden = true; startSignalChat(sc); });
-    row.appendChild(btn);
-    box.appendChild(row);
-  });
-  $('signalmodal').hidden = false;
-}
-function startSignalChat(sc) {
-  var c = {
-    id: newId(), title: 'Signal: ' + (sc.agentName || 'agent'), agentId: sc.agentId || '', externalModelId: '',
-    signalChannel: true, signalNote: "Earlier messages sent over Signal aren't shown here, but the agent still remembers them.",
-    messages: [], updated: Date.now(),
-  };
-  CONVOS.unshift(c);
-  CUR = c.id;
-  saveConvos();
-  renderAll();
-  closeSideOnMobile();
-  // Pulls in whatever's still live (recent Signal activity not yet hibernated); if nothing is, the
-  // note above keeps showing -- the agent's own memory of older messages is unaffected either way.
-  resumeIfLive(c);
+  return apiJson('api/signal/contacts').then(function (d) {
+    var added = false;
+    (d.contacts || []).forEach(function (sc) {
+      // One row per linked number (not per agent: a key could in principle link more than one number
+      // to the same agent), matched on the number itself -- the one thing guaranteed unique per contact.
+      var existing = CONVOS.filter(function (c) { return c.signalPhone === sc.phoneNumber; })[0];
+      if (existing) {
+        existing.signalAgentName = sc.agentName || null;
+        return;
+      }
+      CONVOS.unshift({
+        id: newId(), title: 'Signal: ' + (sc.agentName || 'agent'), agentId: sc.agentId || '', externalModelId: '',
+        signalChannel: true, signalPhone: sc.phoneNumber, signalAgentName: sc.agentName || null,
+        signalNote: "Earlier messages sent over Signal aren't shown here, but the agent still remembers them.",
+        messages: [], updated: Date.now(),
+      });
+      added = true;
+    });
+    if (added) saveConvos();
+  }).catch(function () { /* no Signal numbers linked, or SIGNAL_ENABLED is off -- nothing to add */ });
 }
 
 function applyItem(msg, item) {
@@ -1897,8 +1879,11 @@ function connect(key) {
     $('gotonotebook').hidden = !d.notebooksEnabled;
     sessionStorage.setItem('piper-portal-key', KEY);
     loadConvos();
-    refreshSignalContacts();
     return pullHistory();
+  }).then(function () {
+    // After pullHistory(), which replaces CONVOS wholesale with the server's own copy -- merging
+    // Signal contacts in before that would just have them overwritten the moment it resolves.
+    return refreshSignalContacts();
   }).then(function () {
     if (!CONVOS.length) newChat(); else CUR = CONVOS[0].id;
     renderTargets();
@@ -1974,9 +1959,6 @@ $('input').addEventListener('paste', function (e) {
   e.preventDefault();
   addAttachments(files);
 });
-$('signalcontinuebtn').addEventListener('click', openSignalPicker);
-$('smclose').addEventListener('click', function () { $('signalmodal').hidden = true; });
-$('signalmodal').addEventListener('click', function (e) { if (e.target === $('signalmodal')) $('signalmodal').hidden = true; });
 $('attachbtn').addEventListener('click', function () { $('attachinput').click(); });
 $('attachinput').addEventListener('change', function () { addAttachments(this.files); this.value = ''; });
 $('toolToggle').checked = SHOW_TOOLS;

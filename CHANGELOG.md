@@ -2,6 +2,16 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.8.1] - 2026-10-23
+
+### Changed
+- **Signal chats show up in the client portal by themselves now -- no "from Signal" button.** Every
+  number linked to the key's own agents appears as its own row in the ordinary chat list the moment
+  the portal loads (`GET /api/signal/contacts`, merged in automatically and synced like any other
+  chat), labelled with a phone icon and the number in place of the usual agent/model name. Picking
+  one works exactly as before (same shared session as Signal itself uses); only the discovery step
+  changed, from an explicit picker to just being there.
+
 ## [1.8.0] - 2026-10-23
 
 ### Added
