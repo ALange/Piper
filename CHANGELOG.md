@@ -2,6 +2,11 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.7.2] - 2026-10-23
+
+### Fixed
+- **A steered-in message in the client portal rendered as two separate assistant bubbles, the first one stuck "Thinking…" forever, and the steered-in text itself never appeared as its own bubble.** `renderMessages()` reuses existing DOM rows by their position in `c.messages`, on the assumption messages are only ever appended, never inserted into the middle -- and a sent user bubble is treated as static once built, reused as-is whenever a row already exists at its position. Splicing the new steered-in user message in *before* the in-flight assistant message (to put it in the right place chronologically) broke that assumption: everything after the insertion point shifted by one position, so the new user message was handed the assistant's own still-live row (silently keeping its frozen "Thinking…" content), while the assistant message itself got a second, freshly built row one slot further down. Fixed by forcing a full rebuild (skipping the position-matched reuse) whenever this splice happens, instead of relying on it. The dashboard Playground was never affected -- its own render always rebuilds every row from scratch.
+
 ## [1.7.1] - 2026-10-22
 
 ### Fixed

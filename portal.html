@@ -1408,8 +1408,15 @@ function send() {
       // A steered-in message (POST .../steer, this tab or another) arrives on this same stream as an
       // ordinary item -- a new standalone user bubble, not another part of the assistant's answer.
       // frameMessages() only ever patches the last node, which would miss one spliced in before it, so
-      // this needs the full renderMessages() the terminal 'done' event below also uses.
-      if (event === 'item' && d.item.kind === 'user') { if (d.op !== 'update') { c.messages.splice(c.messages.indexOf(msg), 0, { role: 'user', text: d.item.text }); if (c.id === CUR) renderMessages(); else renderSide(); } }
+      // this needs the full renderMessages() the terminal 'done' event below also uses. That rebuild
+      // normally reuses existing rows by position (messages are "only ever appended"), but splicing this
+      // one in partway through c.messages breaks that for everything after it -- without resetting
+      // MSG_RENDERED_CONV first, the still-in-flight assistant row would get handed to the new user
+      // bubble (user rows are rendered once and never touched again) while a second, fresh row was built
+      // one slot further down for the assistant message itself. Forcing the full box.replaceChildren()
+      // path here, same as dashboard.html's pgRenderMessages always does, keeps every row matched by the
+      // message it's actually for.
+      if (event === 'item' && d.item.kind === 'user') { if (d.op !== 'update') { c.messages.splice(c.messages.indexOf(msg), 0, { role: 'user', text: d.item.text }); if (c.id === CUR) { MSG_RENDERED_CONV = null; renderMessages(); } else renderSide(); } }
       else if (event === 'item') { applyItem(msg, d.item); if (c.id === CUR) { frameMessages(); renderStatusBar(); } else renderSide(); }
       else if (event === 'context') { c.status = c.status || {}; c.status.contextUsed = d.contextUsed; if (c.id === CUR) renderStatusBar(); else renderSide(); }
       else if (event === 'done') { done = true; msg.usage = d.usage; msg.cost = d.cost; if (!(msg.parts || []).some(function (p) { return p.kind === 'text' && p.text; }) && d.text) msg.parts.push({ kind: 'text', id: 'final', text: d.text }); if (d.status) { c.status = d.status; c.status.contextUsed = (d.usage && d.usage.total_tokens) || null; } refresh(); }
@@ -1507,7 +1514,7 @@ function resumeIfLive(c) {
           // A message steered in (POST .../steer, from this tab or another) while reconnected here --
           // same reasoning as send()'s own stream handler: a new standalone bubble, not a part of the
           // assistant's answer. frameMessages() only patches the last node, so this needs a full one.
-          if (d.op !== 'update') { c.messages.splice(c.messages.indexOf(msg), 0, { role: 'user', text: d.item.text }); if (c.id === CUR) renderMessages(); }
+          if (d.op !== 'update') { c.messages.splice(c.messages.indexOf(msg), 0, { role: 'user', text: d.item.text }); if (c.id === CUR) { MSG_RENDERED_CONV = null; renderMessages(); } }
         } else if (event === 'item') { applyItem(msg, d.item); if (c.id === CUR) frameMessages(); }
         else if (event === 'context') { c.status = c.status || {}; c.status.contextUsed = d.contextUsed; if (c.id === CUR) renderStatusBar(); }
         else if (event === 'done') { if (d.usage) msg.usage = d.usage; if (d.cost) msg.cost = d.cost; }
