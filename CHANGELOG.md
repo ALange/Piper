@@ -2,6 +2,24 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.10.0] - 2026-10-24
+
+### Fixed
+- **A Signal conversation shown in the client portal could miss messages -- sometimes a whole exchange
+  never showed up at all.** Two separate gaps, both in portal.html: the portal only ever checked a
+  Signal session for live activity once, right at login/reload (`resumeIfLive()`); a message sent over
+  Signal any time after that -- the normal case, since nobody times opening the portal to match
+  texting the agent -- was never picked up until the conversation happened to be manually closed and
+  reopened. Fixed by re-checking periodically (every 20s) and the moment the tab regains focus, for as
+  long as the underlying session stays live in memory (`SESSION_IDLE_MS` after its last activity, 20
+  minutes by default) -- which covers the overwhelming majority of real delays between checking Signal
+  and checking the portal. Second, even when a check did land at the right moment, its catch-up logic
+  only ever reconstructed one still-open turn and explicitly skipped every "user" item, since that's
+  what a reconnect to a chat *this browser itself* started needs -- but a Signal conversation's own
+  messages were never typed in this browser to begin with, so entire user turns, and anything after
+  the most recent one if several had happened, went missing. Catch-up for a Signal conversation now
+  rebuilds every exchange since the last one this browser already has, not just the latest.
+
 ## [1.9.1] - 2026-10-24
 
 ### Fixed

@@ -1536,8 +1536,14 @@ function resumeIfLive(c) {
       }
       return r.json().catch(function () { return {}; });
     }
-    msg = c.messages[c.messages.length - 1];
-    if (!msg || msg.role !== 'assistant') { msg = { role: 'assistant', parts: [], pending: true }; c.messages.push(msg); }
+    // A Signal-linked conversation builds msg entirely inside the 'snapshot' handler below instead
+    // (it can be catching up on several exchanges this browser never saw, not just one still-open
+    // turn) -- pre-creating a pending placeholder here first would be wrong for it regardless of
+    // what's actually in the log.
+    if (!c.signalChannel) {
+      msg = c.messages[c.messages.length - 1];
+      if (!msg || msg.role !== 'assistant') { msg = { role: 'assistant', parts: [], pending: true }; c.messages.push(msg); }
+    }
     return streamInto(r.body.getReader(), function (event, d) {
       bump();
       // A render that throws here (an edge case in the actual data this particular turn produced,
@@ -1545,7 +1551,29 @@ function resumeIfLive(c) {
       // way an uncaught exception otherwise would -- it would leave everything exactly where it was,
       // forever, with no error and no further events ever processed.
       try {
-        if (event === 'snapshot') {
+        if (event === 'snapshot' && c.signalChannel) {
+          // Rebuilds every exchange this browser hasn't already merged in (c.signalLastItemId), not
+          // just one in-flight turn: a Signal conversation can easily have gone through several
+          // messages and replies since the last time anything here was watching (lib/portal.mjs's own
+          // record stays live, and its LiveLog intact, for SESSION_IDLE_MS after the last activity --
+          // this is what resyncSignalChats()'s periodic/focus-triggered resumeIfLive() calls are
+          // actually catching up on). Each "user" item starts its own bubble; everything after it
+          // until the next one belongs to the assistant reply that followed.
+          var sinceId = c.signalLastItemId || 0;
+          (d.items || []).forEach(function (it) {
+            if (it.id <= sinceId) return;
+            if (it.kind === 'user') { c.messages.push({ role: 'user', text: it.text }); msg = null; }
+            else { if (!msg) { msg = { role: 'assistant', parts: [], pending: true }; c.messages.push(msg); } applyItem(msg, it); }
+            sinceId = it.id;
+          });
+          c.signalLastItemId = sinceId;
+          if (msg) msg.pending = Boolean(d.state && d.state.working);
+          if (d.state && d.state.contextTokens != null) { c.status = c.status || {}; c.status.contextUsed = d.state.contextTokens; }
+          c.updated = Date.now();
+          saveConvos();
+          MSG_RENDERED_CONV = null; // rows may have been inserted anywhere, not just appended -- see send()'s own steer handling for why a full rebuild is the safe one here
+          refresh();
+        } else if (event === 'snapshot') {
           // The log may span older, already-finished turns too (capped by item count, not per-turn):
           // only what came after the last user message belongs to the one we're catching up on.
           var lastUserId = 0;
@@ -1558,8 +1586,14 @@ function resumeIfLive(c) {
           // A message steered in (POST .../steer, from this tab or another) while reconnected here --
           // same reasoning as send()'s own stream handler: a new standalone bubble, not a part of the
           // assistant's answer. frameMessages() only patches the last node, so this needs a full one.
-          if (d.op !== 'update') { c.messages.splice(c.messages.indexOf(msg), 0, { role: 'user', text: d.item.text }); if (c.id === CUR) { MSG_RENDERED_CONV = null; renderMessages(); } }
-        } else if (event === 'item') { applyItem(msg, d.item); if (c.id === CUR) frameMessages(); }
+          // msg can be null here for a Signal conversation reconnected right after its own prompt item
+          // with nothing answered yet (no assistant message exists to anchor a splice position against).
+          if (d.op !== 'update') {
+            var at = msg ? c.messages.indexOf(msg) : c.messages.length;
+            c.messages.splice(at < 0 ? c.messages.length : at, 0, { role: 'user', text: d.item.text });
+            if (c.id === CUR) { MSG_RENDERED_CONV = null; renderMessages(); }
+          }
+        } else if (event === 'item') { if (!msg) { msg = { role: 'assistant', parts: [], pending: true }; c.messages.push(msg); } applyItem(msg, d.item); if (c.id === CUR) frameMessages(); }
         else if (event === 'context') { c.status = c.status || {}; c.status.contextUsed = d.contextUsed; if (c.id === CUR) renderStatusBar(); }
         else if (event === 'done') { if (d.usage) msg.usage = d.usage; if (d.cost) msg.cost = d.cost; }
         else if (event === 'error') { msg.error = d.message; }
@@ -2039,6 +2073,25 @@ function renderPassModal() {
 $('passbtn').addEventListener('click', function () { renderPassModal(); $('passmodal').hidden = false; });
 $('pmclose').addEventListener('click', function () { $('passmodal').hidden = true; });
 $('passmodal').addEventListener('click', function (e) { if (e.target === $('passmodal')) $('passmodal').hidden = true; });
+
+/* A Signal-linked conversation's real exchange only ever reaches this browser if resumeIfLive() is
+   called while that session's record is still live in memory -- and a record stays live for
+   SESSION_IDLE_MS (20 minutes by default) after its last activity, not just for the instant a turn is
+   actually running. connect() only ever calls resumeIfLive() once, right at login/reload, so a message
+   sent over Signal any time after that -- the overwhelmingly common case, since nobody times opening
+   the portal to line up with texting the agent -- was never picked up at all until the person happened
+   to manually leave and reopen that chat. Re-checking periodically, and the moment the tab regains
+   focus (the exact "I was just texting it, let me check the portal" moment), closes that gap for any
+   exchange within the last 20 minutes; only one that's already hibernated by the time anything here
+   next runs is still missed -- lib/livesession.mjs's LiveLog itself doesn't survive hibernation, so
+   there is nothing left to resync from at that point. */
+var SIGNAL_RESYNC_MS = 20000;
+function resyncSignalChats() {
+  if (!KEY) return;
+  CONVOS.forEach(function (c) { if (c.signalChannel) resumeIfLive(c); });
+}
+setInterval(resyncSignalChats, SIGNAL_RESYNC_MS);
+document.addEventListener('visibilitychange', function () { if (!document.hidden) resyncSignalChats(); });
 
 if (KEY) connect(KEY); else showLogin();
 </script>
