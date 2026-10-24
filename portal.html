@@ -1339,6 +1339,12 @@ function streamInto(reader, onEvent) {
   function pump() {
     return reader.read().then(function (x) {
       if (x.done) return;
+      // Any bytes at all -- a real event, or just the server's own ": keep-alive" comment line every
+      // 15s (lib/portal.mjs's own beat) -- prove the connection is still alive. A caller with its own
+      // watchdog (resumeIfLive) calls bump() on every event regardless of type, so this alone is enough
+      // to keep it fed through a long stretch with nothing new to show (a slow tool call, mid-thought);
+      // 'ping' matches no real event name below, so callers without a watchdog just ignore it.
+      onEvent('ping', null);
       buf += dec.decode(x.value, { stream: true });
       var i;
       while ((i = buf.indexOf('\n\n')) >= 0) { handle(buf.slice(0, i)); buf = buf.slice(i + 2); }

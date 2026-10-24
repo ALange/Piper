@@ -5678,6 +5678,11 @@ function pgResumeIfLive(c) {
     function pump() {
       return reader.read().then(function (x) {
         if (x.done) return;
+        // Any bytes at all -- a real event, or just the server's own ": keep-alive" comment line every
+        // 15s -- prove the connection is still alive, even through a long stretch with nothing new to
+        // show (a slow tool call, mid-thought). handle() only calls bump() once it has parsed a real
+        // named event, so a bare comment line would otherwise never reset the watchdog below.
+        bump();
         buf += dec.decode(x.value, { stream: true });
         var i;
         while ((i = buf.indexOf('\n\n')) >= 0) { handle(buf.slice(0, i)); buf = buf.slice(i + 2); }

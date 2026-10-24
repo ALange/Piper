@@ -8529,6 +8529,107 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${profileHelper} "\${rest[@]}"
 		sessions.closeAll();
 	}
 
+	// SIGNAL_PROGRESS_UPDATES: each piece of the model's own "let me check X..." narration is relayed
+	// to Signal as its own message as soon as Pi closes it off (right before the next tool call, or
+	// when the turn settles), ahead of the one final reply -- off by default, so this also checks the
+	// off case sends nothing extra.
+	{
+		const { credentialFor, scopedSessionId, signalClientSessionId, sessions, setSessionSpawn, setRunner, resetEngineCheck } = await import("./server.mjs");
+		resetEngineCheck();
+		const priorNetwork = config.CONTAINER_NETWORK;
+		config.CONTAINER_NETWORK = "none";
+		setRunner(async (bin, args) => {
+			if (bin === "docker" && args[0] === "version") return { code: 0, stdout: "27.0.0", stderr: "" };
+			if (bin === "docker" && args[0] === "inspect") return { code: 1, stdout: "", stderr: "No such object" };
+			if (bin === "docker" && args[0] === "image") return { code: 0, stdout: "sha256:fakeimage|0.99.1", stderr: "" };
+			return { code: 0, stdout: "", stderr: "" };
+		});
+
+		let settleNow = null;
+		let promptSeenResolve = null;
+		let promptSeen = new Promise((r2) => (promptSeenResolve = r2));
+		const fakeChild = () => {
+			const child = new EventEmitter();
+			child.stdout = new PassThrough();
+			child.stderr = new PassThrough();
+			child.exitCode = null;
+			child.signalCode = null;
+			child.kill = (sig = "SIGTERM") => {
+				if (child.exitCode !== null || child.signalCode !== null) return true;
+				child.signalCode = sig;
+				setImmediate(() => child.emit("exit", null, sig));
+				return true;
+			};
+			child.stdin = new PassThrough();
+			child.stdin.on("end", () => child.exitCode === null && child.signalCode === null && setImmediate(() => child.emit("exit", 0, null)));
+			let buffer = "";
+			child.stdin.on("data", (chunk) => {
+				buffer += chunk;
+				let i;
+				while ((i = buffer.indexOf("\n")) >= 0) {
+					const command = JSON.parse(buffer.slice(0, i));
+					buffer = buffer.slice(i + 1);
+					const reply = (r2) => child.stdout.write(`${JSON.stringify(r2)}\n`);
+					const ok = (data) => reply({ type: "response", id: command.id, command: command.type, success: true, data });
+					if (command.type === "get_state") ok({ model: { provider: "p", id: "m", input: ["text"] }, isStreaming: false });
+					else if (command.type === "prompt") {
+						const said = String(command.message ?? "");
+						ok();
+						reply({ type: "agent_start" });
+						reply({ type: "message_start", message: { role: "user", content: said } });
+						reply({ type: "message_end", message: { role: "user", content: said } });
+						// First narration segment, closed off by a tool call -- relayProgress must flush it
+						// right there, not wait for the tool to finish or for a second segment to start.
+						reply({ type: "message_update", assistantMessageEvent: { type: "thinking_delta", delta: "Let me check the weather. " } });
+						reply({ type: "tool_execution_start", toolName: "bash", toolCallId: "tc1", args: {} });
+						reply({ type: "tool_execution_end", toolCallId: "tc1", result: { content: "ok" } });
+						// Second segment, this time closed off only by the turn settling (no further tool call).
+						reply({ type: "message_update", assistantMessageEvent: { type: "thinking_delta", delta: "Now let me check Poznan specifically." } });
+						settleNow = () => {
+							settleNow = null;
+							reply({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: `echo: ${said}` }] } });
+							reply({ type: "agent_settled" });
+						};
+						promptSeenResolve();
+					} else ok();
+				}
+			});
+			return child;
+		};
+		setSessionSpawn(() => fakeChild());
+		setSignalRunner(null); // the real runAgentTurn, against the faked container above
+
+		// Off by default: nothing extra is sent, only the one final reply.
+		config.SIGNAL_PROGRESS_UPDATES = false;
+		sent.length = 0;
+		liveChild.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "receive", params: { envelope: { sourceNumber: "+15551112222", dataMessage: { message: "progress test, off" } } } })}\n`);
+		await promptSeen;
+		await new Promise((r) => setTimeout(r, 30));
+		settleNow();
+		await waitFor(() => sent.length > 0);
+		assert.equal(sent.length, 1, "off by default: no progress messages, just the final reply");
+		assert.equal(sent[0].message, "echo: progress test, off");
+
+		// On: the two narration segments arrive as their own messages, in order, before the final reply.
+		config.SIGNAL_PROGRESS_UPDATES = true;
+		sent.length = 0;
+		promptSeen = new Promise((r2) => (promptSeenResolve = r2));
+		liveChild.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "receive", params: { envelope: { sourceNumber: "+15551112222", dataMessage: { message: "progress test, on" } } } })}\n`);
+		await promptSeen;
+		await waitFor(() => sent.length >= 1);
+		assert.equal(sent[0].message, "Let me check the weather.", "the first segment is relayed the moment the tool call closes it off, before the tool even finishes");
+		settleNow();
+		await waitFor(() => sent.length >= 3);
+		assert.equal(sent[1].message, "Now let me check Poznan specifically.", "the second segment, relayed when the turn settles since no further tool call closed it off");
+		assert.equal(sent[2].message, "echo: progress test, on", "the one final reply, same as always, after the two progress messages");
+
+		config.SIGNAL_PROGRESS_UPDATES = false;
+		setSessionSpawn(null);
+		setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+		config.CONTAINER_NETWORK = priorNetwork;
+		sessions.closeAll();
+	}
+
 	assert.ok(listAllContacts().length >= 2);
 	stopSignal();
 	assert.equal(signalStatus().running, false);

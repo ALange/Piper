@@ -2,6 +2,26 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.9.0] - 2026-10-24
+
+### Added
+- **`SIGNAL_PROGRESS_UPDATES`: hear from the agent while it's still working a long task, not just at
+  the end.** Off by default. On, each piece of the model's own "let me check X..." narration (shown
+  in the web UI as the collapsible "Thinking" block, split into one piece before each tool call) is
+  relayed to Signal as its own message the moment Pi closes it off -- right before the next tool
+  call, or when the turn settles -- instead of staying silent until the one final reply. The final
+  reply itself is unaffected either way.
+
+### Fixed
+- **Reconnecting to a long-running chat (reload, or watching a Signal session from the client portal
+  or dashboard Playground) could show "This chat didn't respond in time -- reload to try again."
+  even while the turn was still genuinely running fine server-side.** The reconnect's own 30-second
+  watchdog only reset on a real named SSE event; the server's periodic `: keep-alive` comment line
+  (sent every 15s precisely to keep the connection alive through a stretch with nothing new to show,
+  like a slow tool call) was never recognized as one, so a turn that went quiet for 30+ seconds --
+  common for anything long-running -- tripped the watchdog regardless of whether the connection, and
+  the turn, were both still fine. Any bytes at all over the stream now count as a sign of life.
+
 ## [1.8.1] - 2026-10-23
 
 ### Changed
