@@ -8529,10 +8529,11 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${profileHelper} "\${rest[@]}"
 		sessions.closeAll();
 	}
 
-	// SIGNAL_PROGRESS_UPDATES: each piece of the model's own "let me check X..." narration is relayed
-	// to Signal as its own message as soon as Pi closes it off (right before the next tool call, or
-	// when the turn settles), ahead of the one final reply -- off by default, so this also checks the
-	// off case sends nothing extra.
+	// SIGNAL_PROGRESS_UPDATES: each piece of what the model actually SAYS (distinct from its internal
+	// "thinking") is relayed to Signal as its own message as soon as Pi closes it off (right before
+	// the next tool call, or when the turn settles) -- replacing the one final reply entirely rather
+	// than repeating it, since relaying everything and then also sending it all again, glued together,
+	// would just double it up. Off by default, so this also checks the off case is unchanged.
 	{
 		const { credentialFor, scopedSessionId, signalClientSessionId, sessions, setSessionSpawn, setRunner, resetEngineCheck } = await import("./server.mjs");
 		resetEngineCheck();
@@ -8578,16 +8579,17 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${profileHelper} "\${rest[@]}"
 						reply({ type: "agent_start" });
 						reply({ type: "message_start", message: { role: "user", content: said } });
 						reply({ type: "message_end", message: { role: "user", content: said } });
-						// First narration segment, closed off by a tool call -- relayProgress must flush it
+						// First spoken segment, closed off by a tool call -- relayProgress must flush it
 						// right there, not wait for the tool to finish or for a second segment to start.
-						reply({ type: "message_update", assistantMessageEvent: { type: "thinking_delta", delta: "Let me check the weather. " } });
+						reply({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "Let me check the weather. " } });
 						reply({ type: "tool_execution_start", toolName: "bash", toolCallId: "tc1", args: {} });
 						reply({ type: "tool_execution_end", toolCallId: "tc1", result: { content: "ok" } });
-						// Second segment, this time closed off only by the turn settling (no further tool call).
-						reply({ type: "message_update", assistantMessageEvent: { type: "thinking_delta", delta: "Now let me check Poznan specifically." } });
+						// Second, distinct spoken segment (text_start marks a new content block, the same way
+						// a real turn's own reply after a tool call would), closed off only by settling.
+						reply({ type: "message_update", assistantMessageEvent: { type: "text_start" } });
+						reply({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: "Now let me check Poznan specifically." } });
 						settleNow = () => {
 							settleNow = null;
-							reply({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: `echo: ${said}` }] } });
 							reply({ type: "agent_settled" });
 						};
 						promptSeenResolve();
@@ -8599,7 +8601,9 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${profileHelper} "\${rest[@]}"
 		setSessionSpawn(() => fakeChild());
 		setSignalRunner(null); // the real runAgentTurn, against the faked container above
 
-		// Off by default: nothing extra is sent, only the one final reply.
+		// Off by default: the turn's own usual single final reply, unchanged -- both spoken segments
+		// glued together with no separator, exactly as every text_delta across a turn already is
+		// (lib/agentrun.mjs's own `streamed += d`), regardless of this setting.
 		config.SIGNAL_PROGRESS_UPDATES = false;
 		sent.length = 0;
 		liveChild.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "receive", params: { envelope: { sourceNumber: "+15551112222", dataMessage: { message: "progress test, off" } } } })}\n`);
@@ -8607,10 +8611,11 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${profileHelper} "\${rest[@]}"
 		await new Promise((r) => setTimeout(r, 30));
 		settleNow();
 		await waitFor(() => sent.length > 0);
-		assert.equal(sent.length, 1, "off by default: no progress messages, just the final reply");
-		assert.equal(sent[0].message, "echo: progress test, off");
+		assert.equal(sent.length, 1, "off by default: one reply, not relayed piece by piece");
+		assert.equal(sent[0].message, "Let me check the weather. Now let me check Poznan specifically.");
 
-		// On: the two narration segments arrive as their own messages, in order, before the final reply.
+		// On: the two spoken segments arrive as their own messages, in order -- and nothing else, since
+		// they already covered everything the turn said; no separate, redundant final reply follows.
 		config.SIGNAL_PROGRESS_UPDATES = true;
 		sent.length = 0;
 		promptSeen = new Promise((r2) => (promptSeenResolve = r2));
@@ -8619,9 +8624,10 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${profileHelper} "\${rest[@]}"
 		await waitFor(() => sent.length >= 1);
 		assert.equal(sent[0].message, "Let me check the weather.", "the first segment is relayed the moment the tool call closes it off, before the tool even finishes");
 		settleNow();
-		await waitFor(() => sent.length >= 3);
+		await waitFor(() => sent.length >= 2);
 		assert.equal(sent[1].message, "Now let me check Poznan specifically.", "the second segment, relayed when the turn settles since no further tool call closed it off");
-		assert.equal(sent[2].message, "echo: progress test, on", "the one final reply, same as always, after the two progress messages");
+		await new Promise((r) => setTimeout(r, 30));
+		assert.equal(sent.length, 2, "nothing more follows -- no separate final reply duplicating what was already relayed");
 
 		config.SIGNAL_PROGRESS_UPDATES = false;
 		setSessionSpawn(null);

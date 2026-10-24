@@ -2,6 +2,16 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.9.1] - 2026-10-24
+
+### Fixed
+- **`SIGNAL_PROGRESS_UPDATES` was relaying the wrong thing.** It was watching the model's internal
+  "thinking" narration; a tool-calling turn can also produce several distinct pieces of what the
+  model actually *says* in between tool calls -- its real, spoken output, not its reasoning -- and
+  that's what's relayed now instead. When at least one piece was actually relayed this way, the
+  turn's one final reply (every spoken segment of the whole turn, glued together with no separator)
+  is no longer also sent afterward -- it would otherwise just repeat everything a second time.
+
 ## [1.9.0] - 2026-10-24
 
 ### Added
