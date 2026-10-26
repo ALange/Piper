@@ -2,6 +2,29 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.12.0] - 2026-10-26
+
+### Changed
+- **The client portal's Jobs page is now full self-service, not a read-only panel.** A key holder can
+  create a job for their own agents (or themselves directly), change its prompt, model, schedule,
+  session mode, notify setting, time limit, daily cost cap and run limit, turn it on or off, run it on
+  demand, delete it, browse its run history and read a run's full prompt and result, and manage its
+  webhook trigger token and completion-webhook signing secret -- the same things the dashboard's own
+  Jobs page offers an operator, but strictly scoped to jobs this key made. Clicking the rail's Jobs icon
+  now replaces the chat view in the main pane entirely (a dedicated page, not a side drawer, since
+  managing jobs needs real room), with a back arrow to return to chatting; picking a chat from the
+  sidebar or starting a new one switches back automatically. Switching jobs off entirely
+  (`JOBS_ENABLED`) stops runs, not visibility -- a key can still see, create and change its jobs with
+  it off, exactly like the dashboard's own page already allows, with a banner explaining why nothing
+  will actually run meanwhile. A webhook URL a key gives here is checked the same strict way
+  `POST /v1/piper/jobs` already checks one (no internal addresses), since it is exactly as untrusted
+  coming from the portal as it is coming through that route; `lib/jobs.mjs`'s own strict-origin check
+  now covers both. A new `PORTAL_JOBS_MAX_PER_KEY` (default 20) caps how many jobs one key may create
+  this way, the same shape as the existing per-agent cap on an agent's own self-made schedules.
+  Backed by a full set of ownership-scoped routes on `lib/portal.mjs` (create, read, change, delete,
+  run now, run history, run detail, trigger token issue/revoke, webhook secret rotation), all 404ing
+  outright for another key's job rather than ever confirming it exists.
+
 ## [1.11.0] - 2026-10-26
 
 ### Added

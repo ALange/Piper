@@ -136,7 +136,41 @@
   /* the chat column + an optional preview pane beside it, side by side -- .chat-split is the row,
      .bg (full-bleed, position:absolute inset:0 on main) still covers both since it's a sibling, not
      a child, of either. */
+  #chatview { flex:1; display:flex; flex-direction:column; min-height:0; min-width:0; }
+  #chatview[hidden] { display:none; }
   .chat-split { position:relative; z-index:10; flex:1; display:flex; min-width:0; overflow:hidden; }
+  .jobsview { position:relative; z-index:10; flex:1; display:flex; flex-direction:column; min-height:0; min-width:0; }
+  .jobsview[hidden] { display:none; }
+  .jobsbody { flex:1; overflow:auto; padding:0 22px 24px; }
+  .jobcard { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:12px; }
+  .jobcard .jc-top { display:flex; align-items:center; gap:10px; }
+  .jobcard .jc-top b { font-size:14px; }
+  .jobcard .jc-top .sp { flex:1; }
+  .jobcard .jc-top .tag { color:var(--dim); font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; }
+  .jobcard .jc-sub { color:var(--muted); font-size:12.5px; margin-top:4px; }
+  .jobcard .jc-status { font-size:12.5px; margin-top:6px; }
+  .jobcard .jc-actions { display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
+  .jobcard .jc-actions button { font-size:12px; padding:5px 10px; }
+  .jobsempty { color:var(--muted); font-size:13px; padding:30px 0; text-align:center; }
+  .jobsbanner { background:rgba(246,193,119,.14); border:1px solid rgba(246,193,119,.35); color:var(--amber);
+    border-radius:10px; padding:9px 12px; font-size:12.5px; margin-bottom:14px; }
+  .jobform { max-width:640px; }
+  .jobform .jf-row { margin-bottom:12px; }
+  .jobform label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+  .jobform input[type=text], .jobform input[type=number], .jobform textarea, .jobform select {
+    width:100%; background:rgba(105,116,116,.28); border:1px solid var(--border); color:var(--fg);
+    border-radius:8px; padding:8px 10px; font:inherit; font-size:13px; }
+  .jobform textarea { resize:vertical; min-height:72px; }
+  .jobform .jf-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .jobform .jf-inline { display:flex; gap:10px; align-items:center; }
+  .jobform .jf-actions { display:flex; gap:8px; margin-top:16px; }
+  .jobform .jf-hint { color:var(--dim); font-size:11.5px; margin-top:3px; }
+  .jobruns table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  .jobruns th, .jobruns td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--border); }
+  .jobruns th { color:var(--muted); font-weight:500; }
+  .jobruns tr.clickable { cursor:pointer; }
+  .jobruns tr.clickable:hover { background:rgba(255,255,255,.05); }
+  .jobbacklink { color:var(--blue); cursor:pointer; font-size:12.5px; margin-bottom:12px; display:inline-block; }
   /* The preview pane gets a fixed basis (50% to start, then whatever #previewresizer last dragged it
      to, in px) with no grow/shrink of its own -- the chat column (flex:1 1 auto) always takes up
      whatever that leaves, so the two can never fight over space the way two percentage flex-basises
@@ -411,55 +445,66 @@
     <div id="crumb"></div>
     <div id="filelist"></div>
   </div>
-  <div id="jobsbox" class="sidebox">
-    <div class="top"><b>Jobs</b><div><button id="jobsrefresh">refresh</button><button class="sideclose" data-close title="close">×</button></div></div>
-    <div id="jobslist" class="plist"></div>
-  </div>
 
   <main>
     <div class="bg"></div>
-    <div class="bar">
-      <button class="icon-btn hamburger" id="hamburger" title="menu">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7 h16 M4 12 h16 M4 17 h16"/></svg>
-      </button>
-      <select id="target"></select>
-      <div class="sp"></div>
-      <div id="statusstats" class="statuspill"></div>
-      <label class="toolToggle"><input type="checkbox" id="toolToggle" style="margin:0"><span>show tool calls</span></label>
-    </div>
-    <div class="chat-split" id="chatsplit">
-      <div class="chat-col">
-        <div id="msgs"></div>
-        <div id="statusstats-mobile" class="statuspill statuspill-mobile"></div>
-        <div class="composer-zone">
-          <div class="composer-wrap">
-            <div id="pending" class="pending" hidden></div>
-            <div class="composer">
-              <div class="composer-inner">
-                <textarea id="input" rows="1" placeholder="Message your agent... (Enter to send, Shift+Enter for a new line, /piper for commands)"></textarea>
-                <div class="comp-bar">
-                  <button class="round-btn" id="attachbtn" title="attach a file (image or any document)">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05 12.25 20.24a5.5 5.5 0 0 1-7.78-7.78l9.19-9.19a3.89 3.89 0 0 1 5.5 5.5l-9.2 9.19a2.25 2.25 0 0 1-3.18-3.18l8.49-8.48"/></svg>
-                  </button>
-                  <input type="file" id="attachinput" multiple hidden>
-                  <span class="spacer"></span>
-                  <button id="send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19 V5 M5.5 11.5 L12 5 l6.5 6.5"/></svg></button>
+    <div id="chatview">
+      <div class="bar">
+        <button class="icon-btn hamburger" id="hamburger" title="menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7 h16 M4 12 h16 M4 17 h16"/></svg>
+        </button>
+        <select id="target"></select>
+        <div class="sp"></div>
+        <div id="statusstats" class="statuspill"></div>
+        <label class="toolToggle"><input type="checkbox" id="toolToggle" style="margin:0"><span>show tool calls</span></label>
+      </div>
+      <div class="chat-split" id="chatsplit">
+        <div class="chat-col">
+          <div id="msgs"></div>
+          <div id="statusstats-mobile" class="statuspill statuspill-mobile"></div>
+          <div class="composer-zone">
+            <div class="composer-wrap">
+              <div id="pending" class="pending" hidden></div>
+              <div class="composer">
+                <div class="composer-inner">
+                  <textarea id="input" rows="1" placeholder="Message your agent... (Enter to send, Shift+Enter for a new line, /piper for commands)"></textarea>
+                  <div class="comp-bar">
+                    <button class="round-btn" id="attachbtn" title="attach a file (image or any document)">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05 12.25 20.24a5.5 5.5 0 0 1-7.78-7.78l9.19-9.19a3.89 3.89 0 0 1 5.5 5.5l-9.2 9.19a2.25 2.25 0 0 1-3.18-3.18l8.49-8.48"/></svg>
+                    </button>
+                    <input type="file" id="attachinput" multiple hidden>
+                    <span class="spacer"></span>
+                    <button id="send"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19 V5 M5.5 11.5 L12 5 l6.5 6.5"/></svg></button>
+                  </div>
                 </div>
               </div>
+              <p class="composer-hint hint">Piper may produce inaccurate information. Verify before use.</p>
             </div>
-            <p class="composer-hint hint">Piper may produce inaccurate information. Verify before use.</p>
           </div>
         </div>
-      </div>
-      <div id="previewresizer" class="previewresizer" hidden></div>
-      <div id="previewpane" class="previewpane" hidden>
-        <div class="previewbar">
-          <select id="previewselect"></select>
-          <button id="previewdownload" title="download this page">⬇</button>
-          <button id="previewtab" title="open in a new tab">↗</button>
-          <button id="previewclose" title="close preview">×</button>
+        <div id="previewresizer" class="previewresizer" hidden></div>
+        <div id="previewpane" class="previewpane" hidden>
+          <div class="previewbar">
+            <select id="previewselect"></select>
+            <button id="previewdownload" title="download this page">⬇</button>
+            <button id="previewtab" title="open in a new tab">↗</button>
+            <button id="previewclose" title="close preview">×</button>
+          </div>
+          <div id="previewbody" class="previewbody"></div>
         </div>
-        <div id="previewbody" class="previewbody"></div>
+      </div>
+    </div>
+    <div id="jobsview" class="jobsview" hidden>
+      <div class="bar">
+        <button class="icon-btn hamburger" id="jobsback" title="back to chat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 19 L8 12 l7-7"/></svg>
+        </button>
+        <b>Jobs</b>
+        <div class="sp"></div>
+        <button id="jobsnewbtn">+ new job</button>
+      </div>
+      <div id="jobsbody" class="jobsbody">
+        <div id="jobsmainlist"></div>
       </div>
     </div>
   </main>
@@ -918,7 +963,7 @@ function renderSide() {
     var model = c.externalModelId ? externalModel(c.externalModelId) : null;
     var subLabel = c.signalChannel ? ('📱 ' + c.signalPhone) : model ? (model.name + ' (model)') : agent ? agent.name : '(main endpoint)';
     row.appendChild(el('div', subLabel)).className = 's';
-    row.addEventListener('click', function () { CUR = c.id; renderAll(); resumeIfLive(c); closeSideOnMobile(); });
+    row.addEventListener('click', function () { showChatView(); CUR = c.id; renderAll(); resumeIfLive(c); closeSideOnMobile(); });
     var clear = el('button', '×');
     clear.className = 'convclear';
     clear.title = 'clear this chat';
@@ -1270,6 +1315,7 @@ function renderAll() {
 }
 
 function newChat() {
+  showChatView();
   var c = { id: newId(), title: '', agentId: '', externalModelId: '', messages: [], updated: Date.now() };
   CONVOS.unshift(c);
   CUR = c.id;
@@ -1646,12 +1692,10 @@ function setSide(which) {
   $('filesbox').classList.toggle('on', SIDE_OPEN === 'files');
   $('toolsbox').classList.toggle('on', SIDE_OPEN === 'tools');
   $('skillsbox').classList.toggle('on', SIDE_OPEN === 'skills');
-  $('jobsbox').classList.toggle('on', SIDE_OPEN === 'jobs');
   $('convsbtn').className = 'icon-btn' + (SIDE_OPEN === 'convs' ? ' on' : '');
   $('filesbtn').className = 'icon-btn' + (SIDE_OPEN === 'files' ? ' on' : '');
   $('toolsbtn').className = 'icon-btn' + (SIDE_OPEN === 'tools' ? ' on' : '');
   $('skillsbtn').className = 'icon-btn' + (SIDE_OPEN === 'skills' ? ' on' : '');
-  $('jobsbtn').className = 'icon-btn' + (SIDE_OPEN === 'jobs' ? ' on' : '');
   // On a phone the open drawer overlays main (see the mobile @media block) rather than sitting beside
   // it, so it needs its own backdrop to tap-to-close -- same idea as dashboard.html's Playground drawer.
   syncBackdrop();
@@ -1674,7 +1718,6 @@ function reloadSidePanel() {
   if (SIDE_OPEN === 'files') loadFiles();
   else if (SIDE_OPEN === 'tools') loadTools();
   else if (SIDE_OPEN === 'skills') loadSkills();
-  else if (SIDE_OPEN === 'jobs') loadJobs();
 }
 function prow(name, description, tag) {
   var row = el('div'); row.className = 'prow';
@@ -1723,37 +1766,333 @@ function loadTools() {
   });
 }
 
-/* ---- jobs ---- */
+/* ---- jobs: a full-page view (replaces the chat view in <main>), not a side drawer -- management
+   of this key's own jobs only, the portal's own equivalent of the dashboard's Jobs page. ---- */
+var JOBS_CACHE = [];
+var DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 function fmtWhen(ms) { return ms ? new Date(ms).toLocaleString() : ''; }
-function loadJobs() {
-  var box = $('jobslist');
+
+function showChatView() {
+  $('jobsview').hidden = true;
+  $('chatview').hidden = false;
+}
+function showJobsView() {
+  $('chatview').hidden = true;
+  $('jobsview').hidden = false;
+  renderJobsList();
+}
+
+function jobErrorBox(box, e) {
+  var d = el('div', e.message || String(e));
+  d.className = 'hint bad';
+  box.appendChild(d);
+}
+
+function jobsBanner() {
+  if (!WHOAMI || WHOAMI.jobsEnabled !== false) return null;
+  var b = el('div', 'Jobs are switched off right now. Your jobs are kept and you can still create, change or delete them here, but none of them will run until this is turned back on.');
+  b.className = 'jobsbanner';
+  return b;
+}
+
+function jobStatusLine(j) {
+  var line;
+  if (!j.enabled && j.disabledReason) line = 'disabled: ' + j.disabledReason;
+  else if (j.last) line = (j.last.status === 'ok' ? 'last run ok' : 'last run: ' + j.last.status) + (j.last.endedAt ? ', ' + fmtWhen(j.last.endedAt) : '');
+  else line = 'never run yet';
+  if (j.enabled && j.nextRunAt) line += (line ? ' · ' : '') + 'next: ' + fmtWhen(j.nextRunAt);
+  return line;
+}
+
+function renderJobsList() {
+  var box = $('jobsmainlist');
   box.replaceChildren(el('div', 'loading…'));
   apiJson('api/jobs').then(function (d) {
+    JOBS_CACHE = d.jobs || [];
     box.replaceChildren();
-    var jobs = d.jobs || [];
-    if (!jobs.length) { box.appendChild(el('div', 'No jobs are scheduled.')).className = 'empty'; return; }
-    jobs.forEach(function (j) {
-      var row = el('div'); row.className = 'prow';
-      var nm = el('div'); nm.className = 'nm';
-      nm.appendChild(el('b', j.name));
-      nm.appendChild(el('span', j.enabled ? 'on' : 'off')).className = 'tag';
-      row.appendChild(nm);
-      var line1 = [j.scheduleText];
-      if (j.agent) line1.push(j.agent);
-      row.appendChild(el('div', line1.join(' · '))).className = 'desc';
-      var line2;
-      if (!j.enabled && j.disabledReason) line2 = 'disabled: ' + j.disabledReason;
-      else if (j.last) line2 = (j.last.status === 'ok' ? 'last run ok' : 'last run: ' + j.last.status) + (j.last.endedAt ? ', ' + fmtWhen(j.last.endedAt) : '');
-      else line2 = 'never run yet';
-      if (j.enabled && j.nextRunAt) line2 += (line2 ? ' · ' : '') + 'next: ' + fmtWhen(j.nextRunAt);
-      var statusLine = el('div', line2); statusLine.className = 'desc';
-      if (!j.enabled || (j.last && j.last.status === 'error')) statusLine.classList.add('bad');
-      row.appendChild(statusLine);
-      box.appendChild(row);
-    });
-  }).catch(function (e) {
-    box.replaceChildren(el('div', e.message));
+    var banner = jobsBanner();
+    if (banner) box.appendChild(banner);
+    if (!JOBS_CACHE.length) { box.appendChild(el('div', 'No jobs yet. "+ new job" sets an agent to run on a schedule, a webhook, or on demand.')).className = 'jobsempty'; return; }
+    JOBS_CACHE.forEach(function (j) { box.appendChild(jobCard(j)); });
+  }).catch(function (e) { jobErrorBox(box, e); });
+}
+
+function jobCard(j) {
+  var card = el('div'); card.className = 'jobcard';
+  var top = el('div'); top.className = 'jc-top';
+  top.appendChild(el('b', j.name));
+  top.appendChild(el('div')).className = 'sp';
+  top.appendChild(el('span', j.enabled ? 'on' : 'off')).className = 'tag';
+  card.appendChild(top);
+  var sub = [j.scheduleText];
+  if (j.agent) sub.push(j.agent);
+  card.appendChild(el('div', sub.join(' · '))).className = 'jc-sub';
+  var status = el('div', jobStatusLine(j)); status.className = 'jc-status';
+  if (!j.enabled || (j.last && j.last.status === 'error')) status.classList.add('bad');
+  card.appendChild(status);
+  var actions = el('div'); actions.className = 'jc-actions';
+  var runBtn = el('button', 'run now');
+  runBtn.addEventListener('click', function () { runBtn.disabled = true; runJobNow(j.id).finally(function () { runBtn.disabled = false; }); });
+  var runsBtn = el('button', 'runs');
+  runsBtn.addEventListener('click', function () { renderJobRuns(j); });
+  var editBtn = el('button', 'edit');
+  editBtn.addEventListener('click', function () { renderJobForm(j.id); });
+  var toggleBtn = el('button', j.enabled ? 'turn off' : 'turn on');
+  toggleBtn.addEventListener('click', function () { setJobEnabled(j.id, !j.enabled); });
+  var delBtn = el('button', 'delete');
+  delBtn.addEventListener('click', function () { deleteJobConfirm(j); });
+  [runBtn, runsBtn, editBtn, toggleBtn, delBtn].forEach(function (b) { actions.appendChild(b); });
+  card.appendChild(actions);
+  return card;
+}
+
+function runJobNow(id) {
+  return apiJson('api/jobs/' + id + '/run', { method: 'POST' }).then(renderJobsList).catch(function (e) { alert(e.message); });
+}
+function setJobEnabled(id, enabled) {
+  apiJson('api/jobs/' + id, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ enabled: enabled }) })
+    .then(renderJobsList).catch(function (e) { alert(e.message); });
+}
+function deleteJobConfirm(j) {
+  if (!confirm('Delete "' + (j.name || 'this job') + '"? Its run history goes with it. This cannot be undone.')) return;
+  apiJson('api/jobs/' + j.id, { method: 'DELETE' }).then(renderJobsList).catch(function (e) { alert(e.message); });
+}
+
+function backLink(onClick) {
+  var b = el('span', '← back to jobs'); b.className = 'jobbacklink';
+  b.addEventListener('click', onClick);
+  return b;
+}
+function jfRow(labelText, inputEl, hint) {
+  var r = el('div'); r.className = 'jf-row';
+  r.appendChild(el('label', labelText));
+  r.appendChild(inputEl);
+  if (hint) r.appendChild(el('div', hint)).className = 'jf-hint';
+  return r;
+}
+
+/** The create/edit form. `id` null means a new job; otherwise the job is fetched fresh (never from
+   the list cache, which can be a moment stale) so editing always starts from the real thing. */
+function renderJobForm(id) {
+  var box = $('jobsmainlist');
+  box.replaceChildren(backLink(renderJobsList));
+  box.appendChild(el('div', 'loading…'));
+  (id ? apiJson('api/jobs/' + id).then(function (d) { return d.job; }) : Promise.resolve(null))
+    .then(function (job) { buildJobForm(box, job); })
+    .catch(function (e) { box.replaceChildren(backLink(renderJobsList)); jobErrorBox(box, e); });
+}
+
+function buildJobForm(box, job) {
+  box.replaceChildren(backLink(renderJobsList));
+  box.appendChild(el('h3', job ? 'Edit job' : 'New job'));
+  var form = el('div'); form.className = 'jobform';
+  box.appendChild(form);
+
+  var name = el('input'); name.type = 'text'; name.maxLength = 80; name.value = job ? job.name : '';
+  form.appendChild(jfRow('Name', name));
+
+  var agent = el('select');
+  agent.appendChild(Object.assign(el('option', '(no agent — run as this key directly)'), { value: '' }));
+  (WHOAMI.agents || []).forEach(function (a) { agent.appendChild(Object.assign(el('option', a.name), { value: a.id })); });
+  if (job && job.agentId) agent.value = job.agentId;
+  form.appendChild(jfRow('Agent', agent));
+
+  var model = el('input'); model.type = 'text'; model.placeholder = "the agent's own default"; model.value = (job && job.model) || '';
+  form.appendChild(jfRow('Model (optional)', model));
+
+  var prompt = el('textarea'); prompt.value = job ? job.prompt || '' : '';
+  form.appendChild(jfRow('Prompt', prompt, 'What the agent is told to do each run. A webhook-triggered run replaces {{payload}} in it with the request body.'));
+
+  // Schedule: a kind selector plus the sub-fields that kind needs, shown/hidden as it changes.
+  var kind = el('select');
+  [['manual', 'only when run manually or by a webhook'], ['interval', 'every N minutes/hours'], ['daily', 'every day at a time'], ['weekly', 'on chosen weekdays'], ['once', 'once, at a date and time']]
+    .forEach(function (o) { kind.appendChild(Object.assign(el('option', o[1]), { value: o[0] })); });
+  var sch = (job && job.schedule) || { kind: 'manual' };
+  kind.value = sch.kind;
+  form.appendChild(jfRow('Schedule', kind));
+
+  var subRow = el('div'); subRow.className = 'jf-row';
+  form.appendChild(subRow);
+
+  var everyN = el('input'); everyN.type = 'number'; everyN.min = 1; everyN.value = sch.kind === 'interval' ? sch.every : 1;
+  var everyUnit = el('select');
+  [['minutes', 'minutes'], ['hours', 'hours']].forEach(function (o) { everyUnit.appendChild(Object.assign(el('option', o[1]), { value: o[0] })); });
+  if (sch.kind === 'interval') everyUnit.value = sch.unit;
+
+  var atTime = el('input'); atTime.type = 'text'; atTime.placeholder = '07:30'; atTime.value = (sch.kind === 'daily' || sch.kind === 'weekly') ? sch.at : '';
+  var dayBoxes = DAY_SHORT.map(function (d, i) {
+    var cb = el('input'); cb.type = 'checkbox'; cb.value = String(i);
+    if (sch.kind === 'weekly' && sch.days && sch.days.indexOf(i) >= 0) cb.checked = true;
+    return cb;
   });
+  var onceAt = el('input'); onceAt.type = 'datetime-local';
+  if (sch.kind === 'once') { var d0 = new Date(sch.at - new Date().getTimezoneOffset() * 60000); onceAt.value = d0.toISOString().slice(0, 16); }
+
+  function renderSub() {
+    subRow.replaceChildren();
+    if (kind.value === 'interval') {
+      var inl = el('div'); inl.className = 'jf-inline';
+      inl.appendChild(el('span', 'every'));
+      inl.appendChild(everyN);
+      inl.appendChild(everyUnit);
+      subRow.appendChild(inl);
+    } else if (kind.value === 'daily') {
+      subRow.appendChild(el('label', 'Time (24h, e.g. 07:30)'));
+      subRow.appendChild(atTime);
+    } else if (kind.value === 'weekly') {
+      subRow.appendChild(el('label', 'Days'));
+      var inl2 = el('div'); inl2.className = 'jf-inline';
+      DAY_SHORT.forEach(function (d, i) {
+        var lab = el('label'); lab.style.display = 'inline-flex'; lab.style.alignItems = 'center'; lab.style.gap = '3px'; lab.style.marginRight = '2px';
+        lab.appendChild(dayBoxes[i]); lab.appendChild(document.createTextNode(d));
+        inl2.appendChild(lab);
+      });
+      subRow.appendChild(inl2);
+      subRow.appendChild(el('label', 'Time (24h)'));
+      subRow.appendChild(atTime);
+    } else if (kind.value === 'once') {
+      subRow.appendChild(el('label', 'When'));
+      subRow.appendChild(onceAt);
+    }
+  }
+  renderSub();
+  kind.addEventListener('change', renderSub);
+
+  var grid = el('div'); grid.className = 'jf-grid';
+  form.appendChild(grid);
+
+  var sessionMode = el('select');
+  [['fresh', 'starts fresh each run'], ['continue', 'continues its own conversation'], ['memory', 'fresh, shown its last reports']]
+    .forEach(function (o) { sessionMode.appendChild(Object.assign(el('option', o[1]), { value: o[0] })); });
+  sessionMode.value = (job && job.sessionMode) || 'fresh';
+  grid.appendChild(jfRow('Each run', sessionMode));
+
+  var notify = el('select');
+  [['never', 'never'], ['changes', 'only when the report changes'], ['always', 'every run']]
+    .forEach(function (o) { notify.appendChild(Object.assign(el('option', o[1]), { value: o[0] })); });
+  notify.value = (job && job.notify) || 'never';
+  grid.appendChild(jfRow('Tell me', notify));
+
+  var timeoutMin = el('input'); timeoutMin.type = 'number'; timeoutMin.min = 1; timeoutMin.value = Math.round(((job && job.timeoutMs) || 600000) / 60000);
+  grid.appendChild(jfRow('Time limit (minutes)', timeoutMin));
+
+  var dailyCostCap = el('input'); dailyCostCap.type = 'number'; dailyCostCap.min = 0; dailyCostCap.step = '0.01'; dailyCostCap.placeholder = 'no cap';
+  if (job && job.dailyCostCap != null) dailyCostCap.value = job.dailyCostCap;
+  grid.appendChild(jfRow('Daily cost cap ($)', dailyCostCap));
+
+  var maxRuns = el('input'); maxRuns.type = 'number'; maxRuns.min = 1; maxRuns.placeholder = 'unlimited';
+  if (job && job.maxRuns != null) maxRuns.value = job.maxRuns;
+  grid.appendChild(jfRow('Run limit', maxRuns));
+
+  var webhookUrl = el('input'); webhookUrl.type = 'text'; webhookUrl.placeholder = 'https://... (optional, called when a run finishes)';
+  webhookUrl.value = (job && job.webhookUrl) || '';
+  form.appendChild(jfRow('Completion webhook (optional)', webhookUrl));
+
+  // Webhook trigger token and signing secret only make sense once the job exists.
+  if (job) {
+    var whWrap = el('div'); whWrap.className = 'jf-row';
+    var trigBtn = el('button', 'get a webhook trigger token');
+    var trigOut = el('div', job.hasTrigger ? 'already has a trigger token (request a new one to replace it)' : 'no trigger token yet'); trigOut.className = 'jf-hint';
+    trigBtn.addEventListener('click', function () {
+      apiJson('api/jobs/' + job.id + '/trigger', { method: 'POST' }).then(function (d) {
+        trigOut.textContent = 'POST ' + d.path + ' with this token (shown once): ' + d.token;
+      }).catch(function (e) { alert(e.message); });
+    });
+    whWrap.appendChild(trigBtn);
+    whWrap.appendChild(trigOut);
+    if (job.hasTrigger) {
+      var revokeBtn = el('button', 'revoke trigger token');
+      revokeBtn.addEventListener('click', function () {
+        apiJson('api/jobs/' + job.id + '/trigger', { method: 'DELETE' }).then(function () { trigOut.textContent = 'revoked'; }).catch(function (e) { alert(e.message); });
+      });
+      whWrap.appendChild(revokeBtn);
+    }
+    form.appendChild(whWrap);
+  }
+
+  var err = el('div'); err.className = 'hint bad';
+  form.appendChild(err);
+
+  var actions = el('div'); actions.className = 'jf-actions';
+  var saveBtn = el('button', job ? 'save changes' : 'create job');
+  var cancelBtn = el('button', 'cancel');
+  cancelBtn.addEventListener('click', renderJobsList);
+  actions.appendChild(saveBtn);
+  actions.appendChild(cancelBtn);
+  form.appendChild(actions);
+
+  saveBtn.addEventListener('click', function () {
+    err.textContent = '';
+    var schedule;
+    if (kind.value === 'interval') schedule = { kind: 'interval', every: Number(everyN.value), unit: everyUnit.value };
+    else if (kind.value === 'daily') schedule = { kind: 'daily', at: atTime.value };
+    else if (kind.value === 'weekly') schedule = { kind: 'weekly', at: atTime.value, days: dayBoxes.filter(function (cb) { return cb.checked; }).map(function (cb) { return Number(cb.value); }) };
+    else if (kind.value === 'once') schedule = { kind: 'once', at: onceAt.value ? new Date(onceAt.value).getTime() : null };
+    else schedule = { kind: 'manual' };
+    var body = {
+      name: name.value.trim(),
+      agentId: agent.value || null,
+      model: model.value.trim() || null,
+      prompt: prompt.value,
+      schedule: schedule,
+      sessionMode: sessionMode.value,
+      notify: notify.value,
+      timeoutMs: Number(timeoutMin.value) * 60000,
+      dailyCostCap: dailyCostCap.value === '' ? null : Number(dailyCostCap.value),
+      maxRuns: maxRuns.value === '' ? null : Number(maxRuns.value),
+      webhookUrl: webhookUrl.value.trim() || null,
+    };
+    saveBtn.disabled = true;
+    var req = job ? apiJson('api/jobs/' + job.id, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+                  : apiJson('api/jobs', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    req.then(renderJobsList).catch(function (e) { err.textContent = e.message; saveBtn.disabled = false; });
+  });
+}
+
+function renderJobRuns(job) {
+  var box = $('jobsmainlist');
+  box.replaceChildren(backLink(renderJobsList));
+  box.appendChild(el('h3', job.name + ' — recent runs'));
+  var wrap = el('div', 'loading…');
+  box.appendChild(wrap);
+  apiJson('api/jobs/' + job.id + '/runs').then(function (d) {
+    wrap.replaceChildren();
+    var runs = d.runs || [];
+    if (!runs.length) { wrap.replaceChildren(); wrap.className = 'jobsempty'; wrap.textContent = 'No runs yet.'; return; }
+    wrap.className = 'jobruns';
+    var table = el('table');
+    var head = el('tr');
+    ['when', 'trigger', 'status', 'cost', 'preview'].forEach(function (h) { head.appendChild(el('th', h)); });
+    table.appendChild(head);
+    runs.forEach(function (r) {
+      var tr = el('tr'); tr.className = 'clickable';
+      tr.appendChild(el('td', fmtWhen(r.startedAt || r.queuedAt)));
+      tr.appendChild(el('td', r.trigger));
+      var st = el('td', r.status); if (r.status === 'error' || r.status === 'timeout') st.className = 'bad'; tr.appendChild(st);
+      tr.appendChild(el('td', r.cost ? ('$' + r.cost.toFixed(4)) : ''));
+      tr.appendChild(el('td', r.error || r.preview || ''));
+      tr.addEventListener('click', function () { renderJobRunDetail(job, r.id); });
+      table.appendChild(tr);
+    });
+    wrap.appendChild(table);
+  }).catch(function (e) { jobErrorBox(wrap, e); });
+}
+
+function renderJobRunDetail(job, runId) {
+  var box = $('jobsmainlist');
+  box.replaceChildren(backLink(function () { renderJobRuns(job); }));
+  box.appendChild(el('h3', job.name + ' — run'));
+  var wrap = el('div', 'loading…');
+  box.appendChild(wrap);
+  apiJson('api/jobs/' + job.id + '/runs/' + runId).then(function (d) {
+    var r = d.run;
+    wrap.replaceChildren();
+    wrap.appendChild(el('div', 'status: ' + r.status + (r.error ? ' — ' + r.error : ''))).className = r.status === 'error' || r.status === 'timeout' ? 'jc-status bad' : 'jc-status';
+    wrap.appendChild(el('label', 'Prompt sent'));
+    wrap.appendChild(Object.assign(el('div'), { className: 'modal-body' })).appendChild(el('pre', r.prompt || ''));
+    wrap.appendChild(el('label', 'Result'));
+    wrap.appendChild(Object.assign(el('div'), { className: 'modal-body' })).appendChild(el('pre', r.text || '(no result text)'));
+  }).catch(function (e) { jobErrorBox(wrap, e); });
 }
 
 /* ---- files ---- */
@@ -2054,7 +2393,9 @@ $('convsbtn').addEventListener('click', function () { setSide('convs'); });
 $('filesbtn').addEventListener('click', function () { setSide('files'); });
 $('toolsbtn').addEventListener('click', function () { setSide('tools'); });
 $('skillsbtn').addEventListener('click', function () { setSide('skills'); });
-$('jobsbtn').addEventListener('click', function () { setSide('jobs'); });
+$('jobsbtn').addEventListener('click', showJobsView);
+$('jobsback').addEventListener('click', showChatView);
+$('jobsnewbtn').addEventListener('click', function () { renderJobForm(null); });
 $('hamburger').addEventListener('click', function () { if (RAIL_OPEN) closeRailMenu(); else openRailMenu(); });
 // On a phone the open panel covers the whole screen, including the rail button that opened it (see the
 // mobile @media block), so there would otherwise be no way to close it short of reloading the page.
@@ -2065,7 +2406,6 @@ $('sidebackdrop').addEventListener('click', function () { if (RAIL_OPEN) closeRa
 function closeSideOnMobile() { if (SIDE_OPEN && window.matchMedia('(max-width: 760px)').matches) setSide(SIDE_OPEN); }
 $('toolsrefresh').addEventListener('click', loadTools);
 $('skillsrefresh').addEventListener('click', loadSkills);
-$('jobsrefresh').addEventListener('click', loadJobs);
 $('filesrefresh').addEventListener('click', loadFiles);
 $('uploadbtn').addEventListener('click', function () { $('uploadinput').click(); });
 $('uploadinput').addEventListener('change', function () { uploadFiles(this.files); this.value = ''; });

@@ -11421,39 +11421,111 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	deleteHistoryOf(myKey.id);
 	assert.equal(getHistory(myKey.id), null);
 
-	// Jobs: a read-only view of this key's own scheduled/webhook/request jobs (lib/jobs.mjs),
-	// for the portal's Jobs panel -- never another key's, and nothing when jobs are off entirely.
+	// Jobs: the client portal's own self-service equivalent of the dashboard's Jobs page --
+	// create, change, run, delete and inspect, but strictly scoped to this key's own jobs.
 	{
-		const { createJob } = await import("./server.mjs");
+		const { createJob, deleteJob, setJobRunner } = await import("./server.mjs");
 		assert.deepEqual((await call("/api/jobs", { headers: auth })).json.jobs, [], "none yet");
 
-		const mine = createJob({ keyId: myKey.id, agentId: myAgent.id, name: "daily digest", prompt: "summarize", schedule: { kind: "daily", at: "07:30" } }).job;
 		const theirJob = createJob({ keyId: theirKey.id, name: "not yours", prompt: "p" }).job;
 
+		// Create: scoped to this key, ownership on the agent enforced the same way lib/jobs.mjs
+		// already enforces it, and a webhook pointing at an internal address is refused -- a
+		// client-supplied address gets the strict check, same as POST /v1/piper/jobs.
+		const stolenAgent = await call("/api/jobs", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ agentId: theirAgent.id, name: "x", prompt: "p" }) });
+		assert.equal(stolenAgent.status, 404, "another key's agent is not this key's to schedule against");
+
+		const internalWebhook = await call("/api/jobs", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ name: "x", prompt: "p", webhookUrl: "http://127.0.0.1:1/x" }) });
+		assert.equal(internalWebhook.status, 400, "a client-supplied webhook is checked strictly, the same as an API job's");
+
+		const created = await call("/api/jobs", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ agentId: myAgent.id, name: "daily digest", prompt: "summarize", schedule: { kind: "daily", at: "07:30" } }) });
+		assert.equal(created.status, 201);
+		const mine = created.json.job;
+		assert.equal(mine.name, "daily digest");
+		assert.equal(mine.scheduleText, "every day at 07:30");
+		assert.equal(mine.agent, "portal-agent");
+		assert.equal(mine.origin, "portal");
+		assert.equal(created.json.webhookSecret, null, "no webhook, no secret");
+
 		const mineJobs = await call("/api/jobs", { headers: auth });
-		assert.equal(mineJobs.status, 200);
 		assert.equal(mineJobs.json.jobs.length, 1, "only this key's own job");
 		assert.equal(mineJobs.json.jobs[0].id, mine.id);
-		assert.equal(mineJobs.json.jobs[0].name, "daily digest");
-		assert.equal(mineJobs.json.jobs[0].scheduleText, "every day at 07:30");
-		assert.equal(mineJobs.json.jobs[0].agent, "portal-agent");
-		assert.equal(mineJobs.json.jobs[0].webhookSecret, undefined, "never a secret in the client-facing view");
 
 		const theirView = await call("/api/jobs", { headers: { authorization: `Bearer ${theirs.key}` } });
 		assert.equal(theirView.json.jobs.length, 1);
 		assert.equal(theirView.json.jobs[0].id, theirJob.id);
 
-		// No run history yet, and another key's job id is simply not found, not leaked as empty.
-		assert.deepEqual((await call(`/api/jobs/${mine.id}/runs`, { headers: auth })).json.runs, []);
-		assert.equal((await call(`/api/jobs/${theirJob.id}/runs`, { headers: auth })).status, 404, "ownership checked on the runs route too");
-		assert.equal((await call(`/api/jobs/jdeadbeef0000/runs`, { headers: auth })).status, 404, "no such job at all");
+		// A single job, ownership-checked: this key's own is visible, another key's is a plain 404.
+		assert.equal((await call(`/api/jobs/${mine.id}`, { headers: auth })).json.job.id, mine.id);
+		assert.equal((await call(`/api/jobs/${theirJob.id}`, { headers: auth })).status, 404, "another key's job, not just empty");
+		assert.equal((await call(`/api/jobs/jdeadbeef0000`, { headers: auth })).status, 404, "no such job at all");
 
-		assert.equal((await call("/api/jobs")).status, 401, "no auth, no jobs");
+		// Change: still ownership-checked, and a change to another key's job is refused outright.
+		const patched = await call(`/api/jobs/${mine.id}`, { method: "PATCH", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ name: "renamed", enabled: false }) });
+		assert.equal(patched.status, 200);
+		assert.equal(patched.json.job.name, "renamed");
+		assert.equal(patched.json.job.enabled, false);
+		assert.equal((await call(`/api/jobs/${theirJob.id}`, { method: "PATCH", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ name: "stolen" }) })).status, 404);
+
+		// Run now: queues a real run (ownership-checked), and jobs.mjs's own JOBS_ENABLED refusal
+		// still applies even though the job itself stays visible and manageable -- the switch
+		// stops runs, not the portal's view of what exists (same as the dashboard's Jobs page).
+		setJobRunner(async ({ prompt }) => ({ text: `ran: ${prompt}`, usage: { total_tokens: 1 }, cost: 0, scopedId: "portal-job-run" }));
+		const queued = await call(`/api/jobs/${mine.id}/run`, { method: "POST", headers: auth });
+		assert.equal(queued.status, 202);
+		assert.equal((await call(`/api/jobs/${theirJob.id}/run`, { method: "POST", headers: auth })).status, 404);
 
 		config.JOBS_ENABLED = false;
-		assert.deepEqual((await call("/api/jobs", { headers: auth })).json.jobs, [], "the feature switch is a kill switch for this route too");
-		assert.deepEqual((await call(`/api/jobs/${mine.id}/runs`, { headers: auth })).json.runs, [], "and for its run history");
+		assert.equal((await call("/api/jobs", { headers: auth })).json.jobs.length, 1, "still listed -- the switch stops runs, not visibility");
+		assert.equal((await call(`/api/jobs/${mine.id}/run`, { method: "POST", headers: auth })).status, 409, "but an actual run is refused");
 		config.JOBS_ENABLED = true;
+
+		// Runs: this job's own history, full detail by run id, both ownership-checked. The run must
+		// actually have finished before its history shows up -- queueRun only queues it.
+		await new Promise((r) => setTimeout(r, 30));
+		const runsList = await call(`/api/jobs/${mine.id}/runs`, { headers: auth });
+		assert.ok(runsList.json.runs.length >= 1);
+		const runId = runsList.json.runs[0].id;
+		assert.equal(runsList.json.runs[0].text, undefined, "a brief view has no full text");
+		assert.equal((await call(`/api/jobs/${theirJob.id}/runs`, { headers: auth })).status, 404);
+
+		const oneRun = await call(`/api/jobs/${mine.id}/runs/${runId}`, { headers: auth });
+		assert.equal(oneRun.status, 200);
+		assert.equal(typeof oneRun.json.run.text, "string", "the full view, with the run's actual text");
+		assert.equal((await call(`/api/jobs/${theirJob.id}/runs/${runId}`, { headers: auth })).status, 404, "a real run id, but the wrong job");
+
+		// Webhook trigger token and signing secret: issued, usable, and revocable, all scoped to
+		// this key's own job -- another key's job refuses every one of these the same way.
+		const triggered = await call(`/api/jobs/${mine.id}/trigger`, { method: "POST", headers: auth });
+		assert.equal(triggered.status, 200);
+		assert.match(triggered.json.token, /^pjt_/);
+		assert.equal(triggered.json.path, `/v1/piper/jobs/${mine.id}/trigger`);
+		assert.equal((await call(`/api/jobs/${theirJob.id}/trigger`, { method: "POST", headers: auth })).status, 404);
+		assert.equal((await call(`/api/jobs/${mine.id}/trigger`, { method: "DELETE", headers: auth })).json.revoked, true);
+
+		const withHook = await call(`/api/jobs/${mine.id}`, { method: "PATCH", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ webhookUrl: "https://example.test/hook" }) });
+		assert.match(withHook.json.webhookSecret, /^whsec_/, "a secret is minted the first time a webhook is added");
+		const rotated = await call(`/api/jobs/${mine.id}/webhook-secret`, { method: "POST", headers: auth });
+		assert.equal(rotated.status, 200);
+		assert.match(rotated.json.secret, /^whsec_/);
+		assert.notEqual(rotated.json.secret, withHook.json.webhookSecret, "a fresh secret, not the same one again");
+		assert.equal((await call(`/api/jobs/${theirJob.id}/webhook-secret`, { method: "POST", headers: auth })).status, 404);
+
+		// A key's total job count from the portal is capped, same shape as the agent self-service cap.
+		const priorCap = config.PORTAL_JOBS_MAX_PER_KEY;
+		config.PORTAL_JOBS_MAX_PER_KEY = 1;
+		const overCap = await call("/api/jobs", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ name: "y", prompt: "p" }) });
+		assert.equal(overCap.status, 429);
+		config.PORTAL_JOBS_MAX_PER_KEY = priorCap;
+
+		// Delete: ownership-checked, then actually gone.
+		assert.equal((await call(`/api/jobs/${theirJob.id}`, { method: "DELETE", headers: auth })).status, 404, "never another key's to delete");
+		assert.equal((await call(`/api/jobs/${mine.id}`, { method: "DELETE", headers: auth })).json.deleted, true);
+		assert.deepEqual((await call("/api/jobs", { headers: auth })).json.jobs, [], "actually gone");
+
+		assert.equal((await call("/api/jobs")).status, 401, "no auth, no jobs");
+		deleteJob(theirJob.id);
+		setJobRunner(null);
 	}
 
 	// Notebooks: the HTTP routes are wired and ownership-scoped -- lib/notebooks.mjs's own logic
