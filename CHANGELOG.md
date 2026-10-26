@@ -2,6 +2,21 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.11.0] - 2026-10-26
+
+### Added
+- **The client portal now shows a key's own scheduled jobs.** A new "Jobs" icon in the rail opens a
+  panel listing every job that runs against this key -- whether it was set up from the dashboard or
+  created by an agent for itself through its own scheduling tool -- with its schedule in plain words,
+  whether it is on or off, when it last ran (and whether that run succeeded), and when it is next due.
+  This is read-only: the portal is where a key holder checks on what their agents have scheduled for
+  them, not where jobs are created or changed -- that stays on the dashboard's own Jobs page. Backed by
+  two new routes on `lib/portal.mjs`, both scoped strictly to the authenticated key exactly like every
+  other portal route (`GET /api/jobs`, and `GET /api/jobs/<id>/runs` for that job's recent run history),
+  reusing `lib/jobs.mjs`'s own `listJobs`/`listRuns` and its existing client-safe view (no webhook
+  secrets or trigger tokens ever appear here). Off entirely, with an empty list rather than an error,
+  when `JOBS_ENABLED` is off.
+
 ## [1.10.0] - 2026-10-24
 
 ### Fixed

@@ -11421,6 +11421,41 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	deleteHistoryOf(myKey.id);
 	assert.equal(getHistory(myKey.id), null);
 
+	// Jobs: a read-only view of this key's own scheduled/webhook/request jobs (lib/jobs.mjs),
+	// for the portal's Jobs panel -- never another key's, and nothing when jobs are off entirely.
+	{
+		const { createJob } = await import("./server.mjs");
+		assert.deepEqual((await call("/api/jobs", { headers: auth })).json.jobs, [], "none yet");
+
+		const mine = createJob({ keyId: myKey.id, agentId: myAgent.id, name: "daily digest", prompt: "summarize", schedule: { kind: "daily", at: "07:30" } }).job;
+		const theirJob = createJob({ keyId: theirKey.id, name: "not yours", prompt: "p" }).job;
+
+		const mineJobs = await call("/api/jobs", { headers: auth });
+		assert.equal(mineJobs.status, 200);
+		assert.equal(mineJobs.json.jobs.length, 1, "only this key's own job");
+		assert.equal(mineJobs.json.jobs[0].id, mine.id);
+		assert.equal(mineJobs.json.jobs[0].name, "daily digest");
+		assert.equal(mineJobs.json.jobs[0].scheduleText, "every day at 07:30");
+		assert.equal(mineJobs.json.jobs[0].agent, "portal-agent");
+		assert.equal(mineJobs.json.jobs[0].webhookSecret, undefined, "never a secret in the client-facing view");
+
+		const theirView = await call("/api/jobs", { headers: { authorization: `Bearer ${theirs.key}` } });
+		assert.equal(theirView.json.jobs.length, 1);
+		assert.equal(theirView.json.jobs[0].id, theirJob.id);
+
+		// No run history yet, and another key's job id is simply not found, not leaked as empty.
+		assert.deepEqual((await call(`/api/jobs/${mine.id}/runs`, { headers: auth })).json.runs, []);
+		assert.equal((await call(`/api/jobs/${theirJob.id}/runs`, { headers: auth })).status, 404, "ownership checked on the runs route too");
+		assert.equal((await call(`/api/jobs/jdeadbeef0000/runs`, { headers: auth })).status, 404, "no such job at all");
+
+		assert.equal((await call("/api/jobs")).status, 401, "no auth, no jobs");
+
+		config.JOBS_ENABLED = false;
+		assert.deepEqual((await call("/api/jobs", { headers: auth })).json.jobs, [], "the feature switch is a kill switch for this route too");
+		assert.deepEqual((await call(`/api/jobs/${mine.id}/runs`, { headers: auth })).json.runs, [], "and for its run history");
+		config.JOBS_ENABLED = true;
+	}
+
 	// Notebooks: the HTTP routes are wired and ownership-scoped -- lib/notebooks.mjs's own logic
 	// (chunking, embeddings, extraction, retrieval) is already proven directly, above.
 	{

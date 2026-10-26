@@ -377,6 +377,9 @@
       <button class="icon-btn" id="gotonotebook" title="notebooks: grounded Q&amp;A over your own sources">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 16 v-3 M12 16 v-6 M15.5 16 v-4.5"/></svg>
       </button>
+      <button class="icon-btn" id="jobsbtn" title="scheduled jobs">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9 v4 l3 2 M9 2.5 h6"/></svg>
+      </button>
     </div>
     <div class="rail-bottom">
       <button class="icon-btn" id="passbtn" title="portal password">
@@ -407,6 +410,10 @@
     <input type="file" id="uploadinput" multiple hidden>
     <div id="crumb"></div>
     <div id="filelist"></div>
+  </div>
+  <div id="jobsbox" class="sidebox">
+    <div class="top"><b>Jobs</b><div><button id="jobsrefresh">refresh</button><button class="sideclose" data-close title="close">×</button></div></div>
+    <div id="jobslist" class="plist"></div>
   </div>
 
   <main>
@@ -1639,10 +1646,12 @@ function setSide(which) {
   $('filesbox').classList.toggle('on', SIDE_OPEN === 'files');
   $('toolsbox').classList.toggle('on', SIDE_OPEN === 'tools');
   $('skillsbox').classList.toggle('on', SIDE_OPEN === 'skills');
+  $('jobsbox').classList.toggle('on', SIDE_OPEN === 'jobs');
   $('convsbtn').className = 'icon-btn' + (SIDE_OPEN === 'convs' ? ' on' : '');
   $('filesbtn').className = 'icon-btn' + (SIDE_OPEN === 'files' ? ' on' : '');
   $('toolsbtn').className = 'icon-btn' + (SIDE_OPEN === 'tools' ? ' on' : '');
   $('skillsbtn').className = 'icon-btn' + (SIDE_OPEN === 'skills' ? ' on' : '');
+  $('jobsbtn').className = 'icon-btn' + (SIDE_OPEN === 'jobs' ? ' on' : '');
   // On a phone the open drawer overlays main (see the mobile @media block) rather than sitting beside
   // it, so it needs its own backdrop to tap-to-close -- same idea as dashboard.html's Playground drawer.
   syncBackdrop();
@@ -1665,6 +1674,7 @@ function reloadSidePanel() {
   if (SIDE_OPEN === 'files') loadFiles();
   else if (SIDE_OPEN === 'tools') loadTools();
   else if (SIDE_OPEN === 'skills') loadSkills();
+  else if (SIDE_OPEN === 'jobs') loadJobs();
 }
 function prow(name, description, tag) {
   var row = el('div'); row.className = 'prow';
@@ -1708,6 +1718,39 @@ function loadTools() {
       box.appendChild(el('div', 'Tools available')).className = 'psection';
       commands.forEach(function (c) { box.appendChild(prow('/' + c.name, c.description, '')); });
     }
+  }).catch(function (e) {
+    box.replaceChildren(el('div', e.message));
+  });
+}
+
+/* ---- jobs ---- */
+function fmtWhen(ms) { return ms ? new Date(ms).toLocaleString() : ''; }
+function loadJobs() {
+  var box = $('jobslist');
+  box.replaceChildren(el('div', 'loading…'));
+  apiJson('api/jobs').then(function (d) {
+    box.replaceChildren();
+    var jobs = d.jobs || [];
+    if (!jobs.length) { box.appendChild(el('div', 'No jobs are scheduled.')).className = 'empty'; return; }
+    jobs.forEach(function (j) {
+      var row = el('div'); row.className = 'prow';
+      var nm = el('div'); nm.className = 'nm';
+      nm.appendChild(el('b', j.name));
+      nm.appendChild(el('span', j.enabled ? 'on' : 'off')).className = 'tag';
+      row.appendChild(nm);
+      var line1 = [j.scheduleText];
+      if (j.agent) line1.push(j.agent);
+      row.appendChild(el('div', line1.join(' · '))).className = 'desc';
+      var line2;
+      if (!j.enabled && j.disabledReason) line2 = 'disabled: ' + j.disabledReason;
+      else if (j.last) line2 = (j.last.status === 'ok' ? 'last run ok' : 'last run: ' + j.last.status) + (j.last.endedAt ? ', ' + fmtWhen(j.last.endedAt) : '');
+      else line2 = 'never run yet';
+      if (j.enabled && j.nextRunAt) line2 += (line2 ? ' · ' : '') + 'next: ' + fmtWhen(j.nextRunAt);
+      var statusLine = el('div', line2); statusLine.className = 'desc';
+      if (!j.enabled || (j.last && j.last.status === 'error')) statusLine.classList.add('bad');
+      row.appendChild(statusLine);
+      box.appendChild(row);
+    });
   }).catch(function (e) {
     box.replaceChildren(el('div', e.message));
   });
@@ -2011,6 +2054,7 @@ $('convsbtn').addEventListener('click', function () { setSide('convs'); });
 $('filesbtn').addEventListener('click', function () { setSide('files'); });
 $('toolsbtn').addEventListener('click', function () { setSide('tools'); });
 $('skillsbtn').addEventListener('click', function () { setSide('skills'); });
+$('jobsbtn').addEventListener('click', function () { setSide('jobs'); });
 $('hamburger').addEventListener('click', function () { if (RAIL_OPEN) closeRailMenu(); else openRailMenu(); });
 // On a phone the open panel covers the whole screen, including the rail button that opened it (see the
 // mobile @media block), so there would otherwise be no way to close it short of reloading the page.
@@ -2021,6 +2065,7 @@ $('sidebackdrop').addEventListener('click', function () { if (RAIL_OPEN) closeRa
 function closeSideOnMobile() { if (SIDE_OPEN && window.matchMedia('(max-width: 760px)').matches) setSide(SIDE_OPEN); }
 $('toolsrefresh').addEventListener('click', loadTools);
 $('skillsrefresh').addEventListener('click', loadSkills);
+$('jobsrefresh').addEventListener('click', loadJobs);
 $('filesrefresh').addEventListener('click', loadFiles);
 $('uploadbtn').addEventListener('click', function () { $('uploadinput').click(); });
 $('uploadinput').addEventListener('change', function () { uploadFiles(this.files); this.value = ''; });
