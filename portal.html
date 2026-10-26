@@ -141,36 +141,59 @@
   .chat-split { position:relative; z-index:10; flex:1; display:flex; min-width:0; overflow:hidden; }
   .jobsview { position:relative; z-index:10; flex:1; display:flex; flex-direction:column; min-height:0; min-width:0; }
   .jobsview[hidden] { display:none; }
-  .jobsbody { flex:1; overflow:auto; padding:0 22px 24px; }
-  .jobcard { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:12px; }
-  .jobcard .jc-top { display:flex; align-items:center; gap:10px; }
-  .jobcard .jc-top b { font-size:14px; }
-  .jobcard .jc-top .sp { flex:1; }
-  .jobcard .jc-top .tag { color:var(--dim); font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; }
-  .jobcard .jc-sub { color:var(--muted); font-size:12.5px; margin-top:4px; }
-  .jobcard .jc-status { font-size:12.5px; margin-top:6px; }
-  .jobcard .jc-actions { display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
-  .jobcard .jc-actions button { font-size:12px; padding:5px 10px; }
-  .jobsempty { color:var(--muted); font-size:13px; padding:30px 0; text-align:center; }
+  .jobsbody { flex:1; overflow:auto; padding:4px 22px 24px; }
+  .jobsgrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:14px; }
+  .jobcard { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px 16px;
+    transition:border-color .15s, transform .15s; }
+  .jobcard:hover { border-color:rgba(255,255,255,.22); }
+  .jobcard .jc-top { display:flex; align-items:center; gap:8px; }
+  .jobcard .jc-top b { font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .jobcard .jc-top .sp { flex:1; min-width:4px; }
+  .jc-dot { width:8px; height:8px; min-width:8px; border-radius:50%; display:inline-block; }
+  .jc-dot.ok { background:var(--green); }
+  .jc-dot.bad { background:var(--red); }
+  .jc-dot.off { background:var(--dim); }
+  .jc-switch { position:relative; display:inline-block; width:32px; height:18px; flex:none; cursor:pointer; }
+  .jc-switch input { opacity:0; width:0; height:0; position:absolute; }
+  .jc-switch .slider { position:absolute; inset:0; background:rgba(255,255,255,.18); border-radius:999px; transition:background .15s; }
+  .jc-switch .slider:before { content:''; position:absolute; width:14px; height:14px; left:2px; top:2px;
+    background:#fff; border-radius:50%; transition:transform .15s; }
+  .jc-switch input:checked + .slider { background:var(--green); }
+  .jc-switch input:checked + .slider:before { transform:translateX(14px); }
+  .jobcard .jc-meta { display:flex; gap:8px; flex-wrap:wrap; color:var(--muted); font-size:12px; margin-top:7px; }
+  .jobcard .jc-meta span:not(:last-child)::after { content:'·'; margin-left:8px; color:var(--dim); }
+  .jobcard .jc-status { font-size:12px; margin-top:5px; color:var(--muted); }
+  .jobcard .jc-status.bad { color:var(--red); }
+  .jobcard .jc-actions { display:flex; align-items:center; gap:6px; margin-top:11px; }
+  .jobcard .jc-actions .sp { flex:1; min-width:4px; }
+  .jobcard .jc-actions button { font-size:11.5px; padding:5px 10px; background:rgba(255,255,255,.07); }
+  .jobcard .jc-actions button:hover { background:rgba(255,255,255,.16); }
+  .jc-icon-btn { background:transparent; padding:5px; border-radius:7px; display:flex; }
+  .jc-icon-btn:hover { background:rgba(255,255,255,.12); }
+  .jc-icon-btn.jc-danger:hover { color:var(--red); background:rgba(248,113,113,.14); }
+  .jobsempty { color:var(--muted); font-size:13px; padding:40px 0; text-align:center; }
   .jobsbanner { background:rgba(246,193,119,.14); border:1px solid rgba(246,193,119,.35); color:var(--amber);
     border-radius:10px; padding:9px 12px; font-size:12.5px; margin-bottom:14px; }
-  .jobform { max-width:640px; }
-  .jobform .jf-row { margin-bottom:12px; }
+  .jobform { max-width:none; }
+  .jobform .jf-row { margin-bottom:13px; }
   .jobform label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
-  .jobform input[type=text], .jobform input[type=number], .jobform textarea, .jobform select {
+  .jobform input[type=text], .jobform input[type=number], .jobform input[type=datetime-local], .jobform textarea, .jobform select {
     width:100%; background:rgba(105,116,116,.28); border:1px solid var(--border); color:var(--fg);
     border-radius:8px; padding:8px 10px; font:inherit; font-size:13px; }
-  .jobform textarea { resize:vertical; min-height:72px; }
-  .jobform .jf-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .jobform textarea { resize:vertical; min-height:80px; }
+  .jobform .jf-grid { display:grid; grid-template-columns:repeat(2, 1fr); gap:12px 16px; }
+  .jobform .jf-2col { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
   .jobform .jf-inline { display:flex; gap:10px; align-items:center; }
-  .jobform .jf-actions { display:flex; gap:8px; margin-top:16px; }
+  .jobform .jf-actions { display:flex; gap:8px; margin-top:18px; }
   .jobform .jf-hint { color:var(--dim); font-size:11.5px; margin-top:3px; }
   .jobruns table { width:100%; border-collapse:collapse; font-size:12.5px; }
-  .jobruns th, .jobruns td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--border); }
+  .jobruns th, .jobruns td { text-align:left; padding:7px 9px; border-bottom:1px solid var(--border); }
   .jobruns th { color:var(--muted); font-weight:500; }
   .jobruns tr.clickable { cursor:pointer; }
   .jobruns tr.clickable:hover { background:rgba(255,255,255,.05); }
+  .jobruns td.bad { color:var(--red); }
   .jobbacklink { color:var(--blue); cursor:pointer; font-size:12.5px; margin-bottom:12px; display:inline-block; }
+  @media (max-width: 760px) { .jobsgrid { grid-template-columns:1fr; } .jobform .jf-grid, .jobform .jf-2col { grid-template-columns:1fr; } }
   /* The preview pane gets a fixed basis (50% to start, then whatever #previewresizer last dragged it
      to, in px) with no grow/shrink of its own -- the chat column (flex:1 1 auto) always takes up
      whatever that leaves, so the two can never fight over space the way two percentage flex-basises
@@ -523,6 +546,13 @@
     <div class="hint" id="fmmeta"></div>
     <div id="fmbody" class="modal-body"></div>
     <div class="modal-actions"><a id="fmdownload" download><button>download</button></a></div>
+  </div>
+</div>
+
+<div id="jobmodal" class="modal-overlay" hidden>
+  <div class="modal-box wide">
+    <div class="modal-top"><b id="jobmodaltitle"></b><button id="jobmodalclose">close</button></div>
+    <div id="jobmodalbody" class="modal-body"></div>
   </div>
 </div>
 
@@ -1767,7 +1797,10 @@ function loadTools() {
 }
 
 /* ---- jobs: a full-page view (replaces the chat view in <main>), not a side drawer -- management
-   of this key's own jobs only, the portal's own equivalent of the dashboard's Jobs page. ---- */
+   of this key's own jobs only, the portal's own equivalent of the dashboard's Jobs page. The list
+   itself is a grid of compact cards; editing a job and browsing its runs happen in a modal, laid
+   over whichever card triggered it, so switching between "all my jobs" and "one job's detail"
+   never costs a full page swap. ---- */
 var JOBS_CACHE = [];
 var DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 function fmtWhen(ms) { return ms ? new Date(ms).toLocaleString() : ''; }
@@ -1813,35 +1846,66 @@ function renderJobsList() {
     var banner = jobsBanner();
     if (banner) box.appendChild(banner);
     if (!JOBS_CACHE.length) { box.appendChild(el('div', 'No jobs yet. "+ new job" sets an agent to run on a schedule, a webhook, or on demand.')).className = 'jobsempty'; return; }
-    JOBS_CACHE.forEach(function (j) { box.appendChild(jobCard(j)); });
+    var grid = el('div'); grid.className = 'jobsgrid';
+    JOBS_CACHE.forEach(function (j) { grid.appendChild(jobCard(j)); });
+    box.appendChild(grid);
   }).catch(function (e) { jobErrorBox(box, e); });
+}
+
+/** A small on/off switch, styled from a plain checkbox -- changing it patches the job immediately,
+   no save step, the same as flipping a setting anywhere else in the portal. */
+function jobSwitch(j) {
+  var wrap = el('label'); wrap.className = 'jc-switch'; wrap.title = j.enabled ? 'turn off' : 'turn on';
+  var cb = el('input'); cb.type = 'checkbox'; cb.checked = j.enabled;
+  cb.addEventListener('change', function () { setJobEnabled(j.id, cb.checked); });
+  wrap.appendChild(cb);
+  wrap.appendChild(el('span')).className = 'slider';
+  return wrap;
+}
+function jobDot(j) {
+  var cls = 'off';
+  if (j.enabled) cls = j.last && (j.last.status === 'error' || j.last.status === 'timeout') ? 'bad' : 'ok';
+  var d = el('span'); d.className = 'jc-dot ' + cls;
+  return d;
+}
+function jobIconBtn(title, pathD, cls) {
+  var b = el('button'); b.type = 'button'; b.title = title; b.className = 'jc-icon-btn' + (cls ? ' ' + cls : '');
+  b.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + pathD + '</svg>';
+  return b;
 }
 
 function jobCard(j) {
   var card = el('div'); card.className = 'jobcard';
   var top = el('div'); top.className = 'jc-top';
+  top.appendChild(jobDot(j));
   top.appendChild(el('b', j.name));
   top.appendChild(el('div')).className = 'sp';
-  top.appendChild(el('span', j.enabled ? 'on' : 'off')).className = 'tag';
+  top.appendChild(jobSwitch(j));
   card.appendChild(top);
-  var sub = [j.scheduleText];
-  if (j.agent) sub.push(j.agent);
-  card.appendChild(el('div', sub.join(' · '))).className = 'jc-sub';
+
+  var meta = el('div'); meta.className = 'jc-meta';
+  meta.appendChild(el('span', j.scheduleText));
+  if (j.agent) meta.appendChild(el('span', j.agent));
+  card.appendChild(meta);
+
   var status = el('div', jobStatusLine(j)); status.className = 'jc-status';
-  if (!j.enabled || (j.last && j.last.status === 'error')) status.classList.add('bad');
+  if (j.last && (j.last.status === 'error' || j.last.status === 'timeout')) status.classList.add('bad');
   card.appendChild(status);
+
   var actions = el('div'); actions.className = 'jc-actions';
   var runBtn = el('button', 'run now');
   runBtn.addEventListener('click', function () { runBtn.disabled = true; runJobNow(j.id).finally(function () { runBtn.disabled = false; }); });
   var runsBtn = el('button', 'runs');
-  runsBtn.addEventListener('click', function () { renderJobRuns(j); });
+  runsBtn.addEventListener('click', function () { openJobRuns(j); });
   var editBtn = el('button', 'edit');
-  editBtn.addEventListener('click', function () { renderJobForm(j.id); });
-  var toggleBtn = el('button', j.enabled ? 'turn off' : 'turn on');
-  toggleBtn.addEventListener('click', function () { setJobEnabled(j.id, !j.enabled); });
-  var delBtn = el('button', 'delete');
+  editBtn.addEventListener('click', function () { openJobForm(j.id); });
+  actions.appendChild(runBtn);
+  actions.appendChild(runsBtn);
+  actions.appendChild(editBtn);
+  actions.appendChild(el('div')).className = 'sp';
+  var delBtn = jobIconBtn('delete', '<path d="M4 7 h16 M9 7 V4 h6 v3 M6 7 l1 13 h10 l1-13 M10 11 v6 M14 11 v6"/>', 'jc-danger');
   delBtn.addEventListener('click', function () { deleteJobConfirm(j); });
-  [runBtn, runsBtn, editBtn, toggleBtn, delBtn].forEach(function (b) { actions.appendChild(b); });
+  actions.appendChild(delBtn);
   card.appendChild(actions);
   return card;
 }
@@ -1851,15 +1915,27 @@ function runJobNow(id) {
 }
 function setJobEnabled(id, enabled) {
   apiJson('api/jobs/' + id, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ enabled: enabled }) })
-    .then(renderJobsList).catch(function (e) { alert(e.message); });
+    .then(renderJobsList).catch(function (e) { alert(e.message); renderJobsList(); });
 }
 function deleteJobConfirm(j) {
   if (!confirm('Delete "' + (j.name || 'this job') + '"? Its run history goes with it. This cannot be undone.')) return;
   apiJson('api/jobs/' + j.id, { method: 'DELETE' }).then(renderJobsList).catch(function (e) { alert(e.message); });
 }
 
+/** The one modal every job sub-view (new/edit, runs, a run's detail) opens into, so hopping between
+   "all my jobs" and one job's detail is never a full page swap -- just this overlay's body changing. */
+function openJobModal(title) {
+  $('jobmodaltitle').textContent = title;
+  $('jobmodalbody').replaceChildren(el('div', 'loading…'));
+  $('jobmodal').hidden = false;
+}
+function closeJobModal() {
+  $('jobmodal').hidden = true;
+  $('jobmodalbody').replaceChildren();
+  renderJobsList();
+}
 function backLink(onClick) {
-  var b = el('span', '← back to jobs'); b.className = 'jobbacklink';
+  var b = el('span', '← back'); b.className = 'jobbacklink';
   b.addEventListener('click', onClick);
   return b;
 }
@@ -1871,31 +1947,32 @@ function jfRow(labelText, inputEl, hint) {
   return r;
 }
 
-/** The create/edit form. `id` null means a new job; otherwise the job is fetched fresh (never from
-   the list cache, which can be a moment stale) so editing always starts from the real thing. */
-function renderJobForm(id) {
-  var box = $('jobsmainlist');
-  box.replaceChildren(backLink(renderJobsList));
-  box.appendChild(el('div', 'loading…'));
+/** The create/edit form, opened in the job modal. `id` null means a new job; otherwise the job is
+   fetched fresh (never from the list cache, which can be a moment stale) so editing always starts
+   from the real thing. */
+function openJobForm(id) {
+  openJobModal(id ? 'Edit job' : 'New job');
   (id ? apiJson('api/jobs/' + id).then(function (d) { return d.job; }) : Promise.resolve(null))
-    .then(function (job) { buildJobForm(box, job); })
-    .catch(function (e) { box.replaceChildren(backLink(renderJobsList)); jobErrorBox(box, e); });
+    .then(function (job) { buildJobForm(job); })
+    .catch(function (e) { jobErrorBox($('jobmodalbody'), e); });
 }
 
-function buildJobForm(box, job) {
-  box.replaceChildren(backLink(renderJobsList));
-  box.appendChild(el('h3', job ? 'Edit job' : 'New job'));
+function buildJobForm(job) {
+  var box = $('jobmodalbody');
+  box.replaceChildren();
   var form = el('div'); form.className = 'jobform';
   box.appendChild(form);
 
+  var topRow = el('div'); topRow.className = 'jf-2col'; form.appendChild(topRow);
+
   var name = el('input'); name.type = 'text'; name.maxLength = 80; name.value = job ? job.name : '';
-  form.appendChild(jfRow('Name', name));
+  topRow.appendChild(jfRow('Name', name));
 
   var agent = el('select');
   agent.appendChild(Object.assign(el('option', '(no agent — run as this key directly)'), { value: '' }));
   (WHOAMI.agents || []).forEach(function (a) { agent.appendChild(Object.assign(el('option', a.name), { value: a.id })); });
   if (job && job.agentId) agent.value = job.agentId;
-  form.appendChild(jfRow('Agent', agent));
+  topRow.appendChild(jfRow('Agent', agent));
 
   var model = el('input'); model.type = 'text'; model.placeholder = "the agent's own default"; model.value = (job && job.model) || '';
   form.appendChild(jfRow('Model (optional)', model));
@@ -1909,10 +1986,11 @@ function buildJobForm(box, job) {
     .forEach(function (o) { kind.appendChild(Object.assign(el('option', o[1]), { value: o[0] })); });
   var sch = (job && job.schedule) || { kind: 'manual' };
   kind.value = sch.kind;
-  form.appendChild(jfRow('Schedule', kind));
+  var schRow = el('div'); schRow.className = 'jf-2col'; form.appendChild(schRow);
+  schRow.appendChild(jfRow('Schedule', kind));
 
   var subRow = el('div'); subRow.className = 'jf-row';
-  form.appendChild(subRow);
+  schRow.appendChild(subRow);
 
   var everyN = el('input'); everyN.type = 'number'; everyN.min = 1; everyN.value = sch.kind === 'interval' ? sch.every : 1;
   var everyUnit = el('select');
@@ -2016,7 +2094,7 @@ function buildJobForm(box, job) {
   var actions = el('div'); actions.className = 'jf-actions';
   var saveBtn = el('button', job ? 'save changes' : 'create job');
   var cancelBtn = el('button', 'cancel');
-  cancelBtn.addEventListener('click', renderJobsList);
+  cancelBtn.addEventListener('click', closeJobModal);
   actions.appendChild(saveBtn);
   actions.appendChild(cancelBtn);
   form.appendChild(actions);
@@ -2045,21 +2123,25 @@ function buildJobForm(box, job) {
     saveBtn.disabled = true;
     var req = job ? apiJson('api/jobs/' + job.id, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
                   : apiJson('api/jobs', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-    req.then(renderJobsList).catch(function (e) { err.textContent = e.message; saveBtn.disabled = false; });
+    req.then(closeJobModal).catch(function (e) { err.textContent = e.message; saveBtn.disabled = false; });
   });
 }
 
-function renderJobRuns(job) {
-  var box = $('jobsmainlist');
-  box.replaceChildren(backLink(renderJobsList));
-  box.appendChild(el('h3', job.name + ' — recent runs'));
-  var wrap = el('div', 'loading…');
-  box.appendChild(wrap);
+/** Runs and a run's own detail live in the same job modal as the form -- switching between the two
+   or back to the list changes only the modal's body, the overlay itself never closes and reopens. */
+function openJobRuns(job) {
+  openJobModal(job.name + ' — runs');
+  loadJobRuns(job);
+}
+function loadJobRuns(job) {
+  var box = $('jobmodalbody');
+  box.replaceChildren(el('div', 'loading…'));
   apiJson('api/jobs/' + job.id + '/runs').then(function (d) {
-    wrap.replaceChildren();
+    box.replaceChildren();
     var runs = d.runs || [];
-    if (!runs.length) { wrap.replaceChildren(); wrap.className = 'jobsempty'; wrap.textContent = 'No runs yet.'; return; }
-    wrap.className = 'jobruns';
+    if (!runs.length) { box.appendChild(el('div', 'No runs yet.')).className = 'jobsempty'; return; }
+    var wrap = el('div'); wrap.className = 'jobruns';
+    box.appendChild(wrap);
     var table = el('table');
     var head = el('tr');
     ['when', 'trigger', 'status', 'cost', 'preview'].forEach(function (h) { head.appendChild(el('th', h)); });
@@ -2071,17 +2153,17 @@ function renderJobRuns(job) {
       var st = el('td', r.status); if (r.status === 'error' || r.status === 'timeout') st.className = 'bad'; tr.appendChild(st);
       tr.appendChild(el('td', r.cost ? ('$' + r.cost.toFixed(4)) : ''));
       tr.appendChild(el('td', r.error || r.preview || ''));
-      tr.addEventListener('click', function () { renderJobRunDetail(job, r.id); });
+      tr.addEventListener('click', function () { openJobRunDetail(job, r.id); });
       table.appendChild(tr);
     });
     wrap.appendChild(table);
-  }).catch(function (e) { jobErrorBox(wrap, e); });
+  }).catch(function (e) { jobErrorBox(box, e); });
 }
 
-function renderJobRunDetail(job, runId) {
-  var box = $('jobsmainlist');
-  box.replaceChildren(backLink(function () { renderJobRuns(job); }));
-  box.appendChild(el('h3', job.name + ' — run'));
+function openJobRunDetail(job, runId) {
+  $('jobmodaltitle').textContent = job.name + ' — run';
+  var box = $('jobmodalbody');
+  box.replaceChildren(backLink(function () { openJobRuns(job); }));
   var wrap = el('div', 'loading…');
   box.appendChild(wrap);
   apiJson('api/jobs/' + job.id + '/runs/' + runId).then(function (d) {
@@ -2395,7 +2477,9 @@ $('toolsbtn').addEventListener('click', function () { setSide('tools'); });
 $('skillsbtn').addEventListener('click', function () { setSide('skills'); });
 $('jobsbtn').addEventListener('click', showJobsView);
 $('jobsback').addEventListener('click', showChatView);
-$('jobsnewbtn').addEventListener('click', function () { renderJobForm(null); });
+$('jobsnewbtn').addEventListener('click', function () { openJobForm(null); });
+$('jobmodalclose').addEventListener('click', closeJobModal);
+$('jobmodal').addEventListener('click', function (e) { if (e.target === $('jobmodal')) closeJobModal(); });
 $('hamburger').addEventListener('click', function () { if (RAIL_OPEN) closeRailMenu(); else openRailMenu(); });
 // On a phone the open panel covers the whole screen, including the rail button that opened it (see the
 // mobile @media block), so there would otherwise be no way to close it short of reloading the page.

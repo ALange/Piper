@@ -2,6 +2,20 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.12.1] - 2026-10-26
+
+### Changed
+- **Reworked the client portal's Jobs page for space and polish, with no change to what it does.**
+  The job list is now a responsive grid of compact cards instead of a single stacked column, each
+  showing a status dot (on and healthy, on and failing, or off), a small switch to turn the job on or
+  off in place, and its schedule and agent on one line. Editing a job, browsing its runs and a run's
+  own detail now all open in a single modal layered over the list -- the same modal the dashboard's
+  own file preview already uses the pattern of -- rather than replacing the whole Jobs page each time,
+  so hopping between "all my jobs" and one job's detail is just that overlay's body changing, never a
+  full page swap. The create/edit form uses the modal's extra width to put name and agent, and the
+  schedule picker and its own sub-fields, side by side instead of stacked. Purely `portal.html`; no
+  API or behavior changes.
+
 ## [1.12.0] - 2026-10-26
 
 ### Changed
