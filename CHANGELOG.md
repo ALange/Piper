@@ -2,6 +2,16 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.13.0] - 2026-10-26
+
+### Added
+- **A combined run log across all of a key's jobs in the client portal.** Each job's own "runs" button
+  still shows that one job's history, but the Jobs page now has a "Run log" tab next to it: every run
+  of every job this key owns, newest first, each row naming the job it belongs to, with the same
+  click-through to a run's full prompt and result as the per-job view. Backed by a new
+  `GET /api/jobs/runs` route and `lib/jobs.mjs`'s `listRunsForKey`, both strictly scoped to the
+  authenticated key's own runs (`job_runs.key_id`, never a join that could leak another key's).
+
 ## [1.12.1] - 2026-10-26
 
 ### Changed

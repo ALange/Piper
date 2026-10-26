@@ -11424,7 +11424,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	// Jobs: the client portal's own self-service equivalent of the dashboard's Jobs page --
 	// create, change, run, delete and inspect, but strictly scoped to this key's own jobs.
 	{
-		const { createJob, deleteJob, setJobRunner } = await import("./server.mjs");
+		const { createJob, deleteJob, queueRun, setJobRunner } = await import("./server.mjs");
 		assert.deepEqual((await call("/api/jobs", { headers: auth })).json.jobs, [], "none yet");
 
 		const theirJob = createJob({ keyId: theirKey.id, name: "not yours", prompt: "p" }).job;
@@ -11493,6 +11493,18 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		assert.equal(oneRun.status, 200);
 		assert.equal(typeof oneRun.json.run.text, "string", "the full view, with the run's actual text");
 		assert.equal((await call(`/api/jobs/${theirJob.id}/runs/${runId}`, { headers: auth })).status, 404, "a real run id, but the wrong job");
+
+		// The combined log, across every job of this key: carries each run's own job name, still
+		// a brief view (no full text), and never another key's runs mixed in.
+		queueRun(theirJob.id, "manual");
+		await new Promise((r) => setTimeout(r, 30));
+		const combined = await call("/api/jobs/runs", { headers: auth });
+		assert.equal(combined.status, 200);
+		assert.ok(combined.json.runs.length >= 1);
+		assert.ok(combined.json.runs.every((r) => r.jobId === mine.id), "only this key's own runs, never another's mixed in");
+		assert.equal(combined.json.runs[0].jobName, "renamed", "each run carries its own job's current name");
+		assert.equal(combined.json.runs[0].text, undefined, "still a brief view, no full text");
+		assert.equal((await call("/api/jobs/runs")).status, 401, "no auth, no log");
 
 		// Webhook trigger token and signing secret: issued, usable, and revocable, all scoped to
 		// this key's own job -- another key's job refuses every one of these the same way.

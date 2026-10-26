@@ -172,6 +172,11 @@
   .jc-icon-btn:hover { background:rgba(255,255,255,.12); }
   .jc-icon-btn.jc-danger:hover { color:var(--red); background:rgba(248,113,113,.14); }
   .jobsempty { color:var(--muted); font-size:13px; padding:40px 0; text-align:center; }
+  .jobstabs { display:flex; gap:4px; background:rgba(255,255,255,.06); border-radius:9px; padding:3px; }
+  .jobstab { background:transparent; color:var(--muted); padding:6px 14px; border-radius:7px; font-size:12.5px; }
+  .jobstab:hover { background:rgba(255,255,255,.08); color:var(--fg); }
+  .jobstab.on { background:rgba(255,255,255,.14); color:var(--fg); }
+  .jobstab.on:hover { background:rgba(255,255,255,.14); }
   .jobsbanner { background:rgba(246,193,119,.14); border:1px solid rgba(246,193,119,.35); color:var(--amber);
     border-radius:10px; padding:9px 12px; font-size:12.5px; margin-bottom:14px; }
   .jobform { max-width:none; }
@@ -522,7 +527,10 @@
         <button class="icon-btn hamburger" id="jobsback" title="back to chat">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 19 L8 12 l7-7"/></svg>
         </button>
-        <b>Jobs</b>
+        <div class="jobstabs">
+          <button id="jobstab-jobs" class="jobstab on">Jobs</button>
+          <button id="jobstab-log" class="jobstab">Run log</button>
+        </div>
         <div class="sp"></div>
         <button id="jobsnewbtn">+ new job</button>
       </div>
@@ -1802,6 +1810,7 @@ function loadTools() {
    over whichever card triggered it, so switching between "all my jobs" and "one job's detail"
    never costs a full page swap. ---- */
 var JOBS_CACHE = [];
+var JOBS_TAB = 'jobs'; // 'jobs' (the card grid) or 'log' (a combined run log across all of them)
 var DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 function fmtWhen(ms) { return ms ? new Date(ms).toLocaleString() : ''; }
 
@@ -1812,7 +1821,16 @@ function showChatView() {
 function showJobsView() {
   $('chatview').hidden = true;
   $('jobsview').hidden = false;
-  renderJobsList();
+  switchJobsTab('jobs');
+}
+function switchJobsTab(tab) {
+  JOBS_TAB = tab;
+  $('jobstab-jobs').classList.toggle('on', tab === 'jobs');
+  $('jobstab-log').classList.toggle('on', tab === 'log');
+  refreshJobsView();
+}
+function refreshJobsView() {
+  if (JOBS_TAB === 'log') renderJobsLog(); else renderJobsList();
 }
 
 function jobErrorBox(box, e) {
@@ -1849,6 +1867,40 @@ function renderJobsList() {
     var grid = el('div'); grid.className = 'jobsgrid';
     JOBS_CACHE.forEach(function (j) { grid.appendChild(jobCard(j)); });
     box.appendChild(grid);
+  }).catch(function (e) { jobErrorBox(box, e); });
+}
+
+/** A combined activity log across every one of this key's jobs, newest first -- unlike a single
+   job's own "runs" (opened from its card), this is everything in one place. Clicking a row opens
+   the same run-detail view a per-job runs list would, via a minimal {id, name} stand-in for the
+   job -- openJobRunDetail only ever needs those two fields. */
+function renderJobsLog() {
+  var box = $('jobsmainlist');
+  box.replaceChildren(el('div', 'loading…'));
+  apiJson('api/jobs/runs').then(function (d) {
+    box.replaceChildren();
+    var banner = jobsBanner();
+    if (banner) box.appendChild(banner);
+    var runs = d.runs || [];
+    if (!runs.length) { box.appendChild(el('div', 'No runs yet across any of your jobs.')).className = 'jobsempty'; return; }
+    var wrap = el('div'); wrap.className = 'jobruns';
+    box.appendChild(wrap);
+    var table = el('table');
+    var head = el('tr');
+    ['when', 'job', 'trigger', 'status', 'cost', 'preview'].forEach(function (h) { head.appendChild(el('th', h)); });
+    table.appendChild(head);
+    runs.forEach(function (r) {
+      var tr = el('tr'); tr.className = 'clickable';
+      tr.appendChild(el('td', fmtWhen(r.startedAt || r.queuedAt)));
+      tr.appendChild(el('td', r.jobName || '(deleted job)'));
+      tr.appendChild(el('td', r.trigger));
+      var st = el('td', r.status); if (r.status === 'error' || r.status === 'timeout') st.className = 'bad'; tr.appendChild(st);
+      tr.appendChild(el('td', r.cost ? ('$' + r.cost.toFixed(4)) : ''));
+      tr.appendChild(el('td', r.error || r.preview || ''));
+      tr.addEventListener('click', function () { openJobRunDetail({ id: r.jobId, name: r.jobName || '(deleted job)' }, r.id); });
+      table.appendChild(tr);
+    });
+    wrap.appendChild(table);
   }).catch(function (e) { jobErrorBox(box, e); });
 }
 
@@ -1911,15 +1963,15 @@ function jobCard(j) {
 }
 
 function runJobNow(id) {
-  return apiJson('api/jobs/' + id + '/run', { method: 'POST' }).then(renderJobsList).catch(function (e) { alert(e.message); });
+  return apiJson('api/jobs/' + id + '/run', { method: 'POST' }).then(refreshJobsView).catch(function (e) { alert(e.message); });
 }
 function setJobEnabled(id, enabled) {
   apiJson('api/jobs/' + id, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ enabled: enabled }) })
-    .then(renderJobsList).catch(function (e) { alert(e.message); renderJobsList(); });
+    .then(refreshJobsView).catch(function (e) { alert(e.message); refreshJobsView(); });
 }
 function deleteJobConfirm(j) {
   if (!confirm('Delete "' + (j.name || 'this job') + '"? Its run history goes with it. This cannot be undone.')) return;
-  apiJson('api/jobs/' + j.id, { method: 'DELETE' }).then(renderJobsList).catch(function (e) { alert(e.message); });
+  apiJson('api/jobs/' + j.id, { method: 'DELETE' }).then(refreshJobsView).catch(function (e) { alert(e.message); });
 }
 
 /** The one modal every job sub-view (new/edit, runs, a run's detail) opens into, so hopping between
@@ -1932,7 +1984,7 @@ function openJobModal(title) {
 function closeJobModal() {
   $('jobmodal').hidden = true;
   $('jobmodalbody').replaceChildren();
-  renderJobsList();
+  refreshJobsView();
 }
 function backLink(onClick) {
   var b = el('span', '← back'); b.className = 'jobbacklink';
@@ -2478,6 +2530,8 @@ $('skillsbtn').addEventListener('click', function () { setSide('skills'); });
 $('jobsbtn').addEventListener('click', showJobsView);
 $('jobsback').addEventListener('click', showChatView);
 $('jobsnewbtn').addEventListener('click', function () { openJobForm(null); });
+$('jobstab-jobs').addEventListener('click', function () { switchJobsTab('jobs'); });
+$('jobstab-log').addEventListener('click', function () { switchJobsTab('log'); });
 $('jobmodalclose').addEventListener('click', closeJobModal);
 $('jobmodal').addEventListener('click', function (e) { if (e.target === $('jobmodal')) closeJobModal(); });
 $('hamburger').addEventListener('click', function () { if (RAIL_OPEN) closeRailMenu(); else openRailMenu(); });
