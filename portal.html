@@ -241,19 +241,17 @@
   .msg.assistant .body { flex:1; min-width:0; border-radius:16px; padding:16px 20px;
     background:rgba(24,26,27,.58); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
     font-size:14.5px; line-height:1.6; color:#f0f2f1; box-shadow:0 10px 30px rgba(0,0,0,.2); }
-  /* Fade/lift in once, the moment an element is first created -- never replayed afterwards. The
-     message row itself (.msg) is created once and only ever patched in place. Each reply part also
-     gets its own wrapper (.part-wrap, assigned in buildMessageNode()) that's reused by position
-     across renders: an unchanged part is left untouched, and a changed one (most commonly the
-     sentence still being streamed in) has its *content* swapped inside that same wrapper rather than
-     the wrapper itself being replaced -- so neither replays this animation, which is what keeps a
-     streaming reply's growing text from flickering on every delta. Only a genuinely new wrapper (the
-     first content in a reply, a tool call, a later part appearing after it, or the thinking block)
-     is a fresh element, so that's what actually fades in. prefers-reduced-motion turns it all off. */
+  /* Each message row fades/lifts in once, the moment it's first created. Deliberately NOT applied to
+     anything inside .body: while a reply streams, buildMessageNode() tears down and rebuilds the
+     body's non-thinking children fresh on every animation frame (see frameMessages() below), so an
+     animation on those would restart from opacity 0 on every single frame -- text already on screen
+     would keep re-fading as more arrives, which reads as blinking rather than a smooth entrance. The
+     row itself, by contrast, is created once and only ever patched in place afterwards, so this fires
+     exactly once per message. prefers-reduced-motion turns it off. */
   @keyframes msgFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
-  .msg, .part-wrap, details.think { animation:msgFadeIn .32s ease-out; }
+  .msg { animation:msgFadeIn .32s ease-out; }
   @media (prefers-reduced-motion: reduce) {
-    .msg, .part-wrap, details.think { animation:none; }
+    .msg { animation:none; }
   }
 
   .md p { margin:0 0 10px; } .md ul, .md ol { margin:0 0 10px; padding-left:22px; } .md li { margin:2px 0; }
@@ -1221,33 +1219,11 @@ function buildMessageNode(m, botLabel, row) {
       body.insertBefore(thinkNode, body.firstChild);
     }
   }
-  // Everything after the thinking block, patched in place rather than torn down and rebuilt: each
-  // part gets its own wrapper div, reused by position across renders. A part whose rendering hasn't
-  // changed since last time is left completely untouched (cheap, and never replays its one-shot
-  // creation fade). A part that changed gets its *content* replaced inside that same wrapper -- the
-  // wrapper element itself persists, so that doesn't fade either, it just updates seamlessly; that's
-  // what keeps a streaming reply's still-growing sentence from re-flashing on every delta. Only a
-  // genuinely new wrapper (the first content in a reply, or a later part appearing after it) is a
-  // fresh element, so it fades/lifts in exactly once, the moment it's created. The placeholder/error
-  // blocks below aren't part of this scheme (they're one-offs, not continuously regenerated) and are
-  // simply removed and re-added fresh each time, as before.
-  Array.prototype.slice.call(body.children).forEach(function (ch) {
-    if (ch.classList.contains('pending-placeholder') || ch.classList.contains('err') || ch.classList.contains('err-why')) body.removeChild(ch);
-  });
-  var oldWraps = Array.prototype.slice.call(body.children).filter(function (ch) { return ch !== thinkNode; });
-  rest.forEach(function (p, i) {
-    var sig = SHOW_TOOLS + '|' + JSON.stringify(p);
-    var existing = oldWraps[i];
-    if (existing) {
-      if (existing.dataset.sig !== sig) { existing.dataset.sig = sig; existing.replaceChildren(partNode(p)); }
-      return;
-    }
-    var wrap = el('div'); wrap.className = 'part-wrap'; wrap.dataset.sig = sig;
-    wrap.appendChild(partNode(p));
-    body.appendChild(wrap);
-  });
-  while (body.children.length > (thinkNode ? 1 : 0) + rest.length) body.removeChild(body.lastChild);
-  if (m.pending && !(m.parts || []).length) { var ph = el('div', 'Thinking…'); ph.className = 'pending-placeholder'; body.appendChild(ph); }
+  // Everything after the thinking block is simpler to just rebuild each time -- remove every other
+  // child, then re-append fresh. Only the thinking node above is ever spared.
+  Array.prototype.slice.call(body.children).forEach(function (ch) { if (ch !== thinkNode) body.removeChild(ch); });
+  rest.forEach(function (p) { body.appendChild(partNode(p)); });
+  if (m.pending && !(m.parts || []).length) body.appendChild(el('div', 'Thinking…'));
   if (m.error) {
     var e = el('div', m.error); e.className = 'err'; body.appendChild(e);
     if (m.errorDetail) {

@@ -2,6 +2,22 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.13.4] - 2026-10-28
+
+### Fixed
+- **Reverted 1.13.3's per-part DOM reuse in the client portal's message rendering.** That change
+  (reusing a reply part's wrapper by position across redraws, patching changed content into it in
+  place instead of tearing it down) was meant to let the actual fade-in happen without flicker, but
+  it touched the core path that renders every assistant message and turned out to produce error
+  messages that were no longer the friendly, human-readable text this gateway normally shows -- the
+  exact failure mode wasn't reproducible in isolation (it ran clean through the full automated suite
+  and a scripted DOM simulation of a streaming reply, tool call, and an error path), but the risk to
+  a core, heavily-exercised rendering path outweighed the cosmetic win, so it's reverted rather than
+  chased further blind. Back to the simpler, previously-verified rendering: reply content is torn
+  down and rebuilt each frame, same as every release before 1.13.1. Only the message bubble itself
+  still fades in on first appearing (1.13.2's change, unaffected and kept) -- the reply text inside
+  it does not fade, pending a safer way to do that without touching this path.
+
 ## [1.13.3] - 2026-10-28
 
 ### Fixed
