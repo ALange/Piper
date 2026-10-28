@@ -2,6 +2,16 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.13.1] - 2026-10-28
+
+### Changed
+- **Agent replies now fade in smoothly in the client portal, instead of popping onto the screen.**
+  Each message row eases in with a gentle fade and lift the moment it first appears, and while a
+  reply is still streaming, every freshly settled chunk of its text gets the same short fade rather
+  than snapping into place — no change to how fast or how often the stream itself redraws, just how
+  each update looks when it lands. Honors `prefers-reduced-motion` by turning both off for anyone who
+  has that set. Pure CSS, no behavioral change, so no restart was needed on the production host.
+
 ## [1.13.0] - 2026-10-26
 
 ### Added
