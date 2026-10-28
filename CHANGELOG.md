@@ -2,6 +2,19 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.13.3] - 2026-10-28
+
+### Fixed
+- **Agent reply text in the client portal now actually fades in, instead of appearing with no
+  animation at all.** 1.13.2 fixed the blinking by dropping the fade from the reply's own text (only
+  the message bubble itself still faded), which just traded one problem for the original complaint:
+  the words never fade. Each reply part (a paragraph, a tool call, a thinking block) now gets its own
+  wrapper, reused by position across redraws — the first time a wrapper is created it fades in once,
+  same as the bubble, but once it exists, further streamed text is patched into that same wrapper in
+  place rather than tearing it down and rebuilding it, so it never replays the fade and never
+  flickers. Net effect: a reply's first line (and each later paragraph or tool call) visibly eases
+  in, while the still-growing sentence inside it just grows normally with no flashing.
+
 ## [1.13.2] - 2026-10-28
 
 ### Fixed
