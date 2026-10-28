@@ -241,16 +241,17 @@
   .msg.assistant .body { flex:1; min-width:0; border-radius:16px; padding:16px 20px;
     background:rgba(24,26,27,.58); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
     font-size:14.5px; line-height:1.6; color:#f0f2f1; box-shadow:0 10px 30px rgba(0,0,0,.2); }
-  /* Each message row fades/lifts in once when first created; while a reply is still streaming,
-     buildMessageNode() rebuilds the assistant body's non-thinking children fresh on every animation
-     frame (see frameMessages() below) -- animating those same direct children too means every newly
-     settled chunk of text eases in rather than popping in mid-sentence, without touching the
-     incremental-render logic itself. prefers-reduced-motion turns both off. */
+  /* Each message row fades/lifts in once, the moment it's first created. Deliberately NOT applied to
+     anything inside .body: while a reply streams, buildMessageNode() tears down and rebuilds the
+     body's non-thinking children fresh on every animation frame (see frameMessages() below), so an
+     animation on those would restart from opacity 0 on every single frame -- text already on screen
+     would keep re-fading as more arrives, which reads as blinking rather than a smooth entrance. The
+     row itself, by contrast, is created once and only ever patched in place afterwards, so this fires
+     exactly once per message. prefers-reduced-motion turns it off. */
   @keyframes msgFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
   .msg { animation:msgFadeIn .32s ease-out; }
-  .msg.assistant .body > * { animation:msgFadeIn .22s ease-out; }
   @media (prefers-reduced-motion: reduce) {
-    .msg, .msg.assistant .body > * { animation:none; }
+    .msg { animation:none; }
   }
 
   .md p { margin:0 0 10px; } .md ul, .md ol { margin:0 0 10px; padding-left:22px; } .md li { margin:2px 0; }

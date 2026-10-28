@@ -2,6 +2,17 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.13.2] - 2026-10-28
+
+### Fixed
+- **The 1.13.1 fade-in was blinking, not fading, while a reply streamed.** That release also faded in
+  every direct child of a reply's body on each redraw, but the portal rebuilds those children fresh
+  on every animation frame while a reply is streaming (so each new chunk of text can be drawn without
+  redrawing the whole conversation) — so already-visible text kept resetting to invisible and fading
+  back in on every frame, which read as a flicker instead of a smooth entrance. The fade now lives
+  only on the message row itself, which is created once and never rebuilt, so it fires exactly once
+  per message with no flicker while the text inside streams in normally.
+
 ## [1.13.1] - 2026-10-28
 
 ### Changed
