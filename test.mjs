@@ -8458,6 +8458,54 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${profileHelper} "\${rest[@]}"
 		config.SIGNAL_SESSION_MAX_AGE_DAYS = 0;
 	}
 
+	// SIGNAL_RESET_ON_IDLE: a gap since the last message longer than SESSION_IDLE_MS starts the next
+	// one completely fresh, forgetting everything before it -- no handoff note (unlike rotation above),
+	// and keyed on last_used_at (the idle gap), not created_at (the session's total age).
+	{
+		const { credentialFor, chatIdHash, chatStore, scopedSessionId, signalClientSessionId, sessions } = await import("./server.mjs");
+		config.SESSION_IDLE_MS = 5 * 60_000;
+		const credential = credentialFor(key.id, agent.id);
+		const scoped = scopedSessionId(credential, signalClientSessionId(key.id, agent.id));
+
+		// A brand new session, well within both the idle gap and the (already off) age limit -- resumed
+		// normally, same session id, nothing forgotten.
+		chatStore.put({ id_hash: chatIdHash(scoped), key_id: key.id, workspace: "", created_at: Date.now(), last_used_at: Date.now(), requests: 1, named: 0, state_json: "{}" });
+		turns.length = 0;
+		setSignalRunner(async ({ credential, clientSessionId, prompt, images }) => {
+			turns.push({ keyId: credential.id, clientSessionId, prompt, images });
+			return { text: `echo: ${prompt}` };
+		});
+		liveChild.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "receive", params: { envelope: { sourceNumber: "+15551112222", dataMessage: { message: "still recent" } } } })}\n`);
+		await waitFor(() => turns.length >= 1);
+		assert.equal(turns.length, 1, "recent enough -- just the one real turn, nothing reset");
+		assert.doesNotMatch(turns[0].prompt, /fresh|handoff/i);
+
+		// Idle past SESSION_IDLE_MS (but NOT old enough for age-based rotation, which is off here
+		// anyway) -- the old session is ended with no handoff turn at all (exactly one turn: the real
+		// message, against a session id that's the same string but backed by nothing from before).
+		chatStore.put({ id_hash: chatIdHash(scoped), key_id: key.id, workspace: "", created_at: Date.now() - 60_000, last_used_at: Date.now() - 6 * 60_000, requests: 1, named: 0, state_json: "{}" });
+		turns.length = 0;
+		liveChild.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "receive", params: { envelope: { sourceNumber: "+15551112222", dataMessage: { message: "after a long gap" } } } })}\n`);
+		await waitFor(() => turns.length >= 1);
+		assert.equal(turns.length, 1, "no handoff turn -- idle reset forgets outright, it doesn't ask the old session for anything");
+		assert.equal(turns[0].prompt, "after a long gap", "no 'continuing from an earlier one' preamble either");
+		assert.ok(recentAudit().some((a) => a.action === "signal.session.idle_reset"));
+		assert.equal(chatStore.get(chatIdHash(scoped)), null, "the stale row is gone");
+
+		// The off switch: same idle gap, but with the feature turned off, resumes normally instead.
+		config.SIGNAL_RESET_ON_IDLE = false;
+		chatStore.put({ id_hash: chatIdHash(scoped), key_id: key.id, workspace: "", created_at: Date.now() - 60_000, last_used_at: Date.now() - 6 * 60_000, requests: 1, named: 0, state_json: "{}" });
+		turns.length = 0;
+		liveChild.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "receive", params: { envelope: { sourceNumber: "+15551112222", dataMessage: { message: "idle reset is off" } } } })}\n`);
+		await waitFor(() => turns.length >= 1);
+		assert.equal(turns.length, 1, "still just one turn -- resumed, not ended, with the feature off");
+		assert.notEqual(chatStore.get(chatIdHash(scoped)), null, "the row survives this time");
+		config.SIGNAL_RESET_ON_IDLE = true;
+
+		sessions.close(scoped);
+		config.SESSION_IDLE_MS = 600000;
+	}
+
 	// Steering: a second message arriving while the first is still being answered is folded into that
 	// same turn (lib/chat.mjs's steerSession) instead of queued behind it -- the real point, same as the
 	// Playground and portal's own steer tests, just reached over Signal's own inbound path instead of

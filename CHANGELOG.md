@@ -2,6 +2,21 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.14.1] - 2026-10-29
+
+### Added
+- **A Signal conversation can now start fresh after a long enough gap, instead of carrying its
+  context forward forever.** Every other channel gets a clean slate on its own -- a web chat that's
+  gone idle for a while is simply gone, and the next message starts a new one -- but Signal never had
+  anything like that: the same session just kept resuming, and kept growing, for as long as the number
+  stayed linked. SIGNAL_RESET_ON_IDLE (on by default) now ends a Signal session, with nothing carried
+  forward, once a gap since its last message passes SESSION_IDLE_MS -- the same idle timeout that
+  already hibernates any other kind of session, so there's one number to tune rather than two. This is
+  separate from SIGNAL_SESSION_MAX_AGE_DAYS's own rotation, which carries a short handoff note forward
+  instead of forgetting outright, and fires on a session's total age rather than a gap in the middle
+  of it; a chatty conversation that never goes quiet long enough to idle-reset still rotates eventually
+  on age, same as before.
+
 ## [1.14.0] - 2026-10-29
 
 ### Fixed
