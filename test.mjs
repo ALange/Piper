@@ -8226,14 +8226,22 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		return { text: `echo: ${prompt}` };
 	});
 	// Re-spawn with a fake daemon whose stdout this test can drive directly, captured via closure.
+	// failAllSends, when set, makes every outbound "send" RPC come back as a JSON-RPC error instead of
+	// succeeding -- used below to prove a failed send doesn't silently swallow a reply.
 	let liveChild = null;
+	let failAllSends = false;
+	const attempted = []; // every "send" RPC's message, delivered or not -- sent only gets the delivered ones
 	setSignalSpawn(() => {
 		const fake = new EventEmitter();
 		fake.stdout = new PassThrough();
 		fake.stderr = new PassThrough();
 		fake.stdin = { writable: true, write: (line) => {
 			const msg = JSON.parse(line);
-			if (msg.method === "send") sent.push(msg.params);
+			if (msg.method === "send") {
+				attempted.push(msg.params.message);
+				if (failAllSends) { fake.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id: msg.id, error: { message: "simulated send failure" } })}\n`); return; }
+				sent.push(msg.params);
+			}
 			fake.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id: msg.id, result: {} })}\n`);
 		} };
 		fake.kill = () => fake.emit("exit", 0, null);
@@ -8393,7 +8401,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${profileHelper} "\${rest[@]}"
 	// against the *old* session, which then ends, and the handoff note is carried into the very next
 	// real turn's prompt against the fresh one.
 	{
-		const { credentialFor, chatIdHash, chatStore, scopedSessionId, signalClientSessionId } = await import("./server.mjs");
+		const { credentialFor, chatIdHash, chatStore, scopedSessionId, signalClientSessionId, sessions } = await import("./server.mjs");
 		config.SIGNAL_SESSION_MAX_AGE_DAYS = 14;
 		const credential = credentialFor(key.id, agent.id);
 		const scoped = scopedSessionId(credential, signalClientSessionId(key.id, agent.id));
@@ -8418,6 +8426,34 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${profileHelper} "\${rest[@]}"
 		assert.match(turns[1].prompt, /second message$/, "the real message still follows it");
 		assert.ok(recentAudit().some((a) => a.action === "signal.session.rotated"));
 		assert.equal(chatStore.get(chatIdHash(scoped)), null, "the old row is gone -- setSignalRunner's fake never re-persists one");
+
+		// If the handoff turn itself fails (or just comes back with nothing to say), rotation is
+		// deferred rather than closing the old session anyway -- trading weeks of real context for a
+		// silent blank slate is a worse outcome than simply retrying on the next message. Two variants:
+		// the handoff turn throwing, and it resolving with empty text.
+		for (const handoffOutcome of ["throw", "empty"]) {
+			chatStore.put({ id_hash: chatIdHash(scoped), key_id: key.id, workspace: "", created_at: Date.now() - 20 * 24 * 60 * 60 * 1000, last_used_at: Date.now(), requests: 1, named: 0, state_json: "{}" });
+			turns.length = 0;
+			setSignalRunner(async ({ credential, clientSessionId, prompt, images }) => {
+				turns.push({ keyId: credential.id, clientSessionId, prompt, images });
+				if (turns.length === 1) {
+					if (handoffOutcome === "throw") throw new Error("spend cap exceeded");
+					return { text: "" };
+				}
+				return { text: `echo: ${prompt}` };
+			});
+			sent.length = 0;
+			liveChild.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "receive", params: { envelope: { sourceNumber: "+15551112222", dataMessage: { message: `deferred rotation, ${handoffOutcome}` } } } })}\n`);
+			await waitFor(() => turns.length >= 2, 3000);
+			assert.equal(turns.length, 2, "the handoff turn, then the real turn -- still against the OLD session, since rotation was deferred");
+			assert.equal(turns[1].clientSessionId, `signal:${key.id}:${agent.id}`, "same session id as the old one -- it never closed");
+			assert.doesNotMatch(turns[1].prompt, /handoff|notes from before/i, "no handoff preamble -- there was never a usable note to carry");
+			assert.notEqual(chatStore.get(chatIdHash(scoped)), null, "the old row survives -- rotation was deferred, not forced through with nothing to show for it");
+			assert.ok(recentAudit().some((a) => a.action === "signal.session.rotated" && /deferred/.test(a.detail)));
+			await waitFor(() => sent.length > 0);
+			assert.equal(sent[0].message, `echo: deferred rotation, ${handoffOutcome}`, "the real message still gets answered normally");
+		}
+		sessions.close(scoped);
 
 		config.SIGNAL_SESSION_MAX_AGE_DAYS = 0;
 	}
@@ -8629,11 +8665,94 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${profileHelper} "\${rest[@]}"
 		await new Promise((r) => setTimeout(r, 30));
 		assert.equal(sent.length, 2, "nothing more follows -- no separate final reply duplicating what was already relayed");
 
+		// If every relayed segment's send actually fails, progress.sent must never have been set, so the
+		// normal final (glued) reply still gets attempted afterward -- a duplicate-but-safe outcome for
+		// anything that *did* go out, and the only delivery at all for a turn where nothing did. Before
+		// the fix, progress.sent was set before the send was even awaited, so a failed relay silently
+		// swallowed the final reply too, on top of losing the relay itself.
+		failAllSends = true;
+		attempted.length = 0;
+		sent.length = 0;
+		promptSeen = new Promise((r2) => (promptSeenResolve = r2));
+		liveChild.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "receive", params: { envelope: { sourceNumber: "+15551112222", dataMessage: { message: "progress test, sends fail" } } } })}\n`);
+		await promptSeen;
+		await waitFor(() => attempted.length >= 1);
+		settleNow();
+		// 4 attempts, not 3: the two failed relays, the fallback final reply (also failing, since
+		// sends are still all failing) -- which is the point of this test -- and then the best-effort
+		// "something went wrong" apology that failure itself triggers (a separate fix, item 2).
+		await waitFor(() => attempted.length >= 4, 3000);
+		assert.equal(sent.length, 0, "nothing was actually delivered");
+		assert.equal(attempted.length, 4);
+		assert.equal(attempted[2], "Let me check the weather. Now let me check Poznan specifically.", "the fallback was attempted and carries everything the turn said, not just part of it -- this is the fix: before it, progress.sent being set up front would have skipped this entirely");
+		assert.match(attempted[3], /something went wrong/, "and then the best-effort apology, since the fallback failed too");
+		assert.ok(recentAudit().filter((a) => a.action === "signal.message.failed").length >= 2, "each failed send is on record");
+		failAllSends = false;
+
 		config.SIGNAL_PROGRESS_UPDATES = false;
 		setSessionSpawn(null);
 		setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 		config.CONTAINER_NETWORK = priorNetwork;
 		sessions.closeAll();
+	}
+
+	// Resilience: credentialFor() throwing because the key/agent behind a linked, enabled contact is
+	// gone must never crash the daemon. This is an ordinary admin action away (deleting a key or
+	// agent, or disabling/revoking one) -- without a catch around it, it would be an unhandled
+	// rejection, and this process has no global handler for one, so it would otherwise take down the
+	// whole gateway, not just drop this one message.
+	{
+		const { apiKeys: apiKeys2, agents: agents2, deleteAgent, setAgentEnabled, disableContactsForKey, disableContactsForAgent } = await import("./server.mjs");
+
+		// The backstop itself, proven directly: orphan a contact by removing its agent the LOW-level
+		// way (bypassing deleteAgent's own new cleanup below), so the only thing standing between this
+		// and a crash is handleReceive's own try/catch.
+		const crashKey = apiKeys2.create({ name: "signal-crash-key" }).record;
+		const crashAgent = agents2.create({ keyId: crashKey.id, name: "crash-signaler" });
+		agents2.update(crashAgent.id, { canSignal: true });
+		sent.length = 0;
+		await signalFor({ keyId: crashKey.id, agentId: crashAgent.id, delegateChain: [], delegateDepth: 0 }).enable({ phoneNumber: "+15554443333" });
+		assert.equal(sent.length, 1, "the welcome message");
+		agents2.remove(crashAgent.id);
+		assert.equal(getContactByNumber("+15554443333").enabled, true, "still enabled -- nothing cleaned it up this low-level way");
+
+		sent.length = 0;
+		liveChild.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "receive", params: { envelope: { sourceNumber: "+15554443333", dataMessage: { message: "hello?" } } } })}\n`);
+		await new Promise((r) => setTimeout(r, 100));
+		assert.equal(sent.length, 0, "no reply -- credentialFor() threw for the deleted agent, caught rather than crashing the process");
+		assert.ok(recentAudit().some((a) => a.action === "signal.message.failed"), "the failure is on record, not silent");
+		assert.equal(signalStatus().running, true, "the daemon (and the whole process) is still up");
+
+		// The real cleanup, exercised through the ordinary paths that now call it: deleting or
+		// disabling an agent, and deleting or revoking a key, each disable (never delete) the matching
+		// signal_contacts row, so this situation can't arise through normal admin use in the first place.
+		const k2 = apiKeys2.create({ name: "signal-cleanup-key" }).record;
+		const a2 = agents2.create({ keyId: k2.id, name: "cleanup-signaler" });
+		agents2.update(a2.id, { canSignal: true });
+		await signalFor({ keyId: k2.id, agentId: a2.id, delegateChain: [], delegateDepth: 0 }).enable({ phoneNumber: "+15556667777" });
+		await deleteAgent(a2.id);
+		assert.equal(getContactByNumber("+15556667777").enabled, false, "disabled, not deleted, by deleteAgent() itself");
+
+		const k3 = apiKeys2.create({ name: "signal-disable-key" }).record;
+		const a3 = agents2.create({ keyId: k3.id, name: "disable-signaler" });
+		agents2.update(a3.id, { canSignal: true });
+		await signalFor({ keyId: k3.id, agentId: a3.id, delegateChain: [], delegateDepth: 0 }).enable({ phoneNumber: "+15557778888" });
+		await setAgentEnabled(a3.id, false);
+		assert.equal(getContactByNumber("+15557778888").enabled, false, "disabled along with the agent itself");
+
+		const k4 = apiKeys2.create({ name: "signal-bare-cleanup-key" }).record;
+		apiKeys2.update(k4.id, { canSignal: true });
+		await signalFor({ keyId: k4.id, agentId: null, delegateChain: [], delegateDepth: 0 }).enable({ phoneNumber: "+15558889999" });
+		assert.equal(disableContactsForKey(k4.id), 1, "the key's own agentless contact -- the same helper lib/dashboard.mjs calls on key delete/revoke");
+		assert.equal(getContactByNumber("+15558889999").enabled, false);
+		assert.equal(disableContactsForAgent(k2.id, a2.id), 0, "already disabled -- nothing left to touch, no error either");
+
+		// And end to end: a message from one of these now-disabled numbers is discarded the ordinary
+		// unknown/disabled way, never reaching credentialFor() at all.
+		sent.length = 0;
+		liveChild.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "receive", params: { envelope: { sourceNumber: "+15556667777", dataMessage: { message: "still there?" } } } })}\n`);
+		await new Promise((r) => setTimeout(r, 100));
+		assert.equal(sent.length, 0);
 	}
 
 	assert.ok(listAllContacts().length >= 2);

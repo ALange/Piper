@@ -2,6 +2,41 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.14.0] - 2026-10-29
+
+### Fixed
+- **A Signal conversation whose key or agent was later deleted, revoked, or disabled could crash the
+  whole gateway, not just that one chat.** `lib/signal.mjs`'s inbound handler looked up the sending
+  number's credential outside its own try/catch; since nothing anywhere in this process handles an
+  unhandled promise rejection, that throw took the entire process down -- every other live session
+  with it -- and the next message from that same number did it again after the restart. Deleting or
+  disabling an agent, or deleting or revoking a key, now also disables (never deletes -- the dashboard's
+  Signal panel can still show and re-enable it) every Signal number that was linked to it, so this
+  can't happen through ordinary admin use; the inbound handler itself is also now wrapped end to end,
+  as a backstop against any other way a linked number's credential could go bad underneath it.
+- **A failed Signal reply, or a failed progress update, used to go completely unanswered, with
+  nothing but an audit log row to show it happened.** The failure is now also reported through the
+  same alert webhook used elsewhere (Settings -> Containers -> Alerts), and a best-effort "something
+  went wrong, please try again" is sent back rather than leaving the conversation hanging in total
+  silence. Separately, a progress-update message that failed to actually send used to also suppress
+  the turn's real final reply (it was marked as sent before the send was confirmed, not after) --
+  that ordering is fixed, so a failed relay no longer takes the real answer down with it.
+- **Automatic Signal session rotation (SIGNAL_SESSION_MAX_AGE_DAYS) could silently erase weeks of
+  context for nothing.** Past the age limit, the old session is asked for a short handoff note before
+  it's closed and replaced with a fresh one; if that one handoff turn failed, or simply came back with
+  nothing useful to say, the old session was closed anyway, trading real context for an empty start
+  with no note at all. Rotation is now deferred instead -- the old session stays exactly as it was,
+  and the next message past the threshold tries the handoff again -- so a transient failure can no
+  longer zero out a long-running conversation's memory.
+- **A long Signal reply used to be cut off mid-sentence at 4000 characters.** signal-cli has no
+  message-length limit of its own, so a reply that runs long is now split across however many
+  messages it takes, breaking on a paragraph, line, or word boundary where one exists, rather than
+  truncated with a "(cut at 4000 characters)" marker.
+- **A crash-looping signal-cli daemon (wrong path, wrong data directory, an incompatible version) was
+  only ever visible by checking the dashboard's own Signal panel.** It now also raises the same alert
+  webhook, and announces its own recovery once it's actually stayed up for a few seconds, the same
+  pattern already used for a flapping container engine.
+
 ## [1.13.4] - 2026-10-28
 
 ### Fixed
