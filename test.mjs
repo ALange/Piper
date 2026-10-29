@@ -8506,6 +8506,36 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${profileHelper} "\${rest[@]}"
 		config.SESSION_IDLE_MS = 600000;
 	}
 
+	// A redelivery of a message already handled (signal-cli occasionally does this, most often right
+	// after the daemon reconnects) must never be answered twice -- deduped by the envelope's own
+	// timestamp, the message's stable identity across any redelivery. Every other test in this block
+	// deliberately never sets one, to prove this is a complete no-op without it (no false positives).
+	{
+		turns.length = 0; sent.length = 0;
+		setSignalRunner(async ({ credential, clientSessionId, prompt, images }) => {
+			turns.push({ keyId: credential.id, clientSessionId, prompt, images });
+			return { text: `echo: ${prompt}` };
+		});
+		const notification = { jsonrpc: "2.0", method: "receive", params: { envelope: { sourceNumber: "+15551112222", timestamp: 1700000000000, dataMessage: { message: "duplicate-prone message" } } } };
+		liveChild.stdout.write(`${JSON.stringify(notification)}\n`);
+		await waitFor(() => turns.length >= 1);
+		await waitFor(() => sent.length >= 1);
+		assert.equal(turns.length, 1);
+		assert.equal(sent.length, 1);
+
+		// The exact same notification again -- same sender, same timestamp -- discarded outright.
+		liveChild.stdout.write(`${JSON.stringify(notification)}\n`);
+		await new Promise((r) => setTimeout(r, 100));
+		assert.equal(turns.length, 1, "no second turn for the redelivered message");
+		assert.equal(sent.length, 1, "and so no second (duplicate) reply either");
+		assert.ok(recentAudit().some((a) => a.action === "signal.message.duplicate"), "on record, not silently dropped with no trace");
+
+		// A genuinely different message from the same sender, a different timestamp, is unaffected.
+		liveChild.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "receive", params: { envelope: { sourceNumber: "+15551112222", timestamp: 1700000000001, dataMessage: { message: "a different message" } } } })}\n`);
+		await waitFor(() => turns.length >= 2);
+		assert.equal(turns[1].prompt, "a different message");
+	}
+
 	// Steering: a second message arriving while the first is still being answered is folded into that
 	// same turn (lib/chat.mjs's steerSession) instead of queued behind it -- the real point, same as the
 	// Playground and portal's own steer tests, just reached over Signal's own inbound path instead of

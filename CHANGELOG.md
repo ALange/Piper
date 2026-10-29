@@ -2,6 +2,17 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.14.2] - 2026-10-29
+
+### Fixed
+- **A Signal reply could occasionally arrive twice.** signal-cli can, intermittently -- most often
+  right after its daemon reconnects (including our own auto-restart on a crash) -- redeliver a
+  message it already delivered once. Each one was answered as if it were new, so the same question
+  got run through the agent, and the same reply sent back, twice. Every inbound message is now
+  deduped by its envelope's own timestamp -- the message's stable identity across any redelivery --
+  before it ever reaches a turn, so a redelivery is now silently (but audibly, in the audit log)
+  discarded rather than answered again.
+
 ## [1.14.1] - 2026-10-29
 
 ### Added
