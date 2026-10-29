@@ -8648,6 +8648,107 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${profileHelper} "\${rest[@]}"
 		sessions.closeAll();
 	}
 
+	// defaultModelFor(): a brand-new session pins the operator's configured default model through the
+	// robust host-side resolveModel()+session.setModel() path (a "set_model" RPC) instead of leaving it
+	// to the one-shot, in-container lookup piper-bridge.mjs otherwise performs at session start -- the
+	// race that was silently stranding fresh Signal sessions on Pi's own placeholder model ("unknown"),
+	// throwing "No API key found for the selected model" on every turn after. A resumed session already
+	// has a model, one way or another, and is left alone -- never re-pinned turn after turn.
+	{
+		const { credentialFor, scopedSessionId, signalClientSessionId, sessions, setSessionSpawn, setRunner, resetEngineCheck } = await import("./server.mjs");
+		resetEngineCheck();
+		const priorNetwork = config.CONTAINER_NETWORK;
+		config.CONTAINER_NETWORK = "none";
+		setRunner(async (bin, args) => {
+			if (bin === "docker" && args[0] === "version") return { code: 0, stdout: "27.0.0", stderr: "" };
+			if (bin === "docker" && args[0] === "inspect") return { code: 1, stdout: "", stderr: "No such object" };
+			if (bin === "docker" && args[0] === "image") return { code: 0, stdout: "sha256:fakeimage|0.99.1", stderr: "" };
+			return { code: 0, stdout: "", stderr: "" };
+		});
+
+		// local-openai/Qwen/Qwen3-Next is a real, resolvable direct model here -- set up earlier in this
+		// same test run (the container Pi config block above) and never torn down since.
+		const modelAgent = agents.create({ keyId: key.id, name: "signaler-model-test", model: "local-openai/Qwen/Qwen3-Next" });
+		agents.update(modelAgent.id, { canSignal: true });
+		const modelRecord = { keyId: key.id, agentId: modelAgent.id, delegateChain: [], delegateDepth: 0 };
+		await signalFor(modelRecord).enable({ phoneNumber: "+15557778899" });
+
+		const setModelCalls = [];
+		let settleNow2 = null;
+		let promptSeenResolve2 = null;
+		let promptSeen2 = new Promise((r2) => (promptSeenResolve2 = r2));
+		const fakeChild2 = () => {
+			const child = new EventEmitter();
+			child.stdout = new PassThrough();
+			child.stderr = new PassThrough();
+			child.exitCode = null;
+			child.signalCode = null;
+			child.kill = (sig = "SIGTERM") => {
+				if (child.exitCode !== null || child.signalCode !== null) return true;
+				child.signalCode = sig;
+				setImmediate(() => child.emit("exit", null, sig));
+				return true;
+			};
+			child.stdin = new PassThrough();
+			child.stdin.on("end", () => child.exitCode === null && child.signalCode === null && setImmediate(() => child.emit("exit", 0, null)));
+			let buffer = "";
+			child.stdin.on("data", (chunk) => {
+				buffer += chunk;
+				let i;
+				while ((i = buffer.indexOf("\n")) >= 0) {
+					const command = JSON.parse(buffer.slice(0, i));
+					buffer = buffer.slice(i + 1);
+					const reply = (r2) => child.stdout.write(`${JSON.stringify(r2)}\n`);
+					const ok = (data) => reply({ type: "response", id: command.id, command: command.type, success: true, data });
+					// A fresh session genuinely starts on Pi's own placeholder model, same as the real
+					// "No API key found" incident -- set_model is the only thing that should move it off it.
+					if (command.type === "get_state") ok({ model: { provider: "unknown", id: "unknown", input: ["text"] }, isStreaming: false });
+					else if (command.type === "set_model") {
+						setModelCalls.push({ provider: command.provider, modelId: command.modelId });
+						ok({ provider: command.provider, id: command.modelId, input: ["text"] });
+					} else if (command.type === "prompt") {
+						const said = String(command.message ?? "");
+						ok();
+						reply({ type: "agent_start" });
+						reply({ type: "message_start", message: { role: "user", content: said } });
+						reply({ type: "message_end", message: { role: "user", content: said } });
+						reply({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: `echo: ${said}` } });
+						settleNow2 = () => {
+							settleNow2 = null;
+							reply({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: `echo: ${said}` }] } });
+							reply({ type: "agent_settled" });
+						};
+						promptSeenResolve2();
+					} else ok();
+				}
+			});
+			return child;
+		};
+		setSessionSpawn(() => fakeChild2());
+		setSignalRunner(null); // the real runAgentTurn, against the faked container above
+
+		sent.length = 0;
+		liveChild.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "receive", params: { envelope: { sourceNumber: "+15557778899", dataMessage: { message: "first message, fresh session" } } } })}\n`);
+		await promptSeen2;
+		assert.equal(setModelCalls.length, 1, "a brand-new session pins the configured default model");
+		assert.deepEqual(setModelCalls[0], { provider: "local-openai", modelId: "Qwen/Qwen3-Next" });
+		settleNow2();
+		await waitFor(() => sent.length > 0);
+
+		promptSeen2 = new Promise((r2) => (promptSeenResolve2 = r2));
+		sent.length = 0;
+		liveChild.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "receive", params: { envelope: { sourceNumber: "+15557778899", dataMessage: { message: "second message, resumed session" } } } })}\n`);
+		await promptSeen2;
+		assert.equal(setModelCalls.length, 1, "a resumed session is left alone -- not re-pinned every turn");
+		settleNow2();
+		await waitFor(() => sent.length > 0);
+
+		setSessionSpawn(null);
+		setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
+		config.CONTAINER_NETWORK = priorNetwork;
+		sessions.closeAll();
+	}
+
 	// SIGNAL_PROGRESS_UPDATES: each piece of what the model actually SAYS (distinct from its internal
 	// "thinking") is relayed to Signal as its own message as soon as Pi closes it off (right before
 	// the next tool call, or when the turn settles) -- replacing the one final reply entirely rather

@@ -2,6 +2,23 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.14.4] - 2026-10-29
+
+### Fixed
+- **A Signal chat could get permanently stuck on "No API key found for the selected model."**
+  Signal has always run every turn with no model override, leaving a brand-new session to pick its
+  own default through a one-shot, best-effort lookup inside the container at startup -- a lookup
+  that can race or simply fail to find the configured default, in which case the session is left on
+  Pi's own internal placeholder model for the rest of its life, throwing that error on every turn
+  after. A web chat on the same key almost never gets a brand-new session recreated, so it only ever
+  had to win that lookup once, a long time ago. A Signal conversation is not so lucky: both
+  SIGNAL_RESET_ON_IDLE (1.14.1) and age-based rotation end a session outright and start a genuinely
+  new one on the next message, so it has to win that same race over and over, and eventually loses.
+  A brand-new (or freshly reset) session's model is now set explicitly, through the same robust,
+  host-side path an OpenAI-style request already uses when it names a model -- bypassing the fragile
+  in-container lookup entirely for the one case it actually matters. An already-resumed session,
+  which already has a model one way or another, is left alone.
+
 ## [1.14.3] - 2026-10-29
 
 ### Fixed
