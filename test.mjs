@@ -8230,6 +8230,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	// succeeding -- used below to prove a failed send doesn't silently swallow a reply.
 	let liveChild = null;
 	let failAllSends = false;
+	let sendDelayMs = 0; // artificial latency on a "send" RPC's own response -- see the race test below
 	const attempted = []; // every "send" RPC's message, delivered or not -- sent only gets the delivered ones
 	setSignalSpawn(() => {
 		const fake = new EventEmitter();
@@ -8237,12 +8238,16 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		fake.stderr = new PassThrough();
 		fake.stdin = { writable: true, write: (line) => {
 			const msg = JSON.parse(line);
-			if (msg.method === "send") {
-				attempted.push(msg.params.message);
-				if (failAllSends) { fake.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id: msg.id, error: { message: "simulated send failure" } })}\n`); return; }
-				sent.push(msg.params);
-			}
-			fake.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id: msg.id, result: {} })}\n`);
+			const respond = () => {
+				if (msg.method === "send") {
+					attempted.push(msg.params.message);
+					if (failAllSends) { fake.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id: msg.id, error: { message: "simulated send failure" } })}\n`); return; }
+					sent.push(msg.params);
+				}
+				fake.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id: msg.id, result: {} })}\n`);
+			};
+			if (msg.method === "send" && sendDelayMs > 0) setTimeout(respond, sendDelayMs);
+			else respond();
 		} };
 		fake.kill = () => fake.emit("exit", 0, null);
 		liveChild = fake;
@@ -8766,6 +8771,70 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${profileHelper} "\${rest[@]}"
 		assert.match(attempted[3], /something went wrong/, "and then the best-effort apology, since the fallback failed too");
 		assert.ok(recentAudit().filter((a) => a.action === "signal.message.failed").length >= 2, "each failed send is on record");
 		failAllSends = false;
+
+		// The single-segment case (no tool call splitting the reply at all -- the common one) is the
+		// most exposed to the turn-settling-vs-last-flush race: there's no earlier flush to have already
+		// absorbed the timing, so the ONLY flush happens right at settle, at the same moment runTurn
+		// itself resolves. A real signal-cli round trip is never instant, so this gives the fake daemon's
+		// own "send" response some actual latency rather than answering in the same tick, to exercise
+		// that race honestly instead of coincidentally dodging it.
+		let settleNow2 = null;
+		let promptSeen2Resolve = null;
+		let promptSeen2 = new Promise((r2) => (promptSeen2Resolve = r2));
+		const oneSegmentChild = () => {
+			const child = new EventEmitter();
+			child.stdout = new PassThrough();
+			child.stderr = new PassThrough();
+			child.exitCode = null;
+			child.signalCode = null;
+			child.kill = (sig = "SIGTERM") => {
+				if (child.exitCode !== null || child.signalCode !== null) return true;
+				child.signalCode = sig;
+				setImmediate(() => child.emit("exit", null, sig));
+				return true;
+			};
+			child.stdin = new PassThrough();
+			child.stdin.on("end", () => child.exitCode === null && child.signalCode === null && setImmediate(() => child.emit("exit", 0, null)));
+			let buffer = "";
+			child.stdin.on("data", (chunk) => {
+				buffer += chunk;
+				let i;
+				while ((i = buffer.indexOf("\n")) >= 0) {
+					const command = JSON.parse(buffer.slice(0, i));
+					buffer = buffer.slice(i + 1);
+					const reply = (r2) => child.stdout.write(`${JSON.stringify(r2)}\n`);
+					const ok = (data) => reply({ type: "response", id: command.id, command: command.type, success: true, data });
+					if (command.type === "get_state") ok({ model: { provider: "p", id: "m", input: ["text"] }, isStreaming: false });
+					else if (command.type === "prompt") {
+						const said = String(command.message ?? "");
+						ok();
+						reply({ type: "agent_start" });
+						reply({ type: "message_start", message: { role: "user", content: said } });
+						reply({ type: "message_end", message: { role: "user", content: said } });
+						reply({ type: "message_update", assistantMessageEvent: { type: "text_delta", delta: `one segment, no tool call: ${said}` } });
+						settleNow2 = () => {
+							settleNow2 = null;
+							reply({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: `one segment, no tool call: ${said}` }] } });
+							reply({ type: "agent_settled" });
+						};
+						promptSeen2Resolve();
+					} else ok();
+				}
+			});
+			return child;
+		};
+		setSessionSpawn(() => oneSegmentChild());
+		sessions.closeAll();
+		sendDelayMs = 20;
+		sent.length = 0;
+		liveChild.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "receive", params: { envelope: { sourceNumber: "+15551112222", dataMessage: { message: "single segment race test" } } } })}\n`);
+		await promptSeen2;
+		// Nothing flushes until settle -- there's no tool call here to flush an earlier segment against.
+		settleNow2();
+		await waitFor(() => sent.length >= 1, 3000);
+		await new Promise((r) => setTimeout(r, 200)); // comfortably longer than sendDelayMs -- if a second send were coming, it would have landed by now
+		assert.equal(sent.length, 1, "exactly one message -- the relayed segment -- not a second, duplicate full reply racing in behind it");
+		sendDelayMs = 0;
 
 		config.SIGNAL_PROGRESS_UPDATES = false;
 		setSessionSpawn(null);

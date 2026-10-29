@@ -2,6 +2,18 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.14.3] - 2026-10-29
+
+### Fixed
+- **A Signal reply could arrive twice when SIGNAL_PROGRESS_UPDATES is on.** 1.14.2's fix for a
+  related failure-ordering bug introduced a race of its own: the turn settling and its last relayed
+  segment's own send happen at essentially the same moment, so the check for "was this already
+  relayed?" could run before that send had actually confirmed and set its flag -- sending the full
+  reply right alongside the segment that was about to cover the exact same text. This hit the single
+  segment case (no tool call splitting the reply at all) almost every time, not rarely, since there's
+  no earlier flush to have absorbed the timing. The final reply now explicitly waits for that last
+  relay attempt to settle before deciding whether it's still needed.
+
 ## [1.14.2] - 2026-10-29
 
 ### Fixed
