@@ -2,6 +2,19 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.14.6] - 2026-11-01
+
+### Fixed
+- **The composer's lightning aura (1.14.5) read as a small blob stuck in one corner instead of
+  surrounding the whole box.** The original draw lit only a short arc sweeping around the border,
+  dim everywhere else, so a glance mostly caught it mid-pass at whichever corner it happened to be
+  crossing. Every point on the border now lights up every frame, each flickering on its own so it
+  still crackles like live current, with one brighter band slowly orbiting the loop for motion --
+  the whole input box now visibly glows, not just a moving dot. Also re-measures the composer's
+  size one frame after the aura first turns on, in case the canvas was inserted before the browser
+  had settled its layout, which could otherwise collapse the entire loop into a tiny corner-sized
+  box for that page load.
+
 ## [1.14.5] - 2026-11-01
 
 ### Added

@@ -2689,34 +2689,36 @@ function drawComposerFx() {
   var path = roundRectPoints(2, 2, w - 4, h - 4, Math.min(9, Math.min(w, h) / 2 - 2));
   var per = path.length;
   if (!per) return;
-  // a faint resting "circuit" glow around the whole loop, so the aura reads as one continuous
-  // border even where the bright traveling arc currently isn't.
-  ctx.globalAlpha = 0.22;
-  ctx.fillStyle = LIGHTNING_PAL[1];
-  for (var i = 0; i < per; i += 2) { ctx.fillRect(Math.round(path[i].x), Math.round(path[i].y), 1, 1); }
-  // the bright arc itself, head brightest, fading over its tail, jittering off the border line.
-  var segLen = Math.max(10, Math.round(per * 0.22));
-  var head = Math.floor(fx.phase) % per;
-  for (var k = 0; k < segLen; k++) {
-    var idx = (head - k + per * 4) % per;
-    var pt = path[idx], t = 1 - k / segLen;
-    var jig = (Math.sin(idx * 0.9 + fx.phase * 0.15) + Math.sin(idx * 2.3 - fx.phase * 0.07)) * 1.1;
+  fx.phase += 1;
+  // Every point on the loop is lit every frame -- this is what makes the WHOLE box read as
+  // surrounded, rather than one dim comet that only lights a corner as it happens to pass it.
+  // Each point flickers on its own (so it crackles like current, not a static outline), and one
+  // broad band slowly orbiting the loop stays brighter than the rest for a sense of motion.
+  for (var i = 0; i < per; i++) {
+    var pt = path[i];
+    var flick = Math.sin(i * 1.7 + fx.phase * 0.25) + Math.sin(i * 0.37 - fx.phase * 0.11);
+    var band = Math.max(0, Math.cos((i / per) * Math.PI * 2 - fx.phase * 0.045));
+    var bright = 0.55 + flick * 0.1 + band * 0.4;
+    var jig = flick * 0.7;
     var x = Math.round(pt.x + pt.nx * jig), y = Math.round(pt.y + pt.ny * jig);
-    ctx.globalAlpha = k < 3 ? 0.9 - k * 0.2 : Math.max(0.15, t);
-    ctx.fillStyle = LIGHTNING_PAL[k < 3 ? LIGHTNING_PAL.length - 1 : Math.round(t * (LIGHTNING_PAL.length - 2))];
+    var ci = Math.max(1, Math.min(LIGHTNING_PAL.length - 1, Math.round(bright * (LIGHTNING_PAL.length - 1))));
+    ctx.globalAlpha = Math.min(1, Math.max(0.4, bright));
+    ctx.fillStyle = LIGHTNING_PAL[ci];
     ctx.fillRect(x, y, 1, 1);
+    // a second pixel just inside the line gives the border real thickness instead of a hairline.
+    ctx.globalAlpha *= 0.6;
+    ctx.fillRect(Math.round(x - pt.nx), Math.round(y - pt.ny), 1, 1);
   }
-  // a couple of stray sparks peeling off the arc's wake, for life.
-  for (var s = 0; s < 3; s++) {
-    if (Math.random() < 0.5) continue;
-    var sidx = (head - Math.floor(Math.random() * segLen) + per * 4) % per, sp = path[sidx];
+  // sparks jutting outward at random points all around the loop, not clustered on one spot.
+  for (var s = 0; s < Math.max(3, Math.round(per / 35)); s++) {
+    if (Math.random() < 0.55) continue;
+    var idx = Math.floor(Math.random() * per), sp = path[idx];
     var dir = Math.random() < 0.5 ? 1 : -1, dist = 2 + Math.random() * 3;
     ctx.globalAlpha = 0.5 + Math.random() * 0.4;
-    ctx.fillStyle = LIGHTNING_PAL[3];
+    ctx.fillStyle = LIGHTNING_PAL[4];
     ctx.fillRect(Math.round(sp.x + sp.nx * dist * dir), Math.round(sp.y + sp.ny * dist * dir), 1, 1);
   }
   ctx.globalAlpha = 1;
-  fx.phase += 1.6;
 }
 function composerFxTick() {
   drawComposerFx();
@@ -2733,6 +2735,11 @@ function setComposerResponding(on) {
   wrap.classList.toggle('responding', on);
   if (on && !was) {
     sizeComposerFx();
+    // Re-measure one frame later too: if this is the very first time the aura has ever turned on,
+    // the canvas was inserted into the DOM only moments ago and a browser can still hand back a
+    // stale (often near-zero) box on the first synchronous read, which is what made the whole
+    // loop collapse down into a tiny blob stuck in one corner instead of tracing the real box.
+    requestAnimationFrame(function () { sizeComposerFx(); });
     if (!COMPOSER_FX.raf) COMPOSER_FX.raf = requestAnimationFrame(composerFxTick);
   }
 }
