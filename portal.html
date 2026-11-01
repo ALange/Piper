@@ -317,19 +317,11 @@
   /* composer */
   .composer-zone { position:relative; z-index:10; flex:none; padding:10px 24px 22px; }
   .composer-wrap { max-width:860px; margin:0 auto; }
-  .composer { position:relative; border-radius:20px; padding:1.5px;
+  .composer { border-radius:20px; padding:1.5px;
     background:linear-gradient(120deg,#8b3df0 0%,#3b2a6e 22%,#0a1030 45%,#06120a 62%,#1f7a2e 85%,#0c1a08 100%);
     box-shadow:0 18px 50px rgba(0,0,0,.35); }
-  .composer-inner { position:relative; z-index:1; border-radius:19px; background:rgba(10,14,18,.88); backdrop-filter:blur(16px);
+  .composer-inner { border-radius:19px; background:rgba(10,14,18,.88); backdrop-filter:blur(16px);
                      -webkit-backdrop-filter:blur(16px); padding:12px 14px 10px; display:flex; flex-direction:column; gap:10px; }
-  /* composer-fx: a pixel-art lightning aura that crawls around the composer's border while the
-     agent is generating a reply (see setComposerResponding()). It lives just outside the
-     composer's own rounded box (inset -8px) rather than replacing its gradient border, so it reads
-     as "the input is charged up" without disturbing layout or the resting look. */
-  .composer-fx { position:absolute; left:-8px; top:-8px; right:-8px; bottom:-8px; z-index:0;
-    pointer-events:none; opacity:0; transition:opacity .3s ease;
-    image-rendering:pixelated; image-rendering:crisp-edges; }
-  .composer.responding .composer-fx { opacity:1; }
   .composer textarea#input { width:100%; border:none; outline:none; resize:none; background:transparent;
     color:#f2f4f3; font-family:inherit; font-size:14.5px; line-height:1.5; max-height:160px; min-height:26px; padding:0; }
   .composer textarea#input::placeholder { color:rgba(240,244,243,.4); }
@@ -1363,7 +1355,6 @@ function renderAll() {
     ? '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>'
     : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19 V5 M5.5 11.5 L12 5 l6.5 6.5"/></svg>';
   $('send').title = isBusy(c) ? 'stop' : 'send';
-  setComposerResponding(isBusy(c));
   // A model is chat only: no tools, skills or extensions, and no vision means no attachments either.
   var model = c && c.externalModelId ? externalModel(c.externalModelId) : null;
   $('toolsbtn').disabled = Boolean(model);
@@ -2636,113 +2627,6 @@ function resyncSignalChats() {
 }
 setInterval(resyncSignalChats, SIGNAL_RESYNC_MS);
 document.addEventListener('visibilitychange', function () { if (!document.hidden) resyncSignalChats(); });
-
-/* ---- composer-fx: pixel-art lightning border, lit while the agent is generating a reply ---- */
-// Dark-to-white electric ramp (pixelfx-style: a few hard steps, not a smooth gradient), walked by
-// index so the traveling arc's head is always the brightest, hottest step.
-var LIGHTNING_PAL = ['#070a1c', '#13205c', '#2850b8', '#5fb0f0', '#bdeeff', '#ffffff'];
-var COMPOSER_FX = null; // { canvas, ctx, w, h, phase, raf }
-var COMPOSER_FX_SCALE = 3; // 1 canvas pixel = this many CSS px, for the chunky pixel-art look
-
-// Points walking the clockwise perimeter of a rounded rect, each with the outward unit normal at
-// that point -- used to jitter the bolt perpendicular to the border and to fling sparks off it.
-function roundRectPoints(x, y, w, h, r) {
-  r = Math.max(0, Math.min(r, w / 2, h / 2));
-  var pts = [];
-  function line(x0, y0, x1, y1, nx, ny) {
-    var steps = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - y0)));
-    for (var i = 0; i < steps; i++) { var t = i / steps; pts.push({ x: x0 + (x1 - x0) * t, y: y0 + (y1 - y0) * t, nx: nx, ny: ny }); }
-  }
-  function arc(cx, cy, a0, a1) {
-    var steps = Math.max(2, Math.round(Math.abs(a1 - a0) * r));
-    for (var i = 0; i < steps; i++) { var a = a0 + (a1 - a0) * (i / steps); pts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r, nx: Math.cos(a), ny: Math.sin(a) }); }
-  }
-  var HPI = Math.PI / 2;
-  line(x + r, y, x + w - r, y, 0, -1); arc(x + w - r, y + r, -HPI, 0);
-  line(x + w, y + r, x + w, y + h - r, 1, 0); arc(x + w - r, y + h - r, 0, HPI);
-  line(x + w - r, y + h, x + r, y + h, 0, 1); arc(x + r, y + h - r, HPI, Math.PI);
-  line(x, y + h - r, x, y + r, -1, 0); arc(x + r, y + r, Math.PI, Math.PI + HPI);
-  return pts;
-}
-function ensureComposerFx() {
-  if (COMPOSER_FX) return COMPOSER_FX;
-  var wrap = document.querySelector('.composer');
-  var canvas = document.createElement('canvas');
-  canvas.className = 'composer-fx';
-  wrap.insertBefore(canvas, wrap.firstChild);
-  COMPOSER_FX = { canvas: canvas, ctx: canvas.getContext('2d'), w: 0, h: 0, phase: 0, raf: null };
-  new ResizeObserver(function () { sizeComposerFx(); }).observe(wrap);
-  return COMPOSER_FX;
-}
-function sizeComposerFx() {
-  var fx = ensureComposerFx();
-  var r = fx.canvas.getBoundingClientRect();
-  fx.w = Math.max(8, Math.round(r.width / COMPOSER_FX_SCALE));
-  fx.h = Math.max(8, Math.round(r.height / COMPOSER_FX_SCALE));
-  fx.canvas.width = fx.w;
-  fx.canvas.height = fx.h;
-}
-function drawComposerFx() {
-  var fx = COMPOSER_FX, ctx = fx.ctx, w = fx.w, h = fx.h;
-  if (!w || !h) return;
-  ctx.clearRect(0, 0, w, h);
-  var path = roundRectPoints(2, 2, w - 4, h - 4, Math.min(9, Math.min(w, h) / 2 - 2));
-  var per = path.length;
-  if (!per) return;
-  fx.phase += 1;
-  // Every point on the loop is lit every frame -- this is what makes the WHOLE box read as
-  // surrounded, rather than one dim comet that only lights a corner as it happens to pass it.
-  // Each point flickers on its own (so it crackles like current, not a static outline), and one
-  // broad band slowly orbiting the loop stays brighter than the rest for a sense of motion.
-  for (var i = 0; i < per; i++) {
-    var pt = path[i];
-    var flick = Math.sin(i * 1.7 + fx.phase * 0.25) + Math.sin(i * 0.37 - fx.phase * 0.11);
-    var band = Math.max(0, Math.cos((i / per) * Math.PI * 2 - fx.phase * 0.045));
-    var bright = 0.55 + flick * 0.1 + band * 0.4;
-    var jig = flick * 0.7;
-    var x = Math.round(pt.x + pt.nx * jig), y = Math.round(pt.y + pt.ny * jig);
-    var ci = Math.max(1, Math.min(LIGHTNING_PAL.length - 1, Math.round(bright * (LIGHTNING_PAL.length - 1))));
-    ctx.globalAlpha = Math.min(1, Math.max(0.4, bright));
-    ctx.fillStyle = LIGHTNING_PAL[ci];
-    ctx.fillRect(x, y, 1, 1);
-    // a second pixel just inside the line gives the border real thickness instead of a hairline.
-    ctx.globalAlpha *= 0.6;
-    ctx.fillRect(Math.round(x - pt.nx), Math.round(y - pt.ny), 1, 1);
-  }
-  // sparks jutting outward at random points all around the loop, not clustered on one spot.
-  for (var s = 0; s < Math.max(3, Math.round(per / 35)); s++) {
-    if (Math.random() < 0.55) continue;
-    var idx = Math.floor(Math.random() * per), sp = path[idx];
-    var dir = Math.random() < 0.5 ? 1 : -1, dist = 2 + Math.random() * 3;
-    ctx.globalAlpha = 0.5 + Math.random() * 0.4;
-    ctx.fillStyle = LIGHTNING_PAL[4];
-    ctx.fillRect(Math.round(sp.x + sp.nx * dist * dir), Math.round(sp.y + sp.ny * dist * dir), 1, 1);
-  }
-  ctx.globalAlpha = 1;
-}
-function composerFxTick() {
-  drawComposerFx();
-  if (document.querySelector('.composer.responding')) COMPOSER_FX.raf = requestAnimationFrame(composerFxTick);
-  else COMPOSER_FX.raf = null;
-}
-// Called from renderAll() with whether the conversation currently on screen is mid-reply. Toggling
-// the class is what the CSS fade (opacity 0 <-> 1) keys off; the rAF loop itself only runs while at
-// least one chat has the class on, so a quiet composer costs nothing.
-function setComposerResponding(on) {
-  var wrap = document.querySelector('.composer');
-  if (!wrap) return;
-  var was = wrap.classList.contains('responding');
-  wrap.classList.toggle('responding', on);
-  if (on && !was) {
-    sizeComposerFx();
-    // Re-measure one frame later too: if this is the very first time the aura has ever turned on,
-    // the canvas was inserted into the DOM only moments ago and a browser can still hand back a
-    // stale (often near-zero) box on the first synchronous read, which is what made the whole
-    // loop collapse down into a tiny blob stuck in one corner instead of tracing the real box.
-    requestAnimationFrame(function () { sizeComposerFx(); });
-    if (!COMPOSER_FX.raf) COMPOSER_FX.raf = requestAnimationFrame(composerFxTick);
-  }
-}
 
 if (KEY) connect(KEY); else showLogin();
 </script>

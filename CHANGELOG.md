@@ -2,6 +2,13 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.14.7] - 2026-11-01
+
+### Removed
+- **The composer's lightning aura (1.14.5, tweaked in 1.14.6) is gone.** Not a good fit visually
+  after seeing it live; `portal.html` is back to exactly what it was before 1.14.5. The underlying
+  `isBusy()` state it was reading is untouched -- nothing else changes.
+
 ## [1.14.6] - 2026-11-01
 
 ### Fixed
