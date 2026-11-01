@@ -2,6 +2,17 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.14.5] - 2026-11-01
+
+### Added
+- **The portal's composer now lights up with a pixel-art lightning aura while the agent is
+  generating a reply.** A faint electric border crawls around the message box the instant a turn
+  starts, head-bright and trailing off with a few stray sparks, and fades back out the moment the
+  reply settles -- a glanceable "it's working" cue tied to the same `isBusy()` state that already
+  drives the stop button and the live dot, needing no extra wiring per chat. Drawn on a small
+  canvas at a chunky pixel scale (not an image or sprite sheet) so it costs nothing while idle and
+  scales to any composer size.
+
 ## [1.14.4] - 2026-10-29
 
 ### Fixed
