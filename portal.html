@@ -352,6 +352,10 @@
   /* attachments on a sent user message */
   .msg-images { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
   .msg-images img { max-width:220px; max-height:220px; border-radius:10px; cursor:pointer; display:block; }
+  /* A generated image (image-generation chat only, see buildMessageNode) is the whole point of that
+     reply, not an attachment alongside other content -- shown at normal size, not a small thumbnail. */
+  .msg-images.full { max-width:100%; }
+  .msg-images.full img { max-width:100%; max-height:70vh; width:auto; height:auto; }
   .msg-docs { margin-top:6px; display:flex; flex-direction:column; gap:3px; }
   .msg-docs a { font-size:12.5px; }
 
@@ -976,6 +980,7 @@ function isBusy(c) {
 }
 
 function externalModel(id) { return (WHOAMI.externalModels || []).filter(function (m) { return m.id === id; })[0] || null; }
+function comfyWorkflow(id) { return (WHOAMI.comfyuiWorkflows || []).filter(function (w) { return w.id === id; })[0] || null; }
 
 function renderTargets() {
   var t = $('target');
@@ -996,10 +1001,13 @@ function renderTargets() {
     });
     t.appendChild(grp);
   }
-  if (WHOAMI.canGenerateImage) {
+  if ((WHOAMI.comfyuiWorkflows || []).length) {
     var igrp = el('optgroup'); igrp.label = 'Image generation';
-    var io = el('option', 'Generate an image (ComfyUI)'); io.value = 'img:comfyui';
-    igrp.appendChild(io);
+    WHOAMI.comfyuiWorkflows.forEach(function (w) {
+      var io = el('option', w.name + (w.kind === 'edit' ? ' (edit an image)' : ''));
+      io.value = 'img:' + w.id;
+      igrp.appendChild(io);
+    });
     t.appendChild(igrp);
   }
 }
@@ -1017,7 +1025,8 @@ function renderSide() {
     row.appendChild(titleRow);
     var agent = (WHOAMI.agents || []).filter(function (a) { return a.id === c.agentId; })[0];
     var model = c.externalModelId ? externalModel(c.externalModelId) : null;
-    var subLabel = c.signalChannel ? ('📱 ' + c.signalPhone) : c.imageModelId ? 'ComfyUI (image)' : model ? (model.name + ' (model)') : agent ? agent.name : '(main endpoint)';
+    var imgWf = c.imageModelId ? comfyWorkflow(c.imageModelId) : null;
+    var subLabel = c.signalChannel ? ('📱 ' + c.signalPhone) : imgWf ? (imgWf.name + ' (image)') : model ? (model.name + ' (model)') : agent ? agent.name : '(main endpoint)';
     row.appendChild(el('div', subLabel)).className = 's';
     row.addEventListener('click', function () { showChatView(); CUR = c.id; renderAll(); resumeIfLive(c); closeSideOnMobile(); });
     var clear = el('button', '×');
@@ -1149,7 +1158,7 @@ function partNode(p) {
   return textBlocks(p.text || '');
 }
 function botLabelFor(c) {
-  if (c.imageModelId) return 'Image generation (ComfyUI)';
+  if (c.imageModelId) { var wf = comfyWorkflow(c.imageModelId); return wf ? wf.name : 'Image generation (ComfyUI)'; }
   var agent = (WHOAMI.agents || []).filter(function (a) { return a.id === c.agentId; })[0];
   var model = c.externalModelId ? externalModel(c.externalModelId) : null;
   return (model && model.name) || (agent && agent.name) || 'Piper';
@@ -1231,7 +1240,10 @@ function buildMessageNode(m, botLabel, row) {
   Array.prototype.slice.call(body.children).forEach(function (ch) { if (ch !== thinkNode) body.removeChild(ch); });
   rest.forEach(function (p) { body.appendChild(partNode(p)); });
   if (m.images && m.images.length) {
-    var imgsBox = el('div'); imgsBox.className = 'msg-images';
+    // This block is reached only for a bot/assistant message's own m.images -- image generation's
+    // reply, never a user's attachment (that's the separate role==='user' branch above, which stays
+    // a thumbnail). Full size here: the image is the whole point of this reply, not a side attachment.
+    var imgsBox = el('div'); imgsBox.className = 'msg-images full';
     m.images.forEach(function (dataUrl) {
       var img = el('img'); img.src = dataUrl; img.alt = 'generated image';
       img.addEventListener('click', function () { previewDataUrlImage(dataUrl); });
@@ -1372,13 +1384,19 @@ function renderAll() {
     : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19 V5 M5.5 11.5 L12 5 l6.5 6.5"/></svg>';
   $('send').title = isBusy(c) ? 'stop' : 'send';
   // A model is chat only: no tools, skills or extensions, and no vision means no attachments either.
-  // Image generation is the same, chat-only story, minus vision -- there is nothing to attach to it.
+  // Image generation is the same, chat-only story, minus vision -- except an "edit" workflow, whose
+  // whole point is one attached image to start from, same as a vision model taking one.
   var model = c && c.externalModelId ? externalModel(c.externalModelId) : null;
+  var imgWfNow = c && c.imageModelId ? comfyWorkflow(c.imageModelId) : null;
+  var isEditWorkflow = Boolean(imgWfNow && imgWfNow.kind === 'edit');
   var noExtras = Boolean(model) || Boolean(c && c.imageModelId);
   $('toolsbtn').disabled = noExtras;
   $('skillsbtn').disabled = noExtras;
-  $('attachbtn').disabled = (Boolean(model) && !model.vision) || Boolean(c && c.imageModelId);
-  $('attachbtn').title = (model && !model.vision) ? 'this model does not support images' : (c && c.imageModelId) ? 'image generation does not take attachments' : 'attach a file (image or any document)';
+  $('attachbtn').disabled = (Boolean(model) && !model.vision) || (Boolean(c && c.imageModelId) && !isEditWorkflow);
+  $('attachbtn').title = (model && !model.vision) ? 'this model does not support images'
+    : isEditWorkflow ? 'attach the one image this workflow should edit'
+    : (c && c.imageModelId) ? 'this workflow generates from the prompt alone -- it does not take an attachment'
+    : 'attach a file (image or any document)';
   reloadSidePanel();
 }
 

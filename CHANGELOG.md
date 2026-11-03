@@ -2,6 +2,24 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.16.0] - 2026-11-03
+
+### Added
+- **ComfyUI image generation now supports a whole library of named workflows, including image
+  editing.** `COMFYUI_WORKFLOW` (a single global setting) is gone; Settings -> ComfyUI now has
+  "ComfyUI workflows", a proper list where any number of workflows can be added, edited and
+  removed, each exported from ComfyUI in API format same as before. Each one is either:
+  - **generate** -- a prompt in, an image out, exactly as before.
+  - **edit** -- a prompt *and one attached image* in, an edited image out. Put the exact text
+    `%%IMAGE%%` on a `LoadImage` node's `image` input in the workflow's own JSON; the one image a
+    chat attaches is uploaded to ComfyUI and put there automatically.
+
+  Every workflow in the library shows up as its own entry in the client portal's target dropdown
+  (under "Image generation"), picking up its name and kind automatically; an "edit" entry enables
+  the attach button for exactly one image, the same way a vision model's entry already does. One
+  `can_generate_image` switch still covers every workflow in the library -- there is no
+  per-workflow grant, only per-key/per-agent, same as every other capability in Piper.
+
 ## [1.15.1] - 2026-11-03
 
 ### Changed

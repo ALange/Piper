@@ -68,7 +68,7 @@ import { sessions, spendReport, startSweeps } from "./lib/sessions.mjs";
 import { chatCompletions, listModels } from "./lib/chat.mjs";
 import { startAgentServers, stopAgentServers } from "./lib/agentservers.mjs";
 import { portalPort, startPortal, stopPortal } from "./lib/portal.mjs";
-import { LOGIN_PAGE, hostPiRoutes, signalRoutes, updateScopeRoute, agentRoutes, apiKeyRoutes, integrationRoutes, containerPiRoutes, containerRoutes, dashboardLogin, dashboardPage, dashboardSetPassword, modelCatalog, saveSettings, settingsPayload } from "./lib/dashboard.mjs";
+import { LOGIN_PAGE, hostPiRoutes, signalRoutes, comfyuiWorkflowRoutes, updateScopeRoute, agentRoutes, apiKeyRoutes, integrationRoutes, containerPiRoutes, containerRoutes, dashboardLogin, dashboardPage, dashboardSetPassword, modelCatalog, saveSettings, settingsPayload } from "./lib/dashboard.mjs";
 
 // Everything the modules export, re-exported: the tests, and anyone embedding the gateway, import
 // from here.
@@ -238,6 +238,7 @@ async function handle(req, res) {
 		}
 		if (path === "/dashboard/hostpi.json" || path === "/dashboard/hostpi/update" || path === "/dashboard/hostpi/restart") return await hostPiRoutes(req, res, path);
 		if (path === "/dashboard/signal.json" || path.startsWith("/dashboard/signal/contacts/")) return await signalRoutes(req, res, path);
+		if (path === "/dashboard/comfyui-workflows.json" || path === "/dashboard/comfyui-workflows" || path.startsWith("/dashboard/comfyui-workflows/")) return await comfyuiWorkflowRoutes(req, res, path);
 		if (path === "/dashboard/agents.json" || path === "/dashboard/wizard.json" || path === "/dashboard/templates.json" || path === "/dashboard/teams.json" || path === "/dashboard/teams" || path.startsWith("/dashboard/teams/") || path === "/dashboard/templates" || path.startsWith("/dashboard/templates/") || path === "/dashboard/agents" || path.startsWith("/dashboard/agents/")) return await agentRoutes(req, res, path);
 		const updateMatch = /^\/dashboard\/profiles\/([A-Za-z0-9_-]+)\/update-container$/.exec(path);
 		if (updateMatch) return await updateScopeRoute(req, res, updateMatch[1]);

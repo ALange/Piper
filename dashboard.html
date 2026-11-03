@@ -3175,12 +3175,6 @@ function settingInput(s, L) {
       input.appendChild(op);
     });
     input.value = String(s.value);
-  } else if (s.type === 'textarea') {
-    input = el('textarea');
-    input.rows = 10;
-    input.className = 'settingtextarea';
-    if (L.placeholder) input.placeholder = L.placeholder;
-    input.value = s.display == null ? '' : String(s.display);
   } else {
     input = el('input');
     if (s.type === 'bool') {
@@ -3413,6 +3407,7 @@ function renderSettings() {
       else {
         node.bySection[name].forEach(function (s) { sec.appendChild(settingField(s)); });
         if (name === 'Disk and alerts') sec.appendChild(alertTestPanel());
+        if (name === 'ComfyUI') sec.appendChild(comfyWorkflowsPanel());
       }
       panel.appendChild(sec);
     });
@@ -3501,6 +3496,81 @@ function alertTestPanel() {
   var wrap = el('div'); wrap.appendChild(box); wrap.appendChild(hint);
   return wrap;
 }
+
+/* The operator's own library of ComfyUI workflows (lib/comfyui.mjs) -- a list with edit/delete, and
+   one shared add/edit form below it (name, kind, the workflow's own JSON). Loaded on its own, not
+   part of /dashboard.json, since it has nothing to do with the rest of Settings' plain key/value
+   fields. */
+function comfyWorkflowsPanel() {
+  var box = el('div'); box.className = 'passblock';
+  box.appendChild(el('p', 'Each workflow is a whole ComfyUI graph exported in API format (ComfyUI’s own "Save (API Format)", Dev Mode on). Put the exact text %%PROMPT%% in whichever node’s prompt field a chat message should fill in. An "edit" workflow also needs %%IMAGE%% on a LoadImage node’s image input -- that is where the one image a chat attaches goes.')).className = 'hint';
+  var list = el('div'); list.className = 'cpstatus';
+  var form = el('div'); form.className = 'cpeditor'; form.hidden = true;
+  var nameRow = el('div'); nameRow.className = 'row';
+  var nameInput = el('input'); nameInput.placeholder = 'name'; nameInput.autocomplete = 'off';
+  var kindSelect = el('select');
+  WORKFLOW_KIND_OPTIONS.forEach(function (k) { var o = el('option', k[1]); o.value = k[0]; kindSelect.appendChild(o); });
+  nameRow.appendChild(nameInput); nameRow.appendChild(kindSelect);
+  var ta = el('textarea'); ta.spellcheck = false; ta.placeholder = 'paste the workflow’s JSON here';
+  var saveBtn = el('button', 'save workflow');
+  var cancelBtn = el('button', 'cancel'); cancelBtn.className = 'linkish';
+  var note = el('span'); note.className = 'cpnote';
+  var foot = el('div'); foot.className = 'row'; foot.appendChild(saveBtn); foot.appendChild(cancelBtn); foot.appendChild(note);
+  form.appendChild(nameRow); form.appendChild(ta); form.appendChild(foot);
+  var addBtn = el('button', '+ add a workflow');
+  var editingId = null;
+
+  function openForm(row) {
+    editingId = row ? row.id : null;
+    nameInput.value = row ? row.name : '';
+    kindSelect.value = row ? row.kind : 'generate';
+    ta.value = row ? row.workflow : '';
+    note.className = 'cpnote'; note.textContent = '';
+    form.hidden = false;
+    nameInput.focus();
+  }
+  addBtn.addEventListener('click', function () { openForm(null); });
+  cancelBtn.addEventListener('click', function () { form.hidden = true; });
+
+  function draw(workflows) {
+    list.replaceChildren();
+    if (!workflows.length) list.appendChild(el('p', 'No workflows yet.')).className = 'hint small';
+    workflows.forEach(function (w) {
+      var r = el('div'); r.className = 'cprow';
+      r.appendChild(el('b', w.name + '  ')).style.marginRight = '4px';
+      r.appendChild(el('span', w.kind === 'edit' ? 'edit (needs one attached image)' : 'generate')).className = 'hint small';
+      var editBtn = el('button', 'edit'); editBtn.className = 'linkish';
+      editBtn.addEventListener('click', function () { openForm(w); });
+      var delBtn = el('button', 'delete'); delBtn.className = 'linkish';
+      delBtn.addEventListener('click', function () {
+        if (!confirm('Delete the workflow "' + w.name + '"? Any chat using it will start failing until a different one is picked.')) return;
+        fetch('dashboard/comfyui-workflows/' + w.id, { method: 'DELETE' }).then(readJson).then(load).catch(function (e) { alert(e.message); });
+      });
+      r.appendChild(editBtn); r.appendChild(delBtn);
+      list.appendChild(r);
+    });
+  }
+  function load() {
+    return fetch('dashboard/comfyui-workflows.json', { cache: 'no-store' }).then(readJson).then(function (d) { draw(d.workflows); });
+  }
+  saveBtn.addEventListener('click', function () {
+    saveBtn.disabled = true; note.className = 'cpnote'; note.textContent = 'saving…';
+    var payload = { name: nameInput.value.trim(), kind: kindSelect.value, workflow: ta.value };
+    var req = editingId
+      ? fetch('dashboard/comfyui-workflows/' + editingId, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) })
+      : fetch('dashboard/comfyui-workflows', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+    req.then(readJson).then(function () {
+      form.hidden = true;
+      load();
+    }).catch(function (e) { note.className = 'cpnote bad'; note.textContent = e.message; })
+      .then(function () { saveBtn.disabled = false; });
+  });
+
+  load();
+  box.appendChild(list); box.appendChild(addBtn); box.appendChild(form);
+  return box;
+}
+var WORKFLOW_KIND_OPTIONS = [['generate', 'generate (prompt only)'], ['edit', 'edit (prompt + one attached image)']];
 
 /* Container health: whether chats can start, from /dashboard.json's `containers`, with a button to look again. */
 function containerHealthPanel() {

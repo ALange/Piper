@@ -29,7 +29,7 @@ process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
 const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, readDockerfile, writeDockerfile, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, portalSessionToken, readPortalSession, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, memoryScopeOf, mayRemember, memoryFor, memoryOverview, memoryEntries, deleteMemoryEntry, clearMemory, deleteMemoryOf, memoryDashboardRoutes, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, mayLookupKnowledge, knowledgeFor, addEntry, getByKey, getEntry, sourceSeen, overview: knowledgeOverview, entriesOf, removeEntry, clearSource, purgeOld, activityLog, knowledgeDashboardRoutes, RssError, SOURCE_TYPE, getFeed, listFeeds, createFeed, updateFeed, removeFeed, parseFeedXml, forcePoll, rssTick, parseExtraction, looksBlocked, parseUnblockReply, setExtractionRunner, rssPump, retryEntry, startFeeds, stopFeeds, rssDashboardRoutes,
 	NotebookError, createNotebook, listNotebooks, getNotebook, renameNotebook, setNotebookAgent, setNotebookExternalModel, deleteNotebook, listSources, getSource, addSource, removeSource, chunkText, cosine, topChunks, embedTexts, setEmbedder, setNotebookRunner, setFileReader, parseExtraction: parseNotebookExtraction, askNotebook, generateOutput, listOutputs, OUTPUT_KINDS, pumpExtract: pumpNotebookExtract, resumeNotebookExtractions, stopNotebookExtractions,
 	ExternalModelError, listEndpoints, getEndpoint, createEndpoint, updateEndpoint, deleteEndpoint, listExternalModels, getModel, addModel, updateModel, removeModel, listEndpointsWithModels, setFetch, guessCapabilities, detectModels, checkEndpointStatus, modelsForKey, setKeyModels, listAccess, splitSseLines, chatCompletion, normalizeBaseUrl, beginExternalTurn, checkedHistory,
-	ComfyUiError, mayGenerateImage, comfyuiFor, setComfyUiFetch, parseComfyUiBaseUrl,
+	ComfyUiError, mayGenerateImage, comfyuiFor, setComfyUiFetch, parseComfyUiBaseUrl, comfyuiWorkflowRoutes,
 	recentAudit: recentAuditRows, syncCompactionSettings, reserveTokensFor, findReplay, commitReplay, normalizeRequestId } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
@@ -11349,44 +11349,88 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		deleteEndpoint(ep.id);
 	}
 
-	// ComfyUI image generation: agent-less and stateless, like an external model, except it produces an
-	// image instead of text (lib/comfyui.mjs). Gated the same way Signal is: a global switch plus the
-	// plain key's own can_generate_image flag (no agent involved here).
+	// ComfyUI image generation/editing: agent-less and stateless, like an external model, except it
+	// produces an image instead of text (lib/comfyui.mjs). Gated the same way Signal is: a global
+	// switch plus the plain key's own can_generate_image flag (no agent involved here) -- one switch
+	// covers every workflow in the operator's own library, managed via the dashboard's
+	// comfyuiWorkflowRoutes (lib/dashboard.mjs) and listed in the portal's whoami.
 	{
 		const priorComfyEnabled = config.COMFYUI_ENABLED;
 		const priorComfyBase = config.COMFYUI_BASE_URL;
-		const priorComfyWorkflow = config.COMFYUI_WORKFLOW;
 		config.COMFYUI_ENABLED = true;
 		config.COMFYUI_BASE_URL = "http://comfy.test:8188";
+
 		// Deliberately not "9" for the SaveImage node, and not "6" for the prompt -- a custom,
-		// operator-supplied workflow has whatever node ids ComfyUI's own export happened to assign,
-		// so the test must not accidentally pass only because it matches Piper's old built-in layout.
-		const comfyWorkflowFixture = JSON.stringify({
+		// operator-supplied workflow has whatever node ids ComfyUI's own export happened to assign.
+		const generateWorkflowJson = JSON.stringify({
 			"41": { class_type: "CheckpointLoaderSimple", inputs: { ckpt_name: "sd.safetensors" } },
 			"42": { class_type: "CLIPTextEncode", inputs: { text: "%%PROMPT%%", clip: ["41", 1] } },
 			"43": { class_type: "KSampler", inputs: { seed: 12345, steps: 20, model: ["41", 0], positive: ["42", 0] } },
 			"77": { class_type: "SaveImage", inputs: { images: ["43", 0] } },
 		});
-		config.COMFYUI_WORKFLOW = comfyWorkflowFixture;
+		const editWorkflowJson = JSON.stringify({
+			"1": { class_type: "LoadImage", inputs: { image: "%%IMAGE%%" } },
+			"2": { class_type: "CLIPTextEncode", inputs: { text: "%%PROMPT%%" } },
+			"3": { class_type: "KSampler", inputs: { seed: 999, denoise: 0.6, positive: ["2", 0], latent_image: ["1", 0] } },
+			"4": { class_type: "SaveImage", inputs: { images: ["3", 0] } },
+		});
 
-		// Not granted: refused before any HTTP call is attempted, and never even offered in whoami.
-		assert.equal((await call("/api/whoami", { headers: auth })).json.canGenerateImage, false, "can_generate_image is off by default");
-		const notGranted = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-1", message: "a cat", imageModelId: "comfyui" }) });
+		// Dashboard CRUD runs on its own tiny in-process server wired straight to comfyuiWorkflowRoutes
+		// (lib/dashboard.mjs), the same pattern memoryDashboardRoutes is tested with above -- it is an
+		// operator-only route, not something the portal's own server (the `call()` helper above) serves.
+		// List, create, read-back via the portal's own whoami, update, delete. A bad kind and a workflow
+		// missing its required placeholder are both refused with a clear reason before anything is stored.
+		const dashSrv = http.createServer((req, res) => comfyuiWorkflowRoutes(req, res, new URL(req.url, "http://x").pathname));
+		await new Promise((r) => dashSrv.listen(0, "127.0.0.1", r));
+		const dashBase = `http://127.0.0.1:${dashSrv.address().port}`;
+		const dash = async (path, opts) => {
+			const r = await fetch(dashBase + path, opts);
+			const text = await r.text();
+			let json = null;
+			try {
+				json = JSON.parse(text);
+			} catch {
+				/* the assertions say */
+			}
+			return { status: r.status, json, text };
+		};
+		assert.deepEqual((await dash("/dashboard/comfyui-workflows.json")).json.workflows, []);
+		const badKind = await dash("/dashboard/comfyui-workflows", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "x", kind: "nonsense", workflow: generateWorkflowJson }) });
+		assert.equal(badKind.status, 400);
+		const missingPlaceholder = await dash("/dashboard/comfyui-workflows", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "x", kind: "edit", workflow: generateWorkflowJson }) });
+		assert.equal(missingPlaceholder.status, 400);
+		assert.match(missingPlaceholder.text, /%%IMAGE%%/);
+
+		const createdGen = await dash("/dashboard/comfyui-workflows", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "Draw something", kind: "generate", workflow: generateWorkflowJson }) });
+		assert.equal(createdGen.status, 201);
+		const genWorkflowId = createdGen.json.workflow.id;
+		const createdEdit = await dash("/dashboard/comfyui-workflows", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "Fix a photo", kind: "edit", workflow: editWorkflowJson }) });
+		assert.equal(createdEdit.status, 201);
+		const editWorkflowId = createdEdit.json.workflow.id;
+		assert.equal((await dash("/dashboard/comfyui-workflows.json")).json.workflows.length, 2);
+
+		// Not granted: refused before any HTTP call is attempted, and neither workflow is offered in whoami.
+		assert.deepEqual((await call("/api/whoami", { headers: auth })).json.comfyuiWorkflows, [], "can_generate_image is off by default");
+		const notGranted = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-1", message: "a cat", imageModelId: genWorkflowId }) });
 		assert.equal(notGranted.status, 403);
 
 		apiKeys.update(myKey.id, { canGenerateImage: true });
-		assert.equal((await call("/api/whoami", { headers: auth })).json.canGenerateImage, true);
+		const whoWithImages = await call("/api/whoami", { headers: auth });
+		assert.equal(whoWithImages.json.comfyuiWorkflows.length, 2, "both workflows are now listed");
+		assert.ok(whoWithImages.json.comfyuiWorkflows.some((w) => w.id === genWorkflowId && w.kind === "generate"));
+		assert.ok(whoWithImages.json.comfyuiWorkflows.some((w) => w.id === editWorkflowId && w.kind === "edit"));
 
-		// Globally off still refuses it even with the key's own flag on.
+		// Globally off still refuses it (and hides it from whoami) even with the key's own flag on.
 		config.COMFYUI_ENABLED = false;
-		const globallyOff = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-2", message: "a cat", imageModelId: "comfyui" }) });
+		assert.deepEqual((await call("/api/whoami", { headers: auth })).json.comfyuiWorkflows, []);
+		const globallyOff = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-2", message: "a cat", imageModelId: genWorkflowId }) });
 		assert.equal(globallyOff.status, 403);
 		config.COMFYUI_ENABLED = true;
 
-		// Happy path: the placeholder is replaced with the typed message, the seed is randomized away
-		// from whatever the configured workflow had, and the SaveImage node is found by its class_type
-		// (node id "77" here), not assumed to be any particular id -- then submit -> poll history ->
-		// fetch the image, threaded back as a data: URI.
+		// Happy path, "generate" workflow: the placeholder is replaced with the typed message, the seed
+		// is randomized away from whatever the configured workflow had, and the SaveImage node is found
+		// by its class_type (node id "77" here), not assumed to be any particular id -- then submit ->
+		// poll history -> fetch the image, threaded back as a data: URI.
 		const tinyPngBytes = Buffer.from("fake-png-bytes");
 		let seenWorkflow = null;
 		setComfyUiFetch(async (url, opts) => {
@@ -11403,7 +11447,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 			}
 			throw new Error(`unexpected ComfyUI call: ${u}`);
 		});
-		const happy = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-3", message: "a cat wearing a hat", imageModelId: "comfyui" }) });
+		const happy = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-3", message: "a cat wearing a hat", imageModelId: genWorkflowId }) });
 		assert.equal(happy.status, 200);
 		assert.match(happy.text, /event: done/);
 		const happyDoneLine = happy.text.split("\n\n").find((b) => b.includes("event: done"));
@@ -11413,19 +11457,62 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		assert.equal(seenWorkflow.prompt["42"].inputs.text, "a cat wearing a hat", "the typed message replaced %%PROMPT%%, wherever in the workflow it was");
 		assert.notEqual(seenWorkflow.prompt["43"].inputs.seed, 12345, "the configured workflow's own seed was replaced with a fresh one");
 
-		// Misconfigured: a blank workflow is refused before any fetch call is made.
-		config.COMFYUI_WORKFLOW = "";
+		// "generate" ignores any attached image -- no upload call is ever made for it.
+		const tinyPng = "data:image/png;base64,QQ==";
+		setComfyUiFetch(async (url, opts) => {
+			const u = String(url);
+			if (u.endsWith("/upload/image")) throw new Error("a \"generate\" workflow must never upload an image");
+			if (u.endsWith("/prompt")) return { ok: true, json: async () => ({ prompt_id: "p1b" }) };
+			if (u.includes("/history/p1b")) return { ok: true, json: async () => ({ p1b: { outputs: { "77": { images: [{ filename: "y.png", subfolder: "", type: "output" }] } } } }) };
+			if (u.includes("/view")) return { ok: true, arrayBuffer: async () => tinyPngBytes.buffer.slice(tinyPngBytes.byteOffset, tinyPngBytes.byteOffset + tinyPngBytes.byteLength) };
+			throw new Error(`unexpected ComfyUI call: ${u}`);
+		});
+		const genWithImage = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-ignoreimg", message: "a cat", imageModelId: genWorkflowId, images: [tinyPng] }) });
+		assert.equal(genWithImage.status, 200);
+
+		// Happy path, "edit" workflow: exactly one attached image is uploaded first, and its returned
+		// filename (with subfolder, when ComfyUI gives one) replaces %%IMAGE%%, alongside %%PROMPT%%.
+		let seenUploadFile = null;
+		let seenEditWorkflow = null;
+		setComfyUiFetch(async (url, opts) => {
+			const u = String(url);
+			if (u.endsWith("/upload/image")) {
+				seenUploadFile = opts.body; // a FormData -- just confirming the call happened is enough here
+				return { ok: true, json: async () => ({ name: "clipspace-123.png", subfolder: "clipspace", type: "input" }) };
+			}
+			if (u.endsWith("/prompt")) {
+				seenEditWorkflow = JSON.parse(opts.body);
+				return { ok: true, json: async () => ({ prompt_id: "p3" }) };
+			}
+			if (u.includes("/history/p3")) return { ok: true, json: async () => ({ p3: { outputs: { "4": { images: [{ filename: "edited.png", subfolder: "", type: "output" }] } } } }) };
+			if (u.includes("/view")) return { ok: true, arrayBuffer: async () => tinyPngBytes.buffer.slice(tinyPngBytes.byteOffset, tinyPngBytes.byteOffset + tinyPngBytes.byteLength) };
+			throw new Error(`unexpected ComfyUI call: ${u}`);
+		});
+		const edited = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-edit", message: "make it black and white", imageModelId: editWorkflowId, images: [tinyPng] }) });
+		assert.equal(edited.status, 200);
+		assert.ok(seenUploadFile, "the attached image was uploaded to ComfyUI");
+		assert.equal(seenEditWorkflow.prompt["1"].inputs.image, "clipspace/clipspace-123.png", "a non-empty subfolder from the upload reply is prefixed onto the filename, the LoadImage convention");
+		assert.equal(seenEditWorkflow.prompt["2"].inputs.text, "make it black and white");
+		const editedDoneLine = edited.text.split("\n\n").find((b) => b.includes("event: done"));
+		assert.match(JSON.parse(editedDoneLine.split("\n").find((l) => l.startsWith("data:")).slice(5)).images[0], /^data:image\/png;base64,/);
+
+		// "edit" without an attached image, or with more than one, is refused before any fetch call.
 		setComfyUiFetch(async () => { throw new Error("must not be called"); });
-		const noWorkflow = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-4", message: "a cat", imageModelId: "comfyui" }) });
-		assert.match(noWorkflow.text, /COMFYUI_WORKFLOW/);
-		config.COMFYUI_WORKFLOW = comfyWorkflowFixture;
+		const editNoImage = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-edit-none", message: "x", imageModelId: editWorkflowId }) });
+		assert.match(editNoImage.text, /exactly one image/);
+		const editTwoImages = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-edit-two", message: "x", imageModelId: editWorkflowId, images: [tinyPng, tinyPng] }) });
+		assert.match(editTwoImages.text, /exactly one image/);
+
+		// An unknown workflow id is a plain 404, not a crash.
+		const noSuchWorkflow = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-404", message: "x", imageModelId: "does-not-exist" }) });
+		assert.match(noSuchWorkflow.text, /no such workflow/);
 
 		// ComfyUI's own node-validation error surfaces readably, not as a raw status/JSON dump.
 		setComfyUiFetch(async (url) => {
 			if (String(url).endsWith("/prompt")) return { ok: false, status: 400, json: async () => ({ node_errors: { "41": { errors: [{ message: "checkpoint not found" }] } } }) };
 			throw new Error("must not reach history/view after a rejected prompt");
 		});
-		const badPrompt = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-5", message: "a cat", imageModelId: "comfyui" }) });
+		const badPrompt = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-5", message: "a cat", imageModelId: genWorkflowId }) });
 		assert.match(badPrompt.text, /checkpoint not found/);
 
 		// Timeout: history never finishes, bounded by a short COMFYUI_TIMEOUT_MS rather than hanging.
@@ -11437,12 +11524,18 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 			if (u.includes("/history/p2")) return { ok: true, json: async () => ({}) };
 			throw new Error("must not reach /view when it never finishes");
 		});
-		const timedOut = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-6", message: "a cat", imageModelId: "comfyui" }) });
+		const timedOut = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-6", message: "a cat", imageModelId: genWorkflowId }) });
 		assert.match(timedOut.text, /did not finish/);
 		config.COMFYUI_TIMEOUT_MS = priorTimeout;
 
+		// Deleting a workflow removes it from the library (and whoami) immediately.
+		await dash(`/dashboard/comfyui-workflows/${genWorkflowId}`, { method: "DELETE" });
+		assert.equal((await call("/api/whoami", { headers: auth })).json.comfyuiWorkflows.length, 1);
+
 		setComfyUiFetch(null);
 		apiKeys.update(myKey.id, { canGenerateImage: false });
+		await dash(`/dashboard/comfyui-workflows/${editWorkflowId}`, { method: "DELETE" });
+		assert.deepEqual((await dash("/dashboard/comfyui-workflows.json")).json.workflows, []);
 
 		// mayGenerateImage/comfyuiFor directly, for an agent record -- the portal only ever uses the
 		// no-agent form above, but the gate itself (lib/agentsignal.mjs's exact shape) covers both.
@@ -11452,9 +11545,9 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		assert.throws(() => comfyuiFor({ agentId: theirAgent.id }), /this agent may not generate images/);
 		await updateAgent(myAgent.id, { canGenerateImage: false });
 
+		await new Promise((r) => dashSrv.close(r));
 		config.COMFYUI_ENABLED = priorComfyEnabled;
 		config.COMFYUI_BASE_URL = priorComfyBase;
-		config.COMFYUI_WORKFLOW = priorComfyWorkflow;
 	}
 
 	// Files: the key's own workspace by default, an agent's own with ?agentId=, never another key's.
