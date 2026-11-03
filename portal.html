@@ -142,6 +142,12 @@
   .jobsview { position:relative; z-index:10; flex:1; display:flex; flex-direction:column; min-height:0; min-width:0; }
   .jobsview[hidden] { display:none; }
   .jobsbody { flex:1; overflow:auto; padding:4px 22px 24px; }
+  .gallerygrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:14px; padding-top:12px; }
+  .galleryitem { position:relative; border-radius:10px; overflow:hidden; background:var(--panel); border:1px solid var(--border); cursor:pointer; }
+  .galleryitem img { width:100%; height:160px; object-fit:cover; display:block; background:var(--bg); }
+  .galleryitem .gidate { font-size:11px; color:var(--dim); padding:6px 8px; }
+  .galleryitem .gidel { position:absolute; top:6px; right:6px; background:rgba(0,0,0,.55); color:#fff; border:none; border-radius:50%; width:22px; height:22px; cursor:pointer; line-height:1; font-size:14px; }
+  .galleryitem .gidel:hover { background:rgba(0,0,0,.8); }
   .jobsgrid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:14px; }
   .jobcard { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:14px 16px;
     transition:border-color .15s, transform .15s; }
@@ -458,6 +464,9 @@
       <button class="icon-btn" id="jobsbtn" title="scheduled jobs">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9 v4 l3 2 M9 2.5 h6"/></svg>
       </button>
+      <button class="icon-btn" id="gallerybtn" title="generated images" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M4 16.5 l5-4.5 3.5 3 4-3.5 3.5 3"/></svg>
+      </button>
     </div>
     <div class="rail-bottom">
       <button class="icon-btn" id="passbtn" title="portal password">
@@ -554,6 +563,19 @@
         <div id="jobsmainlist"></div>
       </div>
     </div>
+    <div id="galleryview" class="jobsview" hidden>
+      <div class="bar">
+        <button class="icon-btn hamburger" id="galleryback" title="back to chat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 19 L8 12 l7-7"/></svg>
+        </button>
+        <b>Gallery</b>
+        <div class="sp"></div>
+        <button id="galleryrefresh">refresh</button>
+      </div>
+      <div id="gallerybody" class="jobsbody">
+        <div id="gallerygrid" class="gallerygrid"></div>
+      </div>
+    </div>
   </main>
 </div>
 
@@ -569,7 +591,7 @@
     <div class="modal-top"><b id="fmtitle"></b><button id="fmclose">close</button></div>
     <div class="hint" id="fmmeta"></div>
     <div id="fmbody" class="modal-body"></div>
-    <div class="modal-actions"><a id="fmdownload" download><button>download</button></a></div>
+    <div class="modal-actions"><a id="fmdownload" download><button>download</button></a><button id="fmdelete" hidden>delete</button></div>
   </div>
 </div>
 
@@ -1865,12 +1887,20 @@ function fmtWhen(ms) { return ms ? new Date(ms).toLocaleString() : ''; }
 
 function showChatView() {
   $('jobsview').hidden = true;
+  $('galleryview').hidden = true;
   $('chatview').hidden = false;
 }
 function showJobsView() {
   $('chatview').hidden = true;
+  $('galleryview').hidden = true;
   $('jobsview').hidden = false;
   switchJobsTab('jobs');
+}
+function showGalleryView() {
+  $('chatview').hidden = true;
+  $('jobsview').hidden = true;
+  $('galleryview').hidden = false;
+  loadGallery();
 }
 function switchJobsTab(tab) {
   JOBS_TAB = tab;
@@ -2344,11 +2374,14 @@ var IMG_TYPES = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 
 var HTML_TYPES = { html: true, htm: true };
 var PREVIEW_MAX = 300 * 1024;
 var MODAL_OBJECT_URL = null;
+var FM_ON_DELETE = null; // set only by previewGalleryImage -- shows/wires fmdelete for that one preview
 function closeModal() {
   $('filemodal').hidden = true;
   $('fmbody').replaceChildren();
   $('fmbox').classList.remove('wide');
   if (MODAL_OBJECT_URL) { URL.revokeObjectURL(MODAL_OBJECT_URL); MODAL_OBJECT_URL = null; }
+  FM_ON_DELETE = null;
+  $('fmdelete').hidden = true;
 }
 /* An image attached inline to a sent message (never uploaded to the workspace) -- the same modal as a
    workspace file's preview, just fed a data: URI directly instead of fetching one. */
@@ -2412,6 +2445,81 @@ function previewFile(path, size) {
       $('fmbody').replaceChildren(el('pre', text));
     });
   }).catch(function (e) { $('fmbody').replaceChildren(el('div', 'cannot show it: ' + e.message)); });
+}
+
+/* ---- gallery: every image generated or edited through ComfyUI, saved server-side under the key's
+   own workspace (generated-images/, lib/comfyui.mjs) and browsed here through the exact same
+   /api/files route the Files panel already uses -- a plain key's own, never an agent's, so this
+   always passes agentId: null to filesUrlFor regardless of which conversation happens to be open. */
+var GALLERY_URLS = []; // object URLs from the last render, revoked before the next one and on unload
+function galleryFileUrl(name) { return filesUrlFor(null, 'generated-images/' + name); }
+function loadGallery() {
+  var grid = $('gallerygrid');
+  grid.replaceChildren(el('div', 'loading…'));
+  apiJson(galleryFileUrl('')).then(function (d) {
+    renderGallery((d.entries || []).filter(function (f) { return f.type === 'file'; }));
+  }).catch(function () { renderGallery([]); }); // most likely: nothing generated yet, no folder at all
+}
+function renderGallery(entries) {
+  GALLERY_URLS.forEach(function (u) { URL.revokeObjectURL(u); });
+  GALLERY_URLS = [];
+  var grid = $('gallerygrid');
+  grid.replaceChildren();
+  if (!entries.length) {
+    grid.appendChild(el('p', 'No generated images yet -- pick "Image generation" from the chat target to make one.')).className = 'hint';
+    return;
+  }
+  entries.sort(function (a, b) { return b.modified - a.modified; }).forEach(function (f) {
+    var item = el('div'); item.className = 'galleryitem';
+    var img = el('img'); img.alt = f.name;
+    api(galleryFileUrl(f.name)).then(function (r) { if (!r.ok) throw new Error(); return r.blob(); }).then(function (blob) {
+      var u = URL.createObjectURL(blob);
+      GALLERY_URLS.push(u);
+      img.src = u;
+    }).catch(function () {});
+    item.appendChild(img);
+    item.appendChild(el('div', new Date(f.modified).toLocaleString())).className = 'gidate';
+    var del = el('button', '×');
+    del.className = 'gidel';
+    del.title = 'delete';
+    del.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (!confirm('Delete this image? This cannot be undone.')) return;
+      api(galleryFileUrl(f.name), { method: 'DELETE' }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); loadGallery(); })
+        .catch(function (err) { alert('could not delete: ' + err.message); });
+    });
+    item.appendChild(del);
+    item.addEventListener('click', function () { previewGalleryImage(f.name, f.bytes); });
+    grid.appendChild(item);
+  });
+}
+/* Like previewFile, but scoped to the gallery's own fixed folder (never the current conversation's
+   agent) and with the modal's delete button wired to remove this one image and refresh the grid. */
+function previewGalleryImage(name, size) {
+  $('fmtitle').textContent = name;
+  $('fmmeta').textContent = bytes(size);
+  $('fmbody').replaceChildren(el('div', 'loading…'));
+  $('filemodal').hidden = false;
+  $('fmdownload').removeAttribute('href');
+  $('fmdownload').download = name;
+  api(galleryFileUrl(name)).then(function (r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.blob();
+  }).then(function (blob) {
+    MODAL_OBJECT_URL = URL.createObjectURL(blob);
+    $('fmdownload').href = MODAL_OBJECT_URL;
+    var img = el('img'); img.src = MODAL_OBJECT_URL; img.alt = name;
+    $('fmbody').replaceChildren(img);
+  }).catch(function (e) { $('fmbody').replaceChildren(el('div', 'cannot show it: ' + e.message)); });
+  FM_ON_DELETE = function () {
+    if (!confirm('Delete this image? This cannot be undone.')) return;
+    api(galleryFileUrl(name), { method: 'DELETE' }).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      closeModal();
+      loadGallery();
+    }).catch(function (err) { alert('could not delete: ' + err.message); });
+  };
+  $('fmdelete').hidden = false;
 }
 /* ---- composer attachments ---- */
 function renderPending() {
@@ -2482,6 +2590,7 @@ function connect(key) {
   return apiJson('api/whoami').then(function (d) {
     WHOAMI = d;
     $('gotonotebook').hidden = !d.notebooksEnabled;
+    $('gallerybtn').hidden = !(d.comfyuiWorkflows && d.comfyuiWorkflows.length);
     sessionStorage.setItem('piper-portal-key', KEY);
     loadConvos();
     return pullHistory();
@@ -2579,6 +2688,9 @@ $('toolsbtn').addEventListener('click', function () { setSide('tools'); });
 $('skillsbtn').addEventListener('click', function () { setSide('skills'); });
 $('jobsbtn').addEventListener('click', showJobsView);
 $('jobsback').addEventListener('click', showChatView);
+$('gallerybtn').addEventListener('click', showGalleryView);
+$('galleryback').addEventListener('click', showChatView);
+$('galleryrefresh').addEventListener('click', loadGallery);
 $('jobsnewbtn').addEventListener('click', function () { openJobForm(null); });
 $('jobstab-jobs').addEventListener('click', function () { switchJobsTab('jobs'); });
 $('jobstab-log').addEventListener('click', function () { switchJobsTab('log'); });
@@ -2599,6 +2711,7 @@ $('uploadbtn').addEventListener('click', function () { $('uploadinput').click();
 $('uploadinput').addEventListener('change', function () { uploadFiles(this.files); this.value = ''; });
 $('fmclose').addEventListener('click', closeModal);
 $('filemodal').addEventListener('click', function (e) { if (e.target === $('filemodal')) closeModal(); });
+$('fmdelete').addEventListener('click', function () { if (FM_ON_DELETE) FM_ON_DELETE(); });
 
 /* ---- portal password: an alternative login, set up from inside the portal itself ---- */
 function renderPassModal() {

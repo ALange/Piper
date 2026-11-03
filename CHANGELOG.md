@@ -2,6 +2,19 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.17.0] - 2026-11-03
+
+### Added
+- **A new "Gallery" section in the client portal's left-hand rail** lists every image you've
+  generated or edited through ComfyUI. Click a thumbnail to preview it full size, download it, or
+  delete it; the × on a thumbnail deletes it directly, no need to open the preview first. Only
+  shown once ComfyUI image generation is actually available to you.
+  Every image a generation or edit produces is now also saved into your own workspace, under
+  `generated-images/` -- the Gallery lists, previews, downloads and deletes through the exact same
+  `/api/files` route the Files panel already uses, rather than a second storage mechanism of its
+  own. Saving is best-effort: if it fails for some reason, the image still reaches the chat reply
+  as before, it just won't show up in the Gallery.
+
 ## [1.16.0] - 2026-11-03
 
 ### Added

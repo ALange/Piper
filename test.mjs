@@ -11457,6 +11457,15 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		assert.equal(seenWorkflow.prompt["42"].inputs.text, "a cat wearing a hat", "the typed message replaced %%PROMPT%%, wherever in the workflow it was");
 		assert.notEqual(seenWorkflow.prompt["43"].inputs.seed, 12345, "the configured workflow's own seed was replaced with a fresh one");
 
+		// A copy also lands in the key's own workspace, under generated-images/, for the portal's
+		// Gallery -- the same /api/files machinery the Files browser already uses lists it. The
+		// happy-path call just above is the first (and so far only) successful generation this block
+		// has made, so exactly one file is expected here.
+		const galleryList1 = await call("/api/files/generated-images/", { headers: auth });
+		assert.equal(galleryList1.status, 200);
+		assert.equal(galleryList1.json.entries.length, 1, "the happy-path generation above was saved");
+		assert.match(galleryList1.json.entries[0].name, /\.png$/);
+
 		// "generate" ignores any attached image -- no upload call is ever made for it.
 		const tinyPng = "data:image/png;base64,QQ==";
 		setComfyUiFetch(async (url, opts) => {
@@ -11495,6 +11504,18 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		assert.equal(seenEditWorkflow.prompt["2"].inputs.text, "make it black and white");
 		const editedDoneLine = edited.text.split("\n\n").find((b) => b.includes("event: done"));
 		assert.match(JSON.parse(editedDoneLine.split("\n").find((l) => l.startsWith("data:")).slice(5)).images[0], /^data:image\/png;base64,/);
+
+		// The edit's own result landed in the gallery too (the third save in this block -- the happy
+		// path above, the "generate ignores an attached image" call just before this, and now this
+		// one), and can be downloaded and deleted through the exact same /api/files route.
+		const galleryList2 = await call("/api/files/generated-images/", { headers: auth });
+		assert.equal(galleryList2.json.entries.length, 3);
+		const galleryName = galleryList2.json.entries.sort((a, b) => b.modified - a.modified)[0].name;
+		const downloaded = await call(`/api/files/generated-images/${galleryName}`, { headers: auth });
+		assert.equal(downloaded.status, 200);
+		const deletedImg = await call(`/api/files/generated-images/${galleryName}`, { method: "DELETE", headers: auth });
+		assert.equal(deletedImg.status, 200);
+		assert.equal((await call("/api/files/generated-images/", { headers: auth })).json.entries.length, 2, "deleted through the gallery, same route a Files-browser delete already uses");
 
 		// "edit" without an attached image, or with more than one, is refused before any fetch call.
 		setComfyUiFetch(async () => { throw new Error("must not be called"); });
