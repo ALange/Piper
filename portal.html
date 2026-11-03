@@ -996,6 +996,12 @@ function renderTargets() {
     });
     t.appendChild(grp);
   }
+  if (WHOAMI.canGenerateImage) {
+    var igrp = el('optgroup'); igrp.label = 'Image generation';
+    var io = el('option', 'Generate an image (ComfyUI)'); io.value = 'img:comfyui';
+    igrp.appendChild(io);
+    t.appendChild(igrp);
+  }
 }
 
 function renderSide() {
@@ -1011,7 +1017,7 @@ function renderSide() {
     row.appendChild(titleRow);
     var agent = (WHOAMI.agents || []).filter(function (a) { return a.id === c.agentId; })[0];
     var model = c.externalModelId ? externalModel(c.externalModelId) : null;
-    var subLabel = c.signalChannel ? ('📱 ' + c.signalPhone) : model ? (model.name + ' (model)') : agent ? agent.name : '(main endpoint)';
+    var subLabel = c.signalChannel ? ('📱 ' + c.signalPhone) : c.imageModelId ? 'ComfyUI (image)' : model ? (model.name + ' (model)') : agent ? agent.name : '(main endpoint)';
     row.appendChild(el('div', subLabel)).className = 's';
     row.addEventListener('click', function () { showChatView(); CUR = c.id; renderAll(); resumeIfLive(c); closeSideOnMobile(); });
     var clear = el('button', '×');
@@ -1143,6 +1149,7 @@ function partNode(p) {
   return textBlocks(p.text || '');
 }
 function botLabelFor(c) {
+  if (c.imageModelId) return 'Image generation (ComfyUI)';
   var agent = (WHOAMI.agents || []).filter(function (a) { return a.id === c.agentId; })[0];
   var model = c.externalModelId ? externalModel(c.externalModelId) : null;
   return (model && model.name) || (agent && agent.name) || 'Piper';
@@ -1223,6 +1230,15 @@ function buildMessageNode(m, botLabel, row) {
   // child, then re-append fresh. Only the thinking node above is ever spared.
   Array.prototype.slice.call(body.children).forEach(function (ch) { if (ch !== thinkNode) body.removeChild(ch); });
   rest.forEach(function (p) { body.appendChild(partNode(p)); });
+  if (m.images && m.images.length) {
+    var imgsBox = el('div'); imgsBox.className = 'msg-images';
+    m.images.forEach(function (dataUrl) {
+      var img = el('img'); img.src = dataUrl; img.alt = 'generated image';
+      img.addEventListener('click', function () { previewDataUrlImage(dataUrl); });
+      imgsBox.appendChild(img);
+    });
+    body.appendChild(imgsBox);
+  }
   if (m.pending && !(m.parts || []).length) body.appendChild(el('div', 'Thinking…'));
   if (m.error) {
     var e = el('div', m.error); e.className = 'err'; body.appendChild(e);
@@ -1349,24 +1365,26 @@ function renderAll() {
   renderStatusBar();
   if (PREVIEW.open) renderPreviewPane();
   var c = conv();
-  $('target').value = c ? (c.externalModelId ? 'm:' + c.externalModelId : (c.agentId || '')) : '';
+  $('target').value = c ? (c.imageModelId ? 'img:' + c.imageModelId : c.externalModelId ? 'm:' + c.externalModelId : (c.agentId || '')) : '';
   $('target').disabled = Boolean(c && c.messages.length) || isBusy(c);
   $('send').innerHTML = isBusy(c)
     ? '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>'
     : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19 V5 M5.5 11.5 L12 5 l6.5 6.5"/></svg>';
   $('send').title = isBusy(c) ? 'stop' : 'send';
   // A model is chat only: no tools, skills or extensions, and no vision means no attachments either.
+  // Image generation is the same, chat-only story, minus vision -- there is nothing to attach to it.
   var model = c && c.externalModelId ? externalModel(c.externalModelId) : null;
-  $('toolsbtn').disabled = Boolean(model);
-  $('skillsbtn').disabled = Boolean(model);
-  $('attachbtn').disabled = Boolean(model) && !model.vision;
-  $('attachbtn').title = (model && !model.vision) ? 'this model does not support images' : 'attach a file (image or any document)';
+  var noExtras = Boolean(model) || Boolean(c && c.imageModelId);
+  $('toolsbtn').disabled = noExtras;
+  $('skillsbtn').disabled = noExtras;
+  $('attachbtn').disabled = (Boolean(model) && !model.vision) || Boolean(c && c.imageModelId);
+  $('attachbtn').title = (model && !model.vision) ? 'this model does not support images' : (c && c.imageModelId) ? 'image generation does not take attachments' : 'attach a file (image or any document)';
   reloadSidePanel();
 }
 
 function newChat() {
   showChatView();
-  var c = { id: newId(), title: '', agentId: '', externalModelId: '', messages: [], updated: Date.now() };
+  var c = { id: newId(), title: '', agentId: '', externalModelId: '', imageModelId: '', messages: [], updated: Date.now() };
   CONVOS.unshift(c);
   CUR = c.id;
   saveConvos();
@@ -1509,9 +1527,10 @@ function send() {
   if (!c) return;
   var text = $('input').value.trim();
   if (!text) return;
-  // An external model has no Pi session to steer -- isBusy(c) for one just means its own stateless
-  // turn is still streaming, which this falls through to as a plain no-op, same as before.
-  if (isBusy(c) && !c.externalModelId) { steer(c, text); return; }
+  // An external model (or image generation) has no Pi session to steer -- isBusy(c) for one just
+  // means its own stateless turn is still streaming, which this falls through to as a plain no-op,
+  // same as before.
+  if (isBusy(c) && !c.externalModelId && !c.imageModelId) { steer(c, text); return; }
   if (isBusy(c)) return;
   if (PENDING_DOCS.some(function (d) { return d.uploading; })) { alert('still uploading an attachment -- wait a moment and send again'); return; }
   var images = PENDING_IMAGES.map(function (img) { return img.dataUrl; });
@@ -1539,7 +1558,7 @@ function send() {
   api('api/chat', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ conversation: c.id, message: outgoing, agentId: c.externalModelId ? undefined : (c.agentId || undefined), channel: c.signalChannel ? 'signal' : undefined, externalModelId: c.externalModelId || undefined, history: history, images: images.length ? images : undefined }),
+    body: JSON.stringify({ conversation: c.id, message: outgoing, agentId: (c.externalModelId || c.imageModelId) ? undefined : (c.agentId || undefined), channel: c.signalChannel ? 'signal' : undefined, externalModelId: c.externalModelId || undefined, imageModelId: c.imageModelId || undefined, history: history, images: images.length ? images : undefined }),
   }).then(function (r) {
     var type = r.headers.get('content-type') || '';
     if (!r.ok || type.indexOf('event-stream') < 0) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error((j.error && j.error.message) || ('HTTP ' + r.status)); });
@@ -1566,7 +1585,7 @@ function send() {
       if (event === 'item' && d.item.kind === 'user') { if (d.op !== 'update') { c.messages.splice(c.messages.indexOf(msg), 0, { role: 'user', text: d.item.text }); if (c.id === CUR) { MSG_RENDERED_CONV = null; renderMessages(); } else renderSide(); } }
       else if (event === 'item') { applyItem(msg, d.item); if (c.id === CUR) { frameMessages(); renderStatusBar(); } else renderSide(); }
       else if (event === 'context') { c.status = c.status || {}; c.status.contextUsed = d.contextUsed; if (c.id === CUR) renderStatusBar(); else renderSide(); }
-      else if (event === 'done') { done = true; msg.usage = d.usage; msg.cost = d.cost; if (!(msg.parts || []).some(function (p) { return p.kind === 'text' && p.text; }) && d.text) msg.parts.push({ kind: 'text', id: 'final', text: d.text }); if (d.status) { c.status = d.status; c.status.contextUsed = (d.usage && d.usage.total_tokens) || null; } refresh(); }
+      else if (event === 'done') { done = true; msg.usage = d.usage; msg.cost = d.cost; if (d.images && d.images.length) msg.images = d.images; if (!(msg.parts || []).some(function (p) { return p.kind === 'text' && p.text; }) && d.text) msg.parts.push({ kind: 'text', id: 'final', text: d.text }); if (d.status) { c.status = d.status; c.status.contextUsed = (d.usage && d.usage.total_tokens) || null; } refresh(); }
       else if (event === 'error') { done = true; msg.error = d.message; }
     });
   }).catch(function (e) {
@@ -1698,7 +1717,7 @@ function resumeIfLive(c) {
           }
         } else if (event === 'item') { if (!msg) { msg = { role: 'assistant', parts: [], pending: true }; c.messages.push(msg); } applyItem(msg, d.item); if (c.id === CUR) frameMessages(); }
         else if (event === 'context') { c.status = c.status || {}; c.status.contextUsed = d.contextUsed; if (c.id === CUR) renderStatusBar(); }
-        else if (event === 'done') { if (d.usage) msg.usage = d.usage; if (d.cost) msg.cost = d.cost; }
+        else if (event === 'done') { if (d.usage) msg.usage = d.usage; if (d.cost) msg.cost = d.cost; if (d.images && d.images.length) msg.images = d.images; }
         else if (event === 'error') { msg.error = d.message; }
       } catch (e) {
         console.error('piper: handling a resumed chat\'s "' + event + '" event failed', e);
@@ -2506,8 +2525,9 @@ $('target').addEventListener('change', function () {
   var c = conv();
   if (!c || c.messages.length) return;
   var v = $('target').value;
-  if (v.indexOf('m:') === 0) { c.externalModelId = v.slice(2); c.agentId = ''; }
-  else { c.agentId = v; c.externalModelId = ''; }
+  if (v.indexOf('img:') === 0) { c.imageModelId = v.slice(4); c.agentId = ''; c.externalModelId = ''; }
+  else if (v.indexOf('m:') === 0) { c.externalModelId = v.slice(2); c.agentId = ''; c.imageModelId = ''; }
+  else { c.agentId = v; c.externalModelId = ''; c.imageModelId = ''; }
   saveConvos();
   renderAll();
 });

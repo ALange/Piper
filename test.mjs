@@ -29,6 +29,7 @@ process.env.CONTAINER_ENV = "TOOL_HOME=/opt/tool";
 const { GATEWAY_DIR: GATEWAY_DIR_FOR_TEST, pi, imageInfo, listEnvironments, environmentOfTag, buildArgs, readDockerfile, writeDockerfile, listImages, buildImage, jobView, resetImageJob, removeImage, pruneImages, refreshDiskSoon, parseSize, parseUsage, parseDiskSize, parseEvent, watchEvents, noteSelfStop, inspectMany, containerStats, diskUsage, listContainers, containerAction, containerExec, containerRoutes, pollDisk, diskSummary, diskState, handleContainerEvent, recentReasonFor, recentEvents, alertPayload, alert, recovered, testAlert, resetAlerts, ALERT_COOLDOWN_MS, parseWebhookUrl, onReadinessChange, lastEngineStatus, chatStore, clearPasswordHash, setPasswordHash, sessions, instanceId, normalizeContainerInput, containerSettingsFor, containerDefaults, networkModesInUse, containerView, secretIn, audit, recentAudit, networkName, networkArgs, NETWORK_OPEN, ensureNetwork, config, iptablesBinary, requireReady, hostNameservers, endpointOf, ensureContainerPiDir, readContainerModels, saveContainerDefaults, validateModelsText, writeChatModels, agentDirPath, classifyModelError, coerceSetting, derivedSessionId, expiryReason, fingerprint, formatDuration, framedTranscript, isInside, isReloadCommand, messageAudioParts, messageImageSources, messageText, nextTurn, parseDuration, requestedSessionId, resolveImages, resolveModelQuery, SessionController, shQuote, shouldFallBack, recordSpend, spendReport, spendTotals, hashPassword, verifyPassword, dashboardAuthorized, isDashboardPath, loadDashboardPassword, apiKeys, ApiKeyStore, expiryFromInput, keyLabel, portalSessionToken, readPortalSession, apiKeyUsage, isSettingsKey, scopedSessionId, isBlockedAddress, fetchImage, guardedLookup, dataUriToImage, profileScope, ensureProfile, loginFails, loginWaitMs, noteLoginFailure, LOGIN_FREE_TRIES, LOGIN_MAX_WAIT_MS, bridgeCatalog, wireEvent, newMeter, meterUsage, PiRpcSession, startBridge, parseGatewayCommand, profileStats, profileWritability, setProfileLock, isProfileLocked, keyIdForScope, keyLimits, limitFromInput, spentToday, spendRefusal, bundleListFromInput, listBundles, grantedBundles, bundleContents, originOf, profileDetail, treeSize, hostDefaultModel, chatIdHash, catalogueStamp, toolActivity, modelAllowed, allowedModelsFor, parseModelPatterns, cachedTreeSize, invalidateSize, SETTINGS_SPEC, parseContainerEnv, parseContainerMounts, rootWarning, ensureWorkspace, workspaceWritability, workspaceStats, setRunner, containerName, containerCreateArgs, containerSignature, execArgs, helperArgs, firewallRules, ensureFirewall, ensureContainer, checkEngine, resetEngineCheck, chatKey, catalogueFor, directProviders, directCatalogue, renderModelsFor, redactedModelsText, saveModelsText, allowedEndpoints, containerDefaultModel, REDACTED, CONTAINER_PATHS, migrateToContainers, migrateSettingRows, containerHost, sweepContainers, parseAllow, profileHelperInvocation, workspaceDir, scopeOf, resolveModel, chatKeyOfContainer, NETWORK, isBlockedIp, inRange, piInvocation, containerSpecFor, setSessionSpawn, createContainerSession, stopContainer, removeContainer, listManaged, EngineError, keyContainerName, isKeyContainer, keyStateImage, killPi, agents, agentScope, ownerKeyOf, agentIdOf, workspaceScopeOf, memoryScopeOf, mayRemember, memoryFor, memoryOverview, memoryEntries, deleteMemoryEntry, clearMemory, deleteMemoryOf, memoryDashboardRoutes, createAgent, updateAgent, deleteAgent, setAgentEnabled, renewAgentPort, stopAgentServers, agentStatus, listeningPort, AgentError, agentView, parsePortRange, startAgent, stopAgent, deleteAgentsOfKey, agentDefaultModel, ensureSystemFiles, rebuildContainer, flattenImage, importChanges, execStream, FLATTEN_OVER_LAYERS, resolveTarget, updateContainer, startUpdate, startUpdateAll, updateJobView, resetUpdateJob, containersOfScope, updateScopeRoute, hostPiVersion, migrateAuditTable, categoryOf, auditEnabled, runWithActor, currentActor, auditOnce, resetAuditDedupe, settingChangeDetail, queryAudit, auditStats, auditCsv, purgeAudit, AUDIT_CATEGORIES, manageability, latestPiVersion, versionNewer, hostExtensions, hostPiInfo, updateHostPi, resetHostPiCache, startJob, startHostPiUpdate, diskPiVersion, hostPiEnv, piCliPath, sweep, db, vendorFile, VENDOR_FILES, THIRD_PARTY, dashboardFilesRoutes, acceptKey, encodeFrame, upgrade, TERMINAL_HELPER, attachTerminal, terminalGate, terminalCount, closeAllTerminals, terminalUpgrade, terminalLabel, sameOrigin, callSpeed, newSpeedStats, addSpeed, speedView, recordSpeed, speedHistory, purgeSpeed, SPEED_RANGES, MIN_PROMPT_TOKENS, renderMarkdown, slugify, linkHref, listPages, renderPage, pageIndex, searchDocs, PATH_NOTES, parseChangelog, readChangelog, readPackage, aboutInfo, parsePiList, piStatus, firstFileOfTar, readPiVersion, PI_PACKAGE_JSON, piVersionsFor, resetPiVersions, piVersionsPending, noteChanged, parseMeminfo, cpuTimes, cpuPercent, containerUsage, resourceSnapshot, resetResources, mayLookupKnowledge, knowledgeFor, addEntry, getByKey, getEntry, sourceSeen, overview: knowledgeOverview, entriesOf, removeEntry, clearSource, purgeOld, activityLog, knowledgeDashboardRoutes, RssError, SOURCE_TYPE, getFeed, listFeeds, createFeed, updateFeed, removeFeed, parseFeedXml, forcePoll, rssTick, parseExtraction, looksBlocked, parseUnblockReply, setExtractionRunner, rssPump, retryEntry, startFeeds, stopFeeds, rssDashboardRoutes,
 	NotebookError, createNotebook, listNotebooks, getNotebook, renameNotebook, setNotebookAgent, setNotebookExternalModel, deleteNotebook, listSources, getSource, addSource, removeSource, chunkText, cosine, topChunks, embedTexts, setEmbedder, setNotebookRunner, setFileReader, parseExtraction: parseNotebookExtraction, askNotebook, generateOutput, listOutputs, OUTPUT_KINDS, pumpExtract: pumpNotebookExtract, resumeNotebookExtractions, stopNotebookExtractions,
 	ExternalModelError, listEndpoints, getEndpoint, createEndpoint, updateEndpoint, deleteEndpoint, listExternalModels, getModel, addModel, updateModel, removeModel, listEndpointsWithModels, setFetch, guessCapabilities, detectModels, checkEndpointStatus, modelsForKey, setKeyModels, listAccess, splitSseLines, chatCompletion, normalizeBaseUrl, beginExternalTurn, checkedHistory,
+	ComfyUiError, mayGenerateImage, comfyuiFor, setComfyUiFetch, parseComfyUiBaseUrl,
 	recentAudit: recentAuditRows, syncCompactionSettings, reserveTokensFor, findReplay, commitReplay, normalizeRequestId } = await import("./server.mjs");
 setRunner(async () => ({ code: 127, stdout: "", stderr: "the tests must not run docker" }));
 const { inventory } = await import("./piper-profile.mjs");
@@ -11346,6 +11347,102 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		setFetch(null);
 		setKeyModels(myKey.id, []);
 		deleteEndpoint(ep.id);
+	}
+
+	// ComfyUI image generation: agent-less and stateless, like an external model, except it produces an
+	// image instead of text (lib/comfyui.mjs). Gated the same way Signal is: a global switch plus the
+	// plain key's own can_generate_image flag (no agent involved here).
+	{
+		const priorComfyEnabled = config.COMFYUI_ENABLED;
+		const priorComfyBase = config.COMFYUI_BASE_URL;
+		const priorComfyCheckpoint = config.COMFYUI_CHECKPOINT;
+		config.COMFYUI_ENABLED = true;
+		config.COMFYUI_BASE_URL = "http://comfy.test:8188";
+		config.COMFYUI_CHECKPOINT = "sd.safetensors";
+
+		// Not granted: refused before any HTTP call is attempted, and never even offered in whoami.
+		assert.equal((await call("/api/whoami", { headers: auth })).json.canGenerateImage, false, "can_generate_image is off by default");
+		const notGranted = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-1", message: "a cat", imageModelId: "comfyui" }) });
+		assert.equal(notGranted.status, 403);
+
+		apiKeys.update(myKey.id, { canGenerateImage: true });
+		assert.equal((await call("/api/whoami", { headers: auth })).json.canGenerateImage, true);
+
+		// Globally off still refuses it even with the key's own flag on.
+		config.COMFYUI_ENABLED = false;
+		const globallyOff = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-2", message: "a cat", imageModelId: "comfyui" }) });
+		assert.equal(globallyOff.status, 403);
+		config.COMFYUI_ENABLED = true;
+
+		// Happy path: submit -> poll history -> fetch the image, threaded back as a data: URI.
+		const tinyPngBytes = Buffer.from("fake-png-bytes");
+		let seenWorkflow = null;
+		setComfyUiFetch(async (url, opts) => {
+			const u = String(url);
+			if (u.endsWith("/prompt")) {
+				seenWorkflow = JSON.parse(opts.body);
+				return { ok: true, json: async () => ({ prompt_id: "p1" }) };
+			}
+			if (u.includes("/history/p1")) {
+				return { ok: true, json: async () => ({ p1: { outputs: { "9": { images: [{ filename: "x.png", subfolder: "", type: "output" }] } } } }) };
+			}
+			if (u.includes("/view")) {
+				return { ok: true, arrayBuffer: async () => tinyPngBytes.buffer.slice(tinyPngBytes.byteOffset, tinyPngBytes.byteOffset + tinyPngBytes.byteLength) };
+			}
+			throw new Error(`unexpected ComfyUI call: ${u}`);
+		});
+		const happy = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-3", message: "a cat wearing a hat", imageModelId: "comfyui" }) });
+		assert.equal(happy.status, 200);
+		assert.match(happy.text, /event: done/);
+		const happyDoneLine = happy.text.split("\n\n").find((b) => b.includes("event: done"));
+		const happyDoneData = JSON.parse(happyDoneLine.split("\n").find((l) => l.startsWith("data:")).slice(5));
+		assert.equal(happyDoneData.images.length, 1);
+		assert.match(happyDoneData.images[0], /^data:image\/png;base64,/);
+		assert.equal(seenWorkflow.prompt["6"].inputs.text, "a cat wearing a hat", "the typed message became the positive prompt");
+		assert.equal(seenWorkflow.prompt["4"].inputs.ckpt_name, "sd.safetensors");
+
+		// Misconfigured: a blank checkpoint is refused before any fetch call is made.
+		config.COMFYUI_CHECKPOINT = "";
+		setComfyUiFetch(async () => { throw new Error("must not be called"); });
+		const noCheckpoint = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-4", message: "a cat", imageModelId: "comfyui" }) });
+		assert.match(noCheckpoint.text, /COMFYUI_CHECKPOINT/);
+		config.COMFYUI_CHECKPOINT = "sd.safetensors";
+
+		// ComfyUI's own node-validation error surfaces readably, not as a raw status/JSON dump.
+		setComfyUiFetch(async (url) => {
+			if (String(url).endsWith("/prompt")) return { ok: false, status: 400, json: async () => ({ node_errors: { "4": { errors: [{ message: "checkpoint not found" }] } } }) };
+			throw new Error("must not reach history/view after a rejected prompt");
+		});
+		const badPrompt = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-5", message: "a cat", imageModelId: "comfyui" }) });
+		assert.match(badPrompt.text, /checkpoint not found/);
+
+		// Timeout: history never finishes, bounded by a short COMFYUI_TIMEOUT_MS rather than hanging.
+		const priorTimeout = config.COMFYUI_TIMEOUT_MS;
+		config.COMFYUI_TIMEOUT_MS = 10;
+		setComfyUiFetch(async (url) => {
+			const u = String(url);
+			if (u.endsWith("/prompt")) return { ok: true, json: async () => ({ prompt_id: "p2" }) };
+			if (u.includes("/history/p2")) return { ok: true, json: async () => ({}) };
+			throw new Error("must not reach /view when it never finishes");
+		});
+		const timedOut = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-6", message: "a cat", imageModelId: "comfyui" }) });
+		assert.match(timedOut.text, /did not finish/);
+		config.COMFYUI_TIMEOUT_MS = priorTimeout;
+
+		setComfyUiFetch(null);
+		apiKeys.update(myKey.id, { canGenerateImage: false });
+
+		// mayGenerateImage/comfyuiFor directly, for an agent record -- the portal only ever uses the
+		// no-agent form above, but the gate itself (lib/agentsignal.mjs's exact shape) covers both.
+		assert.equal(mayGenerateImage({ agentId: myAgent.id }), false, "off by default for a fresh agent");
+		await updateAgent(myAgent.id, { canGenerateImage: true });
+		assert.equal(mayGenerateImage({ agentId: myAgent.id }), true);
+		assert.throws(() => comfyuiFor({ agentId: theirAgent.id }), /this agent may not generate images/);
+		await updateAgent(myAgent.id, { canGenerateImage: false });
+
+		config.COMFYUI_ENABLED = priorComfyEnabled;
+		config.COMFYUI_BASE_URL = priorComfyBase;
+		config.COMFYUI_CHECKPOINT = priorComfyCheckpoint;
 	}
 
 	// Files: the key's own workspace by default, an agent's own with ?agentId=, never another key's.

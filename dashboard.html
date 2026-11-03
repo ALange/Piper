@@ -1198,6 +1198,7 @@
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px" for="epedmsgs">colleague messages</label><select id="epedmsgs" title="How this agent shows what its colleagues write while it waits for them. Follow the setting uses Settings → Agent → DELEGATE_MESSAGES."><option value="">follow the setting</option><option value="chat">in the reply, as (name): message</option><option value="thinking">first line only, in the reasoning</option><option value="off">not shown</option></select></div>
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">schedules</label><label class="ctrl" title="Gives this agent tools to create, list, run and remove its own recurring tasks. A task lives on the gateway, so it runs on its schedule even when this agent's container is stopped; each run starts the container again. Needs AGENT_JOBS_ENABLED. Turning this off, or disabling the agent, pauses its schedules rather than deleting them; they resume by themselves once it is back on."><input type="checkbox" id="epedsched"> may schedule recurring tasks for itself</label></div>
         <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">Signal</label><label class="ctrl" title="Gives this agent tools to link a phone number to itself and carry on a conversation with it over Signal, from Piper's own Signal account. Linking sends that number a real message right away. Needs SIGNAL_ENABLED."><input type="checkbox" id="epedsignal"> may link phone numbers and talk over Signal</label></div>
+        <div class="fieldrow" style="margin-bottom:8px"><label style="min-width:110px">Images</label><label class="ctrl" title="Lets this agent generate an image through ComfyUI, picked from the client portal's target dropdown instead of chatting with this agent. Needs COMFYUI_ENABLED."><input type="checkbox" id="epedimg"> may generate images (ComfyUI)</label></div>
         <div style="margin-bottom:8px"><label class="hint" for="epedinstr">instructions (the agent's AGENTS.md: who it is and how it works)</label><textarea id="epedinstr" rows="9" style="width:100%;box-sizing:border-box;background:#141414;color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px;font-family:inherit;font-size:12px"></textarea></div>
         <div id="epedctr"></div>
         <div class="fieldrow" style="margin-top:8px"><button id="epedsave">save</button><button id="epedcancel">close</button><span class="hint small" id="epednote"></span></div>
@@ -1411,7 +1412,8 @@
               <th class="num" title="spent today / daily cap in USD - blank follows the default, 0 is unlimited">today</th>
               <th title="shared bundles this key gets - blank follows the default, * is all, none for none">bundles</th>
               <th title="lets a chat running as this key directly (no agent endpoint) schedule its own recurring tasks, from the Jobs page">schedule</th>
-              <th title="lets a chat running as this key directly (no agent endpoint) link a Signal phone number and talk over Signal">Signal</th><th></th></tr></thead>
+              <th title="lets a chat running as this key directly (no agent endpoint) link a Signal phone number and talk over Signal">Signal</th>
+              <th title="lets a chat running as this key directly (no agent endpoint) generate an image through ComfyUI, from the client portal's target dropdown">images</th><th></th></tr></thead>
             <tbody id="keyrows"></tbody>
           </table></div>
         </section>
@@ -2124,6 +2126,19 @@ function renderKeyTable() {
     });
     sigcell.appendChild(sigchk);
     tr.appendChild(sigcell);
+
+    // Same idea again, for generating an image through ComfyUI from a chat running as this key directly.
+    var imgcell = el('td');
+    var imgchk = el('input');
+    imgchk.type = 'checkbox';
+    imgchk.checked = Boolean(k.canGenerateImage);
+    imgchk.disabled = !(KEYS.comfyuiEnabled);
+    imgchk.title = KEYS.comfyuiEnabled ? 'may generate an image through ComfyUI from the client portal, with no agent endpoint' : 'switched off globally: Settings → ComfyUI → COMFYUI_ENABLED';
+    imgchk.addEventListener('change', function () {
+      act('POST', 'dashboard/api-keys/' + k.id, { canGenerateImage: imgchk.checked }, imgchk.checked ? 'may now generate images' : 'may no longer generate images');
+    });
+    imgcell.appendChild(imgchk);
+    tr.appendChild(imgcell);
 
     var actions = el('td');
     // First, so it is visible without scrolling the table: what this key's agents get.
@@ -6019,6 +6034,7 @@ function openEndpointEditor(a) {
   $('epedmsgs').value = a.delegateMessages || '';
   $('epedsched').checked = Boolean(a.canSchedule);
   $('epedsignal').checked = Boolean(a.canSignal);
+  $('epedimg').checked = Boolean(a.canGenerateImage);
   $('epedmodel').value = a.model || '';
   epFill($('epedthink'), EP_THINK, 'thinking: default');
   $('epedthink').value = a.thinking || '';
@@ -6034,7 +6050,7 @@ function openEndpointEditor(a) {
 }
 $('epedsave').addEventListener('click', function () {
   if (!EP_EDIT) return;
-  var body = { description: $('epeddesc').value.trim(), canDelegate: $('epeddeleg').checked, delegateMessages: $('epedmsgs').value || null, canSchedule: $('epedsched').checked, canSignal: $('epedsignal').checked, name: $('epedname').value.trim(), model: $('epedmodel').value.trim() || null, thinking: $('epedthink').value || null, container: epReadEdit() };
+  var body = { description: $('epeddesc').value.trim(), canDelegate: $('epeddeleg').checked, delegateMessages: $('epedmsgs').value || null, canSchedule: $('epedsched').checked, canSignal: $('epedsignal').checked, canGenerateImage: $('epedimg').checked, name: $('epedname').value.trim(), model: $('epedmodel').value.trim() || null, thinking: $('epedthink').value || null, container: epReadEdit() };
   if (!$('epedinstr').disabled) body.instructions = $('epedinstr').value;
   $('epedsave').disabled = true; $('epednote').textContent = 'saving…';
   epPost('dashboard/agents/' + EP_EDIT, body).then(function (j) { EP_DATA = j; renderEndpoints(j); $('epednote').textContent = 'saved. New chats use the new instructions and model; running chats pick the instructions up when they next start.'; })

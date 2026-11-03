@@ -118,6 +118,7 @@ export * from "./lib/delegate.mjs";
 export * from "./lib/agentschedule.mjs";
 export * from "./lib/signal.mjs";
 export * from "./lib/agentsignal.mjs";
+export * from "./lib/comfyui.mjs";
 export * from "./lib/agents.mjs";
 export * from "./lib/agentservers.mjs";
 export * from "./lib/portal.mjs";

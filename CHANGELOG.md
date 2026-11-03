@@ -2,6 +2,23 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.15.0] - 2026-11-03
+
+### Added
+- **The client portal can now generate images through a ComfyUI server**, picked from the same
+  target dropdown used to pick an agent or an external chat model -- "Image generation (ComfyUI)".
+  No agent and no Pi session is involved: type a prompt, get the generated image back inline in the
+  chat. Uses one fixed, built-in txt2img workflow (checkpoint loader, positive/negative prompt,
+  sampler, VAE decode, save image); the typed message becomes the positive prompt, everything else
+  (negative prompt, size, steps, cfg, sampler) is a new operator default under Settings -> ComfyUI,
+  alongside the server's own address (COMFYUI_BASE_URL) and the checkpoint filename it should load
+  (COMFYUI_CHECKPOINT, required -- ComfyUI has no default model of its own). Off by default
+  (COMFYUI_ENABLED), and even once on, gated per agent and per API key with their own
+  "may generate images" switch -- the same capability pattern Signal and scheduling already use,
+  edited on the agent's own edit panel and the API Keys page. "Stop" cancels a generation in
+  progress, and reloading the portal mid-generation reconnects to it exactly like any other
+  in-flight turn.
+
 ## [1.14.7] - 2026-11-01
 
 ### Removed
