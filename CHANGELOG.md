@@ -2,6 +2,19 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.15.1] - 2026-11-03
+
+### Changed
+- **ComfyUI image generation (1.15.0) now runs whatever workflow you configure, not a workflow
+  Piper builds for you.** `COMFYUI_CHECKPOINT` and the other built-in defaults (negative prompt,
+  size, steps, cfg, sampler) are gone; in their place, `COMFYUI_WORKFLOW` takes a whole ComfyUI
+  workflow exported in API format (ComfyUI's own "Save (API Format)", with Dev Mode on) -- base
+  model, LoRAs, refiner pass, upscaler, anything your workflow already does. Put the literal text
+  `%%PROMPT%%` in whichever node's prompt field a chat message should fill in; it's swapped out on
+  every generation, and every node with a numeric `seed` input gets a fresh random one. The setting
+  is edited in a real multi-line text box now (Settings pages gained a "textarea" field type for
+  it), not a cramped single-line one.
+
 ## [1.15.0] - 2026-11-03
 
 ### Added

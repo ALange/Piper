@@ -347,6 +347,7 @@
   .cprow b { min-width:130px; font-weight:600; } .cprow span { color:var(--dim); overflow-wrap:anywhere; }
   .cpeditor { display:grid; gap:10px; margin-top:8px; }
   .cpeditor textarea { width:100%; min-height:260px; box-sizing:border-box; font:12px/1.45 ui-monospace,Menlo,Consolas,monospace; background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:6px; padding:10px; resize:vertical; }
+  .settingtextarea { width:100%; max-width:640px; box-sizing:border-box; font:12px/1.45 ui-monospace,Menlo,Consolas,monospace; background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:6px; padding:10px; resize:vertical; }
   .cpeditor .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
   .cpeditor .row input { min-width:0; flex:1 1 160px; }
   .cpnote { font-size:12px; } .cpnote.bad { color:#f85149; } .cpnote.good { color:#3fb950; }
@@ -3174,6 +3175,12 @@ function settingInput(s, L) {
       input.appendChild(op);
     });
     input.value = String(s.value);
+  } else if (s.type === 'textarea') {
+    input = el('textarea');
+    input.rows = 10;
+    input.className = 'settingtextarea';
+    if (L.placeholder) input.placeholder = L.placeholder;
+    input.value = s.display == null ? '' : String(s.display);
   } else {
     input = el('input');
     if (s.type === 'bool') {

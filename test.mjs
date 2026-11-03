@@ -11355,10 +11355,19 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	{
 		const priorComfyEnabled = config.COMFYUI_ENABLED;
 		const priorComfyBase = config.COMFYUI_BASE_URL;
-		const priorComfyCheckpoint = config.COMFYUI_CHECKPOINT;
+		const priorComfyWorkflow = config.COMFYUI_WORKFLOW;
 		config.COMFYUI_ENABLED = true;
 		config.COMFYUI_BASE_URL = "http://comfy.test:8188";
-		config.COMFYUI_CHECKPOINT = "sd.safetensors";
+		// Deliberately not "9" for the SaveImage node, and not "6" for the prompt -- a custom,
+		// operator-supplied workflow has whatever node ids ComfyUI's own export happened to assign,
+		// so the test must not accidentally pass only because it matches Piper's old built-in layout.
+		const comfyWorkflowFixture = JSON.stringify({
+			"41": { class_type: "CheckpointLoaderSimple", inputs: { ckpt_name: "sd.safetensors" } },
+			"42": { class_type: "CLIPTextEncode", inputs: { text: "%%PROMPT%%", clip: ["41", 1] } },
+			"43": { class_type: "KSampler", inputs: { seed: 12345, steps: 20, model: ["41", 0], positive: ["42", 0] } },
+			"77": { class_type: "SaveImage", inputs: { images: ["43", 0] } },
+		});
+		config.COMFYUI_WORKFLOW = comfyWorkflowFixture;
 
 		// Not granted: refused before any HTTP call is attempted, and never even offered in whoami.
 		assert.equal((await call("/api/whoami", { headers: auth })).json.canGenerateImage, false, "can_generate_image is off by default");
@@ -11374,7 +11383,10 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		assert.equal(globallyOff.status, 403);
 		config.COMFYUI_ENABLED = true;
 
-		// Happy path: submit -> poll history -> fetch the image, threaded back as a data: URI.
+		// Happy path: the placeholder is replaced with the typed message, the seed is randomized away
+		// from whatever the configured workflow had, and the SaveImage node is found by its class_type
+		// (node id "77" here), not assumed to be any particular id -- then submit -> poll history ->
+		// fetch the image, threaded back as a data: URI.
 		const tinyPngBytes = Buffer.from("fake-png-bytes");
 		let seenWorkflow = null;
 		setComfyUiFetch(async (url, opts) => {
@@ -11384,7 +11396,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 				return { ok: true, json: async () => ({ prompt_id: "p1" }) };
 			}
 			if (u.includes("/history/p1")) {
-				return { ok: true, json: async () => ({ p1: { outputs: { "9": { images: [{ filename: "x.png", subfolder: "", type: "output" }] } } } }) };
+				return { ok: true, json: async () => ({ p1: { outputs: { "77": { images: [{ filename: "x.png", subfolder: "", type: "output" }] } } } }) };
 			}
 			if (u.includes("/view")) {
 				return { ok: true, arrayBuffer: async () => tinyPngBytes.buffer.slice(tinyPngBytes.byteOffset, tinyPngBytes.byteOffset + tinyPngBytes.byteLength) };
@@ -11398,19 +11410,19 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		const happyDoneData = JSON.parse(happyDoneLine.split("\n").find((l) => l.startsWith("data:")).slice(5));
 		assert.equal(happyDoneData.images.length, 1);
 		assert.match(happyDoneData.images[0], /^data:image\/png;base64,/);
-		assert.equal(seenWorkflow.prompt["6"].inputs.text, "a cat wearing a hat", "the typed message became the positive prompt");
-		assert.equal(seenWorkflow.prompt["4"].inputs.ckpt_name, "sd.safetensors");
+		assert.equal(seenWorkflow.prompt["42"].inputs.text, "a cat wearing a hat", "the typed message replaced %%PROMPT%%, wherever in the workflow it was");
+		assert.notEqual(seenWorkflow.prompt["43"].inputs.seed, 12345, "the configured workflow's own seed was replaced with a fresh one");
 
-		// Misconfigured: a blank checkpoint is refused before any fetch call is made.
-		config.COMFYUI_CHECKPOINT = "";
+		// Misconfigured: a blank workflow is refused before any fetch call is made.
+		config.COMFYUI_WORKFLOW = "";
 		setComfyUiFetch(async () => { throw new Error("must not be called"); });
-		const noCheckpoint = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-4", message: "a cat", imageModelId: "comfyui" }) });
-		assert.match(noCheckpoint.text, /COMFYUI_CHECKPOINT/);
-		config.COMFYUI_CHECKPOINT = "sd.safetensors";
+		const noWorkflow = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-4", message: "a cat", imageModelId: "comfyui" }) });
+		assert.match(noWorkflow.text, /COMFYUI_WORKFLOW/);
+		config.COMFYUI_WORKFLOW = comfyWorkflowFixture;
 
 		// ComfyUI's own node-validation error surfaces readably, not as a raw status/JSON dump.
 		setComfyUiFetch(async (url) => {
-			if (String(url).endsWith("/prompt")) return { ok: false, status: 400, json: async () => ({ node_errors: { "4": { errors: [{ message: "checkpoint not found" }] } } }) };
+			if (String(url).endsWith("/prompt")) return { ok: false, status: 400, json: async () => ({ node_errors: { "41": { errors: [{ message: "checkpoint not found" }] } } }) };
 			throw new Error("must not reach history/view after a rejected prompt");
 		});
 		const badPrompt = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "img-convo-5", message: "a cat", imageModelId: "comfyui" }) });
@@ -11442,7 +11454,7 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 
 		config.COMFYUI_ENABLED = priorComfyEnabled;
 		config.COMFYUI_BASE_URL = priorComfyBase;
-		config.COMFYUI_CHECKPOINT = priorComfyCheckpoint;
+		config.COMFYUI_WORKFLOW = priorComfyWorkflow;
 	}
 
 	// Files: the key's own workspace by default, an agent's own with ?agentId=, never another key's.
