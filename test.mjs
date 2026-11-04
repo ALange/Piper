@@ -9599,7 +9599,14 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	// Who may delegate, and to whom.
 	assert.equal(mayDelegate(rec(arch)), true);
 	assert.equal(mayDelegate(rec(coder)), false, "off by default");
-	assert.equal(mayDelegate({ keyId: k1.record.id, agentId: null }), false, "the key's main endpoint does not delegate");
+	const bareRecord = { keyId: k1.record.id, agentId: null, delegateChain: [], delegateDepth: 0, live: { note() {} } };
+	assert.equal(mayDelegate(bareRecord), false, "the key's main endpoint does not delegate without its own can_delegate flag");
+	await assert.rejects(delegatorFor(bareRecord).delegate("coder", "x"), /this key is not allowed to delegate/);
+	apiKeys.update(k1.record.id, { canDelegate: true });
+	assert.equal(mayDelegate(bareRecord), true, "granting the key's own flag lets its bare endpoint delegate too");
+	assert.deepEqual(colleagues(bareRecord), [{ name: "arch", description: "designs" }, { name: "coder", description: "writes code" }], "every enabled agent of the key, same as an agent caller would see (minus itself)");
+	apiKeys.update(k1.record.id, { canDelegate: false });
+	assert.equal(mayDelegate(bareRecord), false, "back off again");
 	assert.deepEqual(colleagues(rec(arch)), [{ name: "coder", description: "writes code" }], "not itself, not a disabled agent, not another key's");
 	assert.deepEqual(colleagues(rec(arch, { delegateChain: [coder.id] })), [], "nobody already in the chain");
 	config.DELEGATE_ENABLED = false;
@@ -9648,6 +9655,11 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.equal(seen[1].clientSessionId, seen[0].clientSessionId, "the colleague keeps its conversation across calls from one chat");
 	await delegatorFor(rec(arch, { id: "another-chat" })).delegate("coder", "x");
 	assert.notEqual(seen[2].clientSessionId, seen[0].clientSessionId, "another chat of the caller gets its own");
+	// A bare key with its own can_delegate flag hands off exactly the same way an agent does.
+	apiKeys.update(k1.record.id, { canDelegate: true });
+	assert.equal(await delegatorFor(bareRecord).delegate("coder", "write fizzbuzz too"), "done: write fizzbuzz too");
+	apiKeys.update(k1.record.id, { canDelegate: false });
+	await assert.rejects(delegatorFor(bareRecord).delegate("coder", "x"), /this key is not allowed to delegate/);
 	for (const [name, task, re] of [["arch", "x", /itself/], ["nobody", "x", /no agent called/], ["stranger", "x", /no agent called/], ["off", "x", /switched off/], ["coder", "  ", /no task/], ["coder", "x".repeat(40000), /over 32768/]]) {
 		await assert.rejects(d.delegate(name, task), re, name);
 	}

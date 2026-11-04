@@ -2,6 +2,17 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.18.0] - 2026-11-04
+
+### Added
+- **A plain API key can now be granted Delegate on its own**, the same way it can already be granted
+  Signal, Scheduling and ComfyUI image generation. Delegate (`piper_agents`/`piper_delegate`, hand
+  work to one of the key's own agents) used to be an agent-only capability: a chat running as the
+  key directly -- the base model, with no agent persona selected -- had no way to get it, even with
+  `DELEGATE_ENABLED` on and agents it could otherwise hand work to. The API Keys page now has a
+  "delegate" checkbox next to the existing schedule/Signal/images ones, disabled when Delegate is
+  off gateway-wide.
+
 ## [1.17.0] - 2026-11-03
 
 ### Added

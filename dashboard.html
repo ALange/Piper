@@ -1414,7 +1414,8 @@
               <th title="shared bundles this key gets - blank follows the default, * is all, none for none">bundles</th>
               <th title="lets a chat running as this key directly (no agent endpoint) schedule its own recurring tasks, from the Jobs page">schedule</th>
               <th title="lets a chat running as this key directly (no agent endpoint) link a Signal phone number and talk over Signal">Signal</th>
-              <th title="lets a chat running as this key directly (no agent endpoint) generate an image through ComfyUI, from the client portal's target dropdown">images</th><th></th></tr></thead>
+              <th title="lets a chat running as this key directly (no agent endpoint) generate an image through ComfyUI, from the client portal's target dropdown">images</th>
+              <th title="lets a chat running as this key directly (no agent endpoint) hand work to the key's own agents, with piper_agents/piper_delegate">delegate</th><th></th></tr></thead>
             <tbody id="keyrows"></tbody>
           </table></div>
         </section>
@@ -2140,6 +2141,19 @@ function renderKeyTable() {
     });
     imgcell.appendChild(imgchk);
     tr.appendChild(imgcell);
+
+    // Same idea again, for handing work to the key's own agents from a chat running as this key directly.
+    var delcell = el('td');
+    var delchk = el('input');
+    delchk.type = 'checkbox';
+    delchk.checked = Boolean(k.canDelegate);
+    delchk.disabled = !(KEYS.delegateEnabled);
+    delchk.title = KEYS.delegateEnabled ? 'may hand work to the key’s own agents (piper_agents/piper_delegate) from a chat running as this key, with no agent endpoint' : 'switched off globally: Settings → Agent → DELEGATE_ENABLED';
+    delchk.addEventListener('change', function () {
+      act('POST', 'dashboard/api-keys/' + k.id, { canDelegate: delchk.checked }, delchk.checked ? 'may now delegate to its agents' : 'may no longer delegate to its agents');
+    });
+    delcell.appendChild(delchk);
+    tr.appendChild(delcell);
 
     var actions = el('td');
     // First, so it is visible without scrolling the table: what this key's agents get.
