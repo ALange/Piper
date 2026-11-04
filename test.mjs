@@ -1047,6 +1047,10 @@ assert.equal(isReloadCommand(undefined), false);
 	assert.equal(session.getSessionStats().cost, 1.5, "stats come from the gateway's meter");
 
 	// An extension command is handled without a run: no agent_settled ever comes, and prompt must not hang.
+	// The very first prompt on a fresh process re-checks for a few seconds before concluding that --
+	// a cold Pi can genuinely be on its way to a real run and just not show it on the very next
+	// get_state yet -- but it still returns on its own rather than hanging forever, and every later
+	// prompt on the same (by-then-proven-responsive) process goes back to the fast, single-check path.
 	const commandChild = fakeChild((command, reply) => {
 		if (command.type === "get_state") return reply(ok(command, { isStreaming: false }));
 		if (command.type === "prompt") return reply(ok(command));
@@ -1054,7 +1058,35 @@ assert.equal(isReloadCommand(undefined), false);
 	const commandSession = await new PiRpcSession(commandChild).init(2000);
 	const started = Date.now();
 	await commandSession.prompt("/piper-reload");
-	assert.ok(Date.now() - started < 1000, "an extension command returns without waiting for a run");
+	const firstMs = Date.now() - started;
+	assert.ok(firstMs >= 2900 && firstMs < 5000, `the first prompt on a fresh process re-checks for a few seconds before giving up (took ${firstMs}ms)`);
+	const secondStarted = Date.now();
+	await commandSession.prompt("/piper-reload");
+	assert.ok(Date.now() - secondStarted < 1000, "a later extension command, on the same now-proven-responsive process, returns at once");
+
+	// A cold process's real first prompt: get_state answers "not streaming" on the first couple of
+	// checks (loading the bridge/extension code still in progress), then agent_start and the rest of
+	// a real run arrive a little late. Before the fix, prompt() took that first snapshot at face
+	// value, returned early, and the caller got no reply at all even though Pi really did answer --
+	// this is the exact shape of the bug a delegate hand-off to a freshly spawned colleague hit.
+	let slowChecks = 0;
+	const slowStartChild = fakeChild((command, reply) => {
+		if (command.type === "get_state") {
+			slowChecks += 1;
+			return reply(ok(command, { isStreaming: slowChecks > 2 }));
+		}
+		if (command.type === "prompt") {
+			reply(ok(command));
+			setTimeout(() => {
+				reply({ type: "agent_start" });
+				reply({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: "the real answer" }] } });
+				reply({ type: "agent_settled" });
+			}, 250);
+		}
+	});
+	const slowStartSession = await new PiRpcSession(slowStartChild).init(2000);
+	await slowStartSession.prompt("translate this");
+	assert.equal(slowStartSession.getLastAssistantText(), "the real answer", "a run that starts just a little late is still waited for, not mistaken for an extension command");
 
 	// A crash fails the waiting prompt with a reason, and marks the session dead so the next request respawns.
 	const crashChild = fakeChild((command, reply) => {

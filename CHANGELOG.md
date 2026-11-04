@@ -2,6 +2,20 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.18.1] - 2026-11-04
+
+### Fixed
+- **A chat's very first prompt to a freshly spawned Pi process could come back with no reply at
+  all**, most visible as a delegate hand-off ("piper_delegate") to a colleague agent that had never
+  run before: the colleague actually answered, but the gateway had already decided -- from a single
+  snapshot taken right after the prompt was accepted -- that no run had started and stopped
+  listening, so the real answer arrived with nobody there to catch it. The same race could in
+  principle hit a plain chat's very first message too, cold containers just make the window wider.
+  The very first prompt on a process now re-checks for up to a few seconds before concluding that,
+  instead of deciding on one snapshot; every later prompt on the same (by-then-proven-responsive)
+  process keeps the original instant check, so an extension command that genuinely starts no run is
+  never slowed down by this.
+
 ## [1.18.0] - 2026-11-04
 
 ### Added
