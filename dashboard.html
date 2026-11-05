@@ -349,7 +349,7 @@
   .cpeditor textarea { width:100%; min-height:260px; box-sizing:border-box; font:12px/1.45 ui-monospace,Menlo,Consolas,monospace; background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:6px; padding:10px; resize:vertical; }
   .settingtextarea { width:100%; max-width:640px; box-sizing:border-box; font:12px/1.45 ui-monospace,Menlo,Consolas,monospace; background:var(--bg); color:var(--fg); border:1px solid var(--border); border-radius:6px; padding:10px; resize:vertical; }
   .cpeditor .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-  .cpeditor .row input { min-width:0; flex:1 1 160px; }
+  .cpeditor .row input, .cpeditor .row select { min-width:0; flex:1 1 160px; }
   .cpnote { font-size:12px; } .cpnote.bad { color:#f85149; } .cpnote.good { color:#3fb950; }
   #uppanel { position:fixed; right:16px; bottom:16px; width:min(440px,calc(100vw - 32px)); max-height:55vh; overflow:auto; z-index:20;
     background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:10px 12px; box-shadow:0 6px 24px rgba(0,0,0,.45); }
@@ -3626,17 +3626,20 @@ function containerHealthPanel() {
 var LAST_CONTAINERS = null;
 
 /* The Pi configuration containers use: models.json (the models their Pi calls directly, keys shown
-   as ***) and the default model. Saved on its own, not with the settings above. */
+   as ***) and the default model. Saved on its own, not with the settings above. The default model
+   itself is picked from the same known-models list the Models tab shows (#modellist) rather than
+   typed as a bare provider/model pair, so it never has to be typed out by hand. */
 function containerPiPanel() {
   var box = el('div'); box.className = 'passblock';
   box.appendChild(el('p', 'Pi in each container is a stock install. The models below are called by Pi directly, so the containers hold their keys and the firewall lets their endpoints through; every other model still goes through the gateway. Edited separately from your own ~/.pi/agent.')).className = 'hint';
   var ed = el('div'); ed.className = 'cpeditor';
   var ta = el('textarea'); ta.spellcheck = false; ta.value = 'loading…'; ta.disabled = true;
   var row = el('div'); row.className = 'row';
-  var inputs = {};
-  [['defaultProvider', 'default provider'], ['defaultModel', 'default model'], ['defaultThinkingLevel', 'thinking level']].forEach(function (f) {
-    var i = el('input'); i.placeholder = f[1]; i.title = f[1]; i.autocomplete = 'off'; inputs[f[0]] = i; row.appendChild(i);
-  });
+  var modelInput = el('input'); modelInput.setAttribute('list', 'modellist'); modelInput.placeholder = 'default model, pick from the list or type one, blank = none'; modelInput.title = 'default model'; modelInput.autocomplete = 'off';
+  var thinkSelect = el('select'); thinkSelect.title = 'default thinking level';
+  epFill(thinkSelect, EP_THINK, 'thinking: default');
+  row.appendChild(modelInput); row.appendChild(thinkSelect);
+  ensureModels();
   var save = el('button', 'save container Pi config'); save.disabled = true;
   var note = el('span'); note.className = 'cpnote';
   var foot = el('div'); foot.className = 'row'; foot.appendChild(save); foot.appendChild(note);
@@ -3644,14 +3647,21 @@ function containerPiPanel() {
   var loaded = null;
   function fill(v) {
     loaded = v; ta.value = v.models; ta.disabled = false; save.disabled = false;
-    ['defaultProvider', 'defaultModel', 'defaultThinkingLevel'].forEach(function (k) { inputs[k].value = v.defaults[k] || ''; });
+    modelInput.value = v.defaults.defaultProvider && v.defaults.defaultModel ? v.defaults.defaultProvider + '/' + v.defaults.defaultModel : '';
+    thinkSelect.value = v.defaults.defaultThinkingLevel || '';
   }
   fetch('dashboard/container-pi', { cache: 'no-store' }).then(readJson).then(fill)
     .catch(function (e) { ta.value = e.message; });
   save.addEventListener('click', function () {
+    var typed = modelInput.value.trim();
+    var slash = typed.indexOf('/');
+    if (typed && slash <= 0) { note.className = 'cpnote bad'; note.textContent = 'the default model needs a provider too, as "provider/model" -- pick one from the list'; return; }
     save.disabled = true; note.className = 'cpnote'; note.textContent = 'saving…';
-    var defaults = {};
-    Object.keys(inputs).forEach(function (k) { defaults[k] = inputs[k].value.trim(); });
+    var defaults = {
+      defaultProvider: slash > 0 ? typed.slice(0, slash) : '',
+      defaultModel: slash > 0 ? typed.slice(slash + 1) : '',
+      defaultThinkingLevel: thinkSelect.value,
+    };
     fetch('dashboard/container-pi', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ models: ta.value, defaults: defaults }) })
       .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (res) {

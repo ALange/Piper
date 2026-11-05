@@ -2,6 +2,18 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.18.2] - 2026-11-05
+
+### Changed
+- **The gateway-wide default model (Settings → Containers → "Pi config for containers") is now
+  picked from the same known-models list the Models tab shows**, instead of typed out by hand as a
+  bare provider and model pair. It's one field now, with the same autocomplete-as-you-type list
+  every other model field in the dashboard already uses (an agent's own model, a key's allowed
+  models), so a default model never has to be typed from memory. The thinking level next to it is
+  now a dropdown of the real levels instead of free text. The models.json editor above it (Pi's own
+  direct providers, for anything the gateway doesn't already proxy) is unchanged -- that one is
+  still raw JSON, since it's a short list of whole provider definitions, not a single model name.
+
 ## [1.18.1] - 2026-11-04
 
 ### Fixed
