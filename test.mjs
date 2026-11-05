@@ -8055,6 +8055,230 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	stopJobs();
 }
 
+// Phase 2: kanban task cards -- a title+prompt an agent runs at once, moved through a 4-column
+// board. Mirrors the Jobs tests above in shape (an injected runner, a waitFor poller) but a card is
+// its own single live run rather than a definition with a history of many.
+{
+	const K = await import("./server.mjs");
+	const { createCard, cardView, getCard, listEvents, deleteCardsOf, setKanbanRunner, answerCard, cancelCard, retryCard, startKanban, stopKanban, noteQuestion, kanbanBridgeFor, credentialFor, startBridge, newMeter } = K;
+	const created = apiKeys.create({ name: "kanban-test" });
+	const key = created.record ?? created;
+	const other = apiKeys.create({ name: "kanban-other" });
+	const otherKey = other.record ?? other;
+	const agent = agents.create({ keyId: key.id, name: "kanban-agent" });
+	const otherAgent = agents.create({ keyId: otherKey.id, name: "kanban-other-agent" });
+	const waitFor = async (fn, ms = 3000) => { const end = Date.now() + ms; while (Date.now() < end) { const v = fn(); if (v) return v; await new Promise((r) => setTimeout(r, 15)); } throw new Error("timed out waiting"); };
+
+	// Validation: ownership and basic shape, the same checks createJob already has.
+	assert.throws(() => createCard({ keyId: "nope", agentId: agent.id, title: "t", prompt: "p" }), (e) => e.status === 404);
+	assert.throws(() => createCard({ keyId: key.id, agentId: "deadbeef", title: "t", prompt: "p" }), (e) => e.status === 404, "an agent that is not this key's");
+	assert.throws(() => createCard({ keyId: key.id, agentId: otherAgent.id, title: "t", prompt: "p" }), (e) => e.status === 404, "another key's agent");
+	assert.throws(() => createCard({ keyId: key.id, agentId: agent.id, title: "", prompt: "p" }), /needs a title/);
+	assert.throws(() => createCard({ keyId: key.id, agentId: agent.id, title: "t", prompt: "  " }), /instructions are empty/);
+
+	// Create queues immediately: todo -> in_progress -> done(ok), with a fresh session keyed by the card.
+	const calls = [];
+	setKanbanRunner(async ({ credential, clientSessionId, prompt }) => {
+		calls.push({ key: credential.id, clientSessionId, prompt });
+		return { text: `done: ${prompt}`, usage: { total_tokens: 5 }, cost: 0.01, scopedId: `scoped-${clientSessionId}` };
+	});
+	const card = createCard({ keyId: key.id, agentId: agent.id, title: "simple task", prompt: "do the thing" });
+	assert.equal(card.column, "todo", "queued at once, synchronously, before the fake runner even starts");
+	await waitFor(() => getCard(card.id).status === "done");
+	const finished = cardView(getCard(card.id));
+	assert.deepEqual([finished.column, finished.outcome, finished.text], ["done", "ok", "done: do the thing"]);
+	assert.match(calls[0].clientSessionId, new RegExp(`^kanban:${card.id}:0$`), "a session keyed by the card and its run number");
+
+	// Concurrency cap: only KANBAN_MAX_PARALLEL run at once; the rest sit as "queued" (still shown as
+	// the To Do column, not a 5th state) until a slot frees up.
+	const priorParallel = config.KANBAN_MAX_PARALLEL;
+	config.KANBAN_MAX_PARALLEL = 1;
+	let hold = {};
+	setKanbanRunner(async ({ signal }) => {
+		await new Promise((resolve, reject) => {
+			hold.release = resolve;
+			signal.addEventListener("abort", () => reject(new Error("aborted")));
+		});
+		return { text: "ok", usage: {}, cost: 0, scopedId: "cap-s" };
+	});
+	const c1 = createCard({ keyId: key.id, agentId: agent.id, title: "c1", prompt: "p" });
+	const c2 = createCard({ keyId: key.id, agentId: agent.id, title: "c2", prompt: "p" });
+	await waitFor(() => getCard(c1.id).status === "in_progress");
+	await new Promise((r) => setTimeout(r, 60));
+	assert.equal(getCard(c2.id).status, "queued", "only KANBAN_MAX_PARALLEL run at once");
+	assert.equal(cardView(getCard(c2.id)).column, "todo", "queued still reads as To Do on the board");
+	hold.release();
+	await waitFor(() => getCard(c1.id).status === "done");
+	await waitFor(() => getCard(c2.id).status === "in_progress" || getCard(c2.id).status === "done");
+	cancelCard(c2.id);
+	await waitFor(() => getCard(c2.id).status === "done");
+	config.KANBAN_MAX_PARALLEL = priorParallel;
+	hold = null;
+
+	// Ask/answer loop, including TWO loops on the same card: the precedence rule (asked wins over
+	// whatever text the turn produced after asking -- see lib/kanban.mjs's module doc comment) means
+	// the trailing text below is never stored, and the loop resumes the SAME session (run_seq unchanged)
+	// with the user's answer, not the original task restated.
+	let qaTurn = 0;
+	setKanbanRunner(async ({ credential, clientSessionId, prompt }) => {
+		qaTurn++;
+		if (qaTurn === 1) {
+			noteQuestion(credential.kanbanCardId, "which environment?");
+			return { text: "trailing text the model wrote after asking anyway", usage: {}, cost: 0, scopedId: clientSessionId };
+		}
+		if (qaTurn === 2) {
+			assert.equal(prompt, "staging", "the resumed turn's own prompt is the user's answer, not the original task restated");
+			noteQuestion(credential.kanbanCardId, "which branch?");
+			return { text: "ignored again", usage: {}, cost: 0, scopedId: clientSessionId };
+		}
+		assert.equal(prompt, "main", "the second answer, not the first again");
+		return { text: "all done", usage: { total_tokens: 3 }, cost: 0, scopedId: clientSessionId };
+	});
+	const qaCard = createCard({ keyId: key.id, agentId: agent.id, title: "qa task", prompt: "start" });
+	await waitFor(() => getCard(qaCard.id).status === "action_required");
+	assert.equal(getCard(qaCard.id).question, "which environment?");
+	assert.equal(getCard(qaCard.id).text, null, "the precedence rule: trailing text after asking is discarded, never stored as a final answer");
+	const sessionAfterFirstAsk = getCard(qaCard.id).session_id;
+	assert.throws(() => answerCard(qaCard.id, ""), /say something/);
+	answerCard(qaCard.id, "staging");
+	await waitFor(() => getCard(qaCard.id).status === "action_required" && getCard(qaCard.id).question === "which branch?");
+	assert.equal(getCard(qaCard.id).session_id, sessionAfterFirstAsk, "the SAME session is reused across the loop");
+	assert.equal(getCard(qaCard.id).run_seq, 0, "the ask/answer loop never bumps run_seq -- only retry does");
+	answerCard(qaCard.id, "main");
+	await waitFor(() => getCard(qaCard.id).status === "done");
+	assert.equal(getCard(qaCard.id).text, "all done");
+	assert.throws(() => answerCard(qaCard.id, "too late"), (e) => e.status === 409, "not waiting on an answer any more");
+	const qaKinds = listEvents(qaCard.id).slice().reverse().map((e) => e.kind);
+	assert.deepEqual(qaKinds, ["created", "started", "question", "answer", "question", "answer", "done"], "both exchanges are in the durable timeline, in order");
+
+	// Cancel: immediate from To Do/queued (nothing was running yet); from In Progress/Action Required it
+	// aborts the live turn; from Done it is refused (409).
+	config.KANBAN_MAX_PARALLEL = 1;
+	setKanbanRunner(async ({ signal }) => {
+		await new Promise((resolve, reject) => {
+			hold = { release: resolve };
+			signal.addEventListener("abort", () => reject(new Error("aborted")));
+		});
+		return { text: "ok", usage: {}, cost: 0, scopedId: "cancel-s" };
+	});
+	hold = {};
+	const blocker = createCard({ keyId: key.id, agentId: agent.id, title: "blocker", prompt: "p" });
+	await waitFor(() => getCard(blocker.id).status === "in_progress");
+	const queuedCard = createCard({ keyId: key.id, agentId: agent.id, title: "queued-cancel", prompt: "p" });
+	await new Promise((r) => setTimeout(r, 50));
+	assert.equal(getCard(queuedCard.id).status, "queued", "still waiting for a slot -- nothing was ever running");
+	cancelCard(queuedCard.id);
+	assert.deepEqual([getCard(queuedCard.id).status, getCard(queuedCard.id).outcome], ["done", "cancelled"]);
+	cancelCard(blocker.id);
+	await waitFor(() => getCard(blocker.id).status === "done");
+	assert.equal(getCard(blocker.id).outcome, "cancelled");
+	assert.throws(() => cancelCard(blocker.id), (e) => e.status === 409, "already done");
+	config.KANBAN_MAX_PARALLEL = priorParallel;
+
+	setKanbanRunner(async ({ credential }) => {
+		noteQuestion(credential.kanbanCardId, "q?");
+		return { text: "x", usage: {}, cost: 0, scopedId: "ar-scope" };
+	});
+	const arCard = createCard({ keyId: key.id, agentId: agent.id, title: "ar-cancel", prompt: "p" });
+	await waitFor(() => getCard(arCard.id).status === "action_required");
+	cancelCard(arCard.id);
+	await waitFor(() => getCard(arCard.id).status === "done");
+	assert.equal(getCard(arCard.id).outcome, "cancelled", "cancel also works from Action Required, not just In Progress");
+
+	// Retry: only valid from Done; bumps run_seq and opens a brand-new session -- never reopens the one
+	// Done already closed.
+	setKanbanRunner(async ({ clientSessionId }) => ({ text: `ran ${clientSessionId}`, usage: {}, cost: 0, scopedId: clientSessionId }));
+	assert.throws(() => retryCard("nonexistent"), (e) => e.status === 404);
+	const notDoneYet = createCard({ keyId: key.id, agentId: agent.id, title: "not-done", prompt: "p" });
+	assert.throws(() => retryCard(notDoneYet.id), (e) => e.status === 409, "still todo, not done yet");
+	await waitFor(() => getCard(notDoneYet.id).status === "done");
+
+	const retryBase = createCard({ keyId: key.id, agentId: agent.id, title: "retry-me", prompt: "p" });
+	await waitFor(() => getCard(retryBase.id).status === "done");
+	const firstSessionId = getCard(retryBase.id).session_id;
+	const retried = retryCard(retryBase.id);
+	assert.equal(retried.column, "todo");
+	assert.throws(() => retryCard(retryBase.id), (e) => e.status === 409, "mid-retry, not done again yet");
+	await waitFor(() => getCard(retryBase.id).status === "done");
+	assert.equal(cardView(getCard(retryBase.id)).runSeq, 1, "run_seq incremented on retry");
+	assert.notEqual(getCard(retryBase.id).session_id, firstSessionId, "a brand-new session, not the closed one reopened");
+
+	// Restart recovery: a card stuck in_progress/action_required with no live controller (KANBAN_MAX_PARALLEL
+	// forced to 0 so pump() never actually claims it) becomes done/error, not silently resurrected.
+	config.KANBAN_MAX_PARALLEL = 0;
+	const stuck = createCard({ keyId: key.id, agentId: agent.id, title: "stuck", prompt: "p" });
+	assert.equal(getCard(stuck.id).status, "todo", "never claimed -- the cap is 0");
+	db.prepare("UPDATE kanban_cards SET status = 'action_required' WHERE id = ?").run(stuck.id);
+	startKanban();
+	await waitFor(() => getCard(stuck.id).status === "done");
+	assert.equal(getCard(stuck.id).outcome, "error");
+	assert.match(getCard(stuck.id).error, /gateway restarted/);
+	config.KANBAN_MAX_PARALLEL = priorParallel;
+	stopKanban();
+
+	// kanbanCardId plumbing: credentialFor's extra fields survive, for an agent credential and a bare one.
+	assert.equal(credentialFor(key.id, agent.id, { kanbanCardId: "k123" }).kanbanCardId, "k123", "extra fields survive credentialFor");
+	assert.equal(credentialFor(key.id, null, { kanbanCardId: "k123" }).kanbanCardId, "k123", "...for a bare key too");
+
+	// The bridge route end to end: piper_kanban_ask_question's own backing route (lib/runner.mjs's
+	// /kanban/ask-question), refusing when no card is wired, and -- via a REAL in-flight card, not a
+	// synthetic noteQuestion() call -- actually reaching the right card when it is.
+	{
+		const dir = mkdtempSync(join("/tmp", "pb-kanban-"));
+		const post = (socketPath, path, body) =>
+			new Promise((resolve, reject) => {
+				const req = http.request({ socketPath, path, method: "POST", agent: false }, (res) => {
+					let data = "";
+					res.on("data", (c) => (data += c));
+					res.on("end", () => resolve({ status: res.statusCode, body: JSON.parse(data) }));
+				});
+				req.on("error", reject);
+				req.end(JSON.stringify(body ?? {}));
+			});
+
+		let bridgeTurn = 0;
+		let releaseBridgeCard = null;
+		setKanbanRunner(async ({ signal }) => {
+			bridgeTurn++;
+			if (bridgeTurn > 1) return { text: "resolved after answer", usage: {}, cost: 0, scopedId: "bridge-scope-2" };
+			await new Promise((resolve, reject) => {
+				releaseBridgeCard = resolve;
+				signal.addEventListener("abort", () => reject(new Error("aborted")));
+			});
+			return { text: "after the bridge asked", usage: {}, cost: 0, scopedId: "bridge-scope" };
+		});
+		const bridgeCard = createCard({ keyId: key.id, agentId: agent.id, title: "via-bridge", prompt: "p" });
+		await waitFor(() => getCard(bridgeCard.id).status === "in_progress");
+
+		const socketPath = join(dir, "with.sock");
+		const withKanban = await startBridge(socketPath, newMeter(), { kanban: kanbanBridgeFor({ kanbanCardId: bridgeCard.id }) });
+		const asked = await post(socketPath, "/kanban/ask-question", { question: "which repo, over the real bridge route?" });
+		assert.deepEqual(asked, { status: 200, body: { noted: true } });
+		withKanban.close();
+
+		releaseBridgeCard();
+		await waitFor(() => getCard(bridgeCard.id).status === "action_required");
+		assert.equal(getCard(bridgeCard.id).question, "which repo, over the real bridge route?", "the bridge route's call reached the right card, through noteQuestion");
+
+		const socketPath2 = join(dir, "without.sock");
+		const noKanban = await startBridge(socketPath2, newMeter(), {});
+		assert.equal((await post(socketPath2, "/kanban/ask-question", { question: "x" })).status, 403, "no kanban object wired -- refused, same shape as the other bridge routes");
+		noKanban.close();
+		rmSync(dir, { recursive: true, force: true });
+		answerCard(bridgeCard.id, "resolved via test");
+		await waitFor(() => getCard(bridgeCard.id).status === "done");
+		assert.equal(getCard(bridgeCard.id).text, "resolved after answer");
+	}
+
+	// Lifecycle: deleteCardsOf, the helper wired into key/agent deletion elsewhere.
+	const toDelete = createCard({ keyId: key.id, agentId: agent.id, title: "todelete", prompt: "p" });
+	await waitFor(() => getCard(toDelete.id).status === "done");
+	assert.ok(deleteCardsOf({ keyId: key.id }) >= 1);
+	assert.equal(getCard(toDelete.id), null);
+
+	setKanbanRunner(null);
+}
+
 // Phase 2: agent-created schedules (the server side of the bridge's scheduling tools).
 {
 	const { maySchedule, schedulerFor, getJob, createJob, deleteJobsOf } = await import("./server.mjs");
@@ -12378,6 +12602,77 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		assert.equal((await call("/api/jobs")).status, 401, "no auth, no jobs");
 		deleteJob(theirJob.id);
 		setJobRunner(null);
+	}
+
+	// Kanban: the client portal's own task board -- create, answer, cancel, retry, inspect and delete,
+	// strictly scoped to this key's own cards, mirroring the Jobs block above.
+	{
+		const { createCard, getCard, setKanbanRunner } = await import("./server.mjs");
+		const waitFor = async (fn, ms = 3000) => { const end = Date.now() + ms; while (Date.now() < end) { const v = fn(); if (v) return v; await new Promise((r) => setTimeout(r, 15)); } throw new Error("timed out waiting"); };
+		assert.deepEqual((await call("/api/kanban/cards", { headers: auth })).json.cards, [], "none yet");
+
+		let qTurn = 0;
+		setKanbanRunner(async ({ prompt }) => {
+			qTurn++;
+			if (qTurn === 1) return { text: `done: ${prompt}`, usage: {}, cost: 0, scopedId: "portal-s" };
+			return { text: "resolved", usage: {}, cost: 0, scopedId: "portal-s2" };
+		});
+
+		const theirCard = createCard({ keyId: theirKey.id, agentId: theirAgent.id, title: "not yours", prompt: "p" });
+		await waitFor(() => getCard(theirCard.id).status === "done");
+
+		const stolenAgent = await call("/api/kanban/cards", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ agentId: theirAgent.id, title: "x", prompt: "p" }) });
+		assert.equal(stolenAgent.status, 404, "another key's agent is not this key's to assign to");
+
+		const createdCard = await call("/api/kanban/cards", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ agentId: myAgent.id, title: "write a report", prompt: "summarize" }) });
+		assert.equal(createdCard.status, 201);
+		const mine = createdCard.json.card;
+		assert.equal(mine.title, "write a report");
+		assert.equal(mine.agent, "portal-agent");
+		assert.equal(mine.column, "todo");
+
+		await waitFor(() => getCard(mine.id).status === "done");
+
+		const mineCards = await call("/api/kanban/cards", { headers: auth });
+		assert.equal(mineCards.json.cards.length, 1, "only this key's own card");
+		assert.equal(mineCards.json.cards[0].id, mine.id);
+
+		const theirView = await call("/api/kanban/cards", { headers: { authorization: `Bearer ${theirs.key}` } });
+		assert.equal(theirView.json.cards.length, 1);
+		assert.equal(theirView.json.cards[0].id, theirCard.id);
+
+		// A single card, ownership-checked: this key's own is visible (with its event timeline), another
+		// key's is a plain 404.
+		const detail = await call(`/api/kanban/cards/${mine.id}`, { headers: auth });
+		assert.equal(detail.json.card.id, mine.id);
+		assert.ok(Array.isArray(detail.json.events) && detail.json.events.length >= 1);
+		assert.equal((await call(`/api/kanban/cards/${theirCard.id}`, { headers: auth })).status, 404, "another key's card, not just empty");
+		assert.equal((await call(`/api/kanban/cards/kdeadbeef0000`, { headers: auth })).status, 404, "no such card at all");
+
+		// Ask/answer over the real HTTP route: create a second card, let the fake runner ask via
+		// noteQuestion directly isn't available here (no server import of it in this block on purpose --
+		// this tests the PORTAL route, not the engine), so instead this exercises answer's own ownership
+		// and state-validation refusals, which createCard's engine-level tests above already cover for
+		// the state machine itself.
+		assert.equal((await call(`/api/kanban/cards/${mine.id}/answer`, { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ text: "x" }) })).status, 409, "this card is already done, not waiting on an answer");
+		assert.equal((await call(`/api/kanban/cards/${theirCard.id}/answer`, { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ text: "x" }) })).status, 404, "never another key's card");
+
+		assert.equal((await call(`/api/kanban/cards/${theirCard.id}/cancel`, { method: "POST", headers: auth })).status, 404, "never another key's card");
+		assert.equal((await call(`/api/kanban/cards/${theirCard.id}/retry`, { method: "POST", headers: auth })).status, 404, "never another key's card");
+
+		const retried = await call(`/api/kanban/cards/${mine.id}/retry`, { method: "POST", headers: auth });
+		assert.equal(retried.status, 200);
+		assert.equal(retried.json.card.column, "todo");
+		await waitFor(() => getCard(mine.id).status === "done");
+		assert.equal(getCard(mine.id).text, "resolved");
+
+		// Delete: ownership-checked, then actually gone.
+		assert.equal((await call(`/api/kanban/cards/${theirCard.id}`, { method: "DELETE", headers: auth })).status, 404, "never another key's to delete");
+		assert.equal((await call(`/api/kanban/cards/${mine.id}`, { method: "DELETE", headers: auth })).json.deleted, true);
+		assert.deepEqual((await call("/api/kanban/cards", { headers: auth })).json.cards, [], "actually gone");
+
+		assert.equal((await call("/api/kanban/cards")).status, 401, "no auth, no cards");
+		setKanbanRunner(null);
 	}
 
 	// Notebooks: the HTTP routes are wired and ownership-scoped -- lib/notebooks.mjs's own logic

@@ -734,6 +734,37 @@ export default async function piperBridge(pi) {
 		});
 	}
 
+	// Kanban task cards (lib/kanban.mjs): set only for a container running one card's own turn, never
+	// for an ordinary chat. The one tool here lets the agent pause and ask the person who made the card
+	// a single question instead of guessing; see the tool's own description for the "stop here" contract.
+	if (process.env.PIPER_KANBAN === "1") {
+		const reply = (value) => ({ content: [{ type: "text", text: value }], details: {} });
+		pi.registerTool({
+			name: "piper_kanban_ask_question",
+			label: "Ask a question about this task",
+			description:
+				"Pause this task card and ask the person who created it one question. Use this ONLY when you genuinely cannot " +
+				"proceed without clarification -- a missing credential, an ambiguous requirement, a choice only they can make. " +
+				"This ends your turn immediately: do not plan, call another tool, or produce further text after calling this. " +
+				"The person's answer arrives as your next message in this same conversation; you do not need to repeat the " +
+				"original task back to yourself, you will still have it.",
+			promptSnippet: "Ask the task's owner a question",
+			parameters: {
+				type: "object",
+				properties: { question: { type: "string", description: "The one thing you need to know, written for a person with no other context than the task's title." } },
+				required: ["question"],
+			},
+			async execute(_toolCallId, params) {
+				try {
+					await readJson(await request("/kanban/ask-question", { question: params?.question }));
+					return reply("Noted -- stop here. Do not call any more tools or produce further text this turn; the person has been notified and their answer will be your next message.");
+				} catch (err) {
+					return reply(`Could not ask: ${err?.message ?? err}`);
+				}
+			},
+		});
+	}
+
 	// A new chat starts on the operator's current default model, unless the key's profile names its
 	// own. The gateway sets PIPER_DEFAULT_MODEL only for new chats; a resumed one keeps its model.
 	const defaultModel = process.env.PIPER_DEFAULT_MODEL;

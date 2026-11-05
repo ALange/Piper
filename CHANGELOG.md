@@ -2,6 +2,27 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.20.0] - 2026-11-05
+
+### Added
+- **Portal: a Kanban task board.** A new "task board" view in the client portal lets you create a
+  task card -- a title, instructions, and an agent to assign it to -- and that agent starts working
+  on it at once, with no one needing to stay in the chat. The card moves across four columns: To Do
+  (just created, or waiting its turn if several tasks are running at once), In Progress, Action
+  Required, and Done. If the agent genuinely needs to ask you something before it can continue, the
+  card moves to Action Required with its question shown right on the card; answering it (a small
+  modal) resumes the same conversation with your answer as the next message, and it goes back to
+  working -- this can happen more than once before it finishes. Once a card reaches Done (ok, error,
+  or cancelled, shown as a badge), that's the end of its conversation -- there's no further
+  back-and-forth on it, only a retry, which starts a brand new run. Cards can be moved by hand with
+  drag and drop: dragging a Done card back to To Do retries it; dragging a running or waiting-on-you
+  card onto Done cancels it. Each card that's actually running, waiting on a free slot, or waiting on
+  your answer updates live while the board is open, without needing a manual refresh. A new Kanban
+  section in Settings controls how many cards may run at once, how many a key may have in total, how
+  long a finished card's history is kept, and its run timeout; it reuses the same "assign to an agent"
+  machinery the existing Jobs feature already has, so a task card is subject to the same spend caps,
+  model allow-list, and attribution as everything else that key or agent does.
+
 ## [1.19.2] - 2026-11-05
 
 ### Added

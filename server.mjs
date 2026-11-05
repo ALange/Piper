@@ -58,6 +58,7 @@ import { memoryDashboardRoutes } from "./lib/memoryroutes.mjs";
 import { knowledgeDashboardRoutes } from "./lib/knowledgeroutes.mjs";
 import { rssDashboardRoutes } from "./lib/rssroutes.mjs";
 import { startJobs, stopJobs } from "./lib/jobs.mjs";
+import { startKanban, stopKanban } from "./lib/kanban.mjs";
 import { startFeeds, stopFeeds } from "./lib/rssfeeds.mjs";
 import { startSignal, stopSignal } from "./lib/signal.mjs";
 import { resumeNotebookExtractions, stopNotebookExtractions } from "./lib/notebooks.mjs";
@@ -94,6 +95,7 @@ export * from "./lib/livesession.mjs";
 export * from "./lib/agentrun.mjs";
 export * from "./lib/liveroutes.mjs";
 export * from "./lib/jobs.mjs";
+export * from "./lib/kanban.mjs";
 export * from "./lib/jobroutes.mjs";
 export * from "./lib/memoryroutes.mjs";
 export * from "./lib/agentmemory.mjs";
@@ -372,6 +374,7 @@ if (isMain) {
 		process.stderr.write(`${signal}: hibernating ${sessions.size} chat(s)\n`);
 		server.close();
 		stopJobs();
+		stopKanban();
 		stopFeeds();
 		stopSignal();
 		stopNotebookExtractions();
@@ -406,6 +409,7 @@ if (isMain) {
 				if (status.ok) process.stderr.write(`containers: docker ${status.engine.version}, image ${config.CONTAINER_IMAGE} (Pi ${status.image.piVersion || "?"}), network ${status.network.mode}${status.firewall.allowed.length ? `, allowed: ${status.firewall.allowed.map((a) => a.endpoint).join(" ")}` : ""}\n`);
 				startSweeps();
 				startJobs();
+				startKanban();
 				startFeeds();
 				startSignal();
 				resumeNotebookExtractions();
@@ -418,6 +422,7 @@ if (isMain) {
 			() => {
 				startSweeps();
 				startJobs();
+				startKanban();
 				startFeeds();
 				startSignal();
 				resumeNotebookExtractions();

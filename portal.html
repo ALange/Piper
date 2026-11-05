@@ -204,6 +204,23 @@
   .jobruns tr.clickable:hover { background:rgba(255,255,255,.05); }
   .jobruns td.bad { color:var(--red); }
   .jobbacklink { color:var(--blue); cursor:pointer; font-size:12.5px; margin-bottom:12px; display:inline-block; }
+
+  /* ---- kanban task board ---- */
+  .kanbanboard { display:grid; grid-template-columns:repeat(4, minmax(220px, 1fr)); gap:14px; align-items:start; height:100%; }
+  .kanbancol { background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:14px; padding:10px; min-height:120px; display:flex; flex-direction:column; min-width:0; }
+  .kanbancol h3 { font-size:12.5px; font-weight:600; color:var(--muted); margin:2px 4px 10px; display:flex; align-items:center; gap:6px; }
+  .kanbancol h3 .kc-count { color:var(--dim); font-weight:400; }
+  .kanbancol-cards { display:flex; flex-direction:column; gap:10px; min-height:60px; flex:1; }
+  .kanbancol-cards.kc-dragover { background:rgba(255,255,255,.06); border-radius:10px; outline:1.5px dashed rgba(255,255,255,.3); outline-offset:-4px; }
+  .kanbancard { cursor:grab; }
+  .kanbancard:active { cursor:grabbing; }
+  .kanban-badge { font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:999px; text-transform:uppercase; letter-spacing:.03em; }
+  .kanban-badge-ok { background:rgba(74,222,128,.16); color:var(--green); }
+  .kanban-badge-error { background:rgba(248,113,113,.16); color:var(--red); }
+  .kanban-badge-cancelled { background:rgba(255,255,255,.1); color:var(--muted); }
+  .kanbanempty { color:var(--dim); font-size:11.5px; text-align:center; padding:18px 4px; }
+  .kanbanqna { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:10px 12px; margin-bottom:12px; font-size:13px; }
+  @media (max-width: 900px) { .kanbanboard { grid-template-columns:1fr; } }
   @media (max-width: 760px) { .jobsgrid { grid-template-columns:1fr; } .jobform .jf-grid, .jobform .jf-2col { grid-template-columns:1fr; } }
   /* The preview pane gets a fixed basis (50% to start, then whatever #previewresizer last dragged it
      to, in px) with no grow/shrink of its own -- the chat column (flex:1 1 auto) always takes up
@@ -470,6 +487,9 @@
       <button class="icon-btn" id="jobsbtn" title="scheduled jobs">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9 v4 l3 2 M9 2.5 h6"/></svg>
       </button>
+      <button class="icon-btn" id="kanbanbtn" title="task board" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M8.5 8 v8 M13 8 v5 M17.5 8 v10.5"/></svg>
+      </button>
       <button class="icon-btn" id="gallerybtn" title="generated images" hidden>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M4 16.5 l5-4.5 3.5 3 4-3.5 3.5 3"/></svg>
       </button>
@@ -569,6 +589,24 @@
         <div id="jobsmainlist"></div>
       </div>
     </div>
+    <div id="kanbanview" class="jobsview" hidden>
+      <div class="bar">
+        <button class="icon-btn hamburger" id="kanbanback" title="back to chat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 19 L8 12 l7-7"/></svg>
+        </button>
+        <b>Task board</b>
+        <div class="sp"></div>
+        <button id="kanbannewbtn">+ new task</button>
+      </div>
+      <div id="kanbanbody" class="jobsbody">
+        <div class="kanbanboard">
+          <div class="kanbancol" data-col="todo"><h3>To Do<span class="kc-count" id="kanbancount-todo"></span></h3><div class="kanbancol-cards" id="kanbancol-todo"></div></div>
+          <div class="kanbancol" data-col="in_progress"><h3>In Progress<span class="kc-count" id="kanbancount-in_progress"></span></h3><div class="kanbancol-cards" id="kanbancol-in_progress"></div></div>
+          <div class="kanbancol" data-col="action_required"><h3>Action Required<span class="kc-count" id="kanbancount-action_required"></span></h3><div class="kanbancol-cards" id="kanbancol-action_required"></div></div>
+          <div class="kanbancol" data-col="done"><h3>Done<span class="kc-count" id="kanbancount-done"></span></h3><div class="kanbancol-cards" id="kanbancol-done"></div></div>
+        </div>
+      </div>
+    </div>
     <div id="galleryview" class="jobsview" hidden>
       <div class="bar">
         <button class="icon-btn hamburger" id="galleryback" title="back to chat">
@@ -605,6 +643,13 @@
   <div class="modal-box wide">
     <div class="modal-top"><b id="jobmodaltitle"></b><button id="jobmodalclose">close</button></div>
     <div id="jobmodalbody" class="modal-body"></div>
+  </div>
+</div>
+
+<div id="kanbanmodal" class="modal-overlay" hidden>
+  <div class="modal-box wide">
+    <div class="modal-top"><b id="kanbanmodaltitle"></b><button id="kanbanmodalclose">close</button></div>
+    <div id="kanbanmodalbody" class="modal-body"></div>
   </div>
 </div>
 
@@ -1902,17 +1947,23 @@ function fmtWhen(ms) { return ms ? new Date(ms).toLocaleString() : ''; }
 function showChatView() {
   $('jobsview').hidden = true;
   $('galleryview').hidden = true;
+  $('kanbanview').hidden = true;
+  stopKanbanPoll();
   $('chatview').hidden = false;
 }
 function showJobsView() {
   $('chatview').hidden = true;
   $('galleryview').hidden = true;
+  $('kanbanview').hidden = true;
+  stopKanbanPoll();
   $('jobsview').hidden = false;
   switchJobsTab('jobs');
 }
 function showGalleryView() {
   $('chatview').hidden = true;
   $('jobsview').hidden = true;
+  $('kanbanview').hidden = true;
+  stopKanbanPoll();
   $('galleryview').hidden = false;
   loadGallery();
 }
@@ -2322,6 +2373,272 @@ function openJobRunDetail(job, runId) {
   }).catch(function (e) { jobErrorBox(wrap, e); });
 }
 
+/* ---- kanban task board: a full-page view (like Jobs above), 4 columns of cards. Pickup is
+   automatic -- creating a card queues it at once -- so the board can change under the user while
+   it's open (a card finishing, or landing on Action Required); unlike Jobs' poll-on-demand, this
+   polls every KANBAN_POLL_MS while the view is visible, stopped the moment it isn't. Moving a card
+   by hand is real drag-and-drop with an asymmetric rule: Done -> To Do retries it (a brand-new run,
+   since Done's session is closed); {In Progress, Action Required} -> Done cancels it. Any other drop
+   is rejected -- those states are system-controlled. The card is never moved in the DOM on drop, only
+   the API is called and the board re-rendered from its answer, so a rejected or failed drop needs no
+   manual "snap back". ---- */
+var KANBAN_CACHE = [];
+var KANBAN_POLL_MS = 4000;
+var KANBAN_POLL = null;
+var KANBAN_COLUMNS = ['todo', 'in_progress', 'action_required', 'done'];
+
+function showKanbanView() {
+  $('chatview').hidden = true;
+  $('jobsview').hidden = true;
+  $('galleryview').hidden = true;
+  $('kanbanview').hidden = false;
+  renderKanbanBoard();
+  stopKanbanPoll();
+  KANBAN_POLL = setInterval(renderKanbanBoard, KANBAN_POLL_MS);
+}
+function stopKanbanPoll() {
+  if (KANBAN_POLL) { clearInterval(KANBAN_POLL); KANBAN_POLL = null; }
+}
+
+function kanbanErrorBox(box, e) {
+  box.replaceChildren(el('div', e.message || String(e)));
+  box.lastChild.className = 'hint bad';
+}
+
+function renderKanbanBoard() {
+  apiJson('api/kanban/cards').then(function (d) {
+    KANBAN_CACHE = d.cards || [];
+    KANBAN_COLUMNS.forEach(function (col) {
+      var box = $('kanbancol-' + col);
+      var inCol = KANBAN_CACHE.filter(function (c) { return c.column === col; });
+      $('kanbancount-' + col).textContent = inCol.length ? ' (' + inCol.length + ')' : '';
+      box.replaceChildren();
+      if (!inCol.length) { box.appendChild(el('div', '—')).className = 'kanbanempty'; return; }
+      inCol.forEach(function (c) { box.appendChild(kanbanCard(c)); });
+    });
+  }).catch(function () { /* a transient poll failure stays quiet; the next tick retries */ });
+}
+
+function kanbanOutcomeBadge(c) {
+  var b = el('span', c.outcome); b.className = 'kanban-badge kanban-badge-' + c.outcome;
+  return b;
+}
+
+function kanbanCard(c) {
+  var card = el('div'); card.className = 'jobcard kanbancard';
+  card.draggable = true;
+  card.dataset.id = c.id;
+  card.dataset.column = c.column;
+  card.addEventListener('dragstart', function (e) {
+    e.dataTransfer.setData('text/plain', c.id);
+    e.dataTransfer.setData('application/x-kanban-from', c.column);
+  });
+
+  var top = el('div'); top.className = 'jc-top';
+  var dotCls = c.column === 'done' ? (c.outcome === 'ok' ? 'ok' : c.outcome === 'error' ? 'bad' : 'off') : c.column === 'action_required' ? 'bad' : 'ok';
+  top.appendChild(Object.assign(el('span'), { className: 'jc-dot ' + dotCls }));
+  top.appendChild(el('b', c.title));
+  top.appendChild(el('div')).className = 'sp';
+  card.appendChild(top);
+
+  var meta = el('div'); meta.className = 'jc-meta';
+  if (c.agent) meta.appendChild(el('span', c.agent));
+  card.appendChild(meta);
+
+  if (c.column === 'action_required' && c.question) {
+    var q = el('div', c.question); q.className = 'jc-status';
+    card.appendChild(q);
+  } else if (c.column === 'done') {
+    var statusRow = el('div'); statusRow.className = 'jc-status';
+    statusRow.appendChild(kanbanOutcomeBadge(c));
+    if (c.error) statusRow.appendChild(document.createTextNode(' ' + c.error));
+    card.appendChild(statusRow);
+  } else if (c.column === 'todo' && c.status === 'queued') {
+    card.appendChild(el('div', 'waiting for a free slot')).className = 'jc-status';
+  }
+
+  var actions = el('div'); actions.className = 'jc-actions';
+  var viewBtn = el('button', 'view');
+  viewBtn.addEventListener('click', function () { openKanbanDetail(c); });
+  actions.appendChild(viewBtn);
+  if (c.column === 'action_required') {
+    var answerBtn = el('button', 'answer');
+    answerBtn.addEventListener('click', function () { openKanbanAnswerModal(c); });
+    actions.appendChild(answerBtn);
+  }
+  if (c.column === 'done') {
+    var retryBtn = el('button', 'retry');
+    retryBtn.addEventListener('click', function () { kanbanRetry(c.id); });
+    actions.appendChild(retryBtn);
+  } else {
+    var cancelBtn = el('button', 'cancel');
+    cancelBtn.addEventListener('click', function () { kanbanCancel(c.id); });
+    actions.appendChild(cancelBtn);
+  }
+  actions.appendChild(el('div')).className = 'sp';
+  var delBtn = jobIconBtn('delete', '<path d="M4 7 h16 M9 7 V4 h6 v3 M6 7 l1 13 h10 l1-13 M10 11 v6 M14 11 v6"/>', 'jc-danger');
+  delBtn.addEventListener('click', function () { kanbanDeleteConfirm(c); });
+  actions.appendChild(delBtn);
+  card.appendChild(actions);
+  return card;
+}
+
+function kanbanRetry(id) {
+  apiJson('api/kanban/cards/' + id + '/retry', { method: 'POST' }).then(renderKanbanBoard).catch(function (e) { alert(e.message); renderKanbanBoard(); });
+}
+function kanbanCancel(id) {
+  apiJson('api/kanban/cards/' + id + '/cancel', { method: 'POST' }).then(renderKanbanBoard).catch(function (e) { alert(e.message); renderKanbanBoard(); });
+}
+function kanbanDeleteConfirm(c) {
+  if (!confirm('Delete "' + (c.title || 'this task') + '"? This cannot be undone.')) return;
+  apiJson('api/kanban/cards/' + c.id, { method: 'DELETE' }).then(renderKanbanBoard).catch(function (e) { alert(e.message); });
+}
+
+/** The asymmetric drop rule: done -> todo retries; {in_progress, action_required} -> done cancels.
+   Everything else (same column, or any other pair) is rejected -- those states are system-controlled. */
+function kanbanHandleDrop(id, from, to) {
+  if (!id || from === to) return;
+  if (from === 'done' && to === 'todo') return kanbanRetry(id);
+  if ((from === 'in_progress' || from === 'action_required') && to === 'done') return kanbanCancel(id);
+  alert('That move is not allowed. Drag a Done card back to To Do to retry it, or a running/waiting-on-you card to Done to cancel it.');
+}
+
+function openKanbanModal(title) {
+  $('kanbanmodaltitle').textContent = title;
+  $('kanbanmodalbody').replaceChildren(el('div', 'loading…'));
+  $('kanbanmodal').hidden = false;
+}
+function closeKanbanModal() {
+  $('kanbanmodal').hidden = true;
+  $('kanbanmodalbody').replaceChildren();
+  renderKanbanBoard();
+}
+
+function openNewTaskForm() {
+  openKanbanModal('New task');
+  var box = $('kanbanmodalbody');
+  box.replaceChildren();
+  var form = el('div'); form.className = 'jobform';
+  box.appendChild(form);
+
+  var title = el('input'); title.type = 'text'; title.maxLength = 120;
+  form.appendChild(jfRow('Title', title));
+
+  var agent = el('select');
+  (WHOAMI.agents || []).forEach(function (a) { agent.appendChild(Object.assign(el('option', a.name), { value: a.id })); });
+  form.appendChild(jfRow('Assign to agent', agent, (WHOAMI.agents || []).length ? '' : 'You have no agents to assign this to yet.'));
+
+  var prompt = el('textarea'); prompt.placeholder = 'What should the agent do?';
+  form.appendChild(jfRow('Instructions', prompt, 'The agent starts on this at once. If it needs to ask you something along the way, the card moves to Action Required.'));
+
+  var err = el('div'); err.className = 'hint bad';
+  form.appendChild(err);
+
+  var actions = el('div'); actions.className = 'jf-actions';
+  var createBtn = el('button', 'create task');
+  var cancelBtn = el('button', 'cancel');
+  cancelBtn.addEventListener('click', closeKanbanModal);
+  actions.appendChild(createBtn);
+  actions.appendChild(cancelBtn);
+  form.appendChild(actions);
+
+  createBtn.addEventListener('click', function () {
+    err.textContent = '';
+    if (!agent.value) { err.textContent = 'Choose an agent to assign this to.'; return; }
+    createBtn.disabled = true;
+    apiJson('api/kanban/cards', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: title.value.trim(), prompt: prompt.value, agentId: agent.value }) })
+      .then(closeKanbanModal)
+      .catch(function (e) { err.textContent = e.message; createBtn.disabled = false; });
+  });
+}
+
+function openKanbanAnswerModal(c) {
+  openKanbanModal(c.title + ' — action required');
+  var box = $('kanbanmodalbody');
+  box.replaceChildren();
+  box.appendChild(el('div', c.question || '')).className = 'kanbanqna';
+  var answer = el('textarea'); answer.placeholder = 'Your answer…';
+  box.appendChild(jfRow('Your answer', answer));
+  var err = el('div'); err.className = 'hint bad';
+  box.appendChild(err);
+  var actions = el('div'); actions.className = 'jf-actions';
+  var sendBtn = el('button', 'send answer');
+  var cancelTaskBtn = el('button', 'cancel task');
+  var closeBtn = el('button', 'close');
+  closeBtn.addEventListener('click', closeKanbanModal);
+  actions.appendChild(sendBtn);
+  actions.appendChild(cancelTaskBtn);
+  actions.appendChild(closeBtn);
+  box.appendChild(actions);
+  sendBtn.addEventListener('click', function () {
+    err.textContent = '';
+    if (!answer.value.trim()) { err.textContent = 'Say something to answer with.'; return; }
+    sendBtn.disabled = true;
+    apiJson('api/kanban/cards/' + c.id + '/answer', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: answer.value }) })
+      .then(closeKanbanModal)
+      .catch(function (e) { err.textContent = e.message; sendBtn.disabled = false; });
+  });
+  cancelTaskBtn.addEventListener('click', function () {
+    if (!confirm('Cancel this task?')) return;
+    kanbanCancel(c.id);
+    closeKanbanModal();
+  });
+}
+
+function openKanbanDetail(c) {
+  openKanbanModal(c.title);
+  var box = $('kanbanmodalbody');
+  box.replaceChildren(el('div', 'loading…'));
+  apiJson('api/kanban/cards/' + c.id).then(function (d) {
+    var card = d.card;
+    box.replaceChildren();
+    var status = el('div', 'status: ' + card.column + (card.outcome ? ' (' + card.outcome + ')' : '')); status.className = card.outcome === 'error' ? 'jc-status bad' : 'jc-status';
+    box.appendChild(status);
+    box.appendChild(el('label', 'Instructions'));
+    box.appendChild(Object.assign(el('div'), { className: 'modal-body' })).appendChild(el('pre', card.prompt || ''));
+    if (card.question) {
+      box.appendChild(el('label', 'Current question'));
+      box.appendChild(Object.assign(el('div'), { className: 'modal-body' })).appendChild(el('pre', card.question));
+    }
+    if (card.text || card.error) {
+      box.appendChild(el('label', card.error ? 'Error' : 'Result'));
+      box.appendChild(Object.assign(el('div'), { className: 'modal-body' })).appendChild(el('pre', card.error || card.text || ''));
+    }
+    if ((d.events || []).length) {
+      box.appendChild(el('label', 'Timeline'));
+      var wrap = el('div'); wrap.className = 'jobruns';
+      box.appendChild(wrap);
+      var table = el('table');
+      var head = el('tr');
+      ['when', 'what', 'detail'].forEach(function (h) { head.appendChild(el('th', h)); });
+      table.appendChild(head);
+      d.events.forEach(function (ev) {
+        var tr = el('tr');
+        tr.appendChild(el('td', fmtWhen(ev.ts)));
+        tr.appendChild(el('td', ev.kind));
+        tr.appendChild(el('td', ev.text || ''));
+        table.appendChild(tr);
+      });
+      wrap.appendChild(table);
+    }
+  }).catch(function (e) { kanbanErrorBox(box, e); });
+}
+
+KANBAN_COLUMNS.forEach(function (col) {
+  var dropzone = $('kanbancol-' + col);
+  dropzone.addEventListener('dragover', function (e) {
+    if (Array.prototype.indexOf.call(e.dataTransfer.types, 'application/x-kanban-from') !== -1) { e.preventDefault(); dropzone.classList.add('kc-dragover'); }
+  });
+  dropzone.addEventListener('dragleave', function () { dropzone.classList.remove('kc-dragover'); });
+  dropzone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    dropzone.classList.remove('kc-dragover');
+    var id = e.dataTransfer.getData('text/plain');
+    var from = e.dataTransfer.getData('application/x-kanban-from');
+    kanbanHandleDrop(id, from, col);
+  });
+});
+
 /* ---- files ---- */
 function filesUrlFor(agentId, path) {
   var q = agentId ? ('agentId=' + encodeURIComponent(agentId)) : '';
@@ -2616,6 +2933,7 @@ function connect(key) {
     WHOAMI = d;
     $('gotonotebook').hidden = !d.notebooksEnabled;
     $('gallerybtn').hidden = !(d.comfyuiWorkflows && d.comfyuiWorkflows.length);
+    $('kanbanbtn').hidden = !d.kanbanEnabled;
     sessionStorage.setItem('piper-portal-key', KEY);
     loadConvos();
     return pullHistory();
@@ -2721,6 +3039,11 @@ $('jobstab-jobs').addEventListener('click', function () { switchJobsTab('jobs');
 $('jobstab-log').addEventListener('click', function () { switchJobsTab('log'); });
 $('jobmodalclose').addEventListener('click', closeJobModal);
 $('jobmodal').addEventListener('click', function (e) { if (e.target === $('jobmodal')) closeJobModal(); });
+$('kanbanbtn').addEventListener('click', showKanbanView);
+$('kanbanback').addEventListener('click', showChatView);
+$('kanbannewbtn').addEventListener('click', openNewTaskForm);
+$('kanbanmodalclose').addEventListener('click', closeKanbanModal);
+$('kanbanmodal').addEventListener('click', function (e) { if (e.target === $('kanbanmodal')) closeKanbanModal(); });
 $('hamburger').addEventListener('click', function () { if (RAIL_OPEN) closeRailMenu(); else openRailMenu(); });
 // On a phone the open panel covers the whole screen, including the rail button that opened it (see the
 // mobile @media block), so there would otherwise be no way to close it short of reloading the page.
