@@ -2,6 +2,15 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.20.1] - 2026-11-05
+
+### Fixed
+- **A Kanban task card could only be assigned to a named agent, never to the main API key itself.**
+  "Assign to" in the "+ new task" form now has a "(main endpoint — no agent)" choice, the same
+  option Jobs already offers, so a card can run directly on the key that owns the board. Existing
+  databases are migrated automatically on the next start (the `agent_id` column was previously
+  required; it no longer is).
+
 ## [1.20.0] - 2026-11-05
 
 ### Added

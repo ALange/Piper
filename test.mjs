@@ -8089,6 +8089,14 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.deepEqual([finished.column, finished.outcome, finished.text], ["done", "ok", "done: do the thing"]);
 	assert.match(calls[0].clientSessionId, new RegExp(`^kanban:${card.id}:0$`), "a session keyed by the card and its run number");
 
+	// A card may also be assigned to no agent at all -- run directly on the key itself (the "main"
+	// API key), the same optionality Jobs already has alongside a named agent.
+	const bareCard = createCard({ keyId: key.id, agentId: null, title: "bare key task", prompt: "do the other thing" });
+	assert.deepEqual([bareCard.agentId, bareCard.agent], [null, null]);
+	await waitFor(() => getCard(bareCard.id).status === "done");
+	assert.equal(cardView(getCard(bareCard.id)).outcome, "ok");
+	assert.equal(calls[calls.length - 1].key, key.id, "ran with the bare key's own credential, no agent scope");
+
 	// Concurrency cap: only KANBAN_MAX_PARALLEL run at once; the rest sit as "queued" (still shown as
 	// the To Do column, not a 5th state) until a slot frees up.
 	const priorParallel = config.KANBAN_MAX_PARALLEL;
@@ -12623,6 +12631,12 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 
 		const stolenAgent = await call("/api/kanban/cards", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ agentId: theirAgent.id, title: "x", prompt: "p" }) });
 		assert.equal(stolenAgent.status, 404, "another key's agent is not this key's to assign to");
+
+		const bareCard = await call("/api/kanban/cards", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ title: "bare key", prompt: "p" }) });
+		assert.equal(bareCard.status, 201, "no agentId at all -- runs directly on the key");
+		assert.deepEqual([bareCard.json.card.agentId, bareCard.json.card.agent], [null, null]);
+		await waitFor(() => getCard(bareCard.json.card.id).status === "done");
+		await call(`/api/kanban/cards/${bareCard.json.card.id}`, { method: "DELETE", headers: auth });
 
 		const createdCard = await call("/api/kanban/cards", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ agentId: myAgent.id, title: "write a report", prompt: "summarize" }) });
 		assert.equal(createdCard.status, 201);

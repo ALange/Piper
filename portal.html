@@ -2442,7 +2442,7 @@ function kanbanCard(c) {
   card.appendChild(top);
 
   var meta = el('div'); meta.className = 'jc-meta';
-  if (c.agent) meta.appendChild(el('span', c.agent));
+  meta.appendChild(el('span', c.agent || '(main endpoint)'));
   card.appendChild(meta);
 
   if (c.column === 'action_required' && c.question) {
@@ -2525,8 +2525,9 @@ function openNewTaskForm() {
   form.appendChild(jfRow('Title', title));
 
   var agent = el('select');
+  agent.appendChild(Object.assign(el('option', '(main endpoint — no agent)'), { value: '' }));
   (WHOAMI.agents || []).forEach(function (a) { agent.appendChild(Object.assign(el('option', a.name), { value: a.id })); });
-  form.appendChild(jfRow('Assign to agent', agent, (WHOAMI.agents || []).length ? '' : 'You have no agents to assign this to yet.'));
+  form.appendChild(jfRow('Assign to', agent));
 
   var prompt = el('textarea'); prompt.placeholder = 'What should the agent do?';
   form.appendChild(jfRow('Instructions', prompt, 'The agent starts on this at once. If it needs to ask you something along the way, the card moves to Action Required.'));
@@ -2544,9 +2545,8 @@ function openNewTaskForm() {
 
   createBtn.addEventListener('click', function () {
     err.textContent = '';
-    if (!agent.value) { err.textContent = 'Choose an agent to assign this to.'; return; }
     createBtn.disabled = true;
-    apiJson('api/kanban/cards', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: title.value.trim(), prompt: prompt.value, agentId: agent.value }) })
+    apiJson('api/kanban/cards', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: title.value.trim(), prompt: prompt.value, agentId: agent.value || null }) })
       .then(closeKanbanModal)
       .catch(function (e) { err.textContent = e.message; createBtn.disabled = false; });
   });
