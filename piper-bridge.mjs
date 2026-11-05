@@ -443,7 +443,8 @@ export default async function piperBridge(pi) {
 			label: "Send a message over Signal",
 			description:
 				"Send a plain text message right now to one of the phone numbers linked to you, outside of answering an inbound Signal message -- e.g. a status update, something you were asked to report back once it's ready, or an alert. " +
-				"Use it only when the owner has asked for a message to be sent, or set up a task that does; piper_signal_enable's own welcome message is enough when you're only just linking the number.",
+				"Use it only when the owner has asked for a message to be sent, or set up a task that does; piper_signal_enable's own welcome message is enough when you're only just linking the number. " +
+				"While you're answering an inbound Signal message yourself, this always targets that same number -- it refuses to send anywhere else, including any of your linked groups, so nothing from one channel can leak into another.",
 			promptSnippet: "Send a message over Signal",
 			parameters: {
 				type: "object",
@@ -570,7 +571,8 @@ export default async function piperBridge(pi) {
 			label: "Send a message to a Signal group",
 			description:
 				"Send a plain text message right now into one of the Signal groups linked to you, outside of answering an inbound @-mention -- e.g. a status update or an alert. " +
-				"Use it only when the owner has asked for a message to be sent, or set up a task that does.",
+				"Use it only when the owner has asked for a message to be sent, or set up a task that does. " +
+				"While you're answering an inbound @-mention yourself, this always targets that same group -- it refuses to send anywhere else, including any of your linked numbers or other groups, so nothing from one channel can leak into another.",
 			promptSnippet: "Send a message to a Signal group",
 			parameters: {
 				type: "object",

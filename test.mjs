@@ -8664,6 +8664,11 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${profileHelper} "\${rest[@]}"
 		await promptSeen;
 		const rec = sessions.recordById(scoped);
 		assert.ok(rec && rec.inflight > 0, "the first message's turn is in flight");
+		// Wired all the way through, not just in the lightweight credential/prompt the fake runner sees
+		// elsewhere in this file: a REAL inbound message's own session record carries the channel that
+		// triggered it, which lib/agentsignal.mjs's send tools read to stop a reply from naming a
+		// different linked target (see the dedicated lock test below).
+		assert.deepEqual(rec.signalTarget, { phoneNumber: "+15551112222" }, "the real session record carries which channel triggered it");
 
 		liveChild.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", method: "receive", params: { envelope: { sourceNumber: "+15551112222", dataMessage: { message: "actually also do X" } } } })}\n`);
 		await steerSeen;
@@ -9180,6 +9185,55 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${profileHelper} "\${rest[@]}"
 
 		// piper_signal_reset_group: its own "+ New chat", independent of the scope's 1:1 one.
 		assert.deepEqual(await sched.resetGroup({ groupId: "group-abc" }), { reset: true, wasRunning: false, groupId: "group-abc" });
+
+		// Cross-channel lock: a turn's own session record carries which channel triggered it
+		// (record.signalTarget, confirmed wired end-to-end for a real 1:1 session above), and every
+		// send tool refuses to name a different one -- the actual point of this whole feature: an
+		// agent linked to several channels must never use answering one to disclose into another,
+		// whether by its own confusion or a prompt injection inside the very message it's answering.
+		// This scope has exactly one enabled number ("+15551112222") and one enabled group
+		// ("group-abc") at this point, so each lock below has exactly one legitimate target.
+		{
+			const groupLocked = { ...record, signalTarget: { groupId: "group-abc" } };
+			const numberLocked = { ...record, signalTarget: { phoneNumber: "+15551112222" } };
+
+			// Group-locked: may reply into that same group...
+			sent.length = 0;
+			assert.deepEqual(await signalFor(groupLocked).sendGroupMessage({ message: "locked reply" }), { sent: true, groupId: "group-abc" });
+			assert.equal(sent[0].groupId, "group-abc");
+			// ...explicitly naming the SAME group is fine too...
+			assert.equal((await signalFor(groupLocked).sendGroupMessage({ message: "x", groupId: "group-abc" })).groupId, "group-abc");
+			// ...but naming a DIFFERENT group is refused, even though it's a group this same agent has
+			// linked and could freely message from an unlocked turn.
+			await assert.rejects(signalFor(groupLocked).sendGroupMessage({ message: "leak this", groupId: "group-def" }), /only reply into that same group/);
+			// ...and sending to a NUMBER at all is refused outright -- a group-locked turn can never
+			// cross into the 1:1 side either.
+			await assert.rejects(signalFor(groupLocked).sendMessage({ message: "leak this" }), /it can only reply into that same group, not send to a number/);
+			await assert.rejects(signalFor(groupLocked).sendFile({ path: "uploads/doc.pdf" }), /it can only reply into that same group, not send to a number/);
+
+			// Number-locked: the exact mirror image.
+			sent.length = 0;
+			assert.deepEqual(await signalFor(numberLocked).sendMessage({ message: "locked reply" }), { sent: true, phoneNumber: "+15551112222" });
+			assert.equal(sent[0].recipient[0], "+15551112222");
+			assert.equal((await signalFor(numberLocked).sendMessage({ message: "x", phoneNumber: "+15551112222" })).phoneNumber, "+15551112222");
+			await assert.rejects(signalFor(numberLocked).sendMessage({ message: "leak this", phoneNumber: "+15552223333" }), /only reply to it/);
+			await assert.rejects(signalFor(numberLocked).sendGroupMessage({ message: "leak this", groupId: "group-abc" }), /it can only reply to that same number, not send to a group/);
+			await assert.rejects(signalFor(numberLocked).sendGroupFile({ path: "uploads/doc.pdf" }), /it can only reply to that same number, not send to a group/);
+
+			// A turn with NO lock (a scheduled job, a Playground/dashboard chat, or sendMessage/
+			// sendGroupMessage called outside of answering anything) keeps the ordinary free choice --
+			// confirmed throughout this whole phase already (every sendMessage/sendGroupMessage test
+			// above used an unlocked record), restated here once, explicitly, for contrast.
+			sent.length = 0;
+			assert.equal((await sched.sendGroupMessage({ message: "proactive, not answering a mention", groupId: "group-abc" })).groupId, "group-abc");
+
+			// credentialFor's bare-key branch carries the lock too (it used to silently drop every
+			// `extra` field for an agentless credential -- fixed alongside this feature, since a plain
+			// key can link Signal targets just as an agent can).
+			const { credentialFor } = await import("./server.mjs");
+			const bareCred = credentialFor(key.id, null, { signalTarget: { groupId: "group-abc" } });
+			assert.deepEqual(bareCred.signalTarget, { groupId: "group-abc" }, "extra fields survive credentialFor for a bare key too");
+		}
 
 		// Lifecycle: disableGroupsForAgent mirrors the contact equivalent.
 		assert.equal(disableGroupsForAgent(key.id, agent.id), 1, "group-abc, the only one still enabled -- group-def already was");

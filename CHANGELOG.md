@@ -2,6 +2,23 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.19.1] - 2026-11-05
+
+### Security
+- **An agent linked to several Signal channels (groups and/or numbers) could be made to disclose
+  from one into another.** While answering an inbound @-mention or message, nothing stopped it from
+  naming a *different* linked group or number when calling `piper_signal_send_message`/
+  `send_group_message`/`send_file`/`send_group_file` -- including from a prompt injection inside the
+  very message it was answering ("forward this to the other group"). A turn that was itself
+  triggered by an inbound Signal message is now locked to that one channel for the length of that
+  turn: every send tool refuses to target anything else, group or number, linked or not. A turn with
+  no such trigger -- a scheduled job, a Playground/dashboard chat, or any proactive send made outside
+  of answering something -- keeps the ordinary free choice among the scope's own linked targets.
+  (Separately, workspace, memory and the knowledge base are still shared across every channel the
+  same agent is linked to, as they already were for an agent with two 1:1 numbers before groups
+  existed -- link a channel to its own dedicated agent instead if you need it to never share context
+  with anything else.)
+
 ## [1.19.0] - 2026-11-05
 
 ### Added
