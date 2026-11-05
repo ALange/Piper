@@ -2,6 +2,20 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.19.0] - 2026-11-05
+
+### Added
+- **Signal groups.** Invite Piper's Signal bot to a group, then link it from a chat (`piper_signal_groups`
+  to find its id, `piper_signal_link_group` to claim it) and it answers whenever it's @-mentioned there --
+  it stays quiet on every other message in the group, unlike a 1:1 linked number which answers everything.
+  `piper_signal_send_group_message`/`piper_signal_send_group_file` push a notification into a group outside
+  of answering a mention; `piper_signal_unlink_group`/`piper_signal_reset_group` round it out. Each linked
+  group gets its own conversation, independent of that scope's own 1:1 Signal session and of every other
+  group. The same `can_signal` switch that already gates 1:1 numbers covers groups too -- no separate
+  permission to grant. `piper_signal_groups` also flags a linked group the bot is no longer actually a
+  member of, so that going silent is visible rather than just silent. The dashboard's Signal page gets a
+  second table, alongside the phone numbers one, for visibility and to revoke a group on the spot.
+
 ## [1.18.2] - 2026-11-05
 
 ### Changed

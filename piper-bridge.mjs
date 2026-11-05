@@ -504,6 +504,132 @@ export default async function piperBridge(pi) {
 				}
 			},
 		});
+		pi.registerTool({
+			name: "piper_signal_groups",
+			label: "List Signal groups",
+			description:
+				"List the Signal groups you're currently linked to (over Signal), plus any group the bot is a member of but nobody has linked yet. " +
+				"A linked group only ever replies when you're @-mentioned in it -- never on every message, unlike a 1:1 number. Use this before piper_signal_link_group, to find a group's id.",
+			promptSnippet: "List Signal groups",
+			parameters: { type: "object", properties: {} },
+			async execute() {
+				try {
+					const { linked, available } = await readJson(await request("/signal/groups", {}));
+					const lines = [];
+					if (linked.length) lines.push("Linked:", ...linked.map((g) => `- ${g.name || g.groupId} (${g.groupId}): ${g.enabled ? "on" : "off"}${g.stale ? ", no longer a member -- it can be unlinked" : ""}`));
+					else lines.push("No groups linked yet.");
+					if (available.length) lines.push("", "Not yet linked to anyone:", ...available.map((g) => `- ${g.name || g.groupId} (${g.groupId})`));
+					return reply(lines.join("\n"));
+				} catch (err) {
+					return reply(`Could not list them: ${err?.message ?? err}`);
+				}
+			},
+		});
+		pi.registerTool({
+			name: "piper_signal_link_group",
+			label: "Link a Signal group",
+			description:
+				"Link a Signal group the bot is already a member of (invite its number to the group first, in Signal itself, then use piper_signal_groups to find its id) to this chat's agent (or key). " +
+				"From then on, a message that @-mentions the bot in that group is routed here and answered over Signal, into the group; any other message there is left alone. Nothing is sent into the group the moment it's linked.",
+			promptSnippet: "Link a Signal group",
+			parameters: {
+				type: "object",
+				properties: { group_id: { type: "string", description: "The group's id, from piper_signal_groups." } },
+				required: ["group_id"],
+			},
+			async execute(_toolCallId, params) {
+				try {
+					const answer = await readJson(await request("/signal/link-group", { groupId: params?.group_id }));
+					return reply(`Linked ${answer.group.name || answer.group.groupId}. A message there that @-mentions the bot is now routed here.`);
+				} catch (err) {
+					return reply(`Could not link it: ${err?.message ?? err}`);
+				}
+			},
+		});
+		pi.registerTool({
+			name: "piper_signal_unlink_group",
+			label: "Unlink a Signal group",
+			description: "Stop a linked Signal group from being answered when the bot is @-mentioned in it.",
+			promptSnippet: "Unlink a Signal group",
+			parameters: {
+				type: "object",
+				properties: { group_id: { type: "string", description: "The group to unlink, from piper_signal_groups." } },
+				required: ["group_id"],
+			},
+			async execute(_toolCallId, params) {
+				try {
+					await readJson(await request("/signal/unlink-group", { groupId: params?.group_id }));
+					return reply(`Unlinked ${params?.group_id}.`);
+				} catch (err) {
+					return reply(`Could not unlink it: ${err?.message ?? err}`);
+				}
+			},
+		});
+		pi.registerTool({
+			name: "piper_signal_send_group_message",
+			label: "Send a message to a Signal group",
+			description:
+				"Send a plain text message right now into one of the Signal groups linked to you, outside of answering an inbound @-mention -- e.g. a status update or an alert. " +
+				"Use it only when the owner has asked for a message to be sent, or set up a task that does.",
+			promptSnippet: "Send a message to a Signal group",
+			parameters: {
+				type: "object",
+				properties: {
+					message: { type: "string", description: "The text to send." },
+					group_id: { type: "string", description: "Which linked group to send it to. Only needed if more than one group is linked to you; from piper_signal_groups." },
+				},
+				required: ["message"],
+			},
+			async execute(_toolCallId, params) {
+				try {
+					const answer = await readJson(await request("/signal/send-group-message", { message: params?.message, groupId: params?.group_id }));
+					return reply(`Sent to ${answer.groupId} over Signal.`);
+				} catch (err) {
+					return reply(`Could not send it: ${err?.message ?? err}`);
+				}
+			},
+		});
+		pi.registerTool({
+			name: "piper_signal_send_group_file",
+			label: "Send a file to a Signal group",
+			description: "Send a file from your own workspace as a Signal attachment, into one of the Signal groups linked to you.",
+			promptSnippet: "Send a workspace file to a Signal group",
+			parameters: {
+				type: "object",
+				properties: {
+					path: { type: "string", description: "The file's path in your own workspace, e.g. \"report.pdf\"." },
+					group_id: { type: "string", description: "Which linked group to send it to. Only needed if more than one group is linked to you; from piper_signal_groups." },
+					message: { type: "string", description: "An optional caption to send alongside the file." },
+				},
+				required: ["path"],
+			},
+			async execute(_toolCallId, params) {
+				try {
+					const answer = await readJson(await request("/signal/send-group-file", { path: params?.path, groupId: params?.group_id, message: params?.message }));
+					return reply(`Sent ${params?.path} to ${answer.groupId} over Signal.`);
+				} catch (err) {
+					return reply(`Could not send it: ${err?.message ?? err}`);
+				}
+			},
+		});
+		pi.registerTool({
+			name: "piper_signal_reset_group",
+			label: "Start a fresh conversation in a Signal group",
+			description: "End a linked Signal group's own session for good -- the next @-mention there begins with no memory of anything said before.",
+			promptSnippet: "Start a fresh conversation in a Signal group",
+			parameters: {
+				type: "object",
+				properties: { group_id: { type: "string", description: "Which linked group to reset. Only needed if more than one group is linked to you; from piper_signal_groups." } },
+			},
+			async execute(_toolCallId, params) {
+				try {
+					const answer = await readJson(await request("/signal/reset-group", { groupId: params?.group_id }));
+					return reply(answer.wasRunning ? "Done -- that group starts fresh from the next @-mention." : "Nothing was running, but it's reset: the next @-mention starts fresh either way.");
+				} catch (err) {
+					return reply(`Could not reset it: ${err?.message ?? err}`);
+				}
+			},
+		});
 	}
 
 	// Memory: notes that outlive this one chat. A key's own chats all share one memory, and so does a

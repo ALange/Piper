@@ -1036,6 +1036,14 @@
           <tbody id="signalrows"></tbody>
         </table>
         <p class="hint" id="signalempty" hidden>No numbers linked yet.</p>
+
+        <h3 style="margin-top:24px">Signal groups</h3>
+        <p class="hint" style="margin:0 0 10px">Groups linked to an agent or key. A linked group only ever replies when the bot is @-mentioned in it, never on every message. Linked from inside a chat, by its own agent's piper_signal_link_group tool -- not from here.</p>
+        <table>
+          <thead><tr><th>group</th><th>linked to</th><th>linked since</th><th>last message</th><th>on</th><th></th></tr></thead>
+          <tbody id="signalgrouprows"></tbody>
+        </table>
+        <p class="hint" id="signalgroupempty" hidden>No groups linked yet.</p>
       </section>
     </div><!-- /view-signal -->
 
@@ -4337,6 +4345,7 @@ function renderSignal() {
     bits.push(s.phoneNumber ? s.phoneNumber : 'no SIGNAL_PHONE_NUMBER set');
     bits.push(s.running ? 'daemon running' : 'daemon not running' + (s.lastError ? ': ' + s.lastError : ''));
     bits.push(s.contacts + ' number' + (s.contacts === 1 ? '' : 's') + ' linked');
+    bits.push(s.groups + ' group' + (s.groups === 1 ? '' : 's') + ' linked');
   }
   var note = el('span', bits.join(' · '));
   note.className = s.enabled && s.running ? 'ok' : s.enabled ? 'bad' : '';
@@ -4373,6 +4382,32 @@ function renderSignal() {
     tr.appendChild(act);
     body.appendChild(tr);
   });
+
+  var gbody = $('signalgrouprows');
+  gbody.replaceChildren();
+  $('signalgroupempty').hidden = SIGNAL.groups.length > 0;
+  SIGNAL.groups.forEach(function (g) {
+    var tr = el('tr');
+    var nameCell = el('td', g.name || g.groupId);
+    nameCell.title = g.groupId;
+    tr.appendChild(nameCell);
+    tr.appendChild(el('td', g.keyName + (g.agentName ? ' / ' + g.agentName : '')));
+    tr.appendChild(el('td', when(g.createdAt)));
+    tr.appendChild(el('td', g.lastMessageAt ? when(g.lastMessageAt) : 'never'));
+    tr.appendChild(el('td', g.enabled ? 'yes' : 'no'));
+    var act = el('td');
+    var toggle = el('button', g.enabled ? 'disable' : 'enable');
+    toggle.setAttribute('data-signal-group', g.id);
+    toggle.setAttribute('data-act', g.enabled ? 'off' : 'on');
+    act.appendChild(toggle);
+    act.appendChild(document.createTextNode(' '));
+    var del = el('button', 'remove');
+    del.setAttribute('data-signal-group', g.id);
+    del.setAttribute('data-act', 'del');
+    act.appendChild(del);
+    tr.appendChild(act);
+    gbody.appendChild(tr);
+  });
 }
 $('signalrefresh').addEventListener('click', loadSignal);
 $('signalrows').addEventListener('click', function (e) {
@@ -4387,6 +4422,18 @@ $('signalrows').addEventListener('click', function (e) {
     if (contact) pgOpenSignal(contact.keyId, contact.agentId, contact.phoneNumber);
   } else {
     epPost('dashboard/signal/contacts/' + id, { enabled: act === 'on' }).then(loadSignal);
+  }
+});
+$('signalgrouprows').addEventListener('click', function (e) {
+  var b = e.target.closest ? e.target.closest('button[data-signal-group]') : null;
+  if (!b) return;
+  var id = b.getAttribute('data-signal-group'), act = b.getAttribute('data-act');
+  var group = SIGNAL.groups.filter(function (g) { return g.id === id; })[0];
+  if (act === 'del') {
+    if (!group || !confirm('Remove ' + (group.name || group.groupId) + '? It can link again later through its agent’s own tool.')) return;
+    epPost('dashboard/signal/groups/' + id, undefined, 'DELETE').then(loadSignal);
+  } else {
+    epPost('dashboard/signal/groups/' + id, { enabled: act === 'on' }).then(loadSignal);
   }
 });
 

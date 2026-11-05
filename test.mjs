@@ -9036,6 +9036,158 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${profileHelper} "\${rest[@]}"
 		assert.equal(sent.length, 0);
 	}
 
+	// Signal GROUPS: the same scoping and caps as 1:1 numbers, but linking needs the bot to be a real,
+	// live member (a fake "listGroups"), replying answers only an @-mention, and each linked group
+	// gets its own session distinct from the scope's 1:1 conversation.
+	{
+		const { getGroupByGroupId, disableGroupsForAgent } = await import("./server.mjs");
+		config.SIGNAL_MAX_GROUPS_PER_SCOPE = 2;
+		config.SIGNAL_MAX_NEW_GROUPS_PER_DAY = 1000;
+
+		let liveGroups = [{ id: "group-abc", name: "Family" }, { id: "group-def", name: "Work" }];
+		turns.length = 0;
+		sent.length = 0;
+		setSignalRunner(async ({ credential, clientSessionId, prompt, images }) => {
+			turns.push({ keyId: credential.id, clientSessionId, prompt, images });
+			return { text: `echo: ${prompt}` };
+		});
+		setSignalSpawn(() => {
+			const fake = new EventEmitter();
+			fake.stdout = new PassThrough();
+			fake.stderr = new PassThrough();
+			fake.stdin = { writable: true, write: (line) => {
+				const msg = JSON.parse(line);
+				if (msg.method === "listGroups") {
+					fake.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id: msg.id, result: liveGroups })}\n`);
+					return;
+				}
+				if (msg.method === "send") sent.push(msg.params);
+				fake.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id: msg.id, result: {} })}\n`);
+			} };
+			fake.kill = () => fake.emit("exit", 0, null);
+			liveChild = fake;
+			return fake;
+		});
+		stopSignal();
+		startSignal();
+
+		// Cannot link a group the bot isn't actually a live member of.
+		await assert.rejects(sched.linkGroup({ groupId: "group-zzz" }), /not currently a member/);
+
+		// Link one of the two live groups.
+		const g1 = await sched.linkGroup({ groupId: "group-abc" });
+		assert.equal(g1.groupId, "group-abc");
+		assert.equal(g1.name, "Family");
+		assert.equal(g1.enabled, true);
+
+		// groups() separates linked vs. available, and flags a linked group no longer live as stale,
+		// rather than that just going silent with no indication anywhere.
+		let listed = await sched.groups();
+		assert.deepEqual(listed.linked.map((g) => g.groupId), ["group-abc"]);
+		assert.deepEqual(listed.available.map((g) => g.groupId), ["group-def"]);
+		assert.equal(listed.linked[0].stale, false);
+		liveGroups = [{ id: "group-def", name: "Work" }]; // the bot was removed from group-abc
+		listed = await sched.groups();
+		assert.equal(listed.linked[0].stale, true, "no longer a live member -- flagged, not silently dropped");
+		liveGroups = [{ id: "group-abc", name: "Family" }, { id: "group-def", name: "Work" }]; // restore
+
+		// A group already linked to a different scope cannot be taken by another agent/key.
+		await assert.rejects(signalFor(otherRecord).linkGroup({ groupId: "group-abc" }), /already linked elsewhere/);
+
+		// Re-linking the same group here is a no-op (idempotent) -- the same row, not a second one.
+		const g1Again = await sched.linkGroup({ groupId: "group-abc" });
+		assert.equal(g1Again.id, g1.id);
+
+		// The per-scope cap.
+		await sched.linkGroup({ groupId: "group-def" });
+		assert.equal((await sched.groups()).linked.length, 2);
+		liveGroups.push({ id: "group-ghi", name: "Extra" });
+		await assert.rejects(sched.linkGroup({ groupId: "group-ghi" }), /already has 2 linked groups/);
+
+		// The gateway-wide daily cap, independent of any one scope's own cap.
+		config.SIGNAL_MAX_NEW_GROUPS_PER_DAY = 2;
+		await assert.rejects(signalFor(otherRecord).linkGroup({ groupId: "group-ghi" }), /2 new groups have already been linked gateway-wide/);
+		config.SIGNAL_MAX_NEW_GROUPS_PER_DAY = 1000;
+
+		// Inbound: an @-mention answers, into the group, on its own session distinct from the scope's
+		// 1:1 conversation; the mention placeholder is stripped from the prompt.
+		turns.length = 0;
+		sent.length = 0;
+		liveChild.stdout.write(`${JSON.stringify({
+			jsonrpc: "2.0", method: "receive",
+			params: { envelope: { dataMessage: { message: "￼ can you help?", groupInfo: { groupId: "group-abc" }, mentions: [{ author: config.SIGNAL_PHONE_NUMBER, start: 0, length: 1 }] } } },
+		})}\n`);
+		await waitFor(() => turns.length > 0);
+		assert.equal(turns[0].prompt, "can you help?", "the mention placeholder is stripped");
+		assert.equal(turns[0].clientSessionId, `signal:${key.id}:${agent.id}:group:group-abc`, "its own session, distinct from the scope's 1:1 conversation");
+		await waitFor(() => sent.length > 0);
+		assert.equal(sent[0].groupId, "group-abc", "replied into the group via groupId, not a recipient number");
+		assert.equal(sent[0].recipient, undefined);
+
+		// A linked group's message that does NOT mention the bot is ignored -- not answered, and
+		// audited distinctly from an unknown-sender discard (this is a known group, being quiet by
+		// design, same as every other message there).
+		turns.length = 0;
+		sent.length = 0;
+		liveChild.stdout.write(`${JSON.stringify({
+			jsonrpc: "2.0", method: "receive",
+			params: { envelope: { dataMessage: { message: "just chatting, no mention", groupInfo: { groupId: "group-abc" } } } },
+		})}\n`);
+		await new Promise((r) => setTimeout(r, 100));
+		assert.equal(turns.length, 0, "no mention -- never reaches a turn");
+		assert.equal(sent.length, 0, "and no reply");
+		assert.ok(recentAudit().some((a) => a.action === "signal.group.message.ignored"), "on record as ignored, distinct from an unknown-sender discard");
+
+		// An unlinked group is discarded even with a mention.
+		turns.length = 0;
+		liveChild.stdout.write(`${JSON.stringify({
+			jsonrpc: "2.0", method: "receive",
+			params: { envelope: { dataMessage: { message: "hello", groupInfo: { groupId: "group-unlinked" }, mentions: [{ author: config.SIGNAL_PHONE_NUMBER }] } } },
+		})}\n`);
+		await new Promise((r) => setTimeout(r, 100));
+		assert.equal(turns.length, 0, "an unlinked group never reaches a turn even with a mention");
+
+		// A disabled group is treated the same as unlinked.
+		sched.unlinkGroup({ groupId: "group-def" });
+		assert.equal(getGroupByGroupId("group-def").enabled, false);
+		turns.length = 0;
+		liveChild.stdout.write(`${JSON.stringify({
+			jsonrpc: "2.0", method: "receive",
+			params: { envelope: { dataMessage: { message: "hi", groupInfo: { groupId: "group-def" }, mentions: [{ author: config.SIGNAL_PHONE_NUMBER }] } } },
+		})}\n`);
+		await new Promise((r) => setTimeout(r, 100));
+		assert.equal(turns.length, 0, "disabled group discarded, same as a disabled 1:1 contact");
+
+		// Outbound notification, independent of answering a mention -- auto-picks the one enabled
+		// linked group (group-def is disabled above, leaving exactly group-abc).
+		sent.length = 0;
+		const groupMsgResult = await sched.sendGroupMessage({ message: "status update" });
+		assert.equal(groupMsgResult.groupId, "group-abc");
+		assert.equal(sent.length, 1);
+		assert.equal(sent[0].groupId, "group-abc");
+		assert.equal(sent[0].message, "status update");
+		await assert.rejects(sched.sendGroupMessage({ message: "" }), /say what to send/);
+
+		// Sending a file into the group -- needs the fake docker/profile helper back on PATH, the same
+		// one the 1:1 sendFile test above used, to actually read "uploads/doc.pdf" from the workspace.
+		process.env.PATH = `${dockerBin}:${oldPath}`;
+		sent.length = 0;
+		const groupFileResult = await sched.sendGroupFile({ path: "uploads/doc.pdf", message: "here" });
+		assert.equal(groupFileResult.groupId, "group-abc");
+		assert.equal(sent[0].attachment.length, 1);
+		assert.equal(Buffer.from(sent[0].attachment[0].split(",")[1], "base64").toString(), pdfBytes.toString());
+		process.env.PATH = oldPath;
+
+		// piper_signal_reset_group: its own "+ New chat", independent of the scope's 1:1 one.
+		assert.deepEqual(await sched.resetGroup({ groupId: "group-abc" }), { reset: true, wasRunning: false, groupId: "group-abc" });
+
+		// Lifecycle: disableGroupsForAgent mirrors the contact equivalent.
+		assert.equal(disableGroupsForAgent(key.id, agent.id), 1, "group-abc, the only one still enabled -- group-def already was");
+		assert.equal(getGroupByGroupId("group-abc").enabled, false);
+
+		config.SIGNAL_MAX_GROUPS_PER_SCOPE = 5;
+	}
+
 	assert.ok(listAllContacts().length >= 2);
 	stopSignal();
 	assert.equal(signalStatus().running, false);
