@@ -2,6 +2,18 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.19.2] - 2026-11-05
+
+### Added
+- **Portal: "Edit this image" button under a model-returned image.** Image generation/edit replies
+  (and vision-model replies that return an image) now show a small button under the image itself.
+  Clicking it attaches that same image as the pending attachment for your next message, exactly as if
+  you'd just uploaded it -- so following up with another edit prompt ("now make it nighttime") no
+  longer requires manually saving and re-uploading the image the model just gave you. It respects the
+  same attach rules the upload button already does (disabled when the current target can't take an
+  attachment, capped at the same max-images-per-message limit); no server or protocol change was
+  needed since the attachment travels through the exact same pipeline a freshly uploaded file does.
+
 ## [1.19.1] - 2026-11-05
 
 ### Security

@@ -362,6 +362,12 @@
      reply, not an attachment alongside other content -- shown at normal size, not a small thumbnail. */
   .msg-images.full { max-width:100%; }
   .msg-images.full img { max-width:100%; max-height:70vh; width:auto; height:auto; }
+  .msg-image-item { display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
+  .img-edit-btn { display:flex; align-items:center; gap:5px; font-size:11.5px; color:var(--muted);
+                  background:rgba(255,255,255,.07); border:1px solid var(--border); border-radius:7px;
+                  padding:3px 8px; cursor:pointer; }
+  .img-edit-btn:hover { color:var(--fg); background:rgba(255,255,255,.14); }
+  .img-edit-btn svg { width:12px; height:12px; flex:none; }
   .msg-docs { margin-top:6px; display:flex; flex-direction:column; gap:3px; }
   .msg-docs a { font-size:12.5px; }
 
@@ -1266,10 +1272,18 @@ function buildMessageNode(m, botLabel, row) {
     // reply, never a user's attachment (that's the separate role==='user' branch above, which stays
     // a thumbnail). Full size here: the image is the whole point of this reply, not a side attachment.
     var imgsBox = el('div'); imgsBox.className = 'msg-images full';
-    m.images.forEach(function (dataUrl) {
+    m.images.forEach(function (dataUrl, i) {
+      var item = el('div'); item.className = 'msg-image-item';
       var img = el('img'); img.src = dataUrl; img.alt = 'generated image';
       img.addEventListener('click', function () { previewDataUrlImage(dataUrl); });
-      imgsBox.appendChild(img);
+      item.appendChild(img);
+      var editBtn = el('button'); editBtn.type = 'button'; editBtn.className = 'img-edit-btn';
+      editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+        'stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span>Edit this image</span>';
+      editBtn.title = 'use this image as the attachment for your next message';
+      editBtn.addEventListener('click', function () { useImageAsAttachment(dataUrl, 'edit-' + (i + 1) + '.png'); });
+      item.appendChild(editBtn);
+      imgsBox.appendChild(item);
     });
     body.appendChild(imgsBox);
   }
@@ -2544,6 +2558,17 @@ function renderPending() {
     box.appendChild(chip);
   });
   box.hidden = !PENDING_IMAGES.length && !PENDING_DOCS.length;
+}
+// Lets "Edit this image" under a model-returned image feed that same image back in as the
+// attachment for the next message -- reuses the exact same PENDING_IMAGES pipeline a freshly
+// uploaded file goes through, so it is sent and validated identically (checkedImages, MAX_IMAGES, etc).
+function useImageAsAttachment(dataUrl, name) {
+  if ($('attachbtn').disabled) { alert($('attachbtn').title); return; }
+  if (PENDING_IMAGES.length >= ATTACH_MAX_IMAGES) { alert('at most ' + ATTACH_MAX_IMAGES + ' images per message'); return; }
+  PENDING_IMAGES.push({ name: name || 'image.png', dataUrl: dataUrl });
+  renderPending();
+  var input = $('input');
+  if (input) input.focus();
 }
 function addImageFile(f) {
   if (PENDING_IMAGES.length >= ATTACH_MAX_IMAGES) { alert('at most ' + ATTACH_MAX_IMAGES + ' images per message'); return; }
