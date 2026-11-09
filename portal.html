@@ -311,7 +311,7 @@
   .think-sub { border-left:3px solid var(--agent-c, var(--blue)); padding:2px 0 2px 8px; margin:2px 0 2px -8px; }
   .think-sub b { color:var(--agent-c, var(--blue)); }
 
-  /* tool calls: <pill>name</pill>: excerpt, click the line to expand the full result */
+  /* tool calls: <pill>name</pill>: excerpt, click the line to expand the full command and result */
   .tool-line { display:flex; align-items:baseline; gap:7px; margin:6px 0; cursor:pointer; user-select:none; }
   .tool-pill { display:inline-flex; align-items:center; gap:5px; border:1px solid var(--agent-c, var(--border));
                color:var(--agent-c, var(--fg)); border-radius:999px; padding:3px 11px; font-size:11.5px; flex:0 0 auto; }
@@ -325,6 +325,7 @@
   .tool-body .tool-section { color:var(--dim); font-size:10px; text-transform:uppercase; letter-spacing:.06em;
                               margin:8px 0 3px; }
   .tool-body .tool-section:first-child { margin-top:0; }
+  .tool-command { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; word-break:break-all; color:var(--fg); }
 
   /* a colleague agent's own reply, folded into the caller's — a distinct colored callout per name */
   .colleague-msg { border-left:3px solid var(--agent-c, var(--blue)); background:rgba(0,0,0,.18); padding:9px 11px;
@@ -1215,7 +1216,16 @@ function partNode(p) {
       tbox.appendChild(el('div', 'Response')).className = 'tool-section';
       tbox.appendChild(el('div', p.result || '(still running…)'));
     } else {
-      tbox.textContent = p.result || '(still running…)';
+      // The line above shows a short excerpt of the command; this is the full thing, since the
+      // excerpt is cut at 140 chars and often hides the part that actually matters (a long path, a
+      // piped command's second half, flags at the end).
+      if (p.detail) {
+        tbox.appendChild(el('div', 'Command')).className = 'tool-section';
+        var cmdEl = el('div', p.detail); cmdEl.className = 'tool-command';
+        tbox.appendChild(cmdEl);
+        tbox.appendChild(el('div', 'Result')).className = 'tool-section';
+      }
+      tbox.appendChild(el('div', p.result || '(still running…)'));
     }
     line.addEventListener('click', function () {
       OPEN_TOOL[p.id] = !OPEN_TOOL[p.id];
@@ -1541,7 +1551,7 @@ function applyItem(msg, item) {
   var kind = item.kind === 'assistant' ? 'text' : item.kind;
   var p = (msg.parts || []).filter(function (x) { return x.id === item.id; })[0];
   if (!p) { p = { kind: kind, id: item.id }; (msg.parts = msg.parts || []).push(p); }
-  if (kind === 'tool') { p.name = item.name; p.summary = item.summary; p.state = item.state; p.result = item.result || ''; }
+  if (kind === 'tool') { p.name = item.name; p.summary = item.summary; p.detail = item.detail || ''; p.state = item.state; p.result = item.result || ''; }
   else { p.text = item.text; }
 }
 

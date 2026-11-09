@@ -2,6 +2,16 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.20.2] - 2026-11-09
+
+### Changed
+- **Expanding a tool call in the portal now shows the full command, not just the short excerpt.**
+  Clicking a tool pill already opened the result; it now also shows a "Command" section with the
+  complete command line or arguments the agent ran, unabridged -- previously the only place that
+  appeared was the one-line excerpt next to the pill, capped at a couple hundred characters, which
+  often hid exactly the part that mattered (a long path, the tail of a piped command, flags at the
+  end). Colleague delegations are unaffected -- they already showed the full task.
+
 ## [1.20.1] - 2026-11-05
 
 ### Fixed
