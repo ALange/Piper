@@ -2,6 +2,15 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.20.3] - 2026-11-12
+
+### Changed
+- **Portal: the chat/agent/model picker moved into the message box.** It used to sit in the top bar,
+  away from where you're actually typing; it's now next to the attach button, right above the send
+  button, so picking who or what a new chat talks to is part of composing the first message instead
+  of a separate control up top. Still disabled once a chat already has messages, same as before --
+  it only applies to a new, empty chat.
+
 ## [1.20.2] - 2026-11-09
 
 ### Changed
