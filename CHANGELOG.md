@@ -2,6 +2,17 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.20.5] - 2026-11-12
+
+### Fixed
+- **Generating or editing an image could wipe out every other chat in the portal's sidebar.** Image
+  generation/editing keeps the full image data in a chat's own history, and a couple of generated
+  images can alone be several megabytes -- enough to blow past the budget the portal keeps for saving
+  chat history. The code that trims old chats to fit that budget was trimming the live, on-screen list
+  itself rather than a separate copy made just for saving, so an oversized chat (always protected,
+  since it's the most recent) would push every *other* chat off the list down to just itself. It now
+  only trims the copy being saved -- the chats you see while using the portal are never touched by this.
+
 ## [1.20.4] - 2026-11-12
 
 ### Changed

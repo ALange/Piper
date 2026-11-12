@@ -1014,11 +1014,18 @@ function saveConvos() {
   // Unbounded growth over a long-lived account can exceed sessionStorage's quota (setItem then throws
   // QuotaExceededError, silently stopping local persistence) and grows the server-side sync blob
   // towards its own PORTAL_HISTORY_MAX_BYTES cap. Evict the oldest conversations first, same two-stage
-  // pattern dashboard.html's Playground already uses (pgSave()), so this never gets there.
+  // pattern dashboard.html's Playground already uses (pgSave()) -- but only from a COPY made for this
+  // save, never from the live CONVOS the sidebar is actually rendering from. A single conversation can
+  // alone blow past the whole budget (image generation/editing keeps full data URLs in its history --
+  // a couple of generated images is easily several MB), and sorting newest-first right above puts that
+  // very conversation at the front, protected -- so popping the real array to make room for it would
+  // delete every *other*, unrelated chat down to just the one that's oversized, which is exactly the
+  // "my whole chat history vanished after generating an image" bug this used to cause.
   CONVOS.sort(function (a, b) { return b.updated - a.updated; });
   if (CONVOS.length > CONVOS_MAX) CONVOS.length = CONVOS_MAX;
-  var packed = JSON.stringify(CONVOS);
-  while (packed.length > CONVOS_BYTE_BUDGET && CONVOS.length > 1) { CONVOS.pop(); packed = JSON.stringify(CONVOS); }
+  var toSave = CONVOS.slice();
+  var packed = JSON.stringify(toSave);
+  while (packed.length > CONVOS_BYTE_BUDGET && toSave.length > 1) { toSave.pop(); packed = JSON.stringify(toSave); }
   try { sessionStorage.setItem(convKey(), packed); } catch (e) { /* storage full: not fatal */ }
   // r.ok must be checked explicitly: fetch only rejects on a network failure, not on a 4xx/5xx response,
   // so a too-large save (413) would otherwise look identical to a successful one and go unnoticed --
