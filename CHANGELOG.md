@@ -2,6 +2,16 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.20.6] - 2026-11-12
+
+### Changed
+- **Raised how much portal chat history one key may keep, from 16 MB to 32 MB (PORTAL_HISTORY_MAX_BYTES).**
+  Generated or edited images keep their full data in a chat's own history, so this now has real
+  headroom for a handful of them across several chats, not just plain text. The portal's own
+  client-side budget for what it saves is raised to match, so it never trims to a smaller limit than
+  the server actually allows. An existing install's setting is updated automatically on its next start
+  if it was still sitting at an old default -- a deliberately chosen value is left alone.
+
 ## [1.20.5] - 2026-11-12
 
 ### Fixed

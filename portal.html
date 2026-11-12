@@ -1009,7 +1009,12 @@ function loadConvos() {
    same chats. sessionStorage stays as the fast, offline-friendly local copy; the server sync is
    fire-and-forget and never blocks the UI. */
 var CONVOS_MAX = 60; // a hard cap on how many conversations this browser remembers at all
-var CONVOS_BYTE_BUDGET = 4 * 1024 * 1024; // headroom under sessionStorage's typical 5-10MB per-origin quota
+// Mirrors the server's own PORTAL_HISTORY_MAX_BYTES default -- there is no point trimming to fit
+// under a smaller budget here only to have the server accept more. This can exceed sessionStorage's
+// typical 5-10MB per-origin quota, so the local sessionStorage.setItem below may fail more often for
+// a chat history this large; that is not fatal (see the catch there) -- the server sync a few lines
+// down is the one that actually has room for it, and a reload pulls the server's copy back anyway.
+var CONVOS_BYTE_BUDGET = 32 * 1024 * 1024;
 function saveConvos() {
   // Unbounded growth over a long-lived account can exceed sessionStorage's quota (setItem then throws
   // QuotaExceededError, silently stopping local persistence) and grows the server-side sync blob
