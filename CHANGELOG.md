@@ -2,6 +2,12 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.20.4] - 2026-11-12
+
+### Changed
+- **Reverted: the chat/agent/model picker is back in the top bar.** 1.20.3 moved it into the message
+  box next to the attach button; that didn't work out, so it's back where it was.
+
 ## [1.20.3] - 2026-11-12
 
 ### Changed
