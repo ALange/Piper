@@ -765,6 +765,40 @@ export default async function piperBridge(pi) {
 		});
 	}
 
+	// Only while this turn is a self-improvement run (lib/selfimprove.mjs): the one way it changes anything.
+	if (process.env.PIPER_IMPROVE === "1") {
+		const reply = (value) => ({ content: [{ type: "text", text: value }], details: {} });
+		pi.registerTool({
+			name: "piper_propose_improvement",
+			label: "Propose an improvement to yourself",
+			description:
+				"Propose one durable improvement to yourself, learned from the feedback in this review. A person approves or " +
+				"rejects every proposal; nothing changes until then. kind \"memory\": a fact or preference to remember (name = a " +
+				"short note name, content = the note). kind \"skill\": a reusable procedure (name = lowercase-hyphenated skill " +
+				"name, content = the full SKILL.md, with --- name/description --- frontmatter). kind \"rule\": one short standing " +
+				"instruction appended to your AGENTS.md (content = the rule; no name). Always give a reason naming the feedback.",
+			promptSnippet: "Propose an improvement to yourself for review",
+			parameters: {
+				type: "object",
+				properties: {
+					kind: { type: "string", enum: ["memory", "skill", "rule"] },
+					name: { type: "string", description: "memory: the note's name; skill: the skill's name; rule: leave empty" },
+					content: { type: "string", description: "The note, the full SKILL.md, or the one rule." },
+					reason: { type: "string", description: "Which feedback this comes from, and why it will help next time." },
+				},
+				required: ["kind", "content", "reason"],
+			},
+			async execute(_toolCallId, params) {
+				try {
+					const out = await readJson(await request("/improve/propose", params ?? {}));
+					return reply(out?.note ? `${out.proposed ? "Proposed" : "Not proposed"}: ${out.note}` : "Proposed.");
+				} catch (err) {
+					return reply(`Could not propose: ${err?.message ?? err}`);
+				}
+			},
+		});
+	}
+
 	// A new chat starts on the operator's current default model, unless the key's profile names its
 	// own. The gateway sets PIPER_DEFAULT_MODEL only for new chats; a resumed one keeps its model.
 	const defaultModel = process.env.PIPER_DEFAULT_MODEL;

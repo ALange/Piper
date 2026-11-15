@@ -2,6 +2,24 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.21.0] - 2026-11-15
+
+### Added
+- **Self-improving agents, opt-in per API key and per agent.** A new "self-improve" switch on the API
+  Keys page (for chats running as the key itself) and in an agent's edit panel -- off for every key
+  and agent until you turn it on, with a master switch under Settings → Self-improvement. Once on:
+  - the client portal shows 👍/👎 under that agent's replies (👎 lets you say what went wrong);
+  - about once a day (SELF_IMPROVE_INTERVAL_MS), or at once with "reflect now", the agent reviews its
+    new feedback -- plus its task cards that failed or needed a retry, and its jobs that failed -- and
+    proposes improvements to itself: a memory note, a new skill, or a rule added to its AGENTS.md;
+  - a new **Improvements** page in the portal lists what it proposed, with its reasoning. Nothing
+    changes until you approve it, and anything applied can be rolled back (refused if it was changed
+    again since, so a rollback never silently throws away a newer edit).
+  A reflection run only proposes: it gets no memory, scheduling, Signal or delegation tools, and if it
+  edits its profile files directly anyway, those edits are put back and offered as a proposal instead.
+  A run with no new feedback is skipped and costs nothing, and an agent with proposals piling up
+  unreviewed (SELF_IMPROVE_MAX_PENDING) stops reflecting until you catch up.
+
 ## [1.20.6] - 2026-11-12
 
 ### Changed
