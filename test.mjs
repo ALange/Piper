@@ -8480,13 +8480,18 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	// The scheduler: only targets with something new, and then not again within the interval.
 	setImproveRunner(async ({ clientSessionId }) => ({ text: "nothing worth proposing", usage: {}, cost: 0, scopedId: clientSessionId }));
 	recordFeedback({ keyId: key.id, agentId: null, rating: -1, reply: "too long" });
-	assert.equal(improveTick(Date.now()), 1, "the key itself has new feedback; its agent has none");
+	assert.equal(config.SELF_IMPROVE_AUTO_REFLECT, false, "off by default");
+	assert.equal(improveTick(Date.now()), 0, "by default nothing reflects on its own: what it could learn from just collects");
+	assert.equal(targetsFor(key.id).find((t) => t.agentId === null).toReview, 1, "and shows as waiting to be picked");
+	config.SELF_IMPROVE_AUTO_REFLECT = true;
+	assert.equal(improveTick(Date.now()), 1, "switched on: the key itself has new feedback; its agent has none");
 	await waitFor(() => !db.prepare("SELECT 1 FROM improve_runs WHERE key_id = ? AND status IN ('queued', 'running')").get(key.id));
 	recordFeedback({ keyId: key.id, agentId: null, rating: 1, reply: "better" });
 	assert.equal(improveTick(Date.now()), 0, "not again within SELF_IMPROVE_INTERVAL_MS");
 	config.SELF_IMPROVE_ENABLED = false;
 	assert.equal(improveTick(Date.now() + 2 * 86_400_000), 0, "nothing at all while switched off");
 	config.SELF_IMPROVE_ENABLED = true;
+	config.SELF_IMPROVE_AUTO_REFLECT = false;
 
 	// Conversations (SELF_IMPROVE_FROM_CHATS): picked over without a model, kept only for an opted-in
 	// target and only for turns a person is in, cited as evidence, and forgotten after a while.

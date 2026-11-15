@@ -2643,7 +2643,7 @@ function renderImprove() {
     if ($('improveview').hidden) return;
     box.replaceChildren();
     var intro = el('p', 'Agents with self-improvement switched on learn from the 👍/👎 you give their replies, from the moments in their conversations where you corrected them, asked again or thanked them, and from task cards and jobs that failed. ' +
-      'Each reflection run proposes memory notes, skills or rules here. Nothing changes until you approve it, and anything applied can be rolled back.');
+      'What they could learn from collects here; open \u201creview\u201d to pick which items to reflect on (the rest is discarded). The run proposes memory notes, skills or AGENTS.md changes below. Nothing changes until you approve it, and anything applied can be rolled back.');
     intro.className = 'hint';
     box.appendChild(intro);
 
@@ -2659,12 +2659,11 @@ function renderImprove() {
       var st = el('div', improveRunLine(t.lastRun)); st.className = 'jc-status' + (t.lastRun && t.lastRun.status === 'error' ? ' bad' : '');
       card.appendChild(st);
       var meta = el('div'); meta.className = 'jc-meta';
-      meta.appendChild(el('span', t.newFeedback + ' new rating(s)'));
-      meta.appendChild(el('span', t.newExchanges + ' new chat turn(s)'));
-      meta.appendChild(el('span', t.pending + ' waiting for you'));
+      meta.appendChild(el('span', t.toReview + ' item(s) to review'));
+      meta.appendChild(el('span', t.pending + ' proposal(s) to decide'));
       card.appendChild(meta);
       var act = el('div'); act.className = 'jc-actions';
-      var go = el('button', t.busy ? 'reflecting…' : 'reflect now…');
+      var go = el('button', t.busy ? 'reflecting…' : t.toReview ? 'review ' + t.toReview + ' item(s)…' : 'review…');
       go.disabled = t.busy;
       go.title = 'see what it would review, pick what it should learn from, then run it';
       go.addEventListener('click', function () {
@@ -2687,7 +2686,8 @@ function renderImprove() {
       var hgrid = el('div'); hgrid.className = 'imp-grid'; box.appendChild(hgrid);
       done.forEach(function (p) { hgrid.appendChild(improveCard(p)); });
     }
-    $('improvebtn').title = 'improvements: what your agents learned from feedback' + (pending.length ? ' (' + pending.length + ' waiting)' : '');
+    var toReview = d.targets.reduce(function (n, t) { return n + (t.toReview || 0); }, 0);
+    $('improvebtn').title = 'improvements: what your agents learned from feedback' + (toReview ? ' \u00B7 ' + toReview + ' item(s) to review' : '') + (pending.length ? ' \u00B7 ' + pending.length + ' proposal(s) to decide' : '');
     if (d.targets.some(function (t) { return t.busy; })) IMPROVE_POLL = setTimeout(renderImprove, 4000);
   }).catch(function (e) {
     box.replaceChildren(el('div', e.message || String(e)));

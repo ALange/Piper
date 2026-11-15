@@ -2,6 +2,17 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.23.1] - 2026-11-15
+
+### Changed
+- **Self-improvement no longer reflects on its own.** What an opted-in key or agent could learn from --
+  ratings, conversation moments, failed task cards and jobs -- now just collects, and each agent on the
+  Improvements page shows how many items are waiting ("review N item(s)…"). A reflection run happens only
+  when you open that list and pick what it should review. The automatic daily run is still there, off,
+  behind a new setting, SELF_IMPROVE_AUTO_REFLECT (Settings → Self-improvement), for later.
+  Conversation excerpts are still kept only SELF_IMPROVE_TRANSCRIPT_DAYS (7 by default), and failed task
+  cards and jobs are offered for up to a week -- review more often than that or they drop off the list.
+
 ## [1.23.0] - 2026-11-15
 
 ### Added
