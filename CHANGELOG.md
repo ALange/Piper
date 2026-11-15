@@ -2,6 +2,30 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.23.0] - 2026-11-15
+
+### Added
+- **Self-improvement now decides where a lesson belongs: a skill it already has, a new skill, or its
+  AGENTS.md.** A reflection run now sees its own AGENTS.md and every skill in full, and proposes one of:
+  a **skill update** (revise an existing skill), a **new skill** (only for a procedure no skill covers),
+  an **AGENTS.md rule** (a new standing instruction, appended), an **AGENTS.md revision** (fix something
+  already in it), or a **memory note**. Each choice is checked against the profile as it really is: a
+  "new" skill that already exists, or an update to one that doesn't, is refused with the agent told
+  which to use instead, and a revision may not drop more than half of AGENTS.md. Skill updates and
+  AGENTS.md revisions are shown in the Improvements page as a diff against the current text.
+- **Pick what a reflection run reviews.** "reflect now" first lists everything the run would look at --
+  each rating, correction, repeated request, failing turn, praise, failed task card or job -- with a
+  plain explanation of why it is there and the exchange behind it. Tick what the agent should learn
+  from; only those reach the run, and the rest are discarded for good. Ticking nothing just clears the
+  list, with no model call. The list is pinned to when you opened it: anything that arrives while you
+  are choosing waits for the next run instead of being reviewed or discarded unseen.
+
+### Changed
+- Applying a skill update or an AGENTS.md revision is refused if that file changed after it was
+  proposed (by hand, by a chat, by another proposal), and a new skill is refused if a skill of that name
+  was made meanwhile -- a stale proposal can no longer overwrite a newer edit. Reject it; the next run
+  works from the current version.
+
 ## [1.22.0] - 2026-11-15
 
 ### Added

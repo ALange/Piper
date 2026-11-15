@@ -232,6 +232,17 @@
   .imp-path { font-size:11.5px; color:var(--muted); margin-top:8px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
   .imp-reason { font-size:12.5px; color:var(--muted); margin-top:8px; }
   .imp-evidence { margin-top:8px; font-size:12px; }
+  .imp-review { border:1px solid var(--border); border-radius:14px; padding:4px 14px 14px; margin:10px 0 18px; background:rgba(255,255,255,.02); }
+  .imp-item { opacity:.65; }
+  .imp-item.on { opacity:1; border-color:rgba(255,255,255,.3); }
+  .imp-item .jc-top { cursor:pointer; }
+  .imp-title { font-size:13px; margin-top:8px; }
+  .imp-go { background:#5fd98b !important; color:#06301a; font-weight:600; }
+  .imp-diff div { white-space:pre-wrap; }
+  .imp-diff .diff-add { color:var(--green); background:rgba(74,222,128,.08); }
+  .imp-diff .diff-del { color:var(--red); background:rgba(248,113,113,.08); }
+  .imp-diff .diff-same { color:var(--muted); }
+  .imp-diff .diff-skip { color:var(--dim); }
   .imp-evidence summary { cursor:pointer; color:var(--dim); }
   .kanban-badge-pending { background:rgba(246,193,119,.16); color:var(--amber); }
   .kanbanqna { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:10px 12px; margin-bottom:12px; font-size:13px; }
@@ -2500,7 +2511,40 @@ function showImproveView() {
 function stopImprovePoll() {
   if (IMPROVE_POLL) { clearTimeout(IMPROVE_POLL); IMPROVE_POLL = null; }
 }
-var IMPROVE_KIND_LABEL = { memory: 'memory note', skill: 'skill', rule: 'rule for AGENTS.md', files: 'profile edit' };
+var IMPROVE_KIND_LABEL = { memory: 'memory note', skill: 'skill', skill_new: 'new skill', skill_update: 'skill update', rule: 'AGENTS.md: new rule', instructions: 'AGENTS.md: revision', files: 'profile edit' };
+/* Line diff (longest common subsequence) between what a revision was made against and what it proposes,
+   unchanged runs folded down to a couple of lines of context. null when too big to diff in the browser. */
+function lineDiff(a, b) {
+  var x = String(a).split('\n'), y = String(b).split('\n'), n = x.length, m = y.length, i, j;
+  if (n * m > 600000) return null;
+  var t = [];
+  for (i = 0; i <= n; i++) t.push(new Uint32Array(m + 1));
+  for (i = n - 1; i >= 0; i--) for (j = m - 1; j >= 0; j--) t[i][j] = x[i] === y[j] ? t[i + 1][j + 1] + 1 : Math.max(t[i + 1][j], t[i][j + 1]);
+  var out = [];
+  i = 0; j = 0;
+  while (i < n && j < m) {
+    if (x[i] === y[j]) { out.push([' ', x[i]]); i++; j++; }
+    else if (t[i + 1][j] >= t[i][j + 1]) out.push(['-', x[i++]]);
+    else out.push(['+', y[j++]]);
+  }
+  while (i < n) out.push(['-', x[i++]]);
+  while (j < m) out.push(['+', y[j++]]);
+  return out;
+}
+function diffNode(base, next) {
+  var lines = lineDiff(base, next);
+  var box = el('div'); box.className = 'imp-pre imp-diff';
+  if (!lines) { box.textContent = next; return box; }
+  var near = lines.map(function () { return false; });
+  lines.forEach(function (l, k) { if (l[0] !== ' ') for (var d = -2; d <= 2; d++) if (lines[k + d]) near[k + d] = true; });
+  var skipped = false;
+  lines.forEach(function (l, k) {
+    if (!near[k]) { if (!skipped) box.appendChild(el('div', '…')).className = 'diff-skip'; skipped = true; return; }
+    skipped = false;
+    box.appendChild(el('div', l[0] + ' ' + l[1])).className = l[0] === '+' ? 'diff-add' : l[0] === '-' ? 'diff-del' : 'diff-same';
+  });
+  return box;
+}
 function improveTargetName(agentName) { return agentName || 'Main endpoint (no agent)'; }
 function improveRunLine(run) {
   if (!run) return 'has not reflected yet';
@@ -2509,6 +2553,87 @@ function improveRunLine(run) {
   if (run.status === 'skipped') return 'last checked ' + when + ': nothing new to learn from';
   if (run.status === 'error') return 'last run ' + when + ' failed: ' + (run.error || 'unknown error');
   return 'last reflected ' + when + ': ' + run.signals + ' piece(s) of feedback → ' + run.proposals + ' proposal(s)' + (run.cost ? ' · $' + run.cost.toFixed(4) : '');
+}
+/* ---- picking what a run reviews: "reflect now" first shows every item it would look at, explained;
+   the run then reviews only the ticked ones, and the unticked ones are discarded for good. The pick is
+   pinned to when the list was opened (`at`), so anything that arrives meanwhile waits for the next run. */
+var IMPROVE_REVIEW = null;
+var IMPROVE_TYPE = {
+  correction: ['correction', 'error'], repeat: ['asked again', 'pending'], trouble: ['trouble', 'error'], praise: ['praise', 'ok'],
+  good: ['👍 rating', 'ok'], bad: ['👎 rating', 'error'], task: ['task card', 'error'], job: ['job', 'error'],
+};
+function openImproveReview(t) {
+  return apiJson('api/improve/preview' + (t.agentId ? '?agentId=' + encodeURIComponent(t.agentId) : '')).then(function (d) {
+    IMPROVE_REVIEW = { agentId: t.agentId, name: improveTargetName(t.agentId ? t.name : null), at: d.at, items: d.items, checked: {} };
+    return renderImprove();
+  }).then(function () { $('improvebody').scrollTop = 0; });
+}
+function improveReviewNode(R) {
+  var wrap = el('div'); wrap.className = 'imp-review';
+  wrap.appendChild(el('div', 'Review before reflecting: ' + R.name)).className = 'imp-section';
+  if (!R.items.length) {
+    wrap.appendChild(el('p', 'Nothing new to learn from since the last run.')).className = 'hint';
+    var close = el('button', 'close');
+    close.addEventListener('click', function () { IMPROVE_REVIEW = null; renderImprove(); });
+    wrap.appendChild(close);
+    return wrap;
+  }
+  wrap.appendChild(el('p', 'Tick what ' + R.name + ' should learn from. It reviews only the ticked items and may propose improvements from them, each still waiting for your approval. Anything left unticked is discarded and not reviewed again.')).className = 'hint';
+  var bar = el('div'); bar.className = 'jc-actions';
+  var all = el('button', 'tick all'), none = el('button', 'untick all');
+  bar.appendChild(all); bar.appendChild(none);
+  wrap.appendChild(bar);
+  var grid = el('div'); grid.className = 'imp-grid'; wrap.appendChild(grid);
+  var boxes = [];
+  R.items.forEach(function (it) {
+    var card = el('div'); card.className = 'jobcard imp-item';
+    var top = el('label'); top.className = 'jc-top';
+    var cb = el('input'); cb.type = 'checkbox'; cb.checked = Boolean(R.checked[it.key]);
+    cb.addEventListener('change', function () { R.checked[it.key] = cb.checked; card.classList.toggle('on', cb.checked); updateGo(); });
+    boxes.push([cb, it, card]);
+    card.classList.toggle('on', cb.checked);
+    top.appendChild(cb);
+    var type = IMPROVE_TYPE[it.type] || [it.type, 'cancelled'];
+    top.appendChild(el('span', type[0])).className = 'kanban-badge kanban-badge-' + type[1];
+    top.appendChild(el('span')).className = 'sp';
+    top.appendChild(el('span', fmtWhen(it.at))).className = 'hint';
+    card.appendChild(top);
+    card.appendChild(el('div', it.title)).className = 'imp-title';
+    if (it.note) card.appendChild(el('div', (it.type === 'task' || it.type === 'job' ? 'Error: ' : 'Your note: ') + it.note)).className = 'imp-reason';
+    function excerpt(label, text) {
+      if (!text) return;
+      card.appendChild(el('div', label)).className = 'imp-path';
+      card.appendChild(el('div', text)).className = 'imp-pre';
+    }
+    excerpt(it.type === 'task' ? 'The task' : it.type === 'job' ? 'The job' : 'You asked', it.asked);
+    excerpt('It replied', it.replied);
+    excerpt('Then you said', it.followup);
+    grid.appendChild(card);
+  });
+  var foot = el('div'); foot.className = 'jc-actions';
+  var go = el('button'); go.className = 'imp-go';
+  var cancel = el('button', 'cancel');
+  foot.appendChild(go); foot.appendChild(cancel);
+  wrap.appendChild(foot);
+  function picked() { return R.items.filter(function (it) { return R.checked[it.key]; }); }
+  function updateGo() {
+    var n = picked().length, m = R.items.length - n;
+    go.textContent = n ? 'reflect on ' + n + ' item(s)' + (m ? ', discard ' + m : '') : 'discard all ' + m;
+  }
+  all.addEventListener('click', function () { boxes.forEach(function (b) { b[0].checked = true; R.checked[b[1].key] = true; b[2].classList.add('on'); }); updateGo(); });
+  none.addEventListener('click', function () { boxes.forEach(function (b) { b[0].checked = false; R.checked[b[1].key] = false; b[2].classList.remove('on'); }); updateGo(); });
+  cancel.addEventListener('click', function () { IMPROVE_REVIEW = null; renderImprove(); });
+  go.addEventListener('click', function () {
+    var keys = picked().map(function (it) { return it.key; });
+    if (!keys.length && !confirm('Discard all ' + R.items.length + ' item(s)? Nothing is reviewed and they will not come back.')) return;
+    go.disabled = true;
+    apiJson('api/improve/reflect', { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ agentId: R.agentId, selection: { until: R.at, selected: keys } }) })
+      .then(function () { IMPROVE_REVIEW = null; return renderImprove(); })
+      .catch(function (e) { go.disabled = false; alert(e.message); });
+  });
+  updateGo();
+  return wrap;
 }
 function improveSection(box, text) { box.appendChild(el('div', text)).className = 'imp-section'; }
 function renderImprove() {
@@ -2522,6 +2647,7 @@ function renderImprove() {
     intro.className = 'hint';
     box.appendChild(intro);
 
+    if (IMPROVE_REVIEW) box.appendChild(improveReviewNode(IMPROVE_REVIEW));
     improveSection(box, 'Learning from feedback');
     var tgrid = el('div'); tgrid.className = 'imp-grid'; box.appendChild(tgrid);
     if (!d.targets.length) tgrid.appendChild(el('div', 'Nothing is switched on for this key. The operator turns self-improvement on per key or agent in the dashboard.')).className = 'kanbanempty';
@@ -2538,13 +2664,12 @@ function renderImprove() {
       meta.appendChild(el('span', t.pending + ' waiting for you'));
       card.appendChild(meta);
       var act = el('div'); act.className = 'jc-actions';
-      var go = el('button', t.busy ? 'reflecting…' : 'reflect now');
+      var go = el('button', t.busy ? 'reflecting…' : 'reflect now…');
       go.disabled = t.busy;
-      go.title = 'review the new feedback now instead of waiting for the next scheduled run';
+      go.title = 'see what it would review, pick what it should learn from, then run it';
       go.addEventListener('click', function () {
         go.disabled = true;
-        apiJson('api/improve/reflect', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ agentId: t.agentId }) })
-          .then(renderImprove).catch(function (e) { alert(e.message); renderImprove(); });
+        openImproveReview(t).catch(function (e) { alert(e.message); renderImprove(); });
       });
       act.appendChild(go);
       card.appendChild(act);
@@ -2588,6 +2713,8 @@ function improveCard(p) {
       card.appendChild(el('div', (p.files[path] === null ? 'remove ' : '') + path)).className = 'imp-path';
       if (p.files[path] !== null) card.appendChild(el('div', p.files[path])).className = 'imp-pre';
     });
+  } else if ((p.kind === 'skill_update' || p.kind === 'instructions') && p.base !== null) {
+    card.appendChild(diffNode(p.base, p.content));
   } else {
     card.appendChild(el('div', p.content)).className = 'imp-pre';
   }

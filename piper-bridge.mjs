@@ -772,19 +772,21 @@ export default async function piperBridge(pi) {
 			name: "piper_propose_improvement",
 			label: "Propose an improvement to yourself",
 			description:
-				"Propose one durable improvement to yourself, learned from the feedback in this review. A person approves or " +
-				"rejects every proposal; nothing changes until then. kind \"memory\": a fact or preference to remember (name = a " +
-				"short note name, content = the note). kind \"skill\": a reusable procedure (name = lowercase-hyphenated skill " +
-				"name, content = the full SKILL.md, with --- name/description --- frontmatter). kind \"rule\": one short standing " +
-				"instruction appended to your AGENTS.md (content = the rule; no name). Always cite the numbered evidence items it is " +
-				"based on (evidence, e.g. \"M2, F1\") and give a reason.",
+				"Propose one durable improvement to yourself, learned from the evidence in this review. A person approves or " +
+				"rejects every proposal; nothing changes until then. Pick where it belongs: kind \"skill_update\" -- revise a skill " +
+				"you already have (name = that skill, content = its full revised SKILL.md); \"skill_new\" -- a procedure no existing " +
+				"skill covers (name = new lowercase-hyphenated name, content = full SKILL.md with --- name/description --- " +
+				"frontmatter); \"rule\" -- one short new standing instruction added to your AGENTS.md (content = the rule); " +
+				"\"instructions\" -- fix something already in your AGENTS.md (content = the complete revised AGENTS.md, everything " +
+				"else unchanged); \"memory\" -- a fact or preference about the person (name + content). Always cite the numbered " +
+				"evidence items it is based on (evidence, e.g. \"M2, F1\") and give a reason.",
 			promptSnippet: "Propose an improvement to yourself for review",
 			parameters: {
 				type: "object",
 				properties: {
-					kind: { type: "string", enum: ["memory", "skill", "rule"] },
-					name: { type: "string", description: "memory: the note's name; skill: the skill's name; rule: leave empty" },
-					content: { type: "string", description: "The note, the full SKILL.md, or the one rule." },
+					kind: { type: "string", enum: ["skill_update", "skill_new", "rule", "instructions", "memory"] },
+					name: { type: "string", description: "skill_update/skill_new: the skill's name; memory: the note's name; rule/instructions: leave empty" },
+					content: { type: "string", description: "The full SKILL.md, the one rule, the complete revised AGENTS.md, or the note." },
 					evidence: { type: "string", description: "The numbered items from the review this is based on, e.g. \"M2, F1\"." },
 					reason: { type: "string", description: "Why this will help next time." },
 				},

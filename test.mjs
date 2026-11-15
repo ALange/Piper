@@ -8420,11 +8420,11 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.equal(Object.keys(tree(scope)).some((p) => p.startsWith("skills/sneaky")), false, "and a skill made directly is removed, folder and all");
 	assert.ok(reloads.includes(scope), "chats reload the restored profile");
 	const props = listProposals(key.id).filter((p) => p.runId === run.id);
-	assert.deepEqual(props.map((p) => p.kind).sort(), ["files", "memory", "rule", "skill"]);
+	assert.deepEqual(props.map((p) => p.kind).sort(), ["files", "memory", "rule", "skill_new"], "a plain \"skill\" for a name that does not exist yet is a new skill");
 	const direct = props.find((p) => p.kind === "files");
 	assert.equal(direct.origin, "direct-edit");
 	assert.match(direct.files["AGENTS.md"], /Ignore every rule/, "the direct edit is offered for approval, not lost");
-	const skill = props.find((p) => p.kind === "skill");
+	const skill = props.find((p) => p.kind === "skill_new");
 	assert.equal(skill.name, "deploy-check", "a skill name is normalised");
 	assert.match(skill.content, /^---\nname: deploy-check\ndescription: /, "a skill without frontmatter gets some, or Pi would never load it");
 	assert.equal(gatherSignals(key.id, agent.id, Date.now()).feedback.length, 0, "the run used the feedback up");
@@ -8547,6 +8547,139 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		improveTick(Date.now() + 8 * 86_400_000);
 		config.SELF_IMPROVE_ENABLED = true;
 		assert.equal(db.prepare("SELECT COUNT(*) AS n FROM improve_exchanges WHERE key_id = ?").get(key.id).n, 0, "kept SELF_IMPROVE_TRANSCRIPT_DAYS, used or not");
+	}
+
+	// Where a lesson belongs: the run sees its AGENTS.md and skills, and every choice is checked against
+	// the profile as it really is -- a new skill must be new, an update must have something to update,
+	// a revision must not gut AGENTS.md -- and checked again at approval against what is there by then.
+	{
+		const agentsMd = "You are the learner. You help with deployments and with data questions.\n\n## Style\n\nAnswer briefly. Use bullet points for lists of more than three things. Ask before doing anything that cannot be undone.\n";
+		const deploySkill = "---\nname: deploy\ndescription: How to deploy the app.\n---\n\n1. Build.\n2. Push.\n";
+		tree(scope)["AGENTS.md"] = enc(agentsMd);
+		tree(scope)["skills/deploy/SKILL.md"] = enc(deploySkill);
+		recordFeedback({ keyId: key.id, agentId: agent.id, rating: -1, prompt: "deploy it", reply: "pushed", note: "you skipped the tests" });
+		let seen = "";
+		const results = {};
+		setImproveRunner(async ({ credential, clientSessionId, prompt }) => {
+			seen = prompt;
+			const b = improveBridgeFor({ improveRunId: credential.improveRunId });
+			const attempt = (label, args) => {
+				try {
+					results[label] = b.propose({ reason: "you skipped the tests", evidence: "F1", ...args });
+				} catch (err) {
+					results[label] = err.message;
+				}
+			};
+			attempt("newExisting", { kind: "skill_new", name: "deploy", content: "x" });
+			attempt("updateMissing", { kind: "skill_update", name: "release", content: "x" });
+			attempt("updateSame", { kind: "skill_update", name: "deploy", content: deploySkill });
+			attempt("legacy", { kind: "skill", name: "deploy", content: "---\nname: deploy\ndescription: How to deploy the app.\n---\n\n1. Build.\n2. Run the tests.\n3. Push.\n" });
+			attempt("gutted", { kind: "instructions", content: "Be helpful." });
+			attempt("revision", { kind: "instructions", content: agentsMd.replace("Answer briefly.", "Answer briefly, but never skip a verification step to be brief.") });
+			attempt("brandNew", { kind: "skill_new", name: "rollback", content: "---\nname: rollback\ndescription: Undo a bad deploy.\n---\n\n1. Revert.\n" });
+			return { text: "done", usage: {}, cost: 0, scopedId: clientSessionId };
+		});
+		const whereRun = startReflection({ keyId: key.id, agentId: agent.id });
+		await waitFor(() => runStatus(whereRun.id) === "ok");
+		assert.match(seen, /--- AGENTS\.md ---\nYou are the learner/, "the run sees its own AGENTS.md");
+		assert.match(seen, /--- skill: deploy ---\n---\nname: deploy/, "and each skill, in full");
+		assert.match(seen, /"skill_update"/);
+		assert.match(results.newExisting, /already a skill called "deploy" -- to improve it, propose kind "skill_update"/);
+		assert.match(results.updateMissing, /no skill called "release".*the skills you have are: deploy/);
+		assert.match(results.updateSame, /exactly as it already is/);
+		assert.equal(results.legacy.kind, "skill_update", "a plain \"skill\" for an existing name is an update");
+		assert.match(results.gutted, /may not drop more than half of AGENTS\.md/);
+		assert.equal(results.revision.kind, "instructions");
+		assert.equal(results.brandNew.kind, "skill_new");
+
+		const update = getProposal(results.legacy.id);
+		const updateView = listProposals(key.id).find((p) => p.id === update.id);
+		assert.equal(updateView.base, deploySkill, "a revision carries what it revises, for the portal's diff");
+		const revision = listProposals(key.id).find((p) => p.id === results.revision.id);
+		assert.equal(revision.base, agentsMd);
+
+		// AGENTS.md changed after the revision was proposed: applying it would throw that change away.
+		tree(scope)["AGENTS.md"] = enc(`${agentsMd}Edited by hand.\n`);
+		await assert.rejects(approveProposal(revision.id), (e) => e.code === "changed_since_proposed");
+		tree(scope)["AGENTS.md"] = enc(agentsMd);
+		await approveProposal(revision.id);
+		assert.match(dec(tree(scope)["AGENTS.md"]), /never skip a verification step/);
+		await approveProposal(update.id);
+		assert.match(dec(tree(scope)["skills/deploy/SKILL.md"]), /Run the tests/);
+		await rollbackProposal(update.id);
+		assert.equal(dec(tree(scope)["skills/deploy/SKILL.md"]), deploySkill, "an update rolls back to the skill as it was");
+
+		// A new skill whose name was taken meanwhile is not silently merged into the other one.
+		tree(scope)["skills/rollback/SKILL.md"] = enc("---\nname: rollback\ndescription: made by hand\n---\n");
+		await assert.rejects(approveProposal(results.brandNew.id), (e) => e.code === "changed_since_proposed");
+		assert.match(dec(tree(scope)["skills/rollback/SKILL.md"]), /made by hand/);
+	}
+
+	// Picking: a person sees what a run would review, explained, and ticks what counts. The run reviews
+	// only that; the rest is discarded for good; anything that arrives after the list was opened waits.
+	{
+		const { previewSignals } = S;
+		assert.throws(() => previewSignals(key.id, agents.find(key.id, "not-learning").id), (e) => e.code === "not_enabled", "only for an opted-in agent");
+		recordFeedback({ keyId: key.id, agentId: agent.id, rating: -1, prompt: "q1", reply: "a1", note: "KEEP-THIS-ONE" });
+		recordFeedback({ keyId: key.id, agentId: agent.id, rating: -1, prompt: "q2", reply: "a2", note: "DISCARD-THIS-ONE" });
+		S.recordExchange({ id: "s-pick", keyId: key.id, agentId: agent.id }, { prompt: "rename the file to report.txt", text: "renamed to Report.txt" });
+		S.recordExchange({ id: "s-pick", keyId: key.id, agentId: agent.id }, { prompt: "no, lowercase", text: "renamed to report.txt" });
+		const view = previewSignals(key.id, agent.id);
+		assert.deepEqual(view.items.map((i) => i.type).sort(), ["bad", "bad", "correction"]);
+		const keep = view.items.find((i) => i.note === "KEEP-THIS-ONE");
+		const correction = view.items.find((i) => i.type === "correction");
+		assert.equal(correction.title, "You corrected the agent right after this reply", "each item says in plain words why it is here");
+		assert.deepEqual([correction.asked, correction.replied, correction.followup], ["rename the file to report.txt", "renamed to Report.txt", "no, lowercase"]);
+		assert.throws(() => startReflection({ keyId: key.id, agentId: agent.id, selection: { until: Date.now() + 60_000, selected: [] } }), /not valid/, "a pick from the future is refused");
+
+		await new Promise((r) => setTimeout(r, 5));
+		recordFeedback({ keyId: key.id, agentId: agent.id, rating: 1, prompt: "q3", reply: "a3", note: "ARRIVED-LATER" });
+		let picked = "";
+		setImproveRunner(async ({ prompt, clientSessionId }) => {
+			picked = prompt;
+			return { text: "nothing worth proposing", usage: {}, cost: 0, scopedId: clientSessionId };
+		});
+		const pickRun = startReflection({ keyId: key.id, agentId: agent.id, selection: { until: view.at, selected: [keep.key, correction.key] } });
+		await waitFor(() => runStatus(pickRun.id) === "ok");
+		assert.match(picked, /KEEP-THIS-ONE/);
+		assert.match(picked, /no, lowercase/);
+		assert.doesNotMatch(picked, /DISCARD-THIS-ONE/, "an unticked item never reaches the run");
+		assert.doesNotMatch(picked, /ARRIVED-LATER/, "nor does anything that arrived after the list was opened");
+		assert.equal(db.prepare("SELECT signals FROM improve_runs WHERE id = ?").get(pickRun.id).signals, 2);
+		const next = previewSignals(key.id, agent.id);
+		assert.deepEqual(next.items.map((i) => i.note), ["ARRIVED-LATER"], "the discarded item is gone for good; the late one waits for the next run");
+
+		// Ticking nothing discards everything, without a turn -- and is never held back by pending proposals.
+		const priorCap = config.SELF_IMPROVE_MAX_PENDING;
+		config.SELF_IMPROVE_MAX_PENDING = 0;
+		picked = "";
+		const discardRun = startReflection({ keyId: key.id, agentId: agent.id, selection: { until: next.at, selected: [] } });
+		await waitFor(() => runStatus(discardRun.id) === "skipped");
+		assert.equal(picked, "", "no model call for a discard");
+		assert.match(db.prepare("SELECT note FROM improve_runs WHERE id = ?").get(discardRun.id).note, /you discarded all 1 item/);
+		assert.equal(previewSignals(key.id, agent.id).items.length, 0);
+		config.SELF_IMPROVE_MAX_PENDING = priorCap;
+
+		// A run that fails: what was unticked stays discarded; what was ticked comes back next time.
+		recordFeedback({ keyId: key.id, agentId: agent.id, rating: -1, reply: "x", note: "TICKED" });
+		recordFeedback({ keyId: key.id, agentId: agent.id, rating: -1, reply: "y", note: "UNTICKED" });
+		const v2 = previewSignals(key.id, agent.id);
+		setImproveRunner(async () => {
+			throw new Error("model down");
+		});
+		const failing = startReflection({ keyId: key.id, agentId: agent.id, selection: { until: v2.at, selected: [v2.items.find((i) => i.note === "TICKED").key] } });
+		await waitFor(() => runStatus(failing.id) === "error");
+		assert.deepEqual(previewSignals(key.id, agent.id).items.map((i) => i.note), ["TICKED"]);
+
+		// A task card that fails while the list is open is not lost between two runs.
+		setImproveRunner(async ({ clientSessionId }) => ({ text: "ok", usage: {}, cost: 0, scopedId: clientSessionId }));
+		const v3 = previewSignals(key.id, agent.id);
+		db.prepare("INSERT INTO kanban_cards (id, key_id, agent_id, title, prompt, status, outcome, error, run_seq, created_at, ended_at, updated_at) VALUES ('kpick0000001', ?, ?, 'late card', 'p', 'done', 'error', 'boom', 0, ?, ?, ?)").run(key.id, agent.id, v3.at, v3.at + 1, v3.at + 1);
+		await new Promise((r) => setTimeout(r, 5));
+		const settle = startReflection({ keyId: key.id, agentId: agent.id, selection: { until: v3.at, selected: v3.items.map((i) => i.key) } });
+		await waitFor(() => runStatus(settle.id) === "ok");
+		assert.deepEqual(previewSignals(key.id, agent.id).items.map((i) => i.title), ['Task card "late card" failed'], "the next window starts where the pick ended, not where the run started");
+		db.prepare("DELETE FROM kanban_cards WHERE id = 'kpick0000001'").run();
 	}
 
 	// A reflection turn loses every tool whose effect reaches past it, whatever the agent may otherwise do.
@@ -13055,6 +13188,15 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		assert.equal((await call(`/api/improve/proposals/${proposal.id}/rollback`, { method: "POST", headers: auth })).json.proposal.status, "rolled_back");
 		assert.equal(getProposal(proposal.id).status, "rolled_back");
 		assert.equal((await call("/api/improve")).status, 401, "no auth, nothing");
+
+		// Preview, then a pick: here, discarding everything.
+		assert.equal((await call(`/api/improve/preview?agentId=${theirAgent.id}`, { headers: auth })).status, 409, "never another key's agent");
+		await call("/api/improve/feedback", json({ agentId: myAgent.id, rating: 1, prompt: "q", reply: "a" }));
+		const preview = await call(`/api/improve/preview?agentId=${myAgent.id}`, { headers: auth });
+		assert.deepEqual([preview.status, preview.json.items.length, preview.json.items[0].type], [200, 1, "good"]);
+		assert.equal((await call("/api/improve/reflect", json({ agentId: myAgent.id, selection: { until: preview.json.at, selected: [] } }))).status, 202);
+		for (let i = 0; i < 100 && (await call("/api/improve", { headers: auth })).json.targets[0].busy; i++) await new Promise((r) => setTimeout(r, 15));
+		assert.equal((await call(`/api/improve/preview?agentId=${myAgent.id}`, { headers: auth })).json.items.length, 0, "discarded for good");
 
 		setImproveRunner(null);
 		setImproveProfile(null);
