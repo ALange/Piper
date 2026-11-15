@@ -68,7 +68,8 @@ runtime dependencies beyond Node's standard library, the Pi package you already 
   hand work to each other, chain them into a team endpoint, install Pi packages and MCP servers from the dashboard, and edit
   shared bundles in the browser. See Help → Documentation for each.
 - **Self-improving agents, opt-in** — switch it on per key or agent and it learns from the 👍/👎 its replies get in the
-  client portal (and from failed task cards and jobs): a periodic reflection run proposes memory notes, skills or
+  client portal, from the moments in its conversations where it was corrected, asked again or thanked (picked out
+  without a model, then cited as evidence), and from failed task cards and jobs: a periodic reflection run proposes memory notes, skills or
   rules for its own AGENTS.md, which you approve, reject or later roll back on the portal's Improvements page. The run
   can only propose; anything it changes in its profile directly is put back and offered for approval instead.
 - **Model speed** — each running agent's average generation and prompt-processing speed (tokens per second) in

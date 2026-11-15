@@ -776,7 +776,8 @@ export default async function piperBridge(pi) {
 				"rejects every proposal; nothing changes until then. kind \"memory\": a fact or preference to remember (name = a " +
 				"short note name, content = the note). kind \"skill\": a reusable procedure (name = lowercase-hyphenated skill " +
 				"name, content = the full SKILL.md, with --- name/description --- frontmatter). kind \"rule\": one short standing " +
-				"instruction appended to your AGENTS.md (content = the rule; no name). Always give a reason naming the feedback.",
+				"instruction appended to your AGENTS.md (content = the rule; no name). Always cite the numbered evidence items it is " +
+				"based on (evidence, e.g. \"M2, F1\") and give a reason.",
 			promptSnippet: "Propose an improvement to yourself for review",
 			parameters: {
 				type: "object",
@@ -784,7 +785,8 @@ export default async function piperBridge(pi) {
 					kind: { type: "string", enum: ["memory", "skill", "rule"] },
 					name: { type: "string", description: "memory: the note's name; skill: the skill's name; rule: leave empty" },
 					content: { type: "string", description: "The note, the full SKILL.md, or the one rule." },
-					reason: { type: "string", description: "Which feedback this comes from, and why it will help next time." },
+					evidence: { type: "string", description: "The numbered items from the review this is based on, e.g. \"M2, F1\"." },
+					reason: { type: "string", description: "Why this will help next time." },
 				},
 				required: ["kind", "content", "reason"],
 			},

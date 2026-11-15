@@ -231,6 +231,8 @@
   .imp-pre { white-space:pre-wrap; word-break:break-word; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px; background:rgba(0,0,0,.25); border-radius:8px; padding:8px 10px; margin-top:8px; max-height:280px; overflow:auto; }
   .imp-path { font-size:11.5px; color:var(--muted); margin-top:8px; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
   .imp-reason { font-size:12.5px; color:var(--muted); margin-top:8px; }
+  .imp-evidence { margin-top:8px; font-size:12px; }
+  .imp-evidence summary { cursor:pointer; color:var(--dim); }
   .kanban-badge-pending { background:rgba(246,193,119,.16); color:var(--amber); }
   .kanbanqna { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:10px 12px; margin-bottom:12px; font-size:13px; }
   @media (max-width: 900px) { .kanbanboard { grid-template-columns:1fr; } }
@@ -2515,7 +2517,7 @@ function renderImprove() {
   return apiJson('api/improve').then(function (d) {
     if ($('improveview').hidden) return;
     box.replaceChildren();
-    var intro = el('p', 'Agents with self-improvement switched on learn from the 👍/👎 you give their replies, and from task cards and jobs that failed. ' +
+    var intro = el('p', 'Agents with self-improvement switched on learn from the 👍/👎 you give their replies, from the moments in their conversations where you corrected them, asked again or thanked them, and from task cards and jobs that failed. ' +
       'Each reflection run proposes memory notes, skills or rules here. Nothing changes until you approve it, and anything applied can be rolled back.');
     intro.className = 'hint';
     box.appendChild(intro);
@@ -2532,6 +2534,7 @@ function renderImprove() {
       card.appendChild(st);
       var meta = el('div'); meta.className = 'jc-meta';
       meta.appendChild(el('span', t.newFeedback + ' new rating(s)'));
+      meta.appendChild(el('span', t.newExchanges + ' new chat turn(s)'));
       meta.appendChild(el('span', t.pending + ' waiting for you'));
       card.appendChild(meta);
       var act = el('div'); act.className = 'jc-actions';
@@ -2589,6 +2592,12 @@ function improveCard(p) {
     card.appendChild(el('div', p.content)).className = 'imp-pre';
   }
   if (p.reason) card.appendChild(el('div', 'Why: ' + p.reason)).className = 'imp-reason';
+  if (p.evidence) {
+    var ev = el('details'); ev.className = 'imp-evidence';
+    ev.appendChild(el('summary', 'Based on'));
+    ev.appendChild(el('div', p.evidence)).className = 'imp-pre';
+    card.appendChild(ev);
+  }
   var act = el('div'); act.className = 'jc-actions';
   function decide(action, label, confirmText) {
     var b = el('button', label);

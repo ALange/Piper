@@ -1261,7 +1261,12 @@ assert.equal(isReloadCommand(undefined), false);
 
 	// A real, non-streamed turn: the message reaches Pi through the fake container and its answer comes back,
 	// with usage reported.
+	const { setExchangeRecorder } = await import("./server.mjs");
+	const heard = [];
+	setExchangeRecorder((c, exchange) => heard.push({ keyId: c.keyId, ...exchange }));
 	const plain = await call({ messages: [{ role: "user", content: "hello there" }] });
+	setExchangeRecorder(null);
+	assert.deepEqual(heard.map((h) => [h.keyId, h.prompt, h.text, h.toolErrors, h.failed]), [[key.id, "hello there", "echo: hello there", 0, false]], "a turn with a person in it is offered to self-improvement, with how it went");
 	assert.equal(plain.status, 200);
 	const plainJson = await plain.json();
 	assert.equal(plainJson.object, "chat.completion");
@@ -8482,6 +8487,67 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	config.SELF_IMPROVE_ENABLED = false;
 	assert.equal(improveTick(Date.now() + 2 * 86_400_000), 0, "nothing at all while switched off");
 	config.SELF_IMPROVE_ENABLED = true;
+
+	// Conversations (SELF_IMPROVE_FROM_CHATS): picked over without a model, kept only for an opted-in
+	// target and only for turns a person is in, cited as evidence, and forgotten after a while.
+	{
+		const { recordExchange, flagMoments } = S;
+		const ex = (id, session, prompt, reply = "r", extra = {}) => ({ id, session, prompt, reply, tool_errors: 0, failed: 0, created_at: id, ...extra });
+		const moments = flagMoments([
+			ex(1, "a", "write a backup script for postgres databases", "here is a script"),
+			ex(2, "a", "nie, chodziło mi o mysql", "ok, mysql"),
+			ex(3, "b", "summarise the quarterly sales report please", "summary"),
+			ex(4, "b", "please summarise the quarterly sales report", "summary again"),
+			ex(5, "c", "deploy the app", "deployed", { tool_errors: 3 }),
+			ex(6, "c", "thanks, perfect", "you're welcome"),
+			ex(7, "d", "what's the weather like", "sunny"),
+			ex(8, "d", "and tomorrow?", "rain"),
+			ex(9, "e", "list the files here", "a b c"),
+			ex(10, "e", "Don't include the hidden ones", "a b"),
+		]);
+		assert.deepEqual(moments.map((m) => m.kind), ["correction", "correction", "repeat", "trouble", "praise"], "an ordinary follow-up is not a moment");
+		assert.equal(moments[0].followup, "Don't include the hidden ones", "newest first");
+		assert.equal(moments[1].followup, "nie, chodziło mi o mysql", "a Polish correction counts too");
+		assert.equal(moments[1].reply, "here is a script", "a moment quotes the reply that was corrected");
+		assert.equal(moments.find((m) => m.kind === "trouble").toolErrors, 3);
+		const pair = [ex(1, "a", "is x y?", "yes"), ex(2, "a", "wrong, it is z", "ok")];
+		assert.equal(flagMoments(pair, new Set([1])).length, 0, "an older exchange is only there as what a new follow-up reacts to");
+		assert.deepEqual(flagMoments(pair, new Set([2])).map((m) => m.kind), ["correction"]);
+
+		const chat = (over = {}) => ({ id: "client-session-secret", keyId: key.id, agentId: agent.id, ...over });
+		assert.equal(recordExchange(chat({ improveRunId: 3 }), { prompt: "x", text: "y" }), false, "never a reflection run's own turn");
+		assert.equal(recordExchange(chat({ kanbanCardId: "k1" }), { prompt: "x", text: "y" }), false, "nor a task card's");
+		assert.equal(recordExchange(chat({ delegateDepth: 1 }), { prompt: "x", text: "y" }), false, "nor a colleague's hand-off");
+		const bystander = agents.create({ keyId: key.id, name: "not-learning" });
+		assert.equal(recordExchange(chat({ agentId: bystander.id }), { prompt: "x", text: "y" }), false, "nor an agent that is not opted in");
+		config.SELF_IMPROVE_FROM_CHATS = false;
+		assert.equal(recordExchange(chat(), { prompt: "x", text: "y" }), false, "nor anything with SELF_IMPROVE_FROM_CHATS off");
+		config.SELF_IMPROVE_FROM_CHATS = true;
+		assert.equal(recordExchange(chat(), { prompt: "convert 3 miles", text: "3 miles is 4.83 km." }), true);
+		assert.equal(recordExchange(chat(), { prompt: "no, I wanted metres too", text: "4828 m." }), true);
+		assert.ok(db.prepare("SELECT session FROM improve_exchanges WHERE agent_id = ?").all(agent.id).every((r) => r.session !== "client-session-secret"), "only the session's fingerprint is kept, never its id");
+		assert.equal(targetsFor(key.id).find((t) => t.agentId === agent.id).newExchanges, 2);
+
+		let seenPrompt = "";
+		setImproveRunner(async ({ credential, clientSessionId, prompt }) => {
+			seenPrompt = prompt;
+			const out = improveBridgeFor({ improveRunId: credential.improveRunId }).propose({ kind: "memory", name: "length units", content: "Give lengths in metres as well as km.", evidence: "M1, M9", reason: "they corrected me" });
+			assert.equal(out.proposed, true);
+			return { text: "one proposal", usage: {}, cost: 0, scopedId: clientSessionId };
+		});
+		const chatRun = startReflection({ keyId: key.id, agentId: agent.id });
+		await waitFor(() => runStatus(chatRun.id) === "ok");
+		assert.match(seenPrompt, /M1 \[conversation: they corrected you\]/, "the moment reaches the run, numbered");
+		assert.match(seenPrompt, /then they said: no, I wanted metres too/);
+		const cited = listProposals(key.id).find((p) => p.runId === chatRun.id);
+		assert.match(cited.evidence, /^M1: \[conversation: they corrected you\]/, "what it cites is kept next to it; an unknown label is ignored");
+		assert.doesNotMatch(cited.evidence, /M9/, "a label the run never showed is dropped, not quoted as undefined");
+		assert.equal(db.prepare("SELECT COUNT(*) AS n FROM improve_exchanges WHERE agent_id = ? AND used_run IS NULL").get(agent.id).n, 0, "the run used the conversation up");
+		config.SELF_IMPROVE_ENABLED = false; // purge only -- queue nothing
+		improveTick(Date.now() + 8 * 86_400_000);
+		config.SELF_IMPROVE_ENABLED = true;
+		assert.equal(db.prepare("SELECT COUNT(*) AS n FROM improve_exchanges WHERE key_id = ?").get(key.id).n, 0, "kept SELF_IMPROVE_TRANSCRIPT_DAYS, used or not");
+	}
 
 	// A reflection turn loses every tool whose effect reaches past it, whatever the agent may otherwise do.
 	{

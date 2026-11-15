@@ -2,6 +2,22 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.22.0] - 2026-11-15
+
+### Added
+- **Self-improving agents now learn from their conversations too, not just from thumbs.** For a key or
+  agent with self-improvement switched on, each exchange a person has with it -- over the API, in the
+  portal or on Signal (never jobs, task cards or hand-offs between agents) -- is kept for a week
+  (SELF_IMPROVE_TRANSCRIPT_DAYS). Each reflection run first picks out, without asking any model, the
+  moments worth learning from: a correction ("no, I meant…", "that's wrong", in English or Polish), the
+  same request asked again, a turn where tools kept failing or the model errored, and a "thanks,
+  perfect" right after a reply. Only those excerpts are sent to the model, numbered, so a quiet day costs
+  nothing. Every proposal now cites the items it is based on, and the portal's Improvements page shows
+  them under "Based on", next to the proposal, so you can judge it against what actually happened.
+  The conversations are recorded by the gateway as they happen -- never read out of the agent's own
+  container -- and only the session's fingerprint is stored with them. Switch it off with
+  SELF_IMPROVE_FROM_CHATS (Settings → Self-improvement) to learn from thumbs, task cards and jobs only.
+
 ## [1.21.0] - 2026-11-15
 
 ### Added
