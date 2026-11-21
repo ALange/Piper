@@ -50,6 +50,9 @@ runtime dependencies beyond Node's standard library, the Pi package you already 
 - **Chats survive restarts** — a chat's container is stopped, not removed, and its Pi session is
   kept, so a restart, an eviction or a crash resumes the same agent with its context and its
   installed packages rather than replaying the transcript into a new one.
+- **`/exit` ends a chat for good** — typed into the portal, the dashboard Playground, a Signal
+  conversation, or sent as a plain chat message, it closes that session and removes its container
+  right away, the same as `/reload` is always handled by the gateway itself rather than reaching Pi.
 - **One workspace per API key** — every chat of a key works in the same `/workspace`, which
   outlives any chat.
 - **A Containers page** — every container with its key, state, live CPU, memory and disk, buttons to

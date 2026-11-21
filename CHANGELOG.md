@@ -2,6 +2,17 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.23.2] - 2026-11-21
+
+### Added
+- **A new gateway command, `/exit`, ends a chat for good.** Typed into any chat -- the portal, the
+  dashboard Playground, a Signal conversation, or a plain `/v1/chat/completions` request -- it closes
+  that session and removes its container immediately, the same as ending it from the dashboard, instead
+  of reaching the model. Like `/reload`, only the exact command matches; it never reaches Pi at all, so
+  it means the same thing everywhere regardless of what Pi's own built-in `/exit` (for quitting its
+  terminal CLI) would otherwise do in RPC mode. Sending anything afterward on the same session id starts
+  a genuinely new session, not a resume of the one just closed.
+
 ## [1.23.1] - 2026-11-15
 
 ### Changed
