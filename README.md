@@ -437,9 +437,12 @@ the extensions installed for it. It is not about a chat's or a container's Pi (s
 - **Update only.** The gateway loads Pi once, so the new version is what is *installed* but not what is
   *running* until you restart the gateway. The panel says so, and that images and containers follow the running
   version: after restarting, rebuild the image and update the containers. Nothing restarts or rebuilds by itself.
-- **Only where it is safe.** The install has to be the one the gateway's own `npm root -g` leads to, and writable
-  by the gateway's user; otherwise the panel says why (a custom `PI_AGENT_PACKAGE`, another node, a read-only
-  folder) and what to run by hand, and nothing is attempted.
+- **Only where it is safe.** Two install layouts are recognized: a conventional global npm package (the install
+  has to be the one the gateway's own `npm root -g` leads to), or Pi's own self-managed install (introduced in Pi
+  1.6.0: `~/.pi/agent/install/releases/<version>/...`, found by reading `current-version` fresh each time, so it
+  keeps working across later updates too). Either way, the gateway's user has to be able to write there; otherwise
+  the panel says why (a custom `PI_AGENT_PACKAGE`, another node, a read-only folder) and what to run by hand, and
+  nothing is attempted.
 - **Needs a dashboard password.** It installs software from a registry as the gateway's user, which on an open
   dashboard anyone on your network could start, so it is refused (403) until one is set, like the command box.
 - The operator's Pi folder holds credentials. The gateway never reads it; `pi` does, as it would if you ran it.

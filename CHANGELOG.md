@@ -2,6 +2,19 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.23.7] - 2026-11-22
+
+### Fixed
+- **Updating Pi past 1.6.0 could leave the gateway unable to load Pi at all on its next restart, and
+  the "Pi on this host" panel wrongly reported "the gateway's user cannot write to
+  /usr/lib/node_modules/@earendil-works" even as root.** Pi 1.6.0 introduced its own self-managed
+  install layout (`~/.pi/agent/install/releases/<version>/...`, the active version named in
+  `current-version`); running `pi update` against an older, conventionally npm-installed Pi migrates it
+  into this layout and removes the old npm-global copy outright. The gateway now also looks for Pi
+  there, reading `current-version` fresh every time so it keeps working across later updates too, and
+  the dashboard correctly recognizes a managed install as writable and updatable on its own terms,
+  instead of insisting it match where the gateway's own npm installs global packages.
+
 ## [1.23.6] - 2026-11-22
 
 ### Fixed
