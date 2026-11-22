@@ -3972,6 +3972,30 @@ assert.equal(isExitCommand(undefined), false);
 			assert.ok(rmiCalls.filter((id) => id === "sha256:deep-a").length >= 2, "the oldest link was refused once (its child was still there), then tried again rather than given up on after a single retry");
 			assert.equal(r3.reclaimedMb, 700 + 800 + 900);
 		}
+		// An older state still underneath the image a LIVE (running or persistent) container currently
+		// uses: Docker refuses it for exactly the reason it refuses the live image itself, so it must
+		// never be offered as "safe" either -- only resetting that one container frees the whole history
+		// behind it, not removing images in some other order.
+		{
+			const liveName = own("livekey");
+			const parentOfAnc = { "sha256:anc-b": "sha256:anc-a", "sha256:anc-c": "sha256:anc-b" };
+			const sizesAnc = { "sha256:anc-a": 500, "sha256:anc-b": 600, "sha256:anc-c": 700 };
+			const okA = (stdout = "") => ({ code: 0, stdout, stderr: "" });
+			const fmtA = (r) => JSON.stringify({ ID: r[0], Repository: r[1], Tag: r[2], CreatedSince: "1 day ago", Size: `${r[3]}MB` });
+			reply = (bin, args) => {
+				if (args[0] === "images" && args.includes("label=piper.image=1")) return okA(["sha256:anc-a", "sha256:anc-b", "sha256:anc-c"].map((id) => fmtA([id, "<none>", "<none>", sizesAnc[id]])).join("\n"));
+				if (args[0] === "images") return okA();
+				if (args[0] === "image" && args[1] === "inspect") return okA(JSON.stringify(args.slice(2).map((id) => ({ Id: id, Parent: parentOfAnc[id] ?? "", Size: sizesAnc[id] * 1048576, Config: { Labels: { "piper.image": "1", "piper.pi-version": "0.99.1" } } }))));
+				if (args[0] === "ps") return okA(`${liveName}\trunning\t\t`);
+				if (args[0] === "inspect") return okA(JSON.stringify([{ Name: `/${liveName}`, Image: "sha256:anc-c", State: { Running: true }, Config: { Labels: { "piper.managed": "1", "piper.persistent": "1" } } }]));
+				return okA();
+			};
+			const plan4 = await cleanupPlan({ hostPi: "0.99.1" });
+			assert.deepEqual(plan4.items.map((x) => x.id), [], "neither old link is offered -- both are beneath the live container's current image, not merely superseded builds");
+			assert.equal(plan4.blocked.filter((b) => new RegExp(liveName).test(b.reason)).length, 2, "each names which container's history it is still part of");
+			assert.match(plan4.blocked[0].reason, /update or reset that container/);
+			await assert.rejects(removeImage("sha256:anc-a", { hostPi: "0.99.1" }), new RegExp(`beneath ${liveName}`), "removing one directly is refused with the same explanation, not a bare docker error");
+		}
 		reply = baseReplyForRoutes;
 		// Through the page's routes: the plan, the go-ahead on remove, and cleanup.
 		await view();

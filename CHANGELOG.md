@@ -2,6 +2,20 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.23.9] - 2026-11-22
+
+### Fixed
+- **Some old saved-state images could never be cleaned up at all, always refusing with "other images
+  are built on it" even after 1.23.8's deeper retry.** A persistent container does not always get
+  recreated onto its very latest saved state (it keeps running where it is until something actually
+  changes it), so the image it is genuinely running from can sit partway back in that key's history --
+  with older, truly unused-looking snapshots stacked further behind it. Docker refuses to remove any of
+  those too, for the same reason it refuses the one the container is actually using: they are its
+  ancestors, and no amount of retrying frees an ancestor of an image still in use. These are now
+  recognised up front and never offered for cleanup at all, with a plain reason naming the container
+  whose history they are still part of -- updating or resetting that one container is what actually
+  frees the whole chain behind it.
+
 ## [1.23.8] - 2026-11-22
 
 ### Fixed
