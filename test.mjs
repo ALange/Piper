@@ -1544,7 +1544,7 @@ assert.equal(isExitCommand(undefined), false);
 	mem.write({ name: "long-one", value: long });
 	assert.equal((await mem.lookup({ query: "long-one" }))[0].preview.length, 161, "previews are capped, with an ellipsis");
 
-	// Semantic search: off by default (no NOTEBOOK_EMBEDDING_API_KEY), so a query that shares not one
+	// Semantic search: off by default (no EMBEDDING_API_KEY), so a query that shares not one
 	// word with any note finds nothing -- exactly the substring-only behaviour above.
 	assert.equal((await mem.lookup({ query: "how do I release this to production" })).length, 0);
 	let embedCalls = 0;
@@ -1556,8 +1556,8 @@ assert.equal(isExitCommand(undefined), false);
 		return texts.map((t) => Float32Array.from(classes.map((re) => (re.test(t) ? 1 : 0))));
 	});
 	await mem.lookup({ query: "release" });
-	assert.equal(embedCalls, 0, "a fake embedder is registered, but NOTEBOOK_EMBEDDING_API_KEY still is not -- never called for nothing");
-	config.NOTEBOOK_EMBEDDING_API_KEY = "test-key";
+	assert.equal(embedCalls, 0, "a fake embedder is registered, but EMBEDDING_API_KEY still is not -- never called for nothing");
+	config.EMBEDDING_API_KEY = "test-key";
 	const semantic = await mem.lookup({ query: "how do I release this to production" });
 	assert.deepEqual(semantic.map((n) => n.name), ["deploy-steps"], "found by meaning alone -- not one word in common with the query");
 	assert.ok(embedCalls > 0, "now configured, the embedder is actually used");
@@ -1580,7 +1580,7 @@ assert.equal(isExitCommand(undefined), false);
 	});
 	assert.deepEqual((await mem.lookup({ query: "terraform" })).map((n) => n.name), ["deploy-steps"], "the call failed, but the word is right there in the note");
 	setMemoryEmbedder(null);
-	config.NOTEBOOK_EMBEDDING_API_KEY = "";
+	config.EMBEDDING_API_KEY = "";
 	clearMemory("mem-key-1");
 
 	// Caps: a brand new name over the limit is refused; updating an existing one never is.
@@ -4650,10 +4650,10 @@ assert.equal(isExitCommand(undefined), false);
 		const database = new DatabaseSync(":memory:");
 		database.exec("CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, source TEXT NOT NULL, updated_at INTEGER NOT NULL); CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
 		const put = (key, value, source = "ui") => database.prepare("INSERT INTO settings VALUES (?, ?, ?, 1)").run(key, value, source);
-		for (const [k, v] of [["SANDBOX_MEMORY_MB", "4096"], ["SANDBOX_PIDS", "99"], ["SANDBOX_CPUS", "0.5"], ["SANDBOX_ENV", "A=1"], ["KEY_FILES_MAX_BYTES", "1000"], ["WORKSPACE_ARCHIVE_TTL_MS", "5"], ["SANDBOX_NETWORK", "on"], ["RUNNER", "bwrap"], ["SANDBOX_ALLOW", "/x"], ["WORKSPACE_JAIL", "1"], ["WORKSPACE_ON_EXPIRY", "delete"], ["GATEWAY_EXTENSIONS", "0"], ["PI_CWD", ""], ["SANDBOX_LIMITS", "auto"], ["KEY_FILES_ROOT", "/data/shared-folders"], ["CONTAINER_IMAGE", "piper-sandbox"], ["MAX_SESSIONS", "7"]]) put(k, v);
+		for (const [k, v] of [["SANDBOX_MEMORY_MB", "4096"], ["SANDBOX_PIDS", "99"], ["SANDBOX_CPUS", "0.5"], ["SANDBOX_ENV", "A=1"], ["KEY_FILES_MAX_BYTES", "1000"], ["WORKSPACE_ARCHIVE_TTL_MS", "5"], ["SANDBOX_NETWORK", "on"], ["RUNNER", "bwrap"], ["SANDBOX_ALLOW", "/x"], ["WORKSPACE_JAIL", "1"], ["WORKSPACE_ON_EXPIRY", "delete"], ["GATEWAY_EXTENSIONS", "0"], ["PI_CWD", ""], ["SANDBOX_LIMITS", "auto"], ["KEY_FILES_ROOT", "/data/shared-folders"], ["CONTAINER_IMAGE", "piper-sandbox"], ["MAX_SESSIONS", "7"], ["NOTEBOOK_EMBEDDING_URL", "https://embed.example/v1"], ["NOTEBOOK_EMBEDDING_MODEL", "m-small"], ["NOTEBOOK_EMBEDDING_API_KEY", "sk-old"]]) put(k, v);
 		migrateSettingRows(database);
 		const rows = Object.fromEntries(database.prepare("SELECT key, value FROM settings").all().map((r) => [r.key, r.value]));
-		assert.deepEqual(rows, { CONTAINER_MEMORY_MB: "4096", CONTAINER_PIDS: "99", CONTAINER_CPUS: "0.5", CONTAINER_ENV: "A=1", WORKSPACE_MAX_BYTES: "1000", ARCHIVE_TTL_MS: "5", CONTAINER_NETWORK: "internet", MAX_SESSIONS: "7" }, "values carried over, the rest untouched, obsolete rows and the old image default gone");
+		assert.deepEqual(rows, { CONTAINER_MEMORY_MB: "4096", CONTAINER_PIDS: "99", CONTAINER_CPUS: "0.5", CONTAINER_ENV: "A=1", WORKSPACE_MAX_BYTES: "1000", ARCHIVE_TTL_MS: "5", CONTAINER_NETWORK: "internet", MAX_SESSIONS: "7", EMBEDDING_URL: "https://embed.example/v1", EMBEDDING_MODEL: "m-small", EMBEDDING_API_KEY: "sk-old" }, "values carried over, the rest untouched, obsolete rows and the old image default gone -- an operator's already-configured embeddings endpoint survives the rename under NOTEBOOK_EMBEDDING_*");
 		assert.equal(database.prepare("SELECT value FROM meta WHERE key = 'legacy-key-files-root'").get().value, "/data/shared-folders", "where the shared folders were is remembered for the move");
 		const once = JSON.stringify(rows);
 		migrateSettingRows(database);
@@ -4666,8 +4666,9 @@ assert.equal(isExitCommand(undefined), false);
 		assert.equal(database.prepare("SELECT value FROM settings WHERE key = 'CONTAINER_NETWORK'").get().value, "none", "off becomes none");
 		assert.equal(database.prepare("SELECT value FROM settings WHERE key = 'CONTAINER_MEMORY_MB'").get().value, "1", "a value already set under the new name wins");
 		assert.equal(database.prepare("SELECT count(*) n FROM settings WHERE key LIKE 'SANDBOX_%'").get().n, 0);
-		for (const key of ["RUNNER", "WORKSPACE_JAIL", "SANDBOX_ALLOW", "GATEWAY_EXTENSIONS"]) assert.equal(SETTINGS_SPEC.some((s) => s.key === key), false, `${key} is gone from the spec`);
-		for (const key of ["CONTAINER_IMAGE", "CONTAINER_NETWORK", "CONTAINER_ALLOW", "CONTAINER_MOUNTS", "CONTAINER_PI_DIR", "CONTAINER_ENV", "CONTAINER_MEMORY_MB", "WORKSPACE_MAX_BYTES", "ARCHIVE_TTL_MS"]) assert.ok(SETTINGS_SPEC.some((s) => s.key === key), `${key} is in the spec`);
+		for (const key of ["RUNNER", "WORKSPACE_JAIL", "SANDBOX_ALLOW", "GATEWAY_EXTENSIONS", "NOTEBOOK_EMBEDDING_URL", "NOTEBOOK_EMBEDDING_MODEL", "NOTEBOOK_EMBEDDING_API_KEY"]) assert.equal(SETTINGS_SPEC.some((s) => s.key === key), false, `${key} is gone from the spec`);
+		for (const key of ["CONTAINER_IMAGE", "CONTAINER_NETWORK", "CONTAINER_ALLOW", "CONTAINER_MOUNTS", "CONTAINER_PI_DIR", "CONTAINER_ENV", "CONTAINER_MEMORY_MB", "WORKSPACE_MAX_BYTES", "ARCHIVE_TTL_MS", "EMBEDDING_URL", "EMBEDDING_MODEL", "EMBEDDING_API_KEY"]) assert.ok(SETTINGS_SPEC.some((s) => s.key === key), `${key} is in the spec`);
+		assert.equal(SETTINGS_SPEC.find((s) => s.key === "EMBEDDING_URL").group, "Embeddings", "its own group, not folded into Notebook -- agent memory depends on it too");
 		assert.deepEqual(SETTINGS_SPEC.find((s) => s.key === "CONTAINER_NETWORK").options, ["internet", "none", "open"]);
 		assert.equal(SETTINGS_SPEC.find((s) => s.key === "CONTAINER_NETWORK").def, "internet", "the safe policy is the default");
 		assert.equal(SETTINGS_SPEC.find((s) => s.key === "CONTAINER_IMAGE").def, "piper-agent");
