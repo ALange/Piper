@@ -2,6 +2,18 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.23.4] - 2026-11-22
+
+### Added
+- **Agent memory (`piper_memories`) can now search by meaning, not just literal words.** Once
+  NOTEBOOK_EMBEDDING_API_KEY is set, it reuses that same embeddings endpoint -- the exact brute-force
+  cosine approach Notebooks' own grounded Q&A already uses -- so a query that shares not one word with a
+  note can still find it. A literal match is never outranked or dropped in favour of a semantic one: this
+  only adds recall a plain substring search would have missed, never takes any away. Nothing changes for
+  an operator who has not set that key. A note's embedding is computed lazily and batched the first time
+  a search needs it and finds it missing, not on every write, so writing a note never waits on an API
+  call; an edit clears the old vector so a stale one is never scored against the new content.
+
 ## [1.23.3] - 2026-11-22
 
 ### Changed
