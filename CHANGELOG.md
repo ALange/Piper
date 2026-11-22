@@ -2,6 +2,19 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.23.8] - 2026-11-22
+
+### Fixed
+- **Cleaning up old images could leave most of a persistent key's old saved states stuck, refusing to
+  remove with "other images are built on it" even after choosing them and confirming.** Each time a
+  persistent container's chat resumes from idle, its state is committed as one more image layered on
+  the last -- a key that resumes often builds a long, straight chain of untagged images, each one
+  blocked only by the very next link still existing. Cleanup already retried an image Docker refused
+  for that reason, but only once, which cleared a single link at a time: a chain more than two deep
+  needed as many separate cleanup runs as it was links long. It now keeps retrying, a whole extra round
+  at a time, for as long as a round actually frees something -- so the entire chain goes in one go,
+  however long it has grown.
+
 ## [1.23.7] - 2026-11-22
 
 ### Fixed

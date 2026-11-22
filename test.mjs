@@ -3936,6 +3936,42 @@ assert.equal(isExitCommand(undefined), false);
 			assert.ok(gone.has("sha256:s1") && gone.has("sha256:s2") && gone.has("sha256:p1") && gone.has("sha256:p2"), "the whole chain is gone");
 			assert.ok(r2.reclaimedMb > 4000);
 		}
+		// A chain deeper than one link: a persistent key committed many times in a row (one idle
+		// resume at a time) leaves a straight run of untagged parents, each refused while its own
+		// child is still there. One extra pass used to clear only the newest link; the whole chain
+		// must go in one cleanup call, not one link per click.
+		{
+			const chain = ["sha256:deep-a", "sha256:deep-b", "sha256:deep-c"]; // a (oldest) -> b -> c (newest, free)
+			const parentOfDeep = { "sha256:deep-b": "sha256:deep-a", "sha256:deep-c": "sha256:deep-b" };
+			const sizesDeep = { "sha256:deep-a": 700, "sha256:deep-b": 800, "sha256:deep-c": 900 };
+			const goneDeep = new Set();
+			const rmiCalls = [];
+			const ok3 = (stdout = "") => ({ code: 0, stdout, stderr: "" });
+			const fmt3 = (r) => JSON.stringify({ ID: r[0], Repository: r[1], Tag: r[2], CreatedSince: "1 day ago", Size: `${r[3]}MB` });
+			const hasLiveChild = (id) => Object.entries(parentOfDeep).some(([child, parent]) => parent === id && !goneDeep.has(child));
+			reply = (bin, args) => {
+				if (args[0] === "images" && args.includes("label=piper.image=1")) return ok3(chain.filter((id) => !goneDeep.has(id)).map((id) => fmt3([id, "<none>", "<none>", sizesDeep[id]])).join("\n"));
+				if (args[0] === "images") return ok3();
+				if (args[0] === "image" && args[1] === "inspect") return ok3(JSON.stringify(args.slice(2).map((id) => ({ Id: id, Size: (sizesDeep[id] ?? 900) * 1048576, Config: { Labels: { "piper.image": "1", "piper.pi-version": "0.99.1" } } }))));
+				if (args[0] === "ps") return ok3();
+				if (args[0] === "inspect") return ok3("[]");
+				if (args[0] === "rmi") {
+					const id = args.at(-1);
+					rmiCalls.push(id);
+					if (hasLiveChild(id)) return { code: 1, stdout: "", stderr: `Error response from daemon: conflict: unable to delete ${id} (cannot be forced) - image has dependent child images` };
+					goneDeep.add(id);
+					return ok3();
+				}
+				return ok3();
+			};
+			const plan3 = await cleanupPlan({ hostPi: "0.99.1" });
+			assert.deepEqual(plan3.items.filter((x) => x.kind === "safe").map((x) => x.id).sort(), [...chain].sort(), "every link is offered, not just the free one at the end");
+			const r3 = await runCleanup({ select: chain, hostPi: "0.99.1" });
+			assert.deepEqual(r3.failed, [], "the whole three-deep chain goes in one call, not just its newest link");
+			assert.deepEqual([...goneDeep].sort(), [...chain].sort());
+			assert.ok(rmiCalls.filter((id) => id === "sha256:deep-a").length >= 2, "the oldest link was refused once (its child was still there), then tried again rather than given up on after a single retry");
+			assert.equal(r3.reclaimedMb, 700 + 800 + 900);
+		}
 		reply = baseReplyForRoutes;
 		// Through the page's routes: the plan, the go-ahead on remove, and cleanup.
 		await view();
