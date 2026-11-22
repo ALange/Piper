@@ -2,6 +2,18 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.23.6] - 2026-11-22
+
+### Fixed
+- **A self-improvement reflection run (or a profile export/template) could fail with "more than 500
+  files: too much to export" over a single skill's own vendored dependencies.** A skill or extension
+  that `npm install`s something keeps that install under its own `node_modules`, which can alone hold
+  thousands of files -- never a "definition" of the skill itself, but counted the same as everything
+  else when the profile travels. `node_modules` is now skipped entirely (its content never counted or
+  exported), and if the 500-file limit is ever hit for some other reason, the refusal now names the
+  folder it was still inside at the time, instead of just the bare number -- no more hunting for the
+  cause by hand.
+
 ## [1.23.5] - 2026-11-22
 
 ### Changed

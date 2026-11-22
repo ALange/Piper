@@ -10493,12 +10493,25 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	writeFileSync(join(profileDir, "scratch", "x"), "x");
 	symlinkSync("/etc/passwd", join(profileDir, "skills", "passwd-link"));
 	symlinkSync("/etc", join(profileDir, "prompts"));
+	// A skill that npm-installed something: vendored output, not a "definition" -- must never travel,
+	// and must never alone exhaust the file-count limit below for the whole export (this is the exact
+	// shape of a real profile that tripped it: one skill's node_modules, thousands of files).
+	mkdirSync(join(profileDir, "skills", "review-checklist", "node_modules", "some-pkg"), { recursive: true });
+	for (let i = 0; i < 20; i++) writeFileSync(join(profileDir, "skills", "review-checklist", "node_modules", "some-pkg", `f${i}.js`), "x");
 	const bundle = await exportAgent(arch.agent.id);
 	const paths = bundle.files.map((f) => f.path).sort();
-	assert.deepEqual(paths, ["AGENTS.md", "settings.json", "skills/review-checklist/SKILL.md"]);
-	assert.ok(bundle.skipped >= 1, "the links were skipped");
+	assert.deepEqual(paths, ["AGENTS.md", "settings.json", "skills/review-checklist/SKILL.md"], "node_modules never travels, in full or in part");
+	assert.ok(bundle.skipped >= 3, "the links were skipped, and so was the whole node_modules folder (counted once, never recursed into)");
 	assert.equal(JSON.stringify(bundle).includes("do-not-export"), false, "auth.json never travels");
 	assert.deepEqual(Object.keys(bundle.agent).sort(), ["canDelegate", "container", "description", "model", "name", "thinking", "workspace"]);
+
+	// Hitting the file-count limit for real: the refusal names the folder it was inside when it hit,
+	// not just the bare number -- otherwise finding the actual cause means counting files by hand.
+	rmSync(join(profileDir, "skills", "review-checklist", "node_modules"), { recursive: true, force: true });
+	mkdirSync(join(profileDir, "skills", "many-files"), { recursive: true });
+	for (let i = 0; i < 510; i++) writeFileSync(join(profileDir, "skills", "many-files", `f${i}.txt`), "x");
+	await assert.rejects(exportAgent(arch.agent.id), /more than 500 files: too much to export -- still inside skills\/many-files when the limit was reached/);
+	rmSync(join(profileDir, "skills", "many-files"), { recursive: true, force: true });
 
 	// Import into another key: same files, a fresh profile; a hostile bundle writes nothing and leaves no agent.
 	const imported = await importBundle({ keyId: otherKey.id, bundle: JSON.parse(JSON.stringify(bundle)), name: "copy" });

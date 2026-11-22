@@ -235,6 +235,14 @@ function transferPath(path) {
 	return parts;
 }
 
+// Never a "definition" (see TRANSFER_TOP's own doc comment just above) -- installed, derived output a
+// skill or extension's own package.json pulled in, not something written by hand. A single npm-based
+// skill can alone hold thousands of files here, which otherwise silently exhausts TRANSFER_FILES for
+// the whole export over something nobody asked to travel in the first place (tracked down 2026-11-16,
+// after a real profile's one "screenshot" skill's vendored puppeteer-core blew self-improvement's own
+// reflection export -- the 500-file refusal gave no hint which folder was actually responsible).
+const VENDOR_DIR_NAMES = new Set(["node_modules"]);
+
 function exportTree(maxBytes) {
 	const files = [];
 	let skipped = 0;
@@ -244,6 +252,7 @@ function exportTree(maxBytes) {
 		if (!stat) return;
 		if (stat.isDirectory()) {
 			if (depth >= TRANSFER_DEPTH) return void skipped++;
+			if (VENDOR_DIR_NAMES.has(rel.split("/").pop())) return void skipped++;
 			for (const name of readdirSync(join(ROOT, rel)).sort()) visit(`${rel}/${name}`, depth + 1);
 			return;
 		}
@@ -254,7 +263,12 @@ function exportTree(maxBytes) {
 			return void skipped++;
 		}
 		if (!stat.isFile()) return void skipped++;
-		if (files.length >= TRANSFER_FILES) throw new Refusal(`more than ${TRANSFER_FILES} files: too much to export`);
+		if (files.length >= TRANSFER_FILES) {
+			// Named, not just counted: a refusal that only ever says "500" leaves no way to tell which
+			// folder is actually responsible without going and counting by hand (as happened for real).
+			const where = rel.split("/").slice(0, 2).join("/");
+			throw new Refusal(`more than ${TRANSFER_FILES} files: too much to export -- still inside ${where} when the limit was reached`);
+		}
 		bytes += stat.size;
 		if (bytes > maxBytes) throw new Refusal(`the profile is over the ${maxBytes}-byte export limit`);
 		files.push({ path: parts.join("/"), data: readFileSync(join(ROOT, rel)).toString("base64") });
