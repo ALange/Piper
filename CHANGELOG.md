@@ -2,6 +2,16 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.23.3] - 2026-11-22
+
+### Changed
+- **Memory is more effective in two ways.** First, a chat now sees a short reminder of what it already
+  remembers right in its own system prompt -- the recently-updated note names, refreshed every turn --
+  instead of only finding out if it happens to think to call `piper_memories` itself. Second, a
+  self-improvement reflection run now sees its own current memory, the same way it already sees its
+  AGENTS.md and skills, so a proposed memory fact reuses an existing note's exact name to update it
+  instead of silently creating a near-duplicate under a different one.
+
 ## [1.23.2] - 2026-11-21
 
 ### Added

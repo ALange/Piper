@@ -8601,6 +8601,10 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		tree(scope)["AGENTS.md"] = enc(agentsMd);
 		tree(scope)["skills/deploy/SKILL.md"] = enc(deploySkill);
 		recordFeedback({ keyId: key.id, agentId: agent.id, rating: -1, prompt: "deploy it", reply: "pushed", note: "you skipped the tests" });
+		// A note already remembered: the run has no memory tools of its own (see below), so this list in
+		// the prompt is the only way it can ever find out the note exists before proposing one that might
+		// duplicate it.
+		memoryFor({ keyId: key.id, scopeId: scope }).write({ name: "timezone", value: "The person is in UTC+1 (Warsaw)." });
 		let seen = "";
 		const results = {};
 		setImproveRunner(async ({ credential, clientSessionId, prompt }) => {
@@ -8627,6 +8631,8 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 		assert.match(seen, /--- AGENTS\.md ---\nYou are the learner/, "the run sees its own AGENTS.md");
 		assert.match(seen, /--- skill: deploy ---\n---\nname: deploy/, "and each skill, in full");
 		assert.match(seen, /"skill_update"/);
+		assert.match(seen, /--- memory .*---\n- timezone: The person is in UTC\+1 \(Warsaw\)\./, "and its existing memory, by name -- the only way it can find out a note exists, since it has no memory tools of its own");
+		assert.match(seen, /reuse its EXACT name/i, "told to update an existing note rather than duplicate it");
 		assert.match(results.newExisting, /already a skill called "deploy" -- to improve it, propose kind "skill_update"/);
 		assert.match(results.updateMissing, /no skill called "release".*the skills you have are: deploy/);
 		assert.match(results.updateSame, /exactly as it already is/);

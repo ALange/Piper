@@ -640,6 +640,29 @@ export default async function piperBridge(pi) {
 	// scope by the gateway, so a tool call can never name another key's or agent's memory.
 	if (process.env.PIPER_MEMORY === "1") {
 		const reply = (value) => ({ content: [{ type: "text", text: value }], details: {} });
+		// Memory only ever helps if something makes the model think to look -- the tools above exist
+		// either way, but nothing calls them unless the model happens to wonder "do I remember this?".
+		// A short, current reminder in the system prompt (the same place the colleague roster lives)
+		// fixes that: a fresh chat sees right away that notes exist and a taste of what they are, instead
+		// of needing to guess that piper_recall/piper_memories are worth trying at all. Refetched every
+		// turn, same as the roster, so a note written earlier in this very conversation shows up at once.
+		pi.on("before_agent_start", async (event) => {
+			try {
+				const { notes } = await readJson(await request("/memory/lookup", {}));
+				const guidelines = (event.systemPromptOptions.promptGuidelines ??= []);
+				for (let i = guidelines.length - 1; i >= 0; i--) if (guidelines[i].startsWith("You have memory from earlier chats")) guidelines.splice(i, 1);
+				if (!notes.length) return;
+				const shown = notes.slice(0, 5).map((n) => n.name);
+				const more = notes.length > shown.length ? `, and ${notes.length - shown.length} more` : "";
+				guidelines.push(
+					`You have memory from earlier chats on this key or agent. Recently remembered: ${shown.join(", ")}${more}. ` +
+						"Use piper_recall to read one by name, or piper_memories to search, whenever something you already know might be relevant -- do not ask the person to repeat what you could look up yourself. " +
+						"Keep remembering durable facts and preferences as you learn them with piper_remember.",
+				);
+			} catch {
+				/* no reminder this turn */
+			}
+		});
 		pi.registerTool({
 			name: "piper_remember",
 			label: "Remember a note",
