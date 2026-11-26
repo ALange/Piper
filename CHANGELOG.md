@@ -2,6 +2,18 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.23.11] - 2026-11-26
+
+### Fixed
+- **The dashboard's Pi update could report success while leaving the version on disk unchanged, on a
+  managed install (Pi 1.6.0+).** 1.23.10 fixed the update itself failing outright; this fixes a second,
+  deeper issue behind it: a managed install's self-update never changes the specific release folder the
+  gateway loaded Pi from in the first place -- it builds an entirely new one and points the install at
+  that instead. The update's own before/after check kept reading that same original folder, which
+  genuinely never changes, so it always reported "unchanged" even on a run that had, in fact, updated
+  Pi. It now re-resolves where the install currently points after each update step, so a real update is
+  reported as one.
+
 ## [1.23.10] - 2026-11-26
 
 ### Fixed
