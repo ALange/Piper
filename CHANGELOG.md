@@ -2,6 +2,14 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.23.12] - 2026-11-26
+
+### Added
+- **A "Clear chat history" button at the bottom of the Chats panel in the client portal.** Deletes every
+  chat in the list in one go (ending each chat's session, including any linked Signal conversations,
+  the same way clearing a single chat already did), with a confirmation naming how many chats and
+  Signal conversations are about to go. Disabled when there is nothing to clear.
+
 ## [1.23.11] - 2026-11-26
 
 ### Fixed

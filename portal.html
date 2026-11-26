@@ -76,6 +76,11 @@
   .convclear { position:absolute; top:8px; right:6px; border:none; background:transparent; color:var(--dim);
                padding:2px 6px; border-radius:4px; font-size:13px; line-height:1; }
   .convclear:hover { color:var(--red); background:rgba(248,113,113,.14); }
+  .sidefoot { padding:10px 12px 14px; border-top:1px solid var(--border); }
+  .sidefoot .hint { margin:6px 2px 0; }
+  .dangerbtn { width:100%; background:rgba(248,113,113,.1); color:var(--red); border:1px solid rgba(248,113,113,.22); }
+  .dangerbtn:hover { background:rgba(248,113,113,.2); }
+  .dangerbtn:disabled { opacity:.35; }
   #crumb { padding:10px 12px; font-size:11px; color:var(--muted); }
   #crumb a { margin-right:2px; }
   #filelist, .plist { flex:1; overflow:auto; padding:0 8px 10px; }
@@ -539,6 +544,10 @@
     <div class="top"><b>Chats</b><button class="sideclose" data-close title="close">×</button></div>
     <div id="convlist"></div>
     <p id="syncwarn" class="hint bad" hidden>Chat history is too large to save to your account — it only exists in this browser tab until it's trimmed. Delete an old chat to fix this.</p>
+    <div class="sidefoot">
+      <button id="clearhistory" class="dangerbtn">Clear chat history</button>
+      <p class="hint">Deletes every chat in this list and ends their sessions. This cannot be undone.</p>
+    </div>
   </div>
   <div id="toolsbox" class="sidebox">
     <div class="top"><b>Tools &amp; Extensions</b><div><button id="toolsrefresh">refresh</button><button class="sideclose" data-close title="close">×</button></div></div>
@@ -1165,6 +1174,7 @@ function renderSide() {
     row.appendChild(clear);
     box.appendChild(row);
   });
+  $('clearhistory').disabled = !CONVOS.length;
 }
 
 var OPEN_THINK = {};
@@ -1571,6 +1581,25 @@ function clearChat(c) {
   CONVOS = CONVOS.filter(function (x) { return x.id !== c.id; });
   if (CUR === c.id) CUR = CONVOS[0] ? CONVOS[0].id : null;
   if (!CUR) newChat(); else { saveConvos(); renderAll(); }
+}
+
+/* Same ending as clearChat(), for every chat at once -- one confirm covers the lot, including any
+   Signal-linked conversations (ending those too, same as clearing one by itself would). */
+function clearAllChats() {
+  if (!CONVOS.length) return;
+  var signalCount = CONVOS.filter(function (c) { return c.signalChannel; }).length;
+  var warn = 'Delete all ' + CONVOS.length + ' chat(s)? This ends every session' +
+    (signalCount ? ' -- including ' + signalCount + ' Signal conversation(s), which will forget everything discussed' : '') +
+    '. This cannot be undone.';
+  if (!confirm(warn)) return;
+  CONVOS.forEach(function (c) {
+    delete WATCHING[c.id];
+    var q = agentQuery(c);
+    api('api/conversation/' + encodeURIComponent(c.id) + (q ? '?' + q : ''), { method: 'DELETE' }).catch(function () {});
+  });
+  CONVOS = [];
+  CUR = null;
+  newChat();
 }
 
 /* ---- chats that started on Signal show up here by themselves, no button needed: every linked
@@ -3357,6 +3386,7 @@ $('logout').addEventListener('click', function () {
   showLogin();
 });
 $('newchat').addEventListener('click', function () { newChat(); });
+$('clearhistory').addEventListener('click', function () { clearAllChats(); });
 $('gotonotebook').addEventListener('click', function () { location.href = '/notebook'; });
 $('target').addEventListener('change', function () {
   var c = conv();
