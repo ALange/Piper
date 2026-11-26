@@ -2,6 +2,19 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.23.10] - 2026-11-26
+
+### Fixed
+- **Updating Pi from the dashboard ("Containers -> Pi on this host -> Update") could fail outright on a
+  managed install (Pi 1.6.0+) with "pi cannot self-update this installation."** The update ran Pi's own
+  bundled command line directly, the same way a conventional npm install is run -- but a managed
+  install expects to be run through its own stable launcher script instead, which sets up context its
+  self-update logic checks for. Running the bundled command line straight skipped that, and a real Pi
+  1.6.1 refused to update itself at all because of it, even though the installation was otherwise a
+  perfectly ordinary, fully writable managed install. The dashboard's update now runs a managed
+  install's declared launcher script instead, exactly the way Pi itself expects; a conventional npm
+  install is unaffected and still runs exactly as before.
+
 ## [1.23.9] - 2026-11-22
 
 ### Fixed
