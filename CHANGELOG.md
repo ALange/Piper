@@ -2,6 +2,12 @@
 
 All notable changes to Piper, newest first. Versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.23.13] - 2026-11-26
+
+### Changed
+- **Raised the client portal's per-message image attachment limit from 6 to 20.** Applies to both the
+  attach button itself and the server-side check behind it, so the two stay in step.
+
 ## [1.23.12] - 2026-11-26
 
 ### Added

@@ -1023,7 +1023,7 @@ var FILES_PATH = '';
 var PENDING_IMAGES = []; // { name, dataUrl }
 var PENDING_DOCS = []; // { name, path }
 var ATTACH_MAX_BYTES = 8 * 1024 * 1024; // mirrors the server's own PORTAL_ATTACHMENT_MAX_BYTES default
-var ATTACH_MAX_IMAGES = 6;
+var ATTACH_MAX_IMAGES = 20;
 var SHOW_TOOLS = (function () { try { return localStorage.getItem('piper-portal-showtools') !== '0'; } catch (e) { return true; } })();
 
 function api(path, opts) {

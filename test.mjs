@@ -12414,11 +12414,16 @@ cd "$dir" && PROFILE_MAX_BYTES=$max exec node ${helper} "\${rest[@]}"
 	assert.equal(withImage.status, 200);
 	assert.deepEqual(seenImages, [{ type: "image", data: "QQ==", mimeType: "image/png" }]);
 
+	// Right at the limit: 20 is still fine.
+	const atLimit = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "conversation-id-4b", message: "what are these", agentId: myAgent.id, images: Array(20).fill(tinyPng) }) });
+	assert.equal(atLimit.status, 200);
+	assert.equal(seenImages.length, 20);
+
 	// Too many images: refused with 413 before runAgentTurn is ever called.
 	seenImages = "untouched";
-	const tooMany = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "conversation-id-5", message: "hi", agentId: myAgent.id, images: Array(7).fill(tinyPng) }) });
+	const tooMany = await call("/api/chat", { method: "POST", headers: { ...auth, "content-type": "application/json" }, body: JSON.stringify({ conversation: "conversation-id-5", message: "hi", agentId: myAgent.id, images: Array(21).fill(tinyPng) }) });
 	assert.equal(tooMany.status, 413);
-	assert.match(tooMany.text, /at most 6 images/);
+	assert.match(tooMany.text, /at most 20 images/);
 	assert.equal(seenImages, "untouched", "runAgentTurn was never reached");
 
 	// Oversized: refused with 413, the reason naming PORTAL_ATTACHMENT_MAX_BYTES.
